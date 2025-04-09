@@ -18,8 +18,6 @@ ON_TEST_NETWORK = True if os.environ.get("ON_TEST_NETWORK") != "False" else Fals
 SITE_URL_HTTP = f'https://{env("SITE_URL")}'
 SECRET_KEY = env("SECRET_KEY")
 EXTERNAL_PASS = env("EXTERNAL_PASS")
-LIBRARY_API_URL = env("LIBRARY_API_URL")
-LIBRARY_BEARER_TOKEN = env("LIBRARY_BEARER_TOKEN")
 IT_ASSETS_ACCESS_TOKEN = env("IT_ASSETS_ACCESS_TOKEN")
 IT_ASSETS_USER = env("IT_ASSETS_USER")
 IT_ASSETS_URL = "https://itassets.dbca.wa.gov.au/api/v3/departmentuser/"
@@ -58,7 +56,7 @@ DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "mail-relay.lan.fyi")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
-ENVELOPE_EMAIL_RECIPIENTS = [env("SPMS_MAINTAINER_EMAIL")]
+ENVELOPE_EMAIL_RECIPIENTS = [env("CANNABIS_MAINTAINER_EMAIL")]
 ENVELOPE_USE_HTML_EMAIL = True
 
 # endregion ========================================================================================
@@ -105,11 +103,11 @@ else:
 
 
 ALLOW_LIST = [
-    # prod
-    "scienceprojects-test.dbca.wa.gov.au",
-    "scienceprojects.dbca.wa.gov.au",
-    "science-profiles-test.dbca.wa.gov.au",
-    "science-profiles.dbca.wa.gov.au",
+    # Prod
+    "cannabis.dbca.wa.gov.au",
+    # Test
+    "cannabis-test.dbca.wa.gov.au",
+    # Local
     "127.0.0.1:3000",
     "127.0.0.1",
 ]
@@ -122,10 +120,11 @@ ALLOW_LIST = list(set(ALLOW_LIST))
 ALLOWED_HOSTS = ALLOW_LIST
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://scienceprojects-test.dbca.wa.gov.au",
-    "https://scienceprojects.dbca.wa.gov.au",
-    "https://science-profiles-test.dbca.wa.gov.au",
-    "https://science-profiles.dbca.wa.gov.au",
+    # Prod
+    "https://cannabis.dbca.wa.gov.au",
+    # Test
+    "https://cannabis-test.dbca.wa.gov.au",
+    # Local
     "http://127.0.0.1:3000",
     "http://127.0.0.1",
 ]
@@ -151,7 +150,7 @@ CORS_ALLOW_HEADERS = [
     "Authorization",
 ]
 
-CSRF_COOKIE_NAME = "spmscsrf"  # Set custom CSRF cookie name
+CSRF_COOKIE_NAME = "cannabis_cookie"  # Set custom CSRF cookie name
 
 if not DEBUG:
     SESSION_COOKIE_DOMAIN = ".dbca.wa.gov.au"
@@ -246,6 +245,7 @@ if not DEBUG:
     sentry_sdk.init(
         environment=env_type,
         dsn=env("SENTRY_URL"),
+        send_default_pii=True,
         traces_sample_rate=1.0,
         profiles_sample_rate=1.0,
     )
@@ -253,6 +253,7 @@ else:
 
     sentry_sdk.init(
         dsn=env("SENTRY_TEST_URL"),
+        send_default_pii=True,
         traces_sample_rate=1.0,
         profiles_sample_rate=1.0,
     )
@@ -274,22 +275,22 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record: LogRecord) -> str:
         log_message = super().format(record)
         level = ""
-        message = ""
+        # message = ""
         time = self.formatTime(record, "%d-%m-%Y @ %H:%M:%S")
         traceback = ""
         # time = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
 
         if record.levelname == "DEBUG" or record.levelname == "INFO":
             level = self.color_string(f"[{record.levelname}] {record.message}", "white")
-            message = self.color_string(log_message, "white")
+            # message = self.color_string(log_message, "white")
         elif record.levelname == "WARNING":
             level = self.color_string(
                 f"[{record.levelname}] {record.message}", "yellow"
             )
-            message = self.color_string(log_message, "white")
+            # message = self.color_string(log_message, "white")
         elif record.levelname == "ERROR":
             level = self.color_string(f"[{record.levelname}] {record.message}", "red")
-            message = self.color_string(log_message, "white")
+            # message = self.color_string(log_message, "white")
 
         if record.levelname == "ERROR":
             traceback += f"{record.exc_text}"
