@@ -181,10 +181,10 @@ THIRD_PARTY_APPS = [
 ]
 
 CUSTOM_APPS = [
-    "common.apps.CommonConfig",
+    # "common.apps.CommonConfig",
     "users.apps.UsersConfig",
-    "medias.apps.MediasConfig",
-    "organisations.apps.OrganisationsConfig",
+    # "medias.apps.MediasConfig",
+    # "organisations.apps.OrganisationsConfig",
     # "quotes.apps.QuotesConfig",
     # "documents.apps.DocumentsConfig",
     # "adminoptions.apps.AdminoptionsConfig",
@@ -198,7 +198,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "config.dbca_middleware.DBCAMiddleware",
+    # "config.dbca_middleware.DBCAMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -235,28 +235,28 @@ WSGI_APPLICATION = "config.wsgi.application"
 # endregion ========================================================================================
 
 # region Logs and Tracking =======================================================================
-if not DEBUG:
-    env_type = (
-        "production"
-        if ON_TEST_NETWORK == False or ON_TEST_NETWORK == "False"
-        else "staging"
-    )
+# if not DEBUG:
+#     env_type = (
+#         "production"
+#         if ON_TEST_NETWORK == False or ON_TEST_NETWORK == "False"
+#         else "staging"
+#     )
 
-    sentry_sdk.init(
-        environment=env_type,
-        dsn=env("SENTRY_URL"),
-        send_default_pii=True,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
-else:
+#     sentry_sdk.init(
+#         environment=env_type,
+#         dsn=env("SENTRY_URL"),
+#         send_default_pii=True,
+#         traces_sample_rate=1.0,
+#         profiles_sample_rate=1.0,
+#     )
+# else:
 
-    sentry_sdk.init(
-        dsn=env("SENTRY_TEST_URL"),
-        send_default_pii=True,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
+#     sentry_sdk.init(
+#         dsn=env("SENTRY_TEST_URL"),
+#         send_default_pii=True,
+#         traces_sample_rate=1.0,
+#         profiles_sample_rate=1.0,
+#     )
 
 
 class ColoredFormatter(logging.Formatter):

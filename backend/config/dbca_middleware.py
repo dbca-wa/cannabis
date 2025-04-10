@@ -8,7 +8,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import ParseError
-from organisations.models import Organisation
+
+# from organisations.models import Organisation
 
 # endregion ====================================================================================================
 
