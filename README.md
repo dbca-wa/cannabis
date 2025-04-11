@@ -1,13 +1,6 @@
 <div align="center">
-<h1>
-  🧪 Cannabis 🧪
-  <br/>
-  <br/>
-
-👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️
-<br/>
-
-</h1>
+  <img src="frontend/public/favicon.svg" alt="C" width="350" height="350"/>
+  <div>👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️</div>
 </div>
 
 ## System Overview
