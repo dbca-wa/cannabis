@@ -5,23 +5,21 @@
 
 ## System Overview
 
-Current State: WIP
-
-The Cannabis system is a comprehensive digital platform developed in collaboration with the WA Police Force and WA Herbarium. This specialised application streamlines the scientific identification process for suspected cannabis specimens, providing legally admissible, certified determinations for law enforcement and court proceedings.
+The Cannabis system is a digital platform developed for DBCA's Herbarium. This application streamlines the documentation and certification of determinations made by Approved Botanists for suspected cannabis specimens, providing legally admissible evidence for law enforcement and court proceedings.
 
 ### Workflow Process
 
 The overall process is submission, determination, and certification. Here is a detailed breakdown:
 
 1. **Police Collection** (👮): Law enforcement officers collect suspected cannabis samples during operations
-2. **Case Initiation** (📞): Officers contact the forensic team to initiate the identification process
+2. **Case Initiation** (📞): Officers contact DBCA Herbarium to initiate the identification process
 3. **Scientist Assignment** (👩‍🔬): Approved Botanists within the meaning of Acts\* are assigned to the case
 4. **Appointment Set** (📅): A time and location is set for the Approved Botanist to travel to and assess the specimens
-5. **Laboratory Analysis** (🔬): Detailed scientific examination using established taxonomic protocols at the location
-6. **Digital Processing** (💻): Results entered into the system's secure database, along with any attachments
-7. **Certificate Generation** (📄): Output is a PrinceXML certificate, which is digitally-signed by Approved Botanist
-8. **Final Sign Off** (✅): Finance Officers sign off and Cannabis system produces final PDF certificate which is provided to Police Force
-9. **Court Proceedings** (🏛️): Certificates serve as legal evidence for prosecution
+5. **Laboratory Analysis** (🔬): Approved Botanist examines the product at the specified location, marking determintions on a police form with bag identification tags
+6. **Digital Processing** (💻): Form passed on to BCS Finance Officers. Results are entered into the system's secure database, along with any attachments
+7. **Certificate Generation** (📄): System saves and outputs unsigned certificate/s, which are printed and provided to Approved Botanist (If erroneous, Approved Botanist uses system to request changes)
+8. **Final Sign Off** (✅): Approved Botanist signs and provides copies to Finance Officers to scan back into our system and send automated email of certificate and police form attached
+9. **Court Proceedings** (🏛️): Endorsed Certificate/s hand-delivered back to police to serve as legal evidence for prosecution
 
 ## Technical Architecture
 
@@ -36,11 +34,10 @@ This application is built using a modern tech stack:
 ## Key Features
 
 -   Extraction, transformation, and loading (ETL) of historical records from legacy systems into the new, well-structured database
--   Standardised scientific determination workflows based on botanical protocols
 -   Automated certificate generation with tamper-evident features
 -   Task Dashboard with status updates on Submissions
--   Integration capabilities with other law enforcement systems
--   Compliance with evidence handling requirements and legal standards; documents are securely stored in containerized storage volumes
+-   Recordkeeping of costs involved and revenues, including adjustment of certication fee
+-   \*(Limited) Integration capabilities with law enforcement systems (for requesting an assessment), providing an email trail for recordkeeping
 
 ## Purpose
 
