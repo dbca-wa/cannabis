@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background green square with white border -->
+  <rect x="4" y="4" width="80" height="80" fill="#20662a" stroke="white" stroke-width="1.5"/>
+  
+  <!-- Atomic Mass (top left) -->
+  <text x="8" y="14" fill="#d1d5db" font-size="8">12.011</text>
+  
+  <!-- Oxidation states (top right) -->
+  <text x="80" y="14" fill="#d1d5db" font-size="8" text-anchor="end">-4</text>
+  <text x="80" y="24" fill="#d1d5db" font-size="8" text-anchor="end">+2</text>
+  <text x="80" y="34" fill="#d1d5db" font-size="8" text-anchor="end">+4</text>
+  
+  <!-- Atomic number (bottom left) -->
+  <text x="8" y="71" fill="#d1d5db" font-size="16" font-weight="bold">6</text>
+  
+  <!-- Electron configuration (bottom left, below atomic number) -->
+  <text x="9" y="80" fill="#d1d5db" font-size="8">2-4</text>
+  
+  <!-- Element Symbol (center) -->
+  <text x="44" y="44" fill="white" font-size="48" font-weight="bold" text-anchor="middle" dominant-baseline="middle" dy=".1em">C</text>
+</svg>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import CannabisLogo from "@/components/layout/Logo";
 
 const Login = observer(() => {
 	const [username, setUsername] = useState("");
@@ -34,7 +35,9 @@ const Login = observer(() => {
 	return (
 		<Card className="">
 			<CardHeader>
-				<CardTitle className="text-2xl text-center">Login</CardTitle>
+				<CardTitle className="text-2xl text-center flex w-full justify-center">
+					<CannabisLogo shouldAnimate />
+				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleSubmit} className="space-y-4">
