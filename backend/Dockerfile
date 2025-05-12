@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM python:latest
-LABEL org.opencontainers.image.source=https://github.com/dbca-wa/Cannabis
+LABEL org.opencontainers.image.source=https://github.com/dbca-wa/cannabis
 
 # Environment setup
 ENV PYTHONUNBUFFERED=1
