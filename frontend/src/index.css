@@ -24,6 +24,15 @@
 	.bg-cannabis-green {
 		background-color: #2d8a39;
 	}
+
+	.hover-cannabis-button:hover {
+		background-color: rgba(45, 138, 57, 0.1);
+	}
+
+	.cannabis-active-button {
+		background-color: rgba(45, 138, 57, 1);
+	}
+
 	.border-cannabis-green {
 		border-color: #2d8a39;
 	}

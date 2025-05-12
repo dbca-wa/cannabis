@@ -23,49 +23,32 @@ import ErrorPage from "./components/ErrorPage";
 
 // Guards
 const authGuard = () => {
-	try {
-		const authStore = getAuthStore();
-		if (!authStore.isAuthenticated) {
-			return redirect("/auth/login");
-		}
-		return null;
-	} catch (error) {
-		console.error("Auth guard error:", error);
-		// If there's an error, redirect to login as a fallback
+	const authStore = getAuthStore();
+	if (!authStore.isAuthenticated) {
 		return redirect("/auth/login");
 	}
+	return null;
 };
 
 const guestGuard = () => {
-	try {
-		const authStore = getAuthStore();
-		if (authStore.isAuthenticated) {
-			return redirect("/");
-		}
-		return null;
-	} catch (error) {
-		console.error("Guest guard error:", error);
-		// If there's an error, let them continue to auth pages
-		return null;
+	const authStore = getAuthStore();
+	if (authStore.isAuthenticated) {
+		return redirect("/");
 	}
+	return null;
 };
 
 const adminGuard = () => {
-	try {
-		const authStore = getAuthStore();
-		// default auth guard
-		if (!authStore.isAuthenticated) {
-			return redirect("/auth/login");
-		}
-		// Prevent access for non-admins by redirecting to dashboard
-		if (!authStore.isAdmin) {
-			return redirect("/");
-		}
-		return null;
-	} catch (error) {
-		console.error("Admin guard error:", error);
+	const authStore = getAuthStore();
+	// default auth guard
+	if (!authStore.isAuthenticated) {
 		return redirect("/auth/login");
 	}
+	// Prevent access for non-admins by redirecting to dashboard
+	if (!authStore.isAdmin) {
+		return redirect("/");
+	}
+	return null;
 };
 
 export const router = createBrowserRouter([

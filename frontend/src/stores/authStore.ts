@@ -26,27 +26,43 @@ export class AuthStore {
 	}
 
 	get isAdmin() {
-		return this.user?.isAdmin || false;
+		return this.user?.is_superuser || false;
+	}
+
+	// Explicitly handle loading state
+	setLoading(loading: boolean) {
+		runInAction(() => {
+			this.loading = loading;
+		});
+	}
+
+	clearError() {
+		runInAction(() => {
+			this.error = null;
+		});
+	}
+
+	setError(error: string | null) {
+		runInAction(() => {
+			this.error = error;
+		});
 	}
 
 	async checkAuth() {
 		if (!this.token) return;
 
-		this.loading = true;
+		this.setLoading(true);
 		try {
 			await this.getCurrentUser();
 		} catch (error) {
 			console.error("Auth check failed", error);
 		} finally {
-			runInAction(() => {
-				this.loading = false;
-			});
+			this.setLoading(false);
 		}
 	}
 
-	async login(credentials: { username: string; password: string }) {
-		this.loading = true;
-		this.error = null;
+	async login(credentials: { email: string; password: string }) {
+		this.clearError();
 
 		try {
 			const response = await authApi.login(credentials);
@@ -58,17 +74,14 @@ export class AuthStore {
 			return true;
 		} catch (error) {
 			const authError = error as AuthError;
-			runInAction(() => {
-				this.error =
-					authError.response?.data?.message ||
-					authError.message ||
-					"Login failed";
-			});
+			const errorMessage =
+				authError.response?.data?.message ||
+				authError.message ||
+				"Login failed";
+
+			this.setError(errorMessage);
+			console.error("Login error:", errorMessage);
 			return false;
-		} finally {
-			runInAction(() => {
-				this.loading = false;
-			});
 		}
 	}
 
@@ -77,8 +90,8 @@ export class AuthStore {
 		email: string;
 		password: string;
 	}) {
-		this.loading = true;
-		this.error = null;
+		this.clearError();
+		this.setLoading(true);
 
 		try {
 			const response = await authApi.register(userData);
@@ -90,44 +103,37 @@ export class AuthStore {
 			return true;
 		} catch (error) {
 			const authError = error as AuthError;
-			runInAction(() => {
-				this.error =
-					authError.response?.data?.message ||
+			this.setError(
+				authError.response?.data?.message ||
 					authError.message ||
-					"Registration failed";
-			});
+					"Registration failed"
+			);
 			return false;
 		} finally {
-			runInAction(() => {
-				this.loading = false;
-			});
+			this.setLoading(false);
 		}
 	}
 
 	async getCurrentUser() {
 		if (!this.token) return;
 
-		this.loading = true;
 		try {
 			const response = await authApi.getCurrentUser();
 			runInAction(() => {
 				this.user = response.data;
 			});
 		} catch (error) {
-			console.log(error);
-			runInAction(() => {
-				this.logout();
-			});
-		} finally {
-			runInAction(() => {
-				this.loading = false;
-			});
+			console.error("Get current user error:", error);
+			this.logout();
 		}
 	}
 
 	logout() {
-		this.user = null;
-		this.token = null;
-		localStorage.removeItem("token");
+		runInAction(() => {
+			this.user = null;
+			this.token = null;
+			this.error = null;
+			localStorage.removeItem("token");
+		});
 	}
 }

@@ -1,9 +1,10 @@
 // api/authApi.ts
 import axiosInstance from "./axiosInstance";
+import { baseInstance } from "./axiosInstance";
 
 export const authApi = {
-	login: (credentials: { username: string; password: string }) => {
-		return axiosInstance.post("/auth/login/", credentials);
+	login: (credentials: { email: string; password: string }) => {
+		return baseInstance.post("/auth/login/", credentials);
 	},
 
 	register: (userData: {
@@ -11,16 +12,16 @@ export const authApi = {
 		email: string;
 		password: string;
 	}) => {
-		return axiosInstance.post("/auth/register/", userData);
-	},
-
-	getCurrentUser: () => {
-		return axiosInstance.get("/auth/user/");
+		return baseInstance.post("/auth/signup/", userData);
 	},
 
 	refreshToken: (refreshToken: string) => {
-		return axiosInstance.post("/auth/token/refresh/", {
+		return baseInstance.post("/auth/token/refresh/", {
 			refresh: refreshToken,
 		});
+	},
+
+	getCurrentUser: () => {
+		return axiosInstance.get("/users/whoami/");
 	},
 };

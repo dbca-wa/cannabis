@@ -16,6 +16,12 @@ const StoreInitialiser: FC<Props> = ({ children }) => {
 
 		// Set the store reference for router guards and other non-React contexts
 		setStoreRefForUtils(rootStore);
+
+		// Check authentication on initialization if a token exists
+		// This ensures user data is fetched when the page is refreshed
+		if (rootStore.authStore.token) {
+			rootStore.authStore.checkAuth();
+		}
 	}, [rootStore]);
 
 	return <>{children}</>;

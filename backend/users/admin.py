@@ -18,8 +18,6 @@ class CustomUserAdmin(UserAdmin):
             "Permissions",
             {
                 "fields": (
-                    "is_approved_botanist",
-                    "is_finance_officer",
                     "is_superuser",
                     "is_staff",
                     "is_active",

@@ -10,9 +10,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import UserItem from "@/components/users/UserItem";
 import { User } from "@/types";
+import { useEffect } from "react";
 
 const UsersList = observer(() => {
-	const { users, isLoading, error } = useUsers();
+	const { users: usersQueryData, isLoading, error } = useUsers();
+	useEffect(() => {
+		if (!isLoading && usersQueryData) {
+			console.log(usersQueryData);
+		}
+	}, [isLoading, usersQueryData]);
 
 	if (isLoading) {
 		return (
@@ -33,15 +39,15 @@ const UsersList = observer(() => {
 	return (
 		<Table>
 			<TableHeader>
-				<TableRow>
+				<TableRow className="border-b border-slate-800 dark:border-slate-800 hover:bg-transparent dark:hover-transparent select-none ">
 					<TableHead>ID</TableHead>
 					<TableHead>Username</TableHead>
 					<TableHead>Email</TableHead>
 					<TableHead>Actions</TableHead>
 				</TableRow>
 			</TableHeader>
-			<TableBody>
-				{users?.map((user: User) => (
+			<TableBody className="hover:bg-transparent dark:hover-transparent select-none">
+				{usersQueryData?.users?.map((user: User) => (
 					<UserItem key={user.id} user={user} />
 				))}
 			</TableBody>

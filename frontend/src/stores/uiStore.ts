@@ -2,6 +2,13 @@ import { makeAutoObservable } from "mobx";
 
 type Theme = "dark" | "light" | "system";
 
+const ROUTE_TO_HOME_SIDEBAR_MAP: Record<string, string> = {
+	"/": "Home",
+	"/users": "Users",
+	"/submissions": "Submissions",
+	"/admin": "Admin",
+};
+
 // Define page metadata interface
 export interface PageMetadata {
 	title: string;
@@ -11,14 +18,9 @@ export interface PageMetadata {
 }
 
 export class UIStore {
-	// Sidebar state
-	sidebarOpen: boolean = true;
-	// Theme state - compatible with Shadcn
-	theme: Theme = "system";
-	// Current active section/page
-	activeSection: string = "home";
-	// Page metadata for dynamic header content
-	pageMetadata: PageMetadata = { title: "Dashboard" };
+	theme: Theme = "light";
+	homeRouterMap: Record<string, string> = ROUTE_TO_HOME_SIDEBAR_MAP;
+	activeSidebarItem: string = "Home";
 	// Loading states for UI elements
 	loadingStates: Record<string, boolean> = {};
 
@@ -38,21 +40,10 @@ export class UIStore {
 			if (storedTheme) {
 				this.theme = storedTheme;
 			}
-
-			// Get sidebar state from localStorage
-			const storedSidebarOpen = localStorage.getItem("sidebarOpen");
-			if (storedSidebarOpen !== null) {
-				this.sidebarOpen = JSON.parse(storedSidebarOpen);
-			}
 		} catch (error) {
 			console.error("Failed to initialize UI state from storage", error);
 		}
 	}
-
-	toggleSidebar = () => {
-		this.sidebarOpen = !this.sidebarOpen;
-		localStorage.setItem("sidebarOpen", JSON.stringify(this.sidebarOpen));
-	};
 
 	setTheme = (newTheme: Theme) => {
 		this.theme = newTheme;
@@ -78,14 +69,40 @@ export class UIStore {
 		root.classList.add(this.theme);
 	};
 
-	// Set active section (for sidebar highlighting)
-	setActiveSection = (section: string) => {
-		this.activeSection = section;
+	// Home sidebarmenu
+	setActiveSidebarItem = (name: string) => {
+		if (this.activeSidebarItem === name) {
+			// Do nothing, there must always be one selected
+			return;
+		} else {
+			this.activeSidebarItem = name;
+		}
+		// console.log(this.activeHomeSidebarItem);
 	};
 
-	// Update page metadata (for header content)
-	setPageMetadata = (metadata: Partial<PageMetadata>) => {
-		this.pageMetadata = { ...this.pageMetadata, ...metadata };
+	updateSidebarFromRoute = (pathname: string) => {
+		// Check for exact matches first
+		if (ROUTE_TO_HOME_SIDEBAR_MAP[pathname]) {
+			this.setActiveSidebarItem(ROUTE_TO_HOME_SIDEBAR_MAP[pathname]);
+			return;
+		}
+
+		// Handle nested routes by finding the closest parent route
+		const matchingRoute = Object.keys(ROUTE_TO_HOME_SIDEBAR_MAP)
+			.filter((route) => route !== "/") // Skip root route for nested route checking
+			.find((route) => pathname.startsWith(route));
+
+		if (matchingRoute) {
+			this.setActiveSidebarItem(ROUTE_TO_HOME_SIDEBAR_MAP[matchingRoute]);
+		} else {
+			// Default to Home if no match is found
+			this.setActiveSidebarItem("Home");
+		}
+	};
+
+	// Check if a specific home sidebar item is active
+	isActiveSidebarItem = (name: string) => {
+		return this.activeSidebarItem === name;
 	};
 
 	// Check if a path is active or is a parent of the active path
@@ -97,6 +114,17 @@ export class UIStore {
 			currentPath === path ||
 			(path !== "/" && currentPath.startsWith(path))
 		);
+	};
+
+	// Get the inverse mapping (sidebar item to route)
+	getRouteForHomeSidebarItem = (sidebarItem: string): string => {
+		// Find the route that maps to this sidebar item
+		const entry = Object.entries(this.homeRouterMap).find(
+			([_, item]) => item === sidebarItem
+		);
+
+		// Return the route or default to home
+		return entry ? entry[0] : "/";
 	};
 
 	// Set loading state for a specific UI element

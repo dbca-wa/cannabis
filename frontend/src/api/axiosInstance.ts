@@ -9,6 +9,10 @@ const baseBackendUrl =
 		? "http://127.0.0.1:8000/api/v1/"
 		: VITE_PRODUCTION_BACKEND_API_URL;
 
+export const baseInstance = axios.create({
+	// strip api v1
+	baseURL: (baseBackendUrl as string).replace("api/v1/", ""),
+});
 const axiosInstance = axios.create({
 	baseURL: baseBackendUrl,
 	headers: {
@@ -49,7 +53,7 @@ axiosInstance.interceptors.response.use(
 		const originalRequest = error.config;
 
 		// Handle 401 Unauthorized errors (token expired)
-		if (error?.response?.status === 401 && !originalRequest._retry) {
+		if (error.response.status === 401 && !originalRequest._retry) {
 			originalRequest._retry = true;
 			// Call logout through the store reference
 			storeRef?.authStore.logout();

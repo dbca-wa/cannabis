@@ -177,17 +177,16 @@ SYSTEM_APPS = [
 
 THIRD_PARTY_APPS = [
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
 ]
 
 CUSTOM_APPS = [
-    # "common.apps.CommonConfig",
+    "common.apps.CommonConfig",
     "users.apps.UsersConfig",
-    # "medias.apps.MediasConfig",
+    "auth.apps.AuthConfig",
+    "medias.apps.MediasConfig",
     # "organisations.apps.OrganisationsConfig",
-    # "quotes.apps.QuotesConfig",
-    # "documents.apps.DocumentsConfig",
-    # "adminoptions.apps.AdminoptionsConfig",
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
@@ -205,14 +204,22 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# JWT Settings
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "alternative_secret")
+JWT_EXPIRY_HOURS = 48  # Token expiry time in hours (2 days)
+
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "auth.middleware.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
+        # "rest_framework.authentication.TokenAuthentication",
     ],
 }
+
 
 TEMPLATES = [
     {
@@ -275,22 +282,22 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record: LogRecord) -> str:
         log_message = super().format(record)
         level = ""
-        # message = ""
+        message = ""
         time = self.formatTime(record, "%d-%m-%Y @ %H:%M:%S")
         traceback = ""
-        # time = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
+        time = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
 
         if record.levelname == "DEBUG" or record.levelname == "INFO":
             level = self.color_string(f"[{record.levelname}] {record.message}", "white")
-            # message = self.color_string(log_message, "white")
+            message = self.color_string(log_message, "white")
         elif record.levelname == "WARNING":
             level = self.color_string(
                 f"[{record.levelname}] {record.message}", "yellow"
             )
-            # message = self.color_string(log_message, "white")
+            message = self.color_string(log_message, "white")
         elif record.levelname == "ERROR":
             level = self.color_string(f"[{record.levelname}] {record.message}", "red")
-            # message = self.color_string(log_message, "white")
+            message = self.color_string(log_message, "white")
 
         if record.levelname == "ERROR":
             traceback += f"{record.exc_text}"

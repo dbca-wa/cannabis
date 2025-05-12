@@ -26,7 +26,7 @@ const UserItem = observer(({ user }: { user: User }) => {
 	};
 
 	return (
-		<TableRow>
+		<TableRow className="border border-slate-800 dark:border-slate-800 hover:bg-transparent dark:hover-transparent">
 			<TableCell>{user.id}</TableCell>
 			<TableCell>{user.username}</TableCell>
 			<TableCell>{user.email}</TableCell>
@@ -35,12 +35,16 @@ const UserItem = observer(({ user }: { user: User }) => {
 					<Link to={`/users/${user.id}`}>View</Link>
 				</Button>
 
-				{authStore.isAdmin && (
+				{authStore.isAdmin && authStore.user && (
 					<Button
 						variant="destructive"
 						size="sm"
 						onClick={handleDeleteUser}
-						disabled={deleteUserMutation.isPending}
+						disabled={
+							deleteUserMutation.isPending ||
+							user.is_superuser ||
+							user.id === authStore?.user.id
+						}
 					>
 						Delete
 					</Button>

@@ -30,7 +30,7 @@ export default function ErrorPage() {
 				</p>
 
 				<div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-3 justify-center">
-					<Button variant="default" asChild>
+					<Button variant="outline" asChild>
 						<Link to="/">Back to dashboard</Link>
 					</Button>
 					<Button

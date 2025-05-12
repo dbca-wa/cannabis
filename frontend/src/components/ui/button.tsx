@@ -27,6 +27,12 @@ const buttonVariants = cva(
 					"bg-cannabis-earth text-white shadow-xs hover:bg-cannabis-earth/80",
 				cannabisPurple:
 					"bg-cannabis-purple text-white shadow-xs hover:bg-cannabis-purple/80",
+				sidebarButton: cn(
+					"!size-10 cannabis-green !p-2",
+					"cursor-pointer",
+					"z-[999] hover-cannabis-button"
+					// "z-[999] hover:bg-[rgba(45, 138, 57, .1)]"
+				),
 			},
 			size: {
 				default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -57,7 +63,10 @@ function Button({
 	return (
 		<Comp
 			data-slot="button"
-			className={cn(buttonVariants({ variant, size, className }))}
+			className={cn(
+				"cursor-pointer",
+				buttonVariants({ variant, size, className })
+			)}
 			{...props}
 		/>
 	);

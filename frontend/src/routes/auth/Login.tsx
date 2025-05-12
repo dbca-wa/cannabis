@@ -1,97 +1,150 @@
-import { useState, useEffect } from "react";
-import { observer } from "mobx-react-lite";
-import { useNavigate } from "react-router";
-import { useAuthStore, useUIStore } from "@/stores/rootStore";
+import CannabisLogo from "@/components/layout/CannabisLogo";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import CannabisLogo from "@/components/layout/Logo";
+import { loginSchema } from "@/features/auth/schema";
+import { useAuthStore } from "@/stores/rootStore";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { useLogin } from "./hooks/useLogin";
 
-const Login = observer(() => {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
-	const navigate = useNavigate();
+const Login = () => {
+	// const [username, setUsername] = useState("");
+	// const [password, setPassword] = useState("");
+	const [formVisible, setFormVisible] = useState(false);
 	const authStore = useAuthStore();
-	const uiStore = useUIStore();
+
+	const form = useForm<z.infer<typeof loginSchema>>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: {
+			email: "",
+			password: "",
+		},
+	});
+
+	const { mutate, isPending } = useLogin();
+
+	const onSubmit = (values: z.infer<typeof loginSchema>) => {
+		// console.log(values);
+		mutate(values);
+	};
 
 	// Set page metadata when the component mounts
 	useEffect(() => {
-		uiStore.setPageMetadata({
-			title: "Login",
-			description: "Sign in to your account",
-		});
-	}, [uiStore]);
+		// Wait for logo animation to complete before showing the form
+		// The logo takes about 600ms to start + 1000ms to animate = 1600ms total
+		const formTimer = setTimeout(() => {
+			setFormVisible(true);
+		}, 1600);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		const success = await authStore.login({ username, password });
-		if (success) {
-			navigate("/");
-		}
-	};
+		return () => clearTimeout(formTimer);
+	}, []);
 
 	return (
-		<Card className="">
+		<Card className="bg-card">
 			<CardHeader>
 				<CardTitle className="text-2xl text-center flex w-full justify-center">
 					<CannabisLogo shouldAnimate />
 				</CardTitle>
 			</CardHeader>
-			<CardContent>
-				<form onSubmit={handleSubmit} className="space-y-4">
-					{authStore.error && (
-						<Alert variant="destructive">
-							<AlertDescription>
-								{authStore.error}
-							</AlertDescription>
-						</Alert>
-					)}
-
-					<div className="space-y-2">
-						<Label htmlFor="username">Username</Label>
-						<Input
-							id="username"
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
-							required
-						/>
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="password">Password</Label>
-						<Input
-							id="password"
-							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							required
-						/>
-					</div>
-
-					<Button
-						type="submit"
-						className="w-full"
-						variant={"cannabis"}
-						disabled={authStore.loading}
+			<CardContent
+				className={`transition-all duration-1000 ${
+					formVisible
+						? "opacity-100 translate-y-0"
+						: "opacity-0 translate-y-4"
+				}`}
+			>
+				<Form {...form}>
+					<form
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="space-y-4"
 					>
-						{authStore.loading ? "Logging in..." : "Login"}
-					</Button>
+						{authStore.error && (
+							<Alert variant="destructive">
+								<AlertDescription>
+									{authStore.error}
+								</AlertDescription>
+							</Alert>
+						)}
 
-					<div className="text-center text-sm">
-						Don't have an account?{" "}
-						<a
-							href="/auth/register"
-							className="text-blue-600 hover:underline"
+						<div className="space-y-2">
+							<Label htmlFor="email">Email</Label>
+							<FormField
+								name="email"
+								control={form.control}
+								render={({ field }) => (
+									<FormItem>
+										<FormControl>
+											<Input
+												{...field}
+												type="email"
+												placeholder="Enter email"
+												disabled={isPending}
+												required
+												autoComplete="off"
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="password">Password</Label>
+							<FormField
+								name="password"
+								control={form.control}
+								render={({ field }) => (
+									<FormItem>
+										<FormControl>
+											<Input
+												{...field}
+												type="password"
+												placeholder="Enter password"
+												disabled={isPending}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<Button
+							type="submit"
+							className="w-full"
+							variant={"cannabis"}
+							disabled={isPending}
 						>
-							Register
-						</a>
-					</div>
-				</form>
+							{isPending ? "Logging in..." : "Login"}
+						</Button>
+
+						<div className="text-center text-sm">
+							Don't have an account?{" "}
+							<a
+								href="/auth/register"
+								className="cannabis-green hover:underline"
+							>
+								Register
+							</a>
+						</div>
+					</form>
+				</Form>
 			</CardContent>
 		</Card>
 	);
-});
+};
 
 export default Login;

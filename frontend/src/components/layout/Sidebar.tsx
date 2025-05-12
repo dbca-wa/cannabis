@@ -1,117 +1,78 @@
-import { Link, useLocation } from "react-router";
+import { useAuthStore } from "@/stores/rootStore";
+import { PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
+import { LogOut, User } from "lucide-react";
 import { observer } from "mobx-react-lite";
-import { useAuthStore, useUIStore } from "@/stores/rootStore";
-import { Home, Users, FileText, Settings } from "lucide-react";
-import { useEffect } from "react";
+import { Button } from "../ui/button";
+import { Popover } from "../ui/popover";
+import CannabisLogo from "./CannabisLogo";
+import SidebarButton from "./SidebarButton";
+import { REGULAR_SIDEBAR_ITEMS } from "./utils";
 
 const Sidebar = observer(() => {
-	const location = useLocation();
 	const authStore = useAuthStore();
-	const uiStore = useUIStore();
-	const currentPath = location.pathname;
 
-	// Define navigation items for reuse
-	const navItems = [
-		{
-			path: "/",
-			exact: true, // Only match exact path for home
-			icon: <Home size={20} />,
-			label: "Dashboard",
-			section: "dashboard",
-		},
-		{
-			path: "/users",
-			icon: <Users size={20} />,
-			label: "Users",
-			section: "users",
-		},
-		{
-			path: "/submissions",
-			icon: <FileText size={20} />,
-			label: "Submissions",
-			section: "submissions",
-		},
-		{
-			path: "/admin",
-			icon: <Settings size={20} />,
-			label: "Admin",
-			section: "admin",
-			adminOnly: true,
-		},
-	];
-
-	// Update active section when location changes
-	useEffect(() => {
-		// Find the matching nav item
-		const matchedItem = navItems.find((item) => {
-			if (item.exact) {
-				return currentPath === item.path;
-			}
-			return uiStore.isActiveOrChildPath(item.path, currentPath);
-		});
-
-		if (matchedItem) {
-			uiStore.setActiveSection(matchedItem.section);
-
-			// Also update page metadata based on section
-			uiStore.setPageMetadata({
-				title: matchedItem.label,
-			});
-		}
-	}, [currentPath, uiStore]);
+	const handleLogout = () => {
+		authStore.logout();
+	};
 
 	return (
-		<aside className="w-64 bg-slate-800 text-white">
-			<div className="p-6">
-				<h2 className="text-2xl font-bold">App Name</h2>
+		<aside className="w-20 bg-slate-200 text-white flex flex-col justify-between">
+			<div>
+				<div className="p-3 flex justify-center">
+					<CannabisLogo shouldAnimate={false} size="sm" logoOnly />
+					{/* <h2 className="text-2xl font-bold">Cannabis</h2> */}
+				</div>
+				<nav className="space-y-1">
+					{REGULAR_SIDEBAR_ITEMS.map(
+						(item) =>
+							// Skip rendering admin-only items for non-admins
+							(!item.adminOnly || authStore.isAdmin) && (
+								<SidebarButton
+									key={item.name}
+									name={item.name}
+									hideName={false}
+									adminOnly={item.adminOnly}
+									icon={item.icon}
+									activeIcon={item.activeIcon}
+								/>
+							)
+					)}
+				</nav>
 			</div>
-			<nav className="space-y-1">
-				{navItems.map(
-					(item) =>
-						// Skip rendering admin-only items for non-admins
-						(!item.adminOnly || authStore.isAdmin) && (
-							<SidebarLink
-								key={item.path}
-								to={item.path}
-								icon={item.icon}
-								label={item.label}
-								active={
-									item.exact
-										? currentPath === item.path
-										: uiStore.isActiveOrChildPath(
-												item.path,
-												currentPath
-										  )
-								}
-							/>
-						)
-				)}
-			</nav>
+			<div className="w-full flex items-center justify-center pb-4">
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button
+							className="cursor:pointer cannabis-green"
+							variant="sidebarButton"
+							size="icon"
+							asChild
+						>
+							<div className="text-sm">
+								<User className="size-6" />
+							</div>
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent
+						side="right"
+						sideOffset={30}
+						className="mb-2 gap-2 text-black bg-green-200 rounded-lg w-[260px] p-4 flex flex-col justify-center items-center"
+					>
+						<p className="truncate">{authStore.user?.email}</p>
+						<Button
+							variant="sidebarButton"
+							size="icon"
+							onClick={handleLogout}
+							className="text-slate-500 hover:text-red-500 flex w-full"
+						>
+							<span>Logout</span>
+							<LogOut size={18} />
+						</Button>
+					</PopoverContent>
+				</Popover>
+			</div>
 		</aside>
 	);
 });
-
-type SidebarLinkProps = {
-	to: string;
-	icon: React.ReactNode;
-	label: string;
-	active: boolean;
-};
-
-const SidebarLink = ({ to, icon, label, active }: SidebarLinkProps) => {
-	return (
-		<Link
-			to={to}
-			className={`flex items-center px-6 py-3 transition-colors ${
-				active
-					? "bg-slate-700 text-white"
-					: "text-slate-300 hover:bg-slate-700 hover:text-white"
-			}`}
-		>
-			<span className="mr-3">{icon}</span>
-			<span>{label}</span>
-		</Link>
-	);
-};
 
 export default Sidebar;

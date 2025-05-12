@@ -5,7 +5,7 @@ export interface User {
 	id: number;
 	username: string;
 	email: string;
-	isAdmin: boolean;
+	is_superuser: boolean;
 	createdAt?: string;
 	lastLogin?: string;
 	activities?: Array<{

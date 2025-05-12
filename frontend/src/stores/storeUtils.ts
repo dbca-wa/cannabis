@@ -1,11 +1,13 @@
 import { RootStore } from "./rootStore";
 import { AuthStore } from "./authStore";
 import { UIStore } from "./uiStore";
+import { runInAction } from "mobx";
+import { User } from "@/types";
 
 // Store reference for non-React contexts (like route guards)
 let storeRef: RootStore | null = null;
 
-// Set the store reference - this should be called from StoreInitializer
+// Set the store reference - this should be called from StoreIntialiser
 export const setStoreRefForUtils = (store: RootStore) => {
 	storeRef = store;
 };
@@ -14,14 +16,13 @@ export const setStoreRefForUtils = (store: RootStore) => {
 const createTemporaryAuthStore = () => {
 	const tempAuthStore = new AuthStore();
 
-	// Initialize with token if available
+	// Init with token if available
 	const token = localStorage.getItem("token");
 	if (token) {
-		// This is a minimal setup that allows route guards to work
-		Object.assign(tempAuthStore, {
-			token,
-			isAuthenticated: !!token,
-			isAdmin: false,
+		// Only modify the properties that computed values depend on (prevent error for directly trying to assign computed val)
+		runInAction(() => {
+			tempAuthStore.token = token;
+			tempAuthStore.user = {} as User; // Provide a minimal user object since isAuthenticated checks for user
 		});
 	}
 
@@ -30,13 +31,13 @@ const createTemporaryAuthStore = () => {
 
 // Get the auth store - used in router guards
 export const getAuthStore = () => {
-	// If we have the real store, use it
+	// use real store if available
 	if (storeRef) {
 		return storeRef.authStore;
 	}
 
-	// Otherwise return a temporary auth store for the initial render
-	// This avoids errors during initialization
+	// otherwise return a temporary auth store for the initial render
+	// (This avoids errors during init)
 	return createTemporaryAuthStore();
 };
 
