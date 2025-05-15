@@ -18,6 +18,7 @@ class TinyUserSerializer(serializers.ModelSerializer):
             "email",
             "is_staff",
             "is_superuser",
+            "role",
         )
 
 

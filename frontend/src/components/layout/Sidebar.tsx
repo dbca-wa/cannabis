@@ -7,6 +7,7 @@ import { Popover } from "../ui/popover";
 import CannabisLogo from "./CannabisLogo";
 import SidebarButton from "./SidebarButton";
 import { REGULAR_SIDEBAR_ITEMS } from "./utils";
+import { cn } from "@/lib/utils";
 
 const Sidebar = observer(() => {
 	const authStore = useAuthStore();
@@ -34,6 +35,9 @@ const Sidebar = observer(() => {
 									adminOnly={item.adminOnly}
 									icon={item.icon}
 									activeIcon={item.activeIcon}
+									tooltipContent={
+										item.tooltipContent || undefined
+									}
 								/>
 							)
 					)}
@@ -56,14 +60,19 @@ const Sidebar = observer(() => {
 					<PopoverContent
 						side="right"
 						sideOffset={30}
-						className="mb-2 gap-2 text-black bg-green-200 rounded-lg w-[260px] p-4 flex flex-col justify-center items-center"
+						className={cn(
+							"mb-2 gap-2 rounded-lg w-[260px] p-4 flex flex-col justify-center items-center",
+							"text-black popover-bg",
+							"shadow-md shadow-green-700"
+						)}
 					>
 						<p className="truncate">{authStore.user?.email}</p>
+						<p className="truncate">{authStore.user?.role}</p>
 						<Button
 							variant="sidebarButton"
 							size="icon"
 							onClick={handleLogout}
-							className="text-slate-500 hover:text-red-500 flex w-full"
+							className="text-slate-500 hover:text-red-500 flex !w-fit"
 						>
 							<span>Logout</span>
 							<LogOut size={18} />

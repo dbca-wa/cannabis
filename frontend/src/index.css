@@ -30,7 +30,11 @@
 	}
 
 	.cannabis-active-button {
-		background-color: rgba(45, 138, 57, 1);
+		background-color: rgba(45, 138, 57, 0.25);
+	}
+
+	.popover-bg {
+		background-color: rgba(45, 138, 57, 0.1);
 	}
 
 	.border-cannabis-green {

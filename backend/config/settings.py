@@ -56,7 +56,7 @@ DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "mail-relay.lan.fyi")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
-ENVELOPE_EMAIL_RECIPIENTS = [env("CANNABIS_MAINTAINER_EMAIL")]
+ENVELOPE_EMAIL_RECIPIENTS = [env("MAINTAINER_EMAIL")]
 ENVELOPE_USE_HTML_EMAIL = True
 
 # endregion ========================================================================================
@@ -242,28 +242,27 @@ WSGI_APPLICATION = "config.wsgi.application"
 # endregion ========================================================================================
 
 # region Logs and Tracking =======================================================================
-# if not DEBUG:
-#     env_type = (
-#         "production"
-#         if ON_TEST_NETWORK == False or ON_TEST_NETWORK == "False"
-#         else "staging"
-#     )
+if not DEBUG:
+    if ON_TEST_NETWORK:
+        environment = "staging"
+    else:
+        environment = "production"
 
-#     sentry_sdk.init(
-#         environment=env_type,
-#         dsn=env("SENTRY_URL"),
-#         send_default_pii=True,
-#         traces_sample_rate=1.0,
-#         profiles_sample_rate=1.0,
-#     )
-# else:
-
-#     sentry_sdk.init(
-#         dsn=env("SENTRY_TEST_URL"),
-#         send_default_pii=True,
-#         traces_sample_rate=1.0,
-#         profiles_sample_rate=1.0,
-#     )
+    sentry_sdk.init(
+        environment=environment,
+        dsn=env("SENTRY_URL"),
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+else:
+    sentry_sdk.init(
+        environment="development",
+        dsn=env("SENTRY_URL"),
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 
 class ColoredFormatter(logging.Formatter):

@@ -52,5 +52,18 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
-    is_approved_botanist = models.BooleanField(default=False)
-    is_finance_officer = models.BooleanField(default=False)
+
+    class RoleChoices(models.TextChoices):
+        NONE = "none", "None"
+        POLICE = "police", "Police"
+        BOTANIST = "botanist", "Approved Botanist"
+        FINANCE = "finance", "Finance Officer"
+
+    role = models.CharField(
+        choices=RoleChoices.choices,
+        default=RoleChoices.NONE,
+        max_length=20,
+    )
+
+    def __str__(self):
+        return f"{self.username} ({self.role})"

@@ -43,6 +43,8 @@ const UsersList = observer(() => {
 					<TableHead>ID</TableHead>
 					<TableHead>Username</TableHead>
 					<TableHead>Email</TableHead>
+					<TableHead>Role</TableHead>
+					<TableHead>Admin</TableHead>
 					<TableHead>Actions</TableHead>
 				</TableRow>
 			</TableHeader>

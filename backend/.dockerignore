@@ -1,0 +1,60 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Environments and secrets
+.env
+.env.*
+*.env
+env/
+venv/
+ENV/
+.venv
+*/.env
+files/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django specific
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Development/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*
+
+# Other
+**/node_modules/
+**/dist/
+**/.DS_Store
+**/*.pem
+README.md
+LICENSE

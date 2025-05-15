@@ -63,7 +63,7 @@ const SidebarButton = observer(
 									variant={"sidebarButton"}
 									className={cn(
 										uiStore.isActiveSidebarItem(name)
-											? "cannabis-green-dark bg-[rgba(119,49,216,.1)]"
+											? "cannabis-green-dark cannabis-active-button"
 											: "text-[#6c5598] bg-none"
 									)}
 								>

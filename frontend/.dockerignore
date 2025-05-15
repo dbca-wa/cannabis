@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Environments and secrets
+.env
+.env.*
+*.env
+
+# JavaScript/TypeScript
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+coverage/
+.pnp
+.pnp.js
+.turbo
+
+# Build outputs
+/dist/
+/build/
+/.next/
+/.nuxt/
+/.output/
+
+# Development/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*
+
+# Test files
+/coverage/
+/.nyc_output/
+/cypress/videos/
+/cypress/screenshots/
+
+# Other
+README.md
+LICENSE

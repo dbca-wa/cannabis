@@ -10,7 +10,7 @@ class CustomUserAdmin(UserAdmin):
         (
             "Profile",
             {
-                "fields": ("username", "email", "password"),
+                "fields": ("username", "email", "password", "role"),
                 "classes": ("wide",),
             },
         ),

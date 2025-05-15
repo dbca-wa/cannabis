@@ -1,17 +1,14 @@
 import { AuthStore } from "./authStore";
 import { UIStore } from "./uiStore";
 
+export type Role = "botanist" | "police" | "finance" | "none";
 export interface User {
 	id: number;
 	username: string;
 	email: string;
+	role: Role;
+	is_staff: boolean;
 	is_superuser: boolean;
-	createdAt?: string;
-	lastLogin?: string;
-	activities?: Array<{
-		action: string;
-		timestamp: string;
-	}>;
 }
 
 export type AuthState = {

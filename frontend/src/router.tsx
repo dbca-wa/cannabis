@@ -10,7 +10,7 @@ import Login from "@/routes/auth/Login";
 import Register from "@/routes/auth/Register";
 import Home from "@/routes/dashboard/Home";
 import Users from "@/routes/users/Users";
-import UserDetail from "@/routes/users/UserDetail";
+// import UserDetail from "@/routes/users/UserDetail";
 import Submissions from "@/routes/submissions/Submissions";
 import SubmissionDetail from "@/routes/submissions/SubmissionDetail";
 import AdminPage from "./routes/admin/AdminPage";
@@ -79,7 +79,7 @@ export const router = createBrowserRouter([
 						path: "users",
 						children: [
 							{ index: true, element: <Users /> },
-							{ path: ":id", element: <UserDetail /> },
+							// { path: ":id", element: <UserDetail /> },
 						],
 					},
 					{
