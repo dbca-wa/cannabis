@@ -12,7 +12,6 @@ import Home from "@/routes/dashboard/Home";
 import Users from "@/routes/users/Users";
 // import UserDetail from "@/routes/users/UserDetail";
 import Submissions from "@/routes/submissions/Submissions";
-import SubmissionDetail from "@/routes/submissions/SubmissionDetail";
 import AdminPage from "./routes/admin/AdminPage";
 
 // Store utils
@@ -20,6 +19,7 @@ import { getAuthStore } from "./stores/storeUtils";
 
 // Error component
 import ErrorPage from "./components/ErrorPage";
+import Organisations from "./routes/organisations/Organisations";
 
 // Guards
 const authGuard = () => {
@@ -83,10 +83,17 @@ export const router = createBrowserRouter([
 						],
 					},
 					{
+						path: "organisations",
+						children: [
+							{ index: true, element: <Organisations /> },
+							// { path: ":id", element: <OrganisationDetail /> },
+						],
+					},
+					{
 						path: "submissions",
 						children: [
 							{ index: true, element: <Submissions /> },
-							{ path: ":id", element: <SubmissionDetail /> },
+							// { path: ":id", element: <SubmissionDetail /> },
 						],
 					},
 					{

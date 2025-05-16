@@ -5,6 +5,7 @@ type Theme = "dark" | "light" | "system";
 const ROUTE_TO_HOME_SIDEBAR_MAP: Record<string, string> = {
 	"/": "Home",
 	"/users": "Users",
+	"/organisations": "Organisations",
 	"/submissions": "Submissions",
 	"/admin": "Admin",
 };

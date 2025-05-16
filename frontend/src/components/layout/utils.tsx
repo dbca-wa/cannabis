@@ -1,4 +1,4 @@
-import { FileText, Home, Settings, Users } from "lucide-react";
+import { Building, FileText, Home, Settings, Users } from "lucide-react";
 
 export const REGULAR_SIDEBAR_ITEMS = [
 	{
@@ -13,6 +13,13 @@ export const REGULAR_SIDEBAR_ITEMS = [
 		icon: <Users size={20} />,
 		activeIcon: <Users size={20} />,
 		// tooltipContent: <p>Registered Users</p>,
+		adminOnly: false,
+	},
+	{
+		name: "Organisations",
+		icon: <Building size={20} />,
+		activeIcon: <Building size={20} />,
+		// tooltipContent: <p>Addresses of registered orgs</p>,
 		adminOnly: false,
 	},
 	{

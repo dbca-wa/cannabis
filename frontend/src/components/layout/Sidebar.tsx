@@ -17,7 +17,12 @@ const Sidebar = observer(() => {
 	};
 
 	return (
-		<aside className="w-20 bg-slate-200 text-white flex flex-col justify-between">
+		<aside
+			className={cn(
+				"w-20 bg-slate-200 text-white flex flex-col justify-between",
+				"border-r border-slate-300 shadow-md"
+			)}
+		>
 			<div>
 				<div className="p-3 flex justify-center">
 					<CannabisLogo shouldAnimate={false} size="sm" logoOnly />

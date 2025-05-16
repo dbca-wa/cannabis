@@ -53,9 +53,16 @@ class User(AbstractUser):
         null=True,
     )
 
+    police_id = models.CharField(
+        max_length=40,
+        blank=True,
+        null=True,
+    )
+
     class RoleChoices(models.TextChoices):
         NONE = "none", "None"
-        POLICE = "police", "Police"
+        POLICE_UNSWORN = "police_unsworn", "Police (Unsworn)"
+        POLICE_SWORN = "police_sworn", "Police (Sworn)"
         BOTANIST = "botanist", "Approved Botanist"
         FINANCE = "finance", "Finance Officer"
 
