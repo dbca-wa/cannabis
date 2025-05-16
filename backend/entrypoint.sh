@@ -18,8 +18,12 @@
 
 # Output the license template to license.dat
 # echo "$LICENSE_TEMPLATE" > /usr/lib/prince/license/license.dat
-echo "Creating license.dat symlink..."
-ln -s /usr/src/app/backend/files/license.dat /usr/lib/prince/license/license.dat
+if [ ! -e /usr/lib/prince/license/license.dat ]; then
+  echo "Creating license.dat symlink..."
+  ln -s /usr/src/app/backend/files/license.dat /usr/lib/prince/license/license.dat
+else
+  echo "License file already exists, skipping symlink creation."
+fi
 
 # Run Django migrations
 echo "Running Django migrations..."

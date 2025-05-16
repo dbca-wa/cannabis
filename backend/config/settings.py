@@ -43,12 +43,28 @@ USE_TZ = True
 # endregion ========================================================================================
 
 # region Media, Roots and Storage =====================================================
+
+AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
+AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")
+AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
+
 ROOT_URLCONF = "config.urls"
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+
 MEDIA_URL = "/files/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "files")
 DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+
+
+STATICFILES_STORAGE = "storages.backends.azure_storage.AzureStorage"
+DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.azure_storage.AzureStorage",
+    },
+}
 
 # endregion ========================================================================================
 
