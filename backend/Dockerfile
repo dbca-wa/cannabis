@@ -43,7 +43,25 @@ ENV PATH="${PATH}:/usr/lib/prince/bin"
 
 # License setup for Prince
 RUN rm -f /usr/lib/prince/license/license.dat
-COPY ./files/license.dat /tmp/license.dat
+RUN if [ -f ./files/license.dat ]; then \
+    echo "Using provided license file"; \
+    cp ./files/license.dat /tmp/license.dat; \
+    else \
+    echo "Creating license file from environment variables"; \
+    echo "<license id=\"${PRINCE_LICENSE_ID:-missing_id}\">" > /tmp/license.dat && \
+    echo "    <name>Server License</name>" >> /tmp/license.dat && \
+    echo "    <vendor>YesLogic</vendor>" >> /tmp/license.dat && \
+    echo "    <product>Prince</product>" >> /tmp/license.dat && \
+    echo "    <version>15</version>" >> /tmp/license.dat && \
+    echo "    <end-user>Government of Western Australia</end-user>" >> /tmp/license.dat && \
+    echo "    <date>2024-05-31</date>" >> /tmp/license.dat && \
+    echo "    <signature>${PRINCE_LICENSE_SIGNATURE:-missing_signature}</signature>" >> /tmp/license.dat && \
+    echo "    <option id=\"upgrades\">20250531</option>" >> /tmp/license.dat && \
+    echo "    <option id=\"expires\">20250531</option>" >> /tmp/license.dat && \
+    echo "</license>" >> /tmp/license.dat; \
+    fi && \
+    mkdir -p /usr/lib/prince/license/ && \
+    mv /tmp/license.dat /usr/lib/prince/license/license.dat
 RUN mkdir -p /usr/lib/prince/license/ && mv /tmp/license.dat /usr/lib/prince/license/license.dat
 
 # Copy project files
