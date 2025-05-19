@@ -15,6 +15,9 @@ jobs:
         permissions:
             contents: read
             packages: write
+        strategy:
+            matrix:
+                target: [production, test]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -29,19 +32,22 @@ jobs:
               id: tag
               run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-            # Production Frontend Build
-            - name: Build and push Frontend image
+            # Frontend Build (bakes in vite variables to each image)
+            - name: Build and push Frontend image (${{ matrix.target }})
               uses: docker/build-push-action@v6
               with:
                   context: ./frontend
                   push: true
                   build-args: |
-                      VITE_PRODUCTION_BASE_URL=https://cannabis.dbca.wa.gov.au/
-                      VITE_PRODUCTION_BACKEND_API_URL=https://cannabis.dbca.wa.gov.au/api/v1/
+                      VITE_PRODUCTION_BASE_URL=${{ matrix.target == 'production' && 'https://cannabis.dbca.wa.gov.au/' || 'https://cannabis-test.dbca.wa.gov.au/' }}
+                      VITE_PRODUCTION_BACKEND_API_URL=${{ matrix.target == 'production' && 'https://cannabis.dbca.wa.gov.au/api/v1/' || 'https://cannabis-test.dbca.wa.gov.au/api/v1/' }}
                       VITE_CANNABIS_VERSION=${{ steps.tag.outputs.TAG_NAME }}
                   tags: |
-                      ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:${{ steps.tag.outputs.TAG_NAME }}
-                      ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:latest
+                      ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:${{ steps.tag.outputs.TAG_NAME }}${{ matrix.target == 'test' && '-test' || '' }}
+                      ${{ matrix.target == 'production' && '${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:latest' || '' }}
+                      ${{ matrix.target == 'test' && '${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:test' || '' }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
 
     build-backend:
         runs-on: ubuntu-latest
@@ -68,3 +74,5 @@ jobs:
                   tags: |
                       ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-backend:${{ steps.tag.outputs.TAG_NAME }}
                       ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-backend:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
