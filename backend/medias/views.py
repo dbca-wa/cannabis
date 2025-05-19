@@ -12,6 +12,8 @@ from rest_framework.status import (
     HTTP_404_NOT_FOUND,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
+from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.permissions import (
@@ -25,8 +27,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import transaction
 
-from .models import UserAvatar
+from .models import CertificatePDF, UserAvatar
 from .serializers import (
+    CertificatePDFSerializer,
     UserAvatarSerializer,
 )
 
@@ -133,3 +136,50 @@ class UserAvatarDetail(APIView):
         except NotFound:
             # If avatar doesn't exist, create a new one
             return self.post(request)
+
+
+class CertificatePDFList(APIView):
+    permission_classes = [AllowAny]  # Adjust permissions as needed
+
+    def get(self, request):
+        certificate_pdfs = CertificatePDF.objects.all()
+        serializer = CertificatePDFSerializer(certificate_pdfs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CertificatePDFSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=HTTP_201_CREATED)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class CertificatePDFDetail(APIView):
+    permission_classes = [AllowAny]  # Adjust permissions as needed
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]  # Allow file uploads for updates if needed
+
+    def get_object(self, id):
+        return get_object_or_404(CertificatePDF, id=id)
+
+    def get(self, request, id):
+        certificate_pdf = self.get_object(id)
+        serializer = CertificatePDFSerializer(certificate_pdf)
+        return Response(serializer.data)
+
+    def put(self, request, id):
+        certificate_pdf = self.get_object(id)
+        serializer = CertificatePDFSerializer(
+            certificate_pdf, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id):
+        certificate_pdf = self.get_object(id)
+        certificate_pdf.delete()
+        return Response(status=HTTP_204_NO_CONTENT)

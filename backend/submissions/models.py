@@ -1,39 +1,44 @@
 from django.db import models
-
-from backend.common.models import CommonModel
+from common.models import CommonModel
 
 
 # Create your models here.
 class Submission(CommonModel):
 
-    dbca_submitter = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        related_name="submissions",
-        null=False,
-    )
-
+    # Always required
     police_officer = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
+        "users.PoliceStaffProfile",
+        on_delete=models.CASCADE,
+        null=False,
+        blank=False,
         related_name="submissions_as_officer",
     )
 
+    # Not necessisarily someone submitting on someone else's behalf
     police_submitter = models.ForeignKey(
-        "users.User",
+        "users.PoliceStaffProfile",
         on_delete=models.SET_NULL,
         related_name="submissions_on_behalf",
+        null=True,
+        blank=True,
     )
+
+    # Assuming we have to process it
+    dbca_submitter = models.ForeignKey(
+        "users.DBCAStaffProfile",
+        on_delete=models.SET_NULL,
+        related_name="submissions",
+        null=True,
+        blank=True,
+    )
+
+    # suspected_as =
+
+    # assessment_date =
 
     # bags =
 
-    # marked =
-
-    # suspected =
-
     # security_movement_envelope =
-
-    # assessment_date =
 
     def __str__(self):
         return f"Avatar for {f"{self.id}-{self.submitter}-{self.created_at}"}"
@@ -43,6 +48,14 @@ class Submission(CommonModel):
 
 
 class Baggy(CommonModel):
+
+    submission = models.ForeignKey(
+        "submissions.Submission",
+        on_delete=models.CASCADE,
+        related_name="baggies",
+        null=False,
+        blank=False,
+    )
 
     class ItemType(models.TextChoices):
         SEED = "seed", "Seed/s"
@@ -92,7 +105,10 @@ class Baggy(CommonModel):
         DEGRADED = "degraded", "Degraded"
         CANNABIS = "cannabis", "Cannabis Sativa"
 
-    # botanist_determination =
+    botanist_determination = models.CharField(
+        DeterminationOptions.choices,
+        default=DeterminationOptions.CANNABIS,
+    )
 
 
 class Certificate(CommonModel):

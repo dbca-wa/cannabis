@@ -1,5 +1,5 @@
 from medias.models import UserAvatar
-from users.models import User
+from users.models import DBCAStaffProfile, PoliceStaffProfile, User
 from rest_framework import serializers
 
 
@@ -10,6 +10,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class TinyUserSerializer(serializers.ModelSerializer):
+
+    role = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -20,6 +23,19 @@ class TinyUserSerializer(serializers.ModelSerializer):
             "is_superuser",
             "role",
         )
+
+    def get_role(self, obj):
+        try:
+            return obj.dbca_staff_profile.role
+        except DBCAStaffProfile.DoesNotExist:
+            pass  # User is not a DBCA staff
+
+        try:
+            return obj.police_staff_profile.role
+        except PoliceStaffProfile.DoesNotExist:
+            pass  # User is not a police staff
+
+        return DBCAStaffProfile.RoleChoices.NONE  # User has no specific staff role
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -50,20 +66,3 @@ class UserAvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAvatar
         fields = ("id", "image")
-
-
-class ParticipantSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-    role = serializers.CharField(default="editor")
-
-    class Meta:
-        model = User
-        fields = ("id", "username", "email", "image", "role")
-
-    def get_image(self, obj):
-        # Get user's avatar or return empty string
-        try:
-            avatar = obj.avatar
-            return self.context["request"].build_absolute_uri(avatar.image.url)
-        except (AttributeError, UserAvatar.DoesNotExist):
-            return ""

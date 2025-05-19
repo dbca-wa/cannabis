@@ -41,8 +41,17 @@ class User(AbstractUser):
 
     objects = UserManager()
 
-    # To override default django, use same field and set editable to false
-    # first_name = models.CharField(max_length=150, blank=True, editable=False)
+    def __str__(self):
+        return f"{self.username}"
+
+
+class DBCAStaffProfile(models.Model):
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="dbca_staff_profile",
+    )
     it_asset_id = models.PositiveIntegerField(
         blank=True,
         null=True,
@@ -53,18 +62,10 @@ class User(AbstractUser):
         null=True,
     )
 
-    police_id = models.CharField(
-        max_length=40,
-        blank=True,
-        null=True,
-    )
-
     class RoleChoices(models.TextChoices):
-        NONE = "none", "None"
-        POLICE_UNSWORN = "police_unsworn", "Police (Unsworn)"
-        POLICE_SWORN = "police_sworn", "Police (Sworn)"
         BOTANIST = "botanist", "Approved Botanist"
         FINANCE = "finance", "Finance Officer"
+        NONE = "none", "None"
 
     role = models.CharField(
         choices=RoleChoices.choices,
@@ -73,4 +74,39 @@ class User(AbstractUser):
     )
 
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        return f"{self.user.username} (DBCA Staff: {self.get_role_display()})"
+
+
+class PoliceStaffProfile(models.Model):
+    user = models.OneToOneField(
+        "users.User",
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="police_staff_profile",
+    )
+    police_id = models.CharField(
+        max_length=40,
+        blank=True,
+        null=True,
+    )
+    station_membership = models.OneToOneField(
+        "organisations.PoliceStationMembership",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="police_staff_profile",
+    )
+
+    class RoleChoices(models.TextChoices):
+        POLICE_UNSWORN = "police_unsworn", "Police (Unsworn)"
+        POLICE_SWORN = "police_sworn", "Police (Sworn)"
+        NONE = "none", "None"
+
+    role = models.CharField(
+        choices=RoleChoices.choices,
+        default=RoleChoices.NONE,
+        max_length=20,
+    )
+
+    def __str__(self):
+        return f"{self.user.username} (Police Staff: {self.get_role_display()})"

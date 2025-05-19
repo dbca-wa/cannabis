@@ -2,14 +2,17 @@ import { createContext, useContext, ReactNode } from "react";
 import { AuthStore } from "./authStore";
 import { UIStore } from "./uiStore";
 import { RootStoreType } from "@/types";
+import { SearchFilterStore } from "./searchFilterStore";
 
 export class RootStore implements RootStoreType {
 	authStore: AuthStore;
 	uiStore: UIStore;
+	searchFilterStore: SearchFilterStore;
 
 	constructor() {
 		this.authStore = new AuthStore();
 		this.uiStore = new UIStore();
+		this.searchFilterStore = new SearchFilterStore();
 	}
 }
 
@@ -40,3 +43,4 @@ export const useStore = () => {
 // Convenience hooks
 export const useAuthStore = () => useStore().authStore;
 export const useUIStore = () => useStore().uiStore;
+export const useSearchFilterStore = () => useStore().searchFilterStore;

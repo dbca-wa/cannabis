@@ -202,7 +202,8 @@ CUSTOM_APPS = [
     "users.apps.UsersConfig",
     "auth.apps.AuthConfig",
     "medias.apps.MediasConfig",
-    # "organisations.apps.OrganisationsConfig",
+    "organisations.apps.OrganisationsConfig",
+    "submissions.apps.SubmissionsConfig",
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
