@@ -25,6 +25,7 @@ class LoginView(APIView):
 
     def post(self, request: Request) -> Response:
         """Handle user login"""
+        print("Someone is trying to login with creds", request.data)
         serializer = LoginSerializer(data=request.data)
 
         if not serializer.is_valid():

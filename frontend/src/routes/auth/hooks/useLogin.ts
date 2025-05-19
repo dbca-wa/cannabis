@@ -17,6 +17,7 @@ export const useLogin = () => {
 
 	const mutation = useMutation({
 		mutationFn: async (credentials: LoginCredentials) => {
+			console.log("Sending credentials", credentials);
 			const response = await authApi.login(credentials);
 			return response.data;
 		},

@@ -4,6 +4,7 @@ import { baseInstance } from "./axiosInstance";
 
 export const authApi = {
 	login: (credentials: { email: string; password: string }) => {
+		console.log(credentials);
 		return baseInstance.post("/auth/login/", credentials);
 	},
 

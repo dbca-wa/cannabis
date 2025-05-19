@@ -22,6 +22,22 @@ import { useLogin } from "./hooks/useLogin";
 const Login = () => {
 	// const [username, setUsername] = useState("");
 	// const [password, setPassword] = useState("");
+
+	const VERSION = import.meta.env.VITE_CANNABIS_VERSION || "Unset";
+	const VITE_PRODUCTION_BACKEND_API_URL = import.meta.env
+		.VITE_PRODUCTION_BACKEND_API_URL;
+
+	const baseBackendUrl =
+		process.env.NODE_ENV === "development"
+			? "http://127.0.0.1:8000/api/v1/"
+			: VITE_PRODUCTION_BACKEND_API_URL;
+
+	console.log({
+		VERSION,
+		VITE_PRODUCTION_BACKEND_API_URL,
+		baseBackendUrl,
+	});
+
 	const [formVisible, setFormVisible] = useState(false);
 	const authStore = useAuthStore();
 
@@ -132,13 +148,7 @@ const Login = () => {
 						</Button>
 
 						<div className="text-center text-sm">
-							Don't have an account?{" "}
-							<a
-								href="/auth/register"
-								className="cannabis-green hover:underline"
-							>
-								Register
-							</a>
+							Cannabis version:
 						</div>
 					</form>
 				</Form>
