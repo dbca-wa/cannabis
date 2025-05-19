@@ -15,9 +15,9 @@ jobs:
         permissions:
             contents: read
             packages: write
-        strategy:
-            matrix:
-                target: [production, test]
+        # strategy:
+        #     matrix:
+        #         target: [production, test]
 
         steps:
             - name: Checkout code
@@ -33,20 +33,27 @@ jobs:
               id: tag
               run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-            # Frontend Build (bakes in vite variables to each image)
-            - name: Build and push Frontend image (${{ matrix.target }})
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./frontend
-                  push: true
-                  build-args: |
-                      VITE_PRODUCTION_BASE_URL=${{ matrix.target == 'production' && 'https://cannabis.dbca.wa.gov.au/' || 'https://cannabis-test.dbca.wa.gov.au/' }}
-                      VITE_PRODUCTION_BACKEND_API_URL=${{ matrix.target == 'production' && 'https://cannabis.dbca.wa.gov.au/api/v1/' || 'https://cannabis-test.dbca.wa.gov.au/api/v1/' }}
-                      VITE_CANNABIS_VERSION=${{ steps.tag.outputs.TAG_NAME }}
-                  tags: |
-                      ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:${{ steps.tag.outputs.TAG_NAME }}${{ matrix.target == 'test' && '-test' || '' }}
-                      ${{ matrix.target == 'production' && format('{0}/{1}-frontend:latest', env.REGISTRY, env.REPO_NAME) || '' }}
-                      ${{ matrix.target == 'test' && format('{0}/{1}-frontend:test', env.REGISTRY, env.REPO_NAME) || '' }}
+            - name: Build and Push Test Image
+              env:
+                  VITE_PRODUCTION_BASE_URL: "https://cannabis-test.dbca.wa.gov.au/"
+                  VITE_PRODUCTION_BACKEND_API_URL: "https://cannabis-test.dbca.wa.gov.au/api/v1/"
+                  VITE_CANNABIS_VERSION: ${{ steps.tag.outputs.TAG_NAME }}
+              run: |
+                  docker build . --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
+                  docker push ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
+                  docker tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }} ghcr.io/dbca-wa/cannabis-frontend:test
+                  docker push ghcr.io/dbca-wa/cannabis-frontend:test
+
+            - name: Build and Push Production Image
+              env:
+                  VITE_PRODUCTION_BASE_URL: "https://cannabis.dbca.wa.gov.au/"
+                  VITE_PRODUCTION_BACKEND_API_URL: "https://cannabis.dbca.wa.gov.au/api/v1/"
+                  VITE_CANNABIS_VERSION: ${{ steps.tag.outputs.TAG_NAME }}
+              run: |
+                  docker build . --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:${{ steps.tag.outputs.TAG_NAME }}
+                  docker push ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
+                  docker tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }} ghcr.io/dbca-wa/cannabis-frontend:latest
+                  docker push ghcr.io/dbca-wa/cannabis-frontend:latest
 
     build-backend:
         runs-on: ubuntu-latest
