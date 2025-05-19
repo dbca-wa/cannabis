@@ -148,7 +148,15 @@ const Login = () => {
 						</Button>
 
 						<div className="text-center text-sm">
-							Cannabis version:
+							Cannabis version: {VERSION} (
+							{VITE_PRODUCTION_BACKEND_API_URL.includes("test")
+								? "TEST"
+								: VITE_PRODUCTION_BACKEND_API_URL.includes(
+										"local"
+								  )
+								? "LOCAL"
+								: "PROD"}
+							)
 						</div>
 					</form>
 				</Form>
