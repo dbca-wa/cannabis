@@ -39,7 +39,7 @@ jobs:
                   VITE_PRODUCTION_BACKEND_API_URL: "https://cannabis-test.dbca.wa.gov.au/api/v1/"
                   VITE_CANNABIS_VERSION: ${{ steps.tag.outputs.TAG_NAME }}
               run: |
-                  docker build . --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
+                  docker build ..frontend --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
                   docker push ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
                   docker tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }} ghcr.io/dbca-wa/cannabis-frontend:test
                   docker push ghcr.io/dbca-wa/cannabis-frontend:test
@@ -50,7 +50,7 @@ jobs:
                   VITE_PRODUCTION_BACKEND_API_URL: "https://cannabis.dbca.wa.gov.au/api/v1/"
                   VITE_CANNABIS_VERSION: ${{ steps.tag.outputs.TAG_NAME }}
               run: |
-                  docker build . --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:${{ steps.tag.outputs.TAG_NAME }}
+                  docker build ./frontend --build-arg VITE_CANNABIS_VERSION=$VITE_CANNABIS_VERSION --build-arg VITE_PRODUCTION_BASE_URL=$VITE_PRODUCTION_BASE_URL --build-arg VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL --tag ghcr.io/dbca-wa/cannabis-frontend:${{ steps.tag.outputs.TAG_NAME }}
                   docker push ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }}
                   docker tag ghcr.io/dbca-wa/cannabis-frontend:test${{ steps.tag.outputs.TAG_NAME }} ghcr.io/dbca-wa/cannabis-frontend:latest
                   docker push ghcr.io/dbca-wa/cannabis-frontend:latest
