@@ -18,6 +18,7 @@ jobs:
         strategy:
             matrix:
                 target: [production, test]
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -44,10 +45,8 @@ jobs:
                       VITE_CANNABIS_VERSION=${{ steps.tag.outputs.TAG_NAME }}
                   tags: |
                       ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:${{ steps.tag.outputs.TAG_NAME }}${{ matrix.target == 'test' && '-test' || '' }}
-                      ${{ matrix.target == 'production' && '${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:latest' || '' }}
-                      ${{ matrix.target == 'test' && '${{ env.REGISTRY }}/${{ env.REPO_NAME }}-frontend:test' || '' }}
-                  # cache-from: type=gha
-                  # cache-to: type=gha,mode=max
+                      ${{ matrix.target == 'production' && format('{0}/{1}-frontend:latest', env.REGISTRY, env.REPO_NAME) || '' }}
+                      ${{ matrix.target == 'test' && format('{0}/{1}-frontend:test', env.REGISTRY, env.REPO_NAME) || '' }}
 
     build-backend:
         runs-on: ubuntu-latest
@@ -74,5 +73,3 @@ jobs:
                   tags: |
                       ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-backend:${{ steps.tag.outputs.TAG_NAME }}
                       ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-backend:latest
-                  # cache-from: type=gha
-                  # cache-to: type=gha,mode=max
