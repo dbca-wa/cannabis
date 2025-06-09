@@ -4,10 +4,11 @@ import {
 	ResponsiveModalContent,
 	ResponsiveModalTrigger,
 } from "@/components/ui/custom/ResponsiveModal";
-import { Form } from "@/components/ui/form";
+// import { Form } from "@/components/ui/form";
 import { Plus } from "lucide-react";
+import { observer } from "mobx-react";
 
-const Submissions = () => {
+const Submissions = observer(() => {
 	return (
 		<div className="flex flex-col">
 			{/* Add Submission */}
@@ -20,9 +21,10 @@ const Submissions = () => {
 						</Button>
 					</ResponsiveModalTrigger>
 					<ResponsiveModalContent side={"bottom"}>
-						<form>
+						{/* <form>
 							<Form></Form>
-						</form>
+						</form> */}
+						hi
 					</ResponsiveModalContent>
 				</ResponsiveModal>
 			</div>
@@ -31,6 +33,6 @@ const Submissions = () => {
 			<div>List</div>
 		</div>
 	);
-};
+});
 
 export default Submissions;

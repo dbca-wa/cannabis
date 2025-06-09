@@ -1,4 +1,3 @@
-import { observer } from "mobx-react-lite";
 import { useUsers } from "@/hooks/tanstack/useUsers";
 import {
 	Table,
@@ -12,7 +11,7 @@ import UserItem from "@/components/users/UserItem";
 import { User } from "@/types";
 import { useEffect } from "react";
 
-const UsersList = observer(() => {
+const UsersList = () => {
 	const { users: usersQueryData, isLoading, error } = useUsers();
 	useEffect(() => {
 		if (!isLoading && usersQueryData) {
@@ -55,6 +54,6 @@ const UsersList = observer(() => {
 			</TableBody>
 		</Table>
 	);
-});
+};
 
 export default UsersList;

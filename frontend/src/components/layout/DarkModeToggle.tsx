@@ -1,14 +1,10 @@
-import { observer } from "mobx-react-lite";
-import { useUIStore } from "@/stores/rootStore";
 import { Button } from "@/components/ui/button";
 import { Sun, Moon } from "lucide-react";
 
-const DarkModeToggle = observer(() => {
-	const uiStore = useUIStore();
-
+const DarkModeToggle = () => {
 	const toggleTheme = () => {
 		// Toggle between light and dark
-		uiStore.setTheme(uiStore.theme === "dark" ? "light" : "dark");
+		// uiStore.setTheme(uiStore.theme === "dark" ? "light" : "dark");
 	};
 
 	return (
@@ -18,9 +14,9 @@ const DarkModeToggle = observer(() => {
 			onClick={toggleTheme}
 			aria-label="Toggle dark mode"
 		>
-			{uiStore.theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+			{/* {uiStore.theme === "dark" ? <Sun size={20} /> : <Moon size={20} />} */}
 		</Button>
 	);
-});
+};
 
 export default DarkModeToggle;

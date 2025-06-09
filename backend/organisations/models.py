@@ -3,7 +3,6 @@ from django.db import models
 from common.models import CommonModel
 
 
-# Create your models here.
 class PoliceStation(CommonModel):
     # Bare minimum, model entry requires name
     name = models.CharField(

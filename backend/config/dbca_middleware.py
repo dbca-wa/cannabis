@@ -9,15 +9,11 @@ from django.db.models import Q
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import ParseError
 
-# from organisations.models import Organisation
-
 # endregion ====================================================================================================
 
 User = get_user_model()
 
 
-# Extended custom middleware is necessary as the base middleware only has
-# specific fields available (This enables extending to populate more tables with data on creation)
 class DBCAMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         self.get_response = get_response
@@ -104,36 +100,28 @@ class DBCAMiddleware(MiddlewareMixin):
                 else:
                     settings.LOGGER.warning("IT Assets URL not configured")
 
-                organisation_instance = Organisation.objects.get(
-                    pk=1
-                )  # this will be DBCA organisation
-
-                # Create user and basic profile entities
+                # Create the base user first
                 user = User.objects.create_user(
                     username=attributemap["username"],
                     email=attributemap["email"],
-                    first_name=attributemap[
-                        "first_name"
-                    ],  # always have a reference to original from it assets
-                    last_name=attributemap[
-                        "last_name"
-                    ],  # always have a reference to original from it assets
-                    display_first_name=attributemap[
-                        "first_name"
-                    ],  # these will be adjustable
-                    display_last_name=attributemap[
-                        "last_name"
-                    ],  # these will be adjustable
-                    is_hidden=False,
+                    first_name=attributemap["first_name"],
+                    last_name=attributemap["last_name"],
                     is_staff=True,
-                    it_asset_id=it_asset_id,
-                    employee_id=employee_id,
-                    # Fks
-                    organisation=organisation_instance,
                 )
-
                 user.set_password(settings.EXTERNAL_PASS)
                 user.save()
+
+                # Create DBCA staff profile
+                from users.models import DBCAStaffProfile
+
+                dbca_profile = DBCAStaffProfile.objects.create(
+                    user=user,
+                    it_asset_id=it_asset_id,
+                    employee_id=employee_id,
+                    role=DBCAStaffProfile.RoleChoices.NONE,  # Default role
+                )
+
+                settings.LOGGER.info(f"Created DBCA staff profile for {user.username}")
 
                 return user
 
@@ -150,7 +138,7 @@ class DBCAMiddleware(MiddlewareMixin):
                     username=attributemap["username"]
                 ).first()
                 if existing_user:
-                    # Optionally update user details if needed
+                    # update user details if needed
                     existing_user.first_name = attributemap["first_name"]
                     existing_user.last_name = attributemap["last_name"]
                     existing_user.email = attributemap["email"]
@@ -221,6 +209,21 @@ class DBCAMiddleware(MiddlewareMixin):
                 user.backend = "django.contrib.auth.backends.ModelBackend"
                 login(request, user)
 
+        # Add profile information to request for easy access in views
+        # This works for both DBCA staff (created via SSO) and Police staff (created manually)
+        if hasattr(request.user, "dbca_staff_profile"):
+            request.user_profile = request.user.dbca_staff_profile
+            request.user_type = "dbca_staff"
+            request.user_role = request.user.dbca_staff_profile.role
+        elif hasattr(request.user, "police_staff_profile"):
+            request.user_profile = request.user.police_staff_profile
+            request.user_type = "police_staff"
+            request.user_role = request.user.police_staff_profile.role
+        else:
+            request.user_profile = None
+            request.user_type = "unknown"
+            request.user_role = None
+
         # Handling authenticated users (update last login)
         username = request.META.get("HTTP_REMOTE_USER")
         first_name = request.META.get("HTTP_X_FIRST_NAME")
@@ -228,7 +231,7 @@ class DBCAMiddleware(MiddlewareMixin):
         email = request.META.get("HTTP_X_EMAIL")
 
         if first_name and last_name and username and email:
-            user = User.objects.filter(username=email).first()
+            user = User.objects.filter(username=username).first()
             if user:
                 request.user = user
                 user.save(update_fields=["last_login"])

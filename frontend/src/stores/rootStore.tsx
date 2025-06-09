@@ -1,8 +1,14 @@
 import { createContext, useContext, ReactNode } from "react";
 import { AuthStore } from "./authStore";
 import { UIStore } from "./uiStore";
-import { RootStoreType } from "@/types";
 import { SearchFilterStore } from "./searchFilterStore";
+
+// Define the interface
+export interface RootStoreType {
+	authStore: AuthStore;
+	uiStore: UIStore;
+	searchFilterStore: SearchFilterStore;
+}
 
 export class RootStore implements RootStoreType {
 	authStore: AuthStore;
@@ -16,18 +22,23 @@ export class RootStore implements RootStoreType {
 	}
 }
 
+// Create singleton instance
+const rootStore = new RootStore();
+
 // Create the store context
 const StoreContext = createContext<RootStore | null>(null);
 
-// Create a provider component
+// Provider props interface
 interface StoreProviderProps {
 	children: ReactNode;
 }
 
+// Provider component
 export const StoreProvider = ({ children }: StoreProviderProps) => {
-	const root = new RootStore();
 	return (
-		<StoreContext.Provider value={root}>{children}</StoreContext.Provider>
+		<StoreContext.Provider value={rootStore}>
+			{children}
+		</StoreContext.Provider>
 	);
 };
 
@@ -44,3 +55,6 @@ export const useStore = () => {
 export const useAuthStore = () => useStore().authStore;
 export const useUIStore = () => useStore().uiStore;
 export const useSearchFilterStore = () => useStore().searchFilterStore;
+
+// Export singleton for direct access
+export { rootStore };

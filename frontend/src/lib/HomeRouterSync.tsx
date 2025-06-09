@@ -3,7 +3,7 @@ import { observer } from "mobx-react";
 import { useEffect } from "react";
 import { useLocation } from "react-router";
 
-const HomeRouterSync = observer(() => {
+const HomeRouterSyncComponent = observer(() => {
 	const uiStore = useUIStore();
 	const location = useLocation();
 
@@ -16,4 +16,4 @@ const HomeRouterSync = observer(() => {
 	return null;
 });
 
-export default HomeRouterSync;
+export default HomeRouterSyncComponent;

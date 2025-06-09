@@ -21,9 +21,6 @@ EXTERNAL_PASS = env("EXTERNAL_PASS")
 IT_ASSETS_ACCESS_TOKEN = env("IT_ASSETS_ACCESS_TOKEN")
 IT_ASSETS_USER = env("IT_ASSETS_USER")
 IT_ASSETS_URL = "https://itassets.dbca.wa.gov.au/api/v3/departmentuser/"
-if DEBUG or ON_TEST_NETWORK:
-    IT_ASSETS_URL = "https://itassets-uat.dbca.wa.gov.au/api/v3/departmentuser/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2500  # For admin mass gen
 PAGE_SIZE = 10
@@ -43,19 +40,21 @@ USE_TZ = True
 # endregion ========================================================================================
 
 # region Media, Roots and Storage =====================================================
-
-# AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
-# AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")
-# AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
-
 ROOT_URLCONF = "config.urls"
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-
-MEDIA_URL = "/files/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "files")
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+if DEBUG:
+    # Development: Use local file storage
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+    MEDIA_URL = "/files/"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "files")
+else:
+    # Production: Use Azure Blob Storage
+    DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
+    AZURE_ACCOUNT_NAME = env("AZURE_ACCOUNT_NAME")
+    AZURE_ACCOUNT_KEY = env("AZURE_ACCOUNT_KEY")
+    AZURE_CONTAINER = env("AZURE_CONTAINER", default="media")
 
 
 # STATICFILES_STORAGE = "storages.backends.azure_storage.AzureStorage"
@@ -193,14 +192,13 @@ SYSTEM_APPS = [
 
 THIRD_PARTY_APPS = [
     "rest_framework",
-    "rest_framework.authtoken",
     "corsheaders",
 ]
 
 CUSTOM_APPS = [
     "common.apps.CommonConfig",
     "users.apps.UsersConfig",
-    "auth.apps.AuthConfig",
+    # "auth.apps.AuthConfig",
     "medias.apps.MediasConfig",
     "organisations.apps.OrganisationsConfig",
     "submissions.apps.SubmissionsConfig",
@@ -214,16 +212,12 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    # "config.dbca_middleware.DBCAMiddleware",
+    "config.dbca_middleware.DBCAMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-# JWT Settings
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "alternative_secret")
-JWT_EXPIRY_HOURS = 48  # Token expiry time in hours (2 days)
 
 
 REST_FRAMEWORK = {
@@ -231,9 +225,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "auth.middleware.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
-        # "rest_framework.authentication.TokenAuthentication",
     ],
 }
 

@@ -1,5 +1,6 @@
 // router.tsx with error handling
 import { createBrowserRouter, redirect } from "react-router";
+import { authService } from "@/api/authService";
 
 // Layouts
 import AuthLayout from "@/components/layout/AuthLayout";
@@ -7,48 +8,57 @@ import MainLayout from "@/components/layout/MainLayout";
 
 // Pages
 import Login from "@/routes/auth/Login";
-import Register from "@/routes/auth/Register";
 import Home from "@/routes/dashboard/Home";
 import Users from "@/routes/users/Users";
-// import UserDetail from "@/routes/users/UserDetail";
 import Submissions from "@/routes/submissions/Submissions";
 import AdminPage from "./routes/admin/AdminPage";
-
-// Store utils
-import { getAuthStore } from "./stores/storeUtils";
-
-// Error component
 import ErrorPage from "./components/ErrorPage";
 import Organisations from "./routes/organisations/Organisations";
 
-// Guards
-const authGuard = () => {
-	const authStore = getAuthStore();
-	if (!authStore.isAuthenticated) {
+// Auth guards using session-based authentication
+const authGuard = async () => {
+	try {
+		const isAuthenticated = await authService.checkAuthStatus();
+		if (!isAuthenticated) {
+			return redirect("/auth/login");
+		}
+		return null;
+	} catch (error) {
+		console.error("Auth guard error:", error);
 		return redirect("/auth/login");
 	}
-	return null;
 };
 
-const guestGuard = () => {
-	const authStore = getAuthStore();
-	if (authStore.isAuthenticated) {
-		return redirect("/");
+const guestGuard = async () => {
+	try {
+		// In production, DBCA middleware handles auth automatically
+		if (process.env.NODE_ENV !== "development") {
+			const isAuthenticated = await authService.checkAuthStatus();
+			if (isAuthenticated) {
+				return redirect("/");
+			}
+		}
+		return null;
+	} catch {
+		return null;
 	}
-	return null;
 };
 
-const adminGuard = () => {
-	const authStore = getAuthStore();
-	// default auth guard
-	if (!authStore.isAuthenticated) {
+const adminGuard = async () => {
+	try {
+		const user = await authService.getCurrentUser();
+		if (!user) {
+			return redirect("/auth/login");
+		}
+		// Check if user is admin/superuser
+		if (!user.is_superuser && !user.is_staff) {
+			return redirect("/");
+		}
+		return null;
+	} catch (error) {
+		console.error("Admin guard error:", error);
 		return redirect("/auth/login");
 	}
-	// Prevent access for non-admins by redirecting to dashboard
-	if (!authStore.isAdmin) {
-		return redirect("/");
-	}
-	return null;
 };
 
 export const router = createBrowserRouter([
@@ -56,17 +66,18 @@ export const router = createBrowserRouter([
 		path: "/",
 		errorElement: <ErrorPage />,
 		children: [
-			// Auth routes (for non-authenticated users)
-			{
-				path: "auth",
-				element: <AuthLayout />,
-				loader: guestGuard,
-				errorElement: <ErrorPage />,
-				children: [
-					{ path: "login", element: <Login /> },
-					{ path: "register", element: <Register /> },
-				],
-			},
+			// Auth routes - only show in development
+			...(process.env.NODE_ENV === "development"
+				? [
+						{
+							path: "auth",
+							element: <AuthLayout />,
+							loader: guestGuard,
+							errorElement: <ErrorPage />,
+							children: [{ path: "login", element: <Login /> }],
+						},
+				  ]
+				: []),
 
 			// Protected routes (for authenticated users)
 			{
@@ -77,24 +88,15 @@ export const router = createBrowserRouter([
 					{ index: true, element: <Home /> },
 					{
 						path: "users",
-						children: [
-							{ index: true, element: <Users /> },
-							// { path: ":id", element: <UserDetail /> },
-						],
+						children: [{ index: true, element: <Users /> }],
 					},
 					{
 						path: "organisations",
-						children: [
-							{ index: true, element: <Organisations /> },
-							// { path: ":id", element: <OrganisationDetail /> },
-						],
+						children: [{ index: true, element: <Organisations /> }],
 					},
 					{
 						path: "submissions",
-						children: [
-							{ index: true, element: <Submissions /> },
-							// { path: ":id", element: <SubmissionDetail /> },
-						],
+						children: [{ index: true, element: <Submissions /> }],
 					},
 					{
 						path: "admin",

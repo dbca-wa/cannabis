@@ -1,21 +1,6 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuthStore } from "@/stores/rootStore";
-import { observer } from "mobx-react-lite";
 
-const AdminPage = observer(() => {
-	const authStore = useAuthStore();
-
-	if (!authStore.isAdmin) {
-		return (
-			<Alert>
-				<AlertDescription>
-					You must be an admin to view this page.
-				</AlertDescription>
-			</Alert>
-		);
-	}
-
+const AdminPage = () => {
 	return (
 		<div className="space-y-6">
 			<Card>
@@ -28,6 +13,6 @@ const AdminPage = observer(() => {
 			</Card>
 		</div>
 	);
-});
+};
 
 export default AdminPage;

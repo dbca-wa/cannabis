@@ -1,16 +1,13 @@
 import { Link } from "react-router";
-import { observer } from "mobx-react-lite";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/rootStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/api/usersApi";
 import { User } from "@/types";
 import { roleToReadable } from "@/lib/utils";
 
 // Pass the entire user object rather than destructuring props
-const UserItem = observer(({ user }: { user: User }) => {
-	const authStore = useAuthStore();
+const UserItem = ({ user }: { user: User }) => {
 	const queryClient = useQueryClient();
 
 	const deleteUserMutation = useMutation({
@@ -38,23 +35,21 @@ const UserItem = observer(({ user }: { user: User }) => {
 					<Link to={`/users/${user.id}`}>View</Link>
 				</Button>
 
-				{authStore.isAdmin && authStore.user && (
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={handleDeleteUser}
-						disabled={
-							deleteUserMutation.isPending ||
-							user.is_superuser ||
-							user.id === authStore?.user.id
-						}
-					>
-						Delete
-					</Button>
-				)}
+				<Button
+					variant="destructive"
+					size="sm"
+					onClick={handleDeleteUser}
+					disabled={
+						deleteUserMutation.isPending || user.is_superuser
+						// ||
+						// user.id === authStore?.user.id
+					}
+				>
+					Delete
+				</Button>
 			</TableCell>
 		</TableRow>
 	);
-});
+};
 
 export default UserItem;

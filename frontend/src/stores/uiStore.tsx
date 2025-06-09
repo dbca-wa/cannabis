@@ -121,6 +121,7 @@ export class UIStore {
 	getRouteForHomeSidebarItem = (sidebarItem: string): string => {
 		// Find the route that maps to this sidebar item
 		const entry = Object.entries(this.homeRouterMap).find(
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			([_, item]) => item === sidebarItem
 		);
 

@@ -4,10 +4,11 @@ import {
 	ResponsiveModalContent,
 	ResponsiveModalTrigger,
 } from "@/components/ui/custom/ResponsiveModal";
-import { Form } from "@/components/ui/form";
+// import { Form } from "@/components/ui/form";
 import { Plus } from "lucide-react";
+import { observer } from "mobx-react";
 
-const Organisations = () => {
+const Organisations = observer(() => {
 	return (
 		<div className="flex flex-col">
 			<div className="w-full flex justify-between items-center">
@@ -21,14 +22,15 @@ const Organisations = () => {
 						</Button>
 					</ResponsiveModalTrigger>
 					<ResponsiveModalContent side={"bottom"}>
-						<form>
+						{/* <form>
 							<Form></Form>
-						</form>
+						</form> */}
+						hi
 					</ResponsiveModalContent>
 				</ResponsiveModal>
 			</div>
 		</div>
 	);
-};
+});
 
 export default Organisations;
