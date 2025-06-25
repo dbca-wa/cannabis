@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useLogin } from "@/hooks/tanstack/useLogin";
-import { authService } from "@/api/authService";
+import { useAuthStore } from "@/stores/rootStore";
 
 const Login = () => {
 	const VERSION = import.meta.env.VITE_CANNABIS_VERSION || "Unset";
@@ -34,6 +34,7 @@ const Login = () => {
 
 	const [formVisible, setFormVisible] = useState(false);
 	const [loginError, setLoginError] = useState<string | null>(null);
+	const authStore = useAuthStore(); // Get from context
 
 	const form = useForm<z.infer<typeof loginSchema>>({
 		resolver: zodResolver(loginSchema),
@@ -55,15 +56,51 @@ const Login = () => {
 	};
 
 	useEffect(() => {
-		// Ensure CSRF token is available
-		authService.ensureCSRFToken();
+		console.log("Login component mounted");
+		console.log("NODE_ENV:", process.env.NODE_ENV);
+		console.log("AuthStore state:", {
+			isAuthenticated: authStore.isAuthenticated,
+			isLoading: authStore.isLoading,
+			error: authStore.error,
+			user: authStore.user,
+		});
+
+		// Test backend connectivity
+		const testBackend = async () => {
+			try {
+				const response = await fetch(
+					"http://127.0.0.1:8000/api/v1/users/csrf",
+					{
+						credentials: "include",
+					}
+				);
+				console.log(
+					"Backend test response:",
+					response.status,
+					response.statusText
+				);
+				if (response.ok) {
+					const text = await response.text();
+					console.log("Backend test body:", text);
+				} else {
+					console.error(
+						"Backend test failed with status:",
+						response.status
+					);
+				}
+			} catch (error) {
+				console.error("Backend connectivity test failed:", error);
+			}
+		};
+
+		testBackend();
 
 		const formTimer = setTimeout(() => {
 			setFormVisible(true);
 		}, 1600);
 
 		return () => clearTimeout(formTimer);
-	}, []);
+	}, [authStore]); // Add authStore to dependencies
 
 	// Only show login form in development
 	if (process.env.NODE_ENV !== "development") {

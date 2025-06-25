@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 import { cn } from "@/lib/utils";
 
@@ -52,31 +53,78 @@ const ResponsiveModalVariants = cva(
 
 interface ResponsiveModalContentProps
 	extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
-		VariantProps<typeof ResponsiveModalVariants> {}
+		VariantProps<typeof ResponsiveModalVariants> {
+	title?: string;
+	description?: string;
+	hideTitle?: boolean;
+	hideDescription?: boolean;
+}
 
 const ResponsiveModalContent = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Content>,
 	ResponsiveModalContentProps
->(({ side = "bottom", className, children, ...props }, ref) => (
-	<ResponsiveModalPortal>
-		<ResponsiveModalOverlay />
-		<DialogPrimitive.Content
-			ref={ref}
-			className={cn(
-				ResponsiveModalVariants({ side }),
-				"z-[999]",
-				className
-			)}
-			{...props}
-		>
-			{children}
-			<ResponsiveModalClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-				<X className="h-4 w-4" />
-				<span className="sr-only">Close</span>
-			</ResponsiveModalClose>
-		</DialogPrimitive.Content>
-	</ResponsiveModalPortal>
-));
+>(
+	(
+		{
+			side = "bottom",
+			className,
+			children,
+			title,
+			description,
+			hideTitle = false,
+			hideDescription = false,
+			...props
+		},
+		ref
+	) => (
+		<ResponsiveModalPortal>
+			<ResponsiveModalOverlay />
+			<DialogPrimitive.Content
+				ref={ref}
+				className={cn(
+					ResponsiveModalVariants({ side }),
+					"!min-w-200 !min-h-100 z-[999]",
+					className
+				)}
+				{...props}
+			>
+				{/* Required DialogTitle for accessibility */}
+				{title && !hideTitle ? (
+					<DialogPrimitive.Title className="text-lg font-semibold text-foreground mb-2">
+						{title}
+					</DialogPrimitive.Title>
+				) : (
+					<VisuallyHidden.Root>
+						<DialogPrimitive.Title>
+							{title || "Dialog"}
+						</DialogPrimitive.Title>
+					</VisuallyHidden.Root>
+				)}
+
+				{/* Required DialogDescription for accessibility */}
+				{description && !hideDescription ? (
+					<DialogPrimitive.Description className="text-sm text-muted-foreground mb-4">
+						{description}
+					</DialogPrimitive.Description>
+				) : (
+					<VisuallyHidden.Root>
+						<DialogPrimitive.Description>
+							{description || "Dialog content"}
+						</DialogPrimitive.Description>
+					</VisuallyHidden.Root>
+				)}
+
+				{children}
+
+				<ResponsiveModalClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+					<X className="h-4 w-4" />
+					<span className="sr-only">Close</span>
+				</ResponsiveModalClose>
+			</DialogPrimitive.Content>
+		</ResponsiveModalPortal>
+	)
+);
+
 ResponsiveModalContent.displayName = DialogPrimitive.Content.displayName;
 
 const ResponsiveModalHeader = ({

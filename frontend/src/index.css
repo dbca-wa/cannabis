@@ -17,13 +17,58 @@
 }
 
 @layer utilities {
+	/* Popo */
+
+	@keyframes police-siren {
+		0% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+		25% {
+			background-position: 50% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+		}
+		50% {
+			background-position: 100% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+		}
+		75% {
+			background-position: 50% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+		}
+		100% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+	}
+
+	/* @keyframes police-siren {
+		0% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+		50% {
+			background-position: 100% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+		}
+		100% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+	} */
+
 	/* Main cannabis green (leaf color) */
 	.cannabis-green {
 		color: #2d8a39;
 	}
 	.bg-cannabis-green {
 		background-color: #2d8a39;
+		/* transition: filter 0.2s ease; */
 	}
+
+	/* .bg-cannabis-green:hover {
+		filter: brightness(1.1) !important;
+	} */
 
 	.hover-cannabis-button:hover {
 		background-color: rgba(45, 138, 57, 0.1);

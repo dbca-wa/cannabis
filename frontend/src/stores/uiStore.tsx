@@ -7,6 +7,7 @@ const ROUTE_TO_HOME_SIDEBAR_MAP: Record<string, string> = {
 	"/users": "Users",
 	"/organisations": "Organisations",
 	"/submissions": "Submissions",
+	"/certificates": "Certificates",
 	"/admin": "Admin",
 };
 

@@ -134,6 +134,45 @@ if not DEBUG and not PRINCE_SERVER_URL.startswith("/usr"):
 ALLOW_LIST = list(set(ALLOW_LIST))
 ALLOWED_HOSTS = ALLOW_LIST
 
+# CORS ================================================================
+CORS_ALLOW_CREDENTIALS = True
+if DEBUG:
+    # Development CORS settings
+    CORS_ALLOWED_ORIGINS = [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    ]
+else:
+    # Production CORS settings
+    CORS_ALLOWED_ORIGINS = [
+        "https://cannabis.dbca.wa.gov.au",
+        "https://cannabis-test.dbca.wa.gov.au",
+    ]
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# CSRF ================================================================
+CSRF_COOKIE_NAME = "cannabis_cookie"
+
 CSRF_TRUSTED_ORIGINS = [
     # Prod
     "https://cannabis.dbca.wa.gov.au",
@@ -141,42 +180,38 @@ CSRF_TRUSTED_ORIGINS = [
     "https://cannabis-test.dbca.wa.gov.au",
     # Local
     "http://127.0.0.1:3000",
-    "http://127.0.0.1",
+    "http://localhost:3000",
 ]
+
 
 if DEBUG:
-    # Ensure all dbca subroutes allowed and local dev
-    CORS_ALLOWED_ORIGIN_REGEXES = [
-        # r"^https://.*\.dbca\.wa\.gov\.au$", #duplicate policies
-        r"^http://127\.0\.0\.1:3000$",
-    ]
+    # Allow CSRF for development
+    CSRF_COOKIE_AGE = 31449600  # 1 year for development
+    SESSION_COOKIE_AGE = 31449600  # 1 year for development
+else:
+    # Production cookie ages
+    CSRF_COOKIE_AGE = 31449600  # 1 year
+    SESSION_COOKIE_AGE = 1209600  # 2 weeks
 
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "OPTIONS",
-    "PUT",
-    "DELETE",
-]
-CORS_ALLOW_HEADERS = [
-    "X-CSRFToken",
-    "Content-Type",
-    "Authorization",
-]
+if DEBUG:
+    # Development settings
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = False  # Must be False so JavaScript can read it
 
-CSRF_COOKIE_NAME = "cannabis_cookie"  # Set custom CSRF cookie name
-
-if not DEBUG:
+else:
+    # Production settings
     SESSION_COOKIE_DOMAIN = ".dbca.wa.gov.au"
     CSRF_COOKIE_DOMAIN = ".dbca.wa.gov.au"
-
-    # Ensure SameSite attribute allows cross-site requests if needed
-    CSRF_COOKIE_SAMESITE = "None"
     SESSION_COOKIE_SAMESITE = "None"
-    # Secure attribute is also recommended if using HTTPS
-    CSRF_COOKIE_SECURE = DEBUG == False
-    SESSION_COOKIE_SECURE = DEBUG == False
+    CSRF_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = False
 
 # endregion ========================================================================================
 

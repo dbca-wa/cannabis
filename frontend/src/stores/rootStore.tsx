@@ -2,23 +2,39 @@ import { createContext, useContext, ReactNode } from "react";
 import { AuthStore } from "./authStore";
 import { UIStore } from "./uiStore";
 import { SearchFilterStore } from "./searchFilterStore";
+import { StationStore } from "./stationStore";
 
 // Define the interface
 export interface RootStoreType {
 	authStore: AuthStore;
 	uiStore: UIStore;
 	searchFilterStore: SearchFilterStore;
+	stationsStore: StationStore;
 }
 
 export class RootStore implements RootStoreType {
 	authStore: AuthStore;
 	uiStore: UIStore;
 	searchFilterStore: SearchFilterStore;
+	stationsStore: StationStore;
 
 	constructor() {
 		this.authStore = new AuthStore();
 		this.uiStore = new UIStore();
 		this.searchFilterStore = new SearchFilterStore();
+		this.stationsStore = new StationStore();
+
+		// Initialize stations when store is created
+		this.initializeStores();
+	}
+
+	private async initializeStores() {
+		// Initialize stations store after auth is ready (should run after auth finishes)
+		try {
+			await this.stationsStore.initialize();
+		} catch (error) {
+			console.error("Failed to initialize stations store:", error);
+		}
 	}
 }
 
@@ -55,6 +71,7 @@ export const useStore = () => {
 export const useAuthStore = () => useStore().authStore;
 export const useUIStore = () => useStore().uiStore;
 export const useSearchFilterStore = () => useStore().searchFilterStore;
+export const useStationsStore = () => useStore().stationsStore;
 
 // Export singleton for direct access
 export { rootStore };

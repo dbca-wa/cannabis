@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.forms import ValidationError
 
 
 class UserManager(BaseUserManager):
@@ -41,6 +42,44 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    def clean(self):
+        """Validate that user doesn't have both profile types"""
+        super().clean()
+
+        # Skip validation for new users (no pk yet)
+        if not self.pk:
+            return
+
+        has_dbca = hasattr(self, "dbca_staff_profile")
+        has_police = hasattr(self, "police_staff_profile")
+
+        if has_dbca and has_police:
+            raise ValidationError(
+                "User cannot have both DBCA Staff and Police Staff profiles. "
+                "Please choose only one profile type."
+            )
+
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def get_profile_type(self):
+        """Get the type of profile this user has"""
+        if hasattr(self, "dbca_staff_profile"):
+            return "dbca"
+        elif hasattr(self, "police_staff_profile"):
+            return "police"
+        return "none"
+
+    def get_role_display(self):
+        """Get the display name for the user's role"""
+        if hasattr(self, "dbca_staff_profile"):
+            return f"DBCA: {self.dbca_staff_profile.get_role_display()}"
+        elif hasattr(self, "police_staff_profile"):
+            return f"Police: {self.police_staff_profile.get_seniority_display()}"
+        return "No Role Assigned"
+
     def __str__(self):
         return f"{self.username}"
 
@@ -76,6 +115,19 @@ class DBCAStaffProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} (DBCA Staff: {self.get_role_display()})"
 
+    def clean(self):
+        """Validate that user doesn't already have a police profile"""
+        super().clean()
+        if hasattr(self.user, "police_staff_profile"):
+            raise ValidationError(
+                f"User {self.user.username} already has a Police Staff profile. "
+                "Remove the Police profile before adding a DBCA profile."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 
 class PoliceStaffProfile(models.Model):
     user = models.OneToOneField(
@@ -83,11 +135,6 @@ class PoliceStaffProfile(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
         related_name="police_staff_profile",
-    )
-    police_id = models.CharField(
-        max_length=40,
-        blank=True,
-        null=True,
     )
     station_membership = models.OneToOneField(
         "organisations.PoliceStationMembership",
@@ -97,16 +144,47 @@ class PoliceStaffProfile(models.Model):
         related_name="police_staff_profile",
     )
 
-    class RoleChoices(models.TextChoices):
-        POLICE_UNSWORN = "police_unsworn", "Police (Unsworn)"
-        POLICE_SWORN = "police_sworn", "Police (Sworn)"
-        NONE = "none", "None"
+    police_id = models.CharField(
+        max_length=40,
+        blank=True,
+        null=True,
+    )
+    sworn = models.BooleanField(
+        default=False,
+    )
 
-    role = models.CharField(
-        choices=RoleChoices.choices,
-        default=RoleChoices.NONE,
-        max_length=20,
+    class SeniorityChoices(models.TextChoices):
+        UNSET = "unset", "Unset"
+        OFFICER = "officer", "Officer"
+        PROBATION_CONSTABLE = "probationary_constable", "Probationary Constable"
+        CONSTABLE = "constable", "Cnstable"
+        DETECTIVE = "detective", "Detective"
+        FIRST_CLASS_CONSTABLE = "first_class_constable", "First Class Constable"
+        SENIOR_CONSTABLE = "senior_constable", "Senior Constable"
+        DETECTIVE_SENIOR_CONSTABLE = (
+            "detective_senior_constable",
+            "Detective Senior Constable",
+        )
+        CONVEYING_OFFICER = "conveying_officer", "Conveying Officer"
+
+    seniority = models.CharField(
+        choices=SeniorityChoices.choices,
+        default=SeniorityChoices.OFFICER,
+        max_length=30,
     )
 
     def __str__(self):
-        return f"{self.user.username} (Police Staff: {self.get_role_display()})"
+        return f"{self.user.username} (Police Staff: {self.get_seniority_display()})"
+
+    def clean(self):
+        """Validate that user doesn't already have a DBCA profile"""
+        super().clean()
+        if hasattr(self.user, "dbca_staff_profile"):
+            raise ValidationError(
+                f"User {self.user.username} already has a DBCA Staff profile. "
+                "Remove the DBCA profile before adding a Police profile."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)

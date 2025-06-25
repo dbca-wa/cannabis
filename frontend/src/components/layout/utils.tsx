@@ -1,4 +1,5 @@
 import { Building, FileText, Home, Settings, Users } from "lucide-react";
+import { GrCertificate } from "react-icons/gr";
 
 export const REGULAR_SIDEBAR_ITEMS = [
 	{
@@ -26,6 +27,13 @@ export const REGULAR_SIDEBAR_ITEMS = [
 		name: "Submissions",
 		icon: <FileText size={20} />,
 		activeIcon: <FileText size={20} />,
+		// tooltipContent: <p>Submissions Made</p>,
+		adminOnly: false,
+	},
+	{
+		name: "Certificates",
+		icon: <GrCertificate size={20} />,
+		activeIcon: <GrCertificate size={20} />,
 		// tooltipContent: <p>Submissions Made</p>,
 		adminOnly: false,
 	},

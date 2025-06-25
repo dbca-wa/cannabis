@@ -23,22 +23,30 @@ const axiosInstance = axios.create({
 
 // Function to get CSRF token from cookies
 const getCSRFToken = () => {
-	const name = "cannabis_cookie="; // Your custom CSRF cookie name from settings
+	const name = "cannabis_cookie=";
 	const decodedCookie = decodeURIComponent(document.cookie);
-	console.log("All cookies:", decodedCookie); // Debug line
+	console.log("Looking for CSRF cookie 'cannabis_cookie'");
+	console.log("All cookies:", decodedCookie);
+
+	if (!decodedCookie) {
+		console.log("No cookies found at all");
+		return null;
+	}
+
 	const ca = decodedCookie.split(";");
 	for (let i = 0; i < ca.length; i++) {
 		let c = ca[i];
 		while (c.charAt(0) === " ") {
 			c = c.substring(1);
 		}
+		console.log(`Checking cookie ${i}: "${c}"`);
 		if (c.indexOf(name) === 0) {
 			const token = c.substring(name.length, c.length);
-			console.log("Found CSRF token:", token); // Debug line
+			console.log("Found CSRF token:", token);
 			return token;
 		}
 	}
-	console.log("CSRF token not found"); // Debug line
+	console.log("CSRF token 'cannabis_cookie' not found");
 	return null;
 };
 
@@ -64,27 +72,27 @@ axiosInstance.interceptors.request.use(
 );
 
 // Response interceptor for session handling
-axiosInstance.interceptors.response.use(
-	(response) => {
-		return response;
-	},
-	async (error) => {
-		const originalRequest = error.config;
+// axiosInstance.interceptors.response.use(
+// 	(response) => {
+// 		return response;
+// 	},
+// 	async (error) => {
+// 		const originalRequest = error.config;
 
-		// Handle 401/403 Unauthorized errors (session expired)
-		if (
-			(error.response?.status === 401 ||
-				error.response?.status === 403) &&
-			!originalRequest._retry
-		) {
-			originalRequest._retry = true;
+// 		// Handle 401/403 Unauthorized errors (session expired)
+// 		if (
+// 			(error.response?.status === 401 ||
+// 				error.response?.status === 403) &&
+// 			!originalRequest._retry
+// 		) {
+// 			originalRequest._retry = true;
 
-			// Redirect to login page
-			window.location.href = "/auth/login";
-		}
+// 			// Redirect to login page
+// 			window.location.href = "/auth/login";
+// 		}
 
-		return Promise.reject(error);
-	}
-);
+// 		return Promise.reject(error);
+// 	}
+// );
 
 export default axiosInstance;

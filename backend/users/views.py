@@ -304,7 +304,7 @@ class Login(APIView):
                 status=HTTP_400_BAD_REQUEST,
             )
 
-        username = req.data.get("email")
+        username = req.data.get("username")
         password = req.data.get("password")
 
         if not username or not password:

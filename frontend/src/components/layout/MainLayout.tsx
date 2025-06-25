@@ -8,7 +8,7 @@ const MainLayout = () => {
 			<HomeRouterSyncComponent />
 			<Sidebar />
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<main className="flex-1 overflow-y-auto p-6 text-black">
+				<main className="flex-1 overflow-y-auto p-6 text-black select-none">
 					<Outlet />
 				</main>
 			</div>
