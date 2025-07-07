@@ -44,9 +44,8 @@ const AddUserForm = observer(
 			defaultValues: {
 				first_name: "",
 				last_name: "",
-				username: "",
 				email: "",
-				role: "none",
+				role: "police",
 				police_id: "",
 				station: "",
 				rank: "officer",
@@ -60,12 +59,21 @@ const AddUserForm = observer(
 		const handleFormSubmit = (data: AddUserFormData) => {
 			console.log("Form data:", data);
 
+			// Generate username based on email or name + year
+			let username = "";
+			if (data.email && data.email.trim()) {
+				username = data.email.trim();
+			} else {
+				const currentYear = new Date().getFullYear();
+				username = `${data.first_name.toLowerCase()}${data.last_name.toLowerCase()}${currentYear}`;
+			}
+
 			// Transform the data to match backend expectations
 			const transformedData = {
 				first_name: data.first_name,
 				last_name: data.last_name,
-				username: data.username,
-				email: data.email,
+				username: username,
+				email: data.email || "",
 				role: data.role,
 				// Police profile fields
 				police_id: data.police_id || "",
@@ -120,29 +128,12 @@ const AddUserForm = observer(
 							)}
 						</div>
 
-						{/* Username */}
-						<div>
-							<Input
-								{...register("username")}
-								type="text"
-								placeholder="Username"
-								className={
-									errors.username ? "border-red-500" : ""
-								}
-							/>
-							{errors.username && (
-								<p className="text-red-500 text-xs mt-1">
-									{errors.username.message}
-								</p>
-							)}
-						</div>
-
-						{/* Email */}
-						<div>
+						{/* Email - spans both columns */}
+						<div className="col-span-2">
 							<Input
 								{...register("email")}
 								type="email"
-								placeholder="Email"
+								placeholder="Email (optional)"
 								className={errors.email ? "border-red-500" : ""}
 							/>
 							{errors.email && (
@@ -150,6 +141,11 @@ const AddUserForm = observer(
 									{errors.email.message}
 								</p>
 							)}
+							<p className="text-gray-500 text-xs mt-1 text-justify">
+								If no email is provided, username is generated
+								from name and year. If the user requires access,
+								an email must be provided.
+							</p>
 						</div>
 					</div>
 				</ModalSection>

@@ -32,7 +32,7 @@ export interface OrganisationsResponse {
 export const organisationsApi = {
 	// Get all police stations
 	getAllPoliceStations: async (): Promise<PoliceStation[]> => {
-		const response = await axiosInstance.get("/organisations");
+		const response = await axiosInstance.get("/organisations/");
 		return response.data;
 	},
 

@@ -30,7 +30,7 @@ import { User } from "@/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpDown, ChevronDown, EllipsisVertical } from "lucide-react";
 import { observer } from "mobx-react";
-import React from "react";
+import React, { useEffect } from "react";
 import { MdDelete, MdEdit, MdScience } from "react-icons/md";
 
 import { cn } from "@/lib/utils";
@@ -56,11 +56,11 @@ const UsersList = observer(() => {
 	// GET USER DATA ======================================================
 	// Fetch data
 	const { users: usersQueryData, isLoading, error } = useUsers();
-	// useEffect(() => {
-	// 	if (!isLoading && usersQueryData) {
-	// 		console.log(usersQueryData);
-	// 	}
-	// }, [isLoading, usersQueryData]);
+	useEffect(() => {
+		if (!isLoading && usersQueryData) {
+			console.log(usersQueryData);
+		}
+	}, [isLoading, usersQueryData]);
 
 	// Mutations
 	const queryClient = useQueryClient();
@@ -86,6 +86,13 @@ const UsersList = observer(() => {
 			header: "ID",
 			cell: ({ row }) => {
 				return <div>{row.getValue("id")}</div>;
+			},
+		},
+		{
+			accessorKey: "name",
+			header: "Name",
+			cell: ({ row }) => {
+				return <div>{row.getValue("name")}</div>;
 			},
 		},
 		{

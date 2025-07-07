@@ -1,10 +1,10 @@
-// router.tsx with error handling
-import { createBrowserRouter, redirect } from "react-router";
+// router.tsx with unified auth guard
+import { createBrowserRouter } from "react-router";
+import { rootAuthGuard, adminGuard } from "./guards/authGuards";
 
 // Layouts
 import AuthLayout from "@/components/layout/AuthLayout";
 import MainLayout from "@/components/layout/MainLayout";
-import { rootStore } from "@/stores/rootStore"; // Use rootStore instead
 
 // Pages
 import Login from "@/routes/auth/Login";
@@ -28,109 +28,10 @@ import { AddCertificateModal } from "./routes/certificates/AddCertificateModal";
 import { EditCertificateModal } from "./routes/certificates/EditCertificateModal";
 import { DeleteCertificateModal } from "./routes/certificates/DeleteCertificateModal";
 
-// Get authStore from rootStore
-const authStore = rootStore.authStore;
-
-// Auth guards using session-based authentication
-const authGuard = async () => {
-	try {
-		console.log("AuthGuard: Starting, isLoading:", authStore.isLoading);
-
-		// Wait for the auth store to finish its initial check
-		while (authStore.isLoading) {
-			console.log("AuthGuard: Waiting for auth check to complete...");
-			// Simple delay - auth check completes very quickly
-			await new Promise((resolve) => setTimeout(resolve, 10));
-		}
-
-		console.log("AuthGuard: Auth check completed");
-		console.log(
-			"AuthGuard: Final auth state - isAuthenticated:",
-			authStore.isAuthenticated
-		);
-
-		if (!authStore.isAuthenticated) {
-			console.log(
-				"AuthGuard: User not authenticated, redirecting to login"
-			);
-			return redirect("/auth/login");
-		}
-
-		console.log("AuthGuard: User authenticated, allowing access");
-		return null;
-	} catch (error) {
-		console.error("Auth guard error:", error);
-		return redirect("/auth/login");
-	}
-};
-const guestGuard = async () => {
-	try {
-		// In production, DBCA middleware handles auth automatically
-		if (process.env.NODE_ENV !== "development") {
-			// Wait for auth check if still loading
-			if (authStore.isLoading) {
-				await new Promise<void>((resolve) => {
-					const checkInterval = setInterval(() => {
-						if (!authStore.isLoading) {
-							clearInterval(checkInterval);
-							resolve();
-						}
-					}, 50);
-
-					setTimeout(() => {
-						clearInterval(checkInterval);
-						resolve();
-					}, 5000);
-				});
-			}
-
-			if (authStore.isAuthenticated) {
-				return redirect("/");
-			}
-		}
-		return null;
-	} catch {
-		return null;
-	}
-};
-
-const adminGuard = async () => {
-	try {
-		// Wait for auth check if still loading
-		if (authStore.isLoading) {
-			await new Promise<void>((resolve) => {
-				const checkInterval = setInterval(() => {
-					if (!authStore.isLoading) {
-						clearInterval(checkInterval);
-						resolve();
-					}
-				}, 50);
-
-				setTimeout(() => {
-					clearInterval(checkInterval);
-					resolve();
-				}, 5000);
-			});
-		}
-
-		if (!authStore.isAuthenticated) {
-			return redirect("/auth/login");
-		}
-
-		if (!authStore.isAdmin) {
-			return redirect("/");
-		}
-
-		return null;
-	} catch (error) {
-		console.error("Admin guard error:", error);
-		return redirect("/auth/login");
-	}
-};
-
 export const router = createBrowserRouter([
 	{
 		path: "/",
+		loader: rootAuthGuard, // Apply unified guard to all routes
 		errorElement: <ErrorPage />,
 		children: [
 			// Auth routes - only show in development
@@ -139,8 +40,6 @@ export const router = createBrowserRouter([
 						{
 							path: "auth",
 							element: <AuthLayout />,
-							loader: guestGuard,
-							errorElement: <ErrorPage />,
 							children: [{ path: "login", element: <Login /> }],
 						},
 				  ]
@@ -149,8 +48,6 @@ export const router = createBrowserRouter([
 			// Protected routes (for authenticated users)
 			{
 				element: <MainLayout />,
-				loader: authGuard,
-				errorElement: <ErrorPage />,
 				children: [
 					{ index: true, element: <Home /> },
 					{
@@ -228,7 +125,7 @@ export const router = createBrowserRouter([
 					{
 						path: "admin",
 						element: <AdminPage />,
-						loader: adminGuard,
+						loader: adminGuard, // Additional admin check
 					},
 				],
 			},

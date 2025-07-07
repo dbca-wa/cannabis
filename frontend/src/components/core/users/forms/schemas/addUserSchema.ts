@@ -4,8 +4,11 @@ export const addUserSchema = z
 	.object({
 		first_name: z.string().min(1, "First name is required"),
 		last_name: z.string().min(1, "Last name is required"),
-		username: z.string().min(3, "Username must be at least 3 characters"),
-		email: z.string().email("Invalid email address"),
+		email: z
+			.string()
+			.email("Invalid email address")
+			.optional()
+			.or(z.literal("")),
 		role: z.enum(["none", "botanist", "police", "finance"]),
 
 		// Police-specific fields (conditional validation handled in form)
@@ -27,3 +30,5 @@ export const addUserSchema = z
 			path: ["police_id"],
 		}
 	);
+
+export type AddUserFormData = z.infer<typeof addUserSchema>;

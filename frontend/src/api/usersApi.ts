@@ -12,7 +12,7 @@ export const usersApi = {
 	},
 
 	createUser: async (userData: any) => {
-		const response = await axiosInstance.post("/users", userData);
+		const response = await axiosInstance.post("/users/", userData);
 		return response.data;
 	},
 

@@ -4,20 +4,24 @@ from django.forms import ValidationError
 
 
 class UserManager(BaseUserManager):
-    """Custom user manager for email-based authentication"""
+    """Custom user manager for username-based authentication with optional email"""
 
-    def create_user(self, email, password=None, **extra_fields):
-        """Create and save a user with the given email and password"""
-        if not email:
-            raise ValueError("The Email field must be set")
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        """Create and save a user with the given username and optional email"""
+        if not username:
+            raise ValueError("The Username field must be set")
+
+        # Normalise email if provided
+        if email:
+            email = self.normalize_email(email)
+
+        user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
-        """Create and save a superuser with the given email and password"""
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        """Create and save a superuser with the given username and optional email"""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -26,19 +30,21 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
     # Make email required and unique
-    email = models.EmailField(unique=True)
+    # email = models.EmailField(unique=True)
 
-    # Set email as the username field
+    # Make it optional, but unique - users will still need an email to login
+    email = models.EmailField(unique=True, blank=True, null=True)
+
+    # Set username as username field (swapped from email - problematic with external users w/o emails)
     USERNAME_FIELD = "email"
 
-    # Since username comes from AbstractUser, it should be in REQUIRED_FIELDS
-    # Also, email should NOT be in REQUIRED_FIELDS since it's the USERNAME_FIELD
-    REQUIRED_FIELDS = ["username"]
+    # Email is not required for account creation anymore
+    REQUIRED_FIELDS = ["email"] if False else []  # Empty required fields
 
     objects = UserManager()
 
@@ -61,6 +67,9 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         """Override save to run validation"""
+        # Set email to None if it's empty string to maintain uniqueness
+        if self.email == "":
+            self.email = None
         self.clean()
         super().save(*args, **kwargs)
 
@@ -79,6 +88,9 @@ class User(AbstractUser):
         elif hasattr(self, "police_staff_profile"):
             return f"Police: {self.police_staff_profile.get_seniority_display()}"
         return "No Role Assigned"
+
+    def get_display_name(self):
+        return f"{self.first_name} {self.last_name}"
 
     def __str__(self):
         return f"{self.username}"

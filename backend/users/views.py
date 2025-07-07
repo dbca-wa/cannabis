@@ -15,6 +15,7 @@ from rest_framework.status import (
     HTTP_201_CREATED,
     HTTP_401_UNAUTHORIZED,
     HTTP_404_NOT_FOUND,
+    HTTP_409_CONFLICT,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
@@ -135,20 +136,62 @@ class Users(APIView):
 
     def post(self, req):
         settings.LOGGER.info(msg=f"{req.user} is creating user")
-        ser = UserSerializer(data=req.data)
+
+        # Extract data from request
+        first_name = req.data.get("first_name", "").strip()
+        last_name = req.data.get("last_name", "").strip()
+        email = req.data.get("email", "").strip()
+        role = req.data.get("role", "")
+
+        # Generate username logic
+        username = ""
+        if email:
+            username = email
+            # Check if user with this email already exists
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {"error": "A user with this email already exists"},
+                    status=HTTP_409_CONFLICT,
+                )
+        else:
+            # Generate username from first name, last name, and current year
+            from datetime import datetime
+
+            current_year = datetime.now().year
+            username = f"{first_name.lower()}{last_name.lower()}{current_year}"
+
+            # Check if this generated username already exists, if so, add a counter
+            counter = 1
+            base_username = username
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+        # Prepare data for serializer
+        user_data = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "role": role,
+            "police_id": req.data.get("police_id", ""),
+            "station_id": req.data.get("station_id"),
+            "rank": req.data.get("rank", "officer"),
+            "is_sworn": req.data.get("is_sworn", False),
+        }
+
+        # Only include email if it's not empty!
+        if email:
+            user_data["email"] = email
+        # If no email, don't include the field at all, or set it to None
+        else:
+            user_data["email"] = None
+
+        ser = UserSerializer(data=user_data)
 
         if ser.is_valid():
             try:
                 with transaction.atomic():
-                    first_name = req.data.get("firstName", "").capitalize()
-                    last_name = req.data.get("lastName", "").capitalize()
-
-                    new_user = ser.save(
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_staff=False,
-                    )
-
+                    new_user = ser.save()
                     new_user.set_password(settings.EXTERNAL_PASS)
                     new_user.save()
 

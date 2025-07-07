@@ -17,8 +17,10 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useLogin } from "@/hooks/tanstack/useLogin";
 import { useAuthStore } from "@/stores/rootStore";
+import { observer } from "mobx-react";
+import { useNavigate } from "react-router";
 
-const Login = () => {
+const Login = observer(() => {
 	const VERSION = import.meta.env.VITE_CANNABIS_VERSION || "Unset";
 	const VITE_PRODUCTION_BACKEND_API_URL = import.meta.env
 		.VITE_PRODUCTION_BACKEND_API_URL;
@@ -35,6 +37,7 @@ const Login = () => {
 	const [formVisible, setFormVisible] = useState(false);
 	const [loginError, setLoginError] = useState<string | null>(null);
 	const authStore = useAuthStore(); // Get from context
+	const navigate = useNavigate();
 
 	const form = useForm<z.infer<typeof loginSchema>>({
 		resolver: zodResolver(loginSchema),
@@ -65,41 +68,41 @@ const Login = () => {
 			user: authStore.user,
 		});
 
-		// Test backend connectivity
-		const testBackend = async () => {
-			try {
-				const response = await fetch(
-					"http://127.0.0.1:8000/api/v1/users/csrf",
-					{
-						credentials: "include",
-					}
-				);
-				console.log(
-					"Backend test response:",
-					response.status,
-					response.statusText
-				);
-				if (response.ok) {
-					const text = await response.text();
-					console.log("Backend test body:", text);
-				} else {
-					console.error(
-						"Backend test failed with status:",
-						response.status
-					);
-				}
-			} catch (error) {
-				console.error("Backend connectivity test failed:", error);
-			}
-		};
+		// // Test backend connectivity
+		// const testBackend = async () => {
+		// 	try {
+		// 		const response = await fetch(
+		// 			"http://127.0.0.1:8000/api/v1/users/csrf",
+		// 			{
+		// 				credentials: "include",
+		// 			}
+		// 		);
+		// 		console.log(
+		// 			"Backend test response:",
+		// 			response.status,
+		// 			response.statusText
+		// 		);
+		// 		if (response.ok) {
+		// 			const text = await response.text();
+		// 			console.log("Backend test body:", text);
+		// 		} else {
+		// 			console.error(
+		// 				"Backend test failed with status:",
+		// 				response.status
+		// 			);
+		// 		}
+		// 	} catch (error) {
+		// 		console.error("Backend connectivity test failed:", error);
+		// 	}
+		// };
 
-		testBackend();
+		// testBackend();
 
-		const formTimer = setTimeout(() => {
-			setFormVisible(true);
-		}, 1600);
+		// const formTimer = setTimeout(() => {
+		// 	setFormVisible(true);
+		// }, 1600);
 
-		return () => clearTimeout(formTimer);
+		// return () => clearTimeout(formTimer);
 	}, [authStore]); // Add authStore to dependencies
 
 	// Only show login form in development
@@ -216,6 +219,6 @@ const Login = () => {
 			</CardContent>
 		</Card>
 	);
-};
+});
 
 export default Login;

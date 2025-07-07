@@ -8,6 +8,9 @@ class UserSerializer(serializers.ModelSerializer):
     # Add fields for role and profile data
     role = serializers.CharField(required=False)
 
+    # Make email optional and allow blank
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+
     # Police profile fields
     police_id = serializers.CharField(required=False, allow_blank=True)
     station_id = serializers.IntegerField(
@@ -24,6 +27,105 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         exclude = ["password"]
+
+    def validate_email(self, value):
+        """Custom validation for email field"""
+        # If email is empty/None, that's fine - return None for the database
+        if not value or not value.strip():
+            return None
+
+        # If email is provided, validate it's unique
+        email = value.strip()
+        if self.instance:
+            # For updates, exclude current instance
+            if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError(
+                    "A user with this email already exists."
+                )
+        else:
+            # For creation, check if email exists
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError(
+                    "A user with this email already exists."
+                )
+
+        return email
+
+    def create(self, validated_data):
+        """Custom create method to handle profile creation"""
+        # Extract profile-related data
+        role = validated_data.pop("role", "none")
+        police_id = validated_data.pop("police_id", "")
+        station_id = validated_data.pop("station_id", None)
+        rank = validated_data.pop("rank", "officer")
+        is_sworn = validated_data.pop("is_sworn", False)
+
+        # DBCA fields
+        dbca_role = validated_data.pop("dbca_role", None)
+        it_asset_id = validated_data.pop("it_asset_id", None)
+        employee_id = validated_data.pop("employee_id", "")
+
+        with transaction.atomic():
+            # Create the user using the custom manager
+            # The manager expects username as the first parameter (swapped from email due to external users)
+            username = validated_data.pop("username")
+            email = validated_data.pop("email", None)
+
+            user = User.objects.create_user(
+                username=username, email=email, **validated_data
+            )
+
+            # Create profile based on role
+            self._handle_role_update(
+                user,
+                role,
+                {
+                    "police_id": police_id,
+                    "station_id": station_id,
+                    "rank": rank,
+                    "is_sworn": is_sworn,
+                    "dbca_role": dbca_role,
+                    "it_asset_id": it_asset_id,
+                    "employee_id": employee_id,
+                },
+            )
+
+            return user
+
+    def create(self, validated_data):
+        """Custom create method to handle profile creation"""
+        # Extract profile-related data
+        role = validated_data.pop("role", "none")
+        police_id = validated_data.pop("police_id", "")
+        station_id = validated_data.pop("station_id", None)
+        rank = validated_data.pop("rank", "officer")
+        is_sworn = validated_data.pop("is_sworn", False)
+
+        # DBCA fields
+        dbca_role = validated_data.pop("dbca_role", None)
+        it_asset_id = validated_data.pop("it_asset_id", None)
+        employee_id = validated_data.pop("employee_id", "")
+
+        with transaction.atomic():
+            # Create the user
+            user = User.objects.create_user(**validated_data)
+
+            # Create profile based on role
+            self._handle_role_update(
+                user,
+                role,
+                {
+                    "police_id": police_id,
+                    "station_id": station_id,
+                    "rank": rank,
+                    "is_sworn": is_sworn,
+                    "dbca_role": dbca_role,
+                    "it_asset_id": it_asset_id,
+                    "employee_id": employee_id,
+                },
+            )
+
+            return user
 
     def update(self, instance, validated_data):
         # Extract profile-related data
@@ -157,11 +259,11 @@ class UserSerializer(serializers.ModelSerializer):
         # Add role information
         data["role"] = self._get_user_role(instance)
 
-        # Add police_data structure to match your UserDetail interface
+        # Add police_data structure to match UserDetail interface
         if hasattr(instance, "police_staff_profile"):
             profile = instance.police_staff_profile
 
-            # Create police_data object matching your IPoliceData interface
+            # Create police_data object matching IPoliceData interface
             station_data = None
             if profile.station_membership and profile.station_membership.station:
                 station_data = {
@@ -235,17 +337,22 @@ class UserSerializer(serializers.ModelSerializer):
 
 class TinyUserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
             "id",
+            "name",
             "username",
             "email",
             "is_staff",
             "is_superuser",
             "role",
         )
+
+    def get_name(self, obj):
+        return obj.get_display_name()
 
     def get_role(self, obj):
         """Return the user's role type: 'dbca', 'police', or 'none'"""
@@ -266,23 +373,24 @@ class TinyUserSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
         fields = ("email", "username", "password")
 
     def validate_email(self, value):
-        """
-        Check if email already exists
-        """
-        if User.objects.filter(email=value).exists():
+        """Check if email already exists"""
+        if not value or not value.strip():
+            return None
+
+        email = value.strip()
+        if User.objects.filter(email=email).exists():
             raise serializers.ValidationError("Email already registered")
-        return value
+        return email
 
     def validate_username(self, value):
-        """
-        Check if username already exists
-        """
+        """Check if username already exists"""
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already taken")
         return value
