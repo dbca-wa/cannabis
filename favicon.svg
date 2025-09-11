@@ -1,22 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background green square with white border -->
-  <rect x="4" y="4" width="80" height="80" fill="#20662a" stroke="white" stroke-width="1.5"/>
-  
-  <!-- Atomic Mass (top left) -->
-  <text x="8" y="14" fill="#d1d5db" font-size="8">12.011</text>
-  
-  <!-- Oxidation states (top right) -->
-  <text x="80" y="14" fill="#d1d5db" font-size="8" text-anchor="end">-4</text>
-  <text x="80" y="24" fill="#d1d5db" font-size="8" text-anchor="end">+2</text>
-  <text x="80" y="34" fill="#d1d5db" font-size="8" text-anchor="end">+4</text>
-  
-  <!-- Atomic number (bottom left) -->
-  <text x="8" y="71" fill="#d1d5db" font-size="16" font-weight="bold">6</text>
-  
-  <!-- Electron configuration (bottom left, below atomic number) -->
-  <text x="9" y="80" fill="#d1d5db" font-size="8">2-4</text>
-  
-  <!-- Element Symbol (center) -->
-  <text x="44" y="44" fill="white" font-size="48" font-weight="bold" text-anchor="middle" dominant-baseline="middle" dy=".1em">C</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128">
+  <defs>
+    <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="50%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(50,62.5) scale(1.75)">
+    <path d="M0,-35 Q-3,-25 -2,-10 Q-1,0 0,5 Q1,0 2,-10 Q3,-25 0,-35 Z" fill="url(#leafGradient)" />
+    
+    <path d="M-8,-30 Q-12,-22 -10,-8 Q-8,0 -6,3 Q-4,-2 -5,-12 Q-6,-22 -8,-30 Z" fill="url(#leafGradient)" transform="rotate(-15)" />
+    <path d="M-15,-25 Q-18,-18 -16,-6 Q-14,0 -12,2 Q-10,-3 -11,-10 Q-13,-18 -15,-25 Z" fill="url(#leafGradient)" transform="rotate(-30)" />
+    <path d="M-20,-18 Q-22,-12 -20,-4 Q-18,0 -16,1 Q-14,-2 -15,-6 Q-17,-12 -20,-18 Z" fill="url(#leafGradient)" transform="rotate(-50)" />
+    
+    <path d="M     8,-30 Q12,-22 10,-8 Q8,0 6,3 Q4,-2 5,-12 Q6,-22 8,-30 Z" fill="url(#leafGradient)" transform="rotate(15)" />
+    <path d="M15,-25 Q18,-18 16,-6 Q14,0 12,2 Q10,-3 11,-10 Q13,-18 15,-25 Z" fill="url(#leafGradient)" transform="rotate(30)" />
+    <path d="M20,-18 Q22,-12 20,-4 Q18,0 16,1 Q14,-2 15,-6 Q17,-12 20,-18 Z" fill="url(#leafGradient)" transform="rotate(50)" />
+  </g>
 </svg>
