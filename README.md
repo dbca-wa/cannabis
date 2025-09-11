@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="favicon.svg" alt="C" width="350" height="350"/>
+  <img src="frontend/public/favicon.svg" alt="C" width="350" height="350"/>
   <div>👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️</div>
 </div>
 
