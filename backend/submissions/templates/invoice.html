@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice</title>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 48px;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #111;
+            line-height: 1.5;
+            font-size: 14px;
+            background: white;
+            /* Create a flex container for the entire page */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Main content wrapper */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header styling - matching React exactly */
+        #document_header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        #header_left {
+            margin-top: -24px;
+        }
+        
+        #header_left img {
+            height: 4rem;
+            width: auto;
+            object-fit: contain;
+        }
+        
+        #header_right {
+            display: flex;
+            flex-direction: column;
+            margin-top: -24px;
+        }
+        
+        .tax-invoice-title {
+            text-transform: uppercase;
+            font-size: 2.25rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .invoice-number {
+            color: #6b7280;
+            justify-content: flex-end;
+            width: 100%;
+            text-align: right;
+            margin: 0;
+        }
+        
+        /* Police/Case Info - matching React */
+        .police-case-info {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            margin: 12px 0;
+        }
+
+        .police-case-left,
+        .police-case-right {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .police-case-right {
+            text-align: right;
+        }
+
+        .police-case-info div {
+            text-transform: uppercase;
+        }
+
+        .police-case-info span {
+            font-weight: bold;
+        }
+        
+        /* Info section - matching React exactly */
+        .info-section {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            border-top: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            margin: 12px 0 16px 0;
+        }
+        
+        .info-column {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+        }
+        
+        .info-column:first-child {
+            flex: 1;
+            padding-left: 0;
+            border-right: 1px solid #d1d5db;
+        }
+        
+        .info-column:last-child {
+            flex: 1;
+        }
+        
+        .info-column h2 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .info-column p {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 0;
+        }
+        
+        .company-name {
+            font-weight: 600 !important;
+        }
+        
+        /* Table styling - matching React exactly */
+        .table-container {
+            margin-top: 1rem;
+            /* Allow this to grow and take available space */
+            flex: 1;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        .invoice-table thead tr {
+            border-bottom: 1px solid #d1d5db;
+        }
+        
+        .invoice-table th {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #111827;
+            padding: 0.5rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+        
+        /* Column styling - matching React with fixed widths */
+        .item-col {
+            width: 10%;
+            padding: 0.5rem 1rem 0.5rem 0;
+            text-align: left;  
+        }
+        
+        .service-col {
+            width: 45%;
+            padding: 0.5rem;
+            text-align: left;  
+        }
+        
+        .qty-col {
+            width: 10%;
+            padding: 0.5rem 1rem 0.5rem 0;
+            text-align: center !important;
+        }
+        
+        .rate-col {
+            width: 15%;
+            padding: 0.5rem;
+            text-align: right !important;
+        }
+        
+        .total-col {
+            width: 20%;
+            padding: 0.5rem;
+            text-align: right !important;
+        }
+                
+        .service-row td {
+            font-size: 0.875rem;
+            color: #111827;
+            font-weight: 300;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+
+        .service-row .item-cell {
+            padding: 0.5rem 0.5rem 0.5rem 1rem;
+            width: 10%;
+        }
+
+        .service-row .service-cell {
+            padding: 0;
+            width: 45%;
+        }
+
+        .service-row .qty-cell {
+            padding: 0;
+            padding-top: 0.5rem;
+            text-align: center !important;
+            width: 10%;
+        }
+
+        .service-row .rate-cell {
+            padding: 0;
+            padding-top: 0.5rem;
+            text-align: right;
+            width: 15%;
+        }
+
+        .service-row .total-cell {
+            padding: 0;
+            padding-top: 0.5rem;
+            text-align: right;
+            width: 20%;
+        }   
+
+        .service-row.last-service td {
+            padding-bottom: 0.5rem !important;
+        }
+
+        .item-number {
+            font-weight: bold;
+        }
+        
+        .service-name {
+            font-weight: 500;
+            margin-bottom: 0;
+            padding-top: 0.5rem;
+            display: block;
+        }
+        
+        .service-description {
+            color: #6b7280;
+            display: block;
+        }
+        
+        /* Summary rows - matching React */
+        .table-separator {
+            border-bottom: 1px solid #d1d5db;
+        }
+                                
+        .summary-row {
+            height: auto;
+            width: 100%;
+            display: flex;
+        }
+
+        .summary-cell {
+            width: 100%;
+            padding: 0.5rem;
+            padding-bottom: 0 !important;
+            font-size: 0.875rem;
+            text-align: right;
+            justify-self: right;
+            justify-content: right;
+        }
+
+        .summary-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-value {
+            color: #111827;
+            font-weight: 600;
+        }
+        
+        /* Amount due styling - matching React green border */
+        .amount-due td {
+            font-weight: 500;
+            border-bottom: 1px solid black;
+        }
+        
+        /* Footer styling - matching React */
+        .footer-section {
+            margin-top: auto;
+        }
+        
+        .payment-terms {
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #d1d5db;
+        }
+        
+        .payment-terms p {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .footer-spacer {
+            height: 36px;
+        }
+        
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .footer-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+        
+        .footer-left span {
+            font-weight: bold;
+        }
+        
+        .footer-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+        
+        .footer-right span {
+            font-weight: normal;
+        }
+        
+        .footer-contacts {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        /* Remittance section - bottom positioning */
+        .remittance-container {
+            /* Position at bottom of page */
+            margin-top: auto;
+            /* Prevent breaking inside */
+            page-break-inside: avoid;
+            break-inside: avoid;
+            /* Ensure minimum space requirements */
+            min-height: 200px; 
+        }
+        
+        .dashed-separator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+        
+        .dashed-line {
+            border-top: 1px dashed #9ca3af;
+            width: 100%;
+        }
+        
+        /* Hide dashed line when remittance is on new page */
+        .remittance-new-page .dashed-separator {
+            display: none;
+        }
+        
+        .remittance-advice {
+            margin-top: -8px;
+        }
+        
+        #remittance-header {
+            margin-bottom: 4px;
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        #remittance-header-left {
+            margin-bottom: 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        #remittance-header-left img {
+            margin-top: -8px;
+            height: 75px;
+            width: 75px;
+            object-fit: contain;
+        }
+
+        #remittance-header-right {
+            margin-bottom: 0;
+        }
+
+        .remittance-title {
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .remittance-subtitle {
+            font-size: 0.5rem !important;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .remittance-abn {
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        
+        .remittance-grid {
+            display: table;
+            width: 100%;
+            margin-top: 0px;
+        }
+        
+        .remittance-row {
+            display: table-row;
+        }
+        
+        .remittance-section {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+
+        .right {
+            text-align: right;
+            justify-self: right;
+            justify-content: right;
+        }
+
+        .left {
+            text-align: left;
+            justify-self: left;
+            justify-content: left;
+        }
+        
+        .remittance-section h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .remittance-section p {
+            font-size: 8px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .remittance-contact-section {
+            vertical-align: top;
+        }
+
+        .remittance-contact-section h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .remittance-contact-section p {
+            font-size: 8px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .remittance-table {
+            font-size: 12px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .remittance-table td {
+            padding: 0;
+            text-align: left !important;
+            justify-self: left !important;
+            justify-content: left !important;
+        }
+{% comment %} 
+        .remittance-table td:first-child {
+            text-align: left !important;
+            justify-self: left !important;
+            justify-content: left !important;
+        } {% endcomment %}
+
+        .remittance-table td:last-child {
+            text-align: right !important;
+            justify-self: right !important;
+            justify-content: right !important;
+        }
+        
+        .remittance-table .label {
+            font-weight: bold;
+        }
+        
+        /* PrinceXML specific page break rules */
+        @media print {
+            .remittance-container {
+                page-break-inside: avoid;
+            }
+            
+            /* Force new page if remittance doesn't fit */
+            .remittance-new-page {
+                page-break-before: always;
+            }
+        }
+        
+        /* PrinceXML page break handling */
+        @prince-pdf {
+            prince-shrink-to-fit: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <!-- Header - matching React structure exactly -->
+        <div id="document_header">
+            <div id="header_left">
+                <img src="{{ logo_path }}" alt="DBCA Logo">
+            </div>
+            <div id="header_right">
+                <div class="tax-invoice-title">Tax Invoice</div>
+                <p class="invoice-number">#{{ invoice_id }}</p>
+            </div>
+        </div>
+
+        <!-- Police/Case Info - matching React -->
+        <div class="police-case-info">
+            <div class="police-case-left">
+                <div><span>Issued:</span> {{ issue_date }}</div>
+                <div><span>Due:</span> {{ due_date }}</div>
+            </div>
+            <div class="police-case-right">
+                <div><span>Att:</span> {{ police_name }}, {{ police_id }}</div>
+                <div><span>Case:</span> {{ case_number }}</div>
+            </div>
+        </div>
+
+        <!-- Company Info - matching React exactly -->
+        <div class="info-section">
+            <div class="info-column">
+                <h2>From</h2>
+                <p class="company-name">{{ dbca_org_data.name }}</p>
+                <p>{{ dbca_org_data.address }}</p>
+                <p>{{ dbca_org_data.city }}, {{ dbca_org_data.state }} {{ dbca_org_data.zip }}</p>
+                <p>{{ dbca_org_data.tax_id }}</p>
+            </div>
+            <div class="info-column">
+                <h2>Billed To</h2>
+                <p class="company-name">{{ billed_to.name }}</p>
+                <p>{{ billed_to.address }}</p>
+                <p>{{ billed_to.city }}, {{ billed_to.state }} {{ billed_to.zip }}</p>
+                <p>{{ billed_to.phone }}</p>
+            </div>
+        </div>
+
+        <div class="footer-info" style="padding-left:0.25rem; padding-right:0.25rem;">
+            <div class="footer-left">
+                <span>Approved Botanist</span>
+                <span>Enquiries</span>
+            </div>
+            
+            <div class="footer-right">
+                <span>{{ approved_botanist }}</span>
+
+                <div class="footer-contacts">
+                    <span>{{ finance_officer }}</span>
+                    <span>{{ dbca_org_data.phone }}</span>
+                    <span>{{ dbca_org_data.email }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Table - matching React exactly -->
+        <div class="table-container">
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th class="item-col">Item</th>
+                        <th class="service-col">Service</th>
+                        <th class="qty-col">Qty</th>
+                        <th class="rate-col">Rate</th>
+                        <th class="total-col">Line total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr class="service-row {% if forloop.last %}last-service{% endif %}">
+                        <td class="item-cell">
+                            <span class="item-number">{{ forloop.counter }}</span>
+                        </td>
+                        <td class="service-cell">
+                            <div>
+                                <div class="service-name">{{ service.name }}</div>
+                                {% if service.description %}
+                                <div class="service-description">{{ service.description }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="qty-cell">{{ service.quantity }}</td>
+                        <td class="rate-cell">A${{ service.rate|floatformat:2 }}</td>
+                        <td class="total-cell">A${{ service.line_total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-separator">
+                        <td colspan="5" style="height: 1px;"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="summary-row">
+                <div class="summary-cell" style="flex-shrink: none"></div>
+                <div class="summary-cell">
+                    <div class="summary-label">Subtotal</div>
+                    <div class="summary-value">A${{ subtotal|floatformat:2 }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="summary-label">GST ({{ tax_rate_percent }}%)</div>
+                    <div class="summary-value">A${{ tax|floatformat:2 }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="summary-label">Total Due</div>
+                    <div class="summary-value">A${{ total|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remittance Advice Section with proper page break handling -->
+    <div class="remittance-container">
+        <!-- Dashed line separator - only shown if remittance fits on same page -->
+        <div class="dashed-separator">
+            <div class="dashed-line"></div>
+        </div>
+
+        <!-- Remittance Advice Section -->
+        <div class="remittance-advice">
+            <div id="remittance-header">
+                <div id="remittance-header-left">
+                    <img src="{{ logo_square }}" alt="DBCA Logo" />
+                    <div style="text-align: left;">
+                        <h2 class="remittance-title">Remittance Advice</h2>
+                        <p class="remittance-subtitle">PLEASE DETACH AND RETURN WITH YOUR PAYMENT</p>
+                        <p class="remittance-subtitle">{{ dbca_org_data.tax_id }}</p>
+                    </div> 
+                </div>
+                
+                <div id="remittance-header-right">
+                      <div class="remittance-contact-section right">
+                        <h3>Remittance Advice to be faxed to</h3>
+                        <p>{{ finance_officer }}</p>
+                        <p>Fax {{ dbca_org_data.phone }}</p>
+                        <p>Email: {{ dbca_org_data.email }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="remittance-grid">
+                <div class="remittance-row">
+                    <div class="remittance-section left">
+                        <h3>Pay By Cheque</h3>
+                        <p>Make cheque payable to: {{ dbca_org_data.name }}</p>
+                        <p>Mail to: {{ dbca_org_data.name }}</p>
+                        <p>{{ dbca_org_data.address }}</p>
+                        <p>{{ dbca_org_data.city }}, {{ dbca_org_data.state }} {{ dbca_org_data.zip }}</p>
+                    </div>
+                    <div class="remittance-section right">
+                        <h3>Pay By Direct Deposit</h3>
+                        <p>BSB 066-040</p>
+                        <p>A/C No 11300006</p>
+                        <p>Account Name: {{ dbca_org_data.name }}</p>
+                        <p>Reference: {{ invoice_id }}</p>
+                    </div>
+                </div>
+            </div> 
+        </div>
+
+        <div class="" style="margin-top: 12px">
+            <table class="remittance-table">
+                <tbody>
+                    <tr>
+                        <td>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="label">Customer Number</span>
+                                <span>{{ police_id }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="label">Invoice Number</span>
+                                <span>{{ invoice_id }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="label">Invoice Date</span>
+                                <span>{{ issue_date }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="label">Invoice Total</span>
+                                <span>A${{ total|floatformat:2 }}</span>
+                            </div>
+                        </td>
+                    </tr>                     
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

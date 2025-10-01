@@ -5,7 +5,9 @@
 
 ## System Overview
 
-WIP: The Cannabis system is a digital platform developed for DBCA's Herbarium. This application streamlines the documentation and certification of determinations made by Approved Botanists for suspected cannabis specimens, providing legally admissible evidence for law enforcement and court proceedings.
+WIP: v1.0.0
+
+The Cannabis system is a digital platform developed for DBCA's Herbarium. This application streamlines the documentation and certification of determinations made by Approved Botanists for suspected cannabis specimens, providing legally admissible evidence for law enforcement and court proceedings.
 
 ### Workflow Process
 
@@ -47,6 +49,21 @@ This application is built using a modern tech stack:
 ## Purpose
 
 This system modernises the cannabis identification workflow by replacing an outdated Microsoft Access database with a robust digital platform. It ensures seamless processing of specimen determinations while maintaining secure, court-admissible evidentiary records that meet legal standards for prosecution.
+
+## Development Setup
+
+This project has been setup to run entirely locally or in a Docker environment.
+You can use docker-compose.dev.yml to establish a local docker setup or use bun and poetry:
+
+```shell
+  # From frontend folder after bun install
+  bun run dev
+```
+
+```shell
+  # From backend folder after poetry init/shell and install
+  python manage.py runserver
+```
 
 ---
 

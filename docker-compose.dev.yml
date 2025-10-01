@@ -1,0 +1,68 @@
+services:
+    # Frontend Development Container
+    cannabis-frontend-dev:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile.dev
+        ports:
+            - "3000:3000"
+        volumes:
+            - ./frontend:/app
+            - /app/node_modules
+        environment:
+            - NODE_ENV=development
+            - VITE_NODE_ENV=development
+            - VITE_DEVELOPMENT_BACKEND_API_URL=http://localhost:8000/v1/api/
+        command: bun run vite --host=0.0.0.0 --port=3000
+        depends_on:
+            - cannabis-backend-dev
+        networks:
+            - cannabis-dev
+
+    # Backend Development Container
+    cannabis-backend-dev:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.dev
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./backend:/usr/src/app/backend
+            # - backend-prince:/usr/lib/prince
+            - ./backend/files:/usr/src/app/backend/files
+        environment:
+            - DJANGO_SETTINGS_MODULE=config.settings
+            - DEBUG=True
+            - PYTHONPATH=/usr/src/app/backend
+        # extra_hosts:
+        #     - "host.docker.internal:host-gateway"
+        env_file:
+            - ./backend/.development.env
+        command: python manage.py runserver 0.0.0.0:8000
+        depends_on:
+            - db
+        networks:
+            - cannabis-dev
+
+    # Add the new database service
+    db:
+        image: postgres:17
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_DB=cannabis
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=123
+        ports:
+            # Expose for DB tools like DBeaver/pgAdmin
+            - "54320:5432"
+        networks:
+            - cannabis-dev
+
+volumes:
+    backend-prince: # Volume to cache Prince XML installation
+    postgres_data: # Volume for persistent DB data
+
+networks:
+    cannabis-dev:
+        driver: bridge

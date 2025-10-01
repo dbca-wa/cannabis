@@ -1,0 +1,59 @@
+# Development Dockerfile for Django backend with hot reloading
+FROM python:3.13-slim-bookworm
+
+# Development environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/usr/src/app/backend
+
+# Install development dependencies including Prince XML
+RUN echo "Installing Development Dependencies." && apt-get update && apt-get install -y \
+    -o Acquire::Retries=4 --no-install-recommends \
+    build-essential gcc g++ \
+    curl wget ca-certificates \
+    gdebi \
+    vim git \
+    && apt-get upgrade -y
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Install Poetry
+RUN pip install --upgrade pip
+RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/etc/poetry python3 -
+ENV PATH="${PATH}:/etc/poetry/bin"
+
+# Install Prince XML
+RUN DEB_FILE=prince.deb \
+    && ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "arm64" ]; then \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.1-1_debian12_arm64.deb"; \
+    else \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.1-1_debian12_amd64.deb"; \
+    fi \
+    && wget -O ${DEB_FILE} $PRINCE_URL \
+    && yes | gdebi ${DEB_FILE} \
+    && rm -f ${DEB_FILE}
+
+COPY license.dat /usr/lib/prince/license/license.dat
+COPY license.dat /lib/prince/license/license.dat
+
+
+# Configure Poetry (don't create virtual env since we're in container)
+RUN poetry config virtualenvs.create false
+
+# Copy project files for dependency installation
+COPY pyproject.toml poetry.lock* ./backend/
+WORKDIR /usr/src/app/backend
+
+# Install all dependencies (including dev dependencies)
+RUN poetry install --no-root
+
+# Set PATH for Prince XML
+ENV PATH="${PATH}:/usr/lib/prince/bin"
+
+# Expose port
+EXPOSE 8000
+
+# Default command - Django development server with hot reloading
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

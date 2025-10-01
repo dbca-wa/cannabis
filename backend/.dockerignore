@@ -1,0 +1,128 @@
+# Docker build
+Dockerfile
+Dockerfile.dev
+.build.env
+# license.dat
+
+# Development environment files
+.env
+.local.env
+.development.env
+.staging.env
+.production.env
+
+.env.test
+.env.example
+*.log
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.editorconfig
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+.nyc_output/
+coverage/
+test-results/
+
+# Documentation
+docs/
+*.md
+README*
+CHANGELOG*
+LICENSE*
+
+# Development database
+db.sqlite3
+*.sqlite3
+*.db
+
+# Development and testing scripts
+scripts/
+test_*.py
+*_test.py
+tests/
+
+# Docker development files
+Dockerfile.dev
+docker-compose*.yml
+.dockerignore
+
+# Static files (will be collected in production)
+staticfiles/
+media/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Security and secrets (extra safety)
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Development tools
+.pre-commit-config.yaml
+.flake8
+.pylintrc
+mypy.ini
+setup.cfg
+tox.ini

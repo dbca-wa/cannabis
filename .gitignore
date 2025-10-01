@@ -1,4 +1,12 @@
-*
-!README.md
-!favicon.svg
-!.gitignore
+.vscode
+
+# Frontend
+frontend
+frontend/node_modules
+
+# Backend
+backend/files
+backend/etl
+*.pyc
+*.env
+*license.dat
