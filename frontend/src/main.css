@@ -1,0 +1,566 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "tailwindcss-animate";
+@import "react-pdf/dist/Page/AnnotationLayer.css";
+@import "react-pdf/dist/Page/TextLayer.css";
+@layer theme, base, components, utilities;
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+	--radius: 0.625rem;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0 0);
+	--primary: oklch(0.205 0 0);
+	--primary-foreground: oklch(0.985 0 0);
+	--secondary: oklch(0.97 0 0);
+	--secondary-foreground: oklch(0.205 0 0);
+	--muted: oklch(0.97 0 0);
+	--muted-foreground: oklch(0.556 0 0);
+	--accent: oklch(0.97 0 0);
+	--accent-foreground: oklch(0.205 0 0);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.922 0 0);
+	--input: oklch(0.922 0 0);
+	--ring: oklch(0.708 0 0);
+	--chart-1: oklch(0.646 0.222 41.116);
+	--chart-2: oklch(0.6 0.118 184.704);
+	--chart-3: oklch(0.398 0.07 227.392);
+	--chart-4: oklch(0.828 0.189 84.429);
+	--chart-5: oklch(0.769 0.188 70.08);
+	--sidebar: oklch(0.985 0 0);
+	--sidebar-foreground: oklch(0.145 0 0);
+	--sidebar-primary: oklch(0.205 0 0);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.97 0 0);
+	--sidebar-accent-foreground: oklch(0.205 0 0);
+	--sidebar-border: oklch(0.922 0 0);
+	--sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+	--background: oklch(0.145 0 0);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.205 0 0);
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.205 0 0);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.922 0 0);
+	--primary-foreground: oklch(0.205 0 0);
+	--secondary: oklch(0.269 0 0);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.269 0 0);
+	--muted-foreground: oklch(0.708 0 0);
+	--accent: oklch(0.269 0 0);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.556 0 0);
+	--chart-1: oklch(0.488 0.243 264.376);
+	--chart-2: oklch(0.696 0.17 162.48);
+	--chart-3: oklch(0.769 0.188 70.08);
+	--chart-4: oklch(0.627 0.265 303.9);
+	--chart-5: oklch(0.645 0.246 16.439);
+	--sidebar: oklch(0.205 0 0);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.488 0.243 264.376);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.269 0 0);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+	html,
+	body {
+		height: 100%;
+		overflow: hidden; /* Prevent body scrolling */
+		margin: 0;
+		padding: 0;
+	}
+
+	#root {
+		height: 100vh;
+		overflow: hidden;
+	}
+
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+
+	:root {
+		--color-bg-primary: #0c0d10;
+		--color-bg-subpage: #13141a;
+		--color-bg-subpage-subtle: #16171f;
+		--color-bg-sidebar: #1a1b23;
+		--color-bg-sidebar-secondary: #1e1f28;
+		--color-bg-hover: #23242e;
+		--color-bg-hover-subtle: #26272f;
+	}
+}
+
+@layer utilities {
+	/* Popo */
+
+	@keyframes gentle-pulse {
+		0%,
+		100% {
+			opacity: 0.4;
+			transform: scale(1);
+		}
+		50% {
+			opacity: 0.7;
+			transform: scale(1.05);
+		}
+	}
+
+	@keyframes flowing-energy {
+		0% {
+			opacity: 0.5;
+			transform: scale(1) rotate(0deg);
+		}
+		33% {
+			opacity: 0.7;
+			transform: scale(1.08) rotate(1deg);
+		}
+		66% {
+			opacity: 0.8;
+			transform: scale(1.12) rotate(-1deg);
+		}
+		100% {
+			opacity: 0.5;
+			transform: scale(1) rotate(0deg);
+		}
+	}
+
+	.sidebar-aura-active {
+		opacity: 1 !important;
+		animation: gentle-pulse 2.5s ease-in-out infinite;
+	}
+
+	@keyframes police-siren {
+		0% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+		25% {
+			background-position: 50% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+		}
+		50% {
+			background-position: 100% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+		}
+		75% {
+			background-position: 50% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+		}
+		100% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+	}
+
+	/* @keyframes police-siren {
+		0% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+		50% {
+			background-position: 100% 50%;
+			box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+		}
+		100% {
+			background-position: 0% 50%;
+			box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+		}
+	} */
+
+	.react-pdf__Page {
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		margin-bottom: 1rem;
+	}
+
+	.react-pdf__Page__canvas {
+		display: block;
+		margin: 0 auto;
+	}
+
+	/* Main cannabis green (leaf color) */
+	.cannabis-green {
+		color: #2d8a39;
+	}
+	.bg-cannabis-green {
+		background-color: #2d8a39;
+	}
+
+	.cannabis-secondary {
+		color: #8b5a2b;
+	}
+	.bg-cannabis-secondary {
+		background-color: #8b5a2b;
+	}
+
+	.cannabis-alert {
+		color: #d97706;
+	}
+	.bg-cannabis-alert {
+		background-color: #d97706;
+	}
+
+	.submission {
+		color: #3b82f6;
+	}
+	.bg-submission {
+		background-color: #3b82f6;
+	}
+
+	.invoice {
+		color: #dc2626;
+	}
+	.bg-invoice {
+		background-color: #dc2626;
+	}
+
+	.certificate {
+		color: #059669;
+	}
+	.bg-certificate {
+		background-color: #059669;
+	}
+	/* .bg-cannabis-green:hover {
+		filter: brightness(1.1) !important;
+	} */
+
+	.hover-cannabis-button:hover {
+		background-color: rgba(45, 138, 57, 0.1);
+	}
+
+	.cannabis-active-button {
+		background-color: rgba(45, 138, 57, 0.25);
+	}
+
+	.section-bg-dark {
+		background: linear-gradient(
+			135deg,
+			rgba(17, 24, 39, 1) 0%,
+			rgba(31, 41, 55, 1) 50%,
+			rgba(20, 83, 45, 1) 100%
+		);
+		color: white !important;
+	}
+
+	.section-bg-card {
+		background-color: rgba(255, 255, 255, 1); /* bg-white */
+		border-radius: 1rem; /* rounded-2xl */
+		border-left: 4px solid rgba(34, 197, 94, 1); /* border-l-4 border-green-500 */
+		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* shadow-xl */
+	}
+
+	.section-bg-sunset {
+		background: linear-gradient(
+			135deg,
+			rgba(255, 247, 237, 1) 0%,
+			/* from-orange-50 */ rgba(254, 242, 242, 1) 50%,
+			/* via-red-50 */ rgba(253, 242, 248, 1) 100% /* to-pink-50 */
+		);
+	}
+
+	.section-bg-ocean {
+		background: linear-gradient(
+			135deg,
+			rgba(236, 254, 255, 1) 0%,
+			/* from-cyan-50 */ rgba(239, 246, 255, 1) 50%,
+			/* via-blue-50 */ rgba(238, 242, 255, 1) 100% /* to-indigo-50 */
+		);
+	}
+
+	.section-bg-mix {
+		background: linear-gradient(
+			135deg,
+			rgba(240, 253, 244, 1) 0%,
+			rgba(239, 246, 255, 1) 50%,
+			rgba(250, 245, 255, 1) 100%
+		);
+		border: 1px solid rgba(229, 231, 235, 1); /* border-gray-200 */
+		border-radius: 0.75rem; /* rounded-xl */
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+			0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+	}
+
+	.section-bg-default {
+		border: 1px solid rgba(229, 231, 235, 1); /* border-gray-200 */
+		border-radius: 0.75rem; /* rounded-xl */
+		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+			0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+	}
+
+	.border-cannabis-green {
+		border-color: #2d8a39;
+	}
+	.hover\:bg-cannabis-green:hover {
+		background-color: #2d8a39;
+	}
+	.hover\:text-cannabis-green:hover {
+		color: #2d8a39;
+	}
+
+	/* Darker cannabis green (for hover states) */
+	.cannabis-green-dark {
+		color: #20662a;
+	}
+	.bg-cannabis-green-dark {
+		background-color: #20662a;
+	}
+	.border-cannabis-green-dark {
+		border-color: #20662a;
+	}
+	.hover\:bg-cannabis-green-dark:hover {
+		background-color: #20662a;
+	}
+	.hover\:text-cannabis-green-dark:hover {
+		color: #20662a;
+	}
+
+	/* Light green (young leaves) */
+	.cannabis-light {
+		color: #5cad65;
+	}
+	.bg-cannabis-light {
+		background-color: #5cad65;
+	}
+	.border-cannabis-light {
+		border-color: #5cad65;
+	}
+
+	/* Earthy brown (stems) */
+	.cannabis-earth {
+		color: #8a6d3d;
+	}
+	.bg-cannabis-earth {
+		background-color: #8a6d3d;
+	}
+	.border-cannabis-earth {
+		border-color: #8a6d3d;
+	}
+
+	/* Purple accent (purple strains) */
+	.cannabis-purple {
+		color: #644a8e;
+	}
+	.bg-cannabis-purple {
+		background-color: #644a8e;
+	}
+	.border-cannabis-purple {
+		border-color: #644a8e;
+	}
+
+	.bg-primary {
+		background-color: var(--color-bg-primary);
+	}
+	.bg-subpage {
+		background-color: var(--color-bg-subpage);
+	}
+	.bg-subpage-subtle {
+		background-color: var(--color-bg-subpage-subtle);
+	}
+	.bg-sidebar {
+		background-color: var(--color-bg-sidebar);
+	}
+	.bg-sidebar-secondary {
+		background-color: var(--color-bg-sidebar-secondary);
+	}
+	.bg-hover {
+		background-color: var(--color-bg-hover);
+	}
+	.bg-hover-subtle {
+		background-color: var(--color-bg-hover-subtle);
+	}
+}
+
+scrollbar-hide::-webkit-scrollbar {
+	display: none;
+}
+
+.scrollbar-hide {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+@theme {
+	--color-cannabis-green: #2d8a39;
+	--color-cannabis-secondary: #8b5a2b;
+	--color-cannabis-alert: #d97706;
+	--color-submission: #3b82f6;
+	--color-invoice: #dc2626;
+	--color-certificate: #059669;
+}
+
+:root {
+	--radius: 0.625rem;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0 0);
+	--primary: oklch(0.205 0 0);
+	--primary-foreground: oklch(0.985 0 0);
+	--secondary: oklch(0.97 0 0);
+	--secondary-foreground: oklch(0.205 0 0);
+	--muted: oklch(0.97 0 0);
+	--muted-foreground: oklch(0.556 0 0);
+	--accent: oklch(0.97 0 0);
+	--accent-foreground: oklch(0.205 0 0);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.922 0 0);
+	--input: oklch(0.922 0 0);
+	--ring: oklch(0.708 0 0);
+	--chart-1: oklch(0.646 0.222 41.116);
+	--chart-2: oklch(0.6 0.118 184.704);
+	--chart-3: oklch(0.398 0.07 227.392);
+	--chart-4: oklch(0.828 0.189 84.429);
+	--chart-5: oklch(0.769 0.188 70.08);
+	--sidebar: oklch(0.985 0 0);
+	--sidebar-foreground: oklch(0.145 0 0);
+	--sidebar-primary: oklch(0.205 0 0);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.97 0 0);
+	--sidebar-accent-foreground: oklch(0.205 0 0);
+	--sidebar-border: oklch(0.922 0 0);
+	--sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+	--background: oklch(0.145 0 0);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.205 0 0);
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.205 0 0);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.922 0 0);
+	--primary-foreground: oklch(0.205 0 0);
+	--secondary: oklch(0.269 0 0);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.269 0 0);
+	--muted-foreground: oklch(0.708 0 0);
+	--accent: oklch(0.269 0 0);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.556 0 0);
+	--chart-1: oklch(0.488 0.243 264.376);
+	--chart-2: oklch(0.696 0.17 162.48);
+	--chart-3: oklch(0.769 0.188 70.08);
+	--chart-4: oklch(0.627 0.265 303.9);
+	--chart-5: oklch(0.645 0.246 16.439);
+	--sidebar: oklch(0.205 0 0);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.488 0.243 264.376);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.269 0 0);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+
+	/* Required field indicator */
+	label.required::after {
+		content: " *";
+		color: rgb(239 68 68); /* red-500 */
+	}
+}
