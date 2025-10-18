@@ -190,6 +190,7 @@ CORS_ALLOW_METHODS = [
     "POST",
     "OPTIONS",
     "PUT",
+    "PATCH",
     "DELETE",
 ]
 CORS_ALLOW_HEADERS = [
@@ -255,6 +256,7 @@ CUSTOM_APPS = [
     "common.apps.CommonConfig",
     "users.apps.UsersConfig",
     "police.apps.PoliceConfig",
+    "defendants.apps.DefendantsConfig",
     "submissions.apps.SubmissionsConfig",
     "communications.apps.CommunicationsConfig",
 ]
@@ -308,6 +310,10 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         # "rest_framework.authentication.SessionAuthentication", #no django admin
     ],
+    "DEFAULT_PAGINATION_CLASS": "config.pagination.StandardResultsSetPagination",
+    "PAGE_SIZE": 25,  # Default page size for all paginated views (matches frontend default)
+    "PAGE_SIZE_QUERY_PARAM": "limit",  # Allow frontend to control page size via ?limit=X
+    "MAX_PAGE_SIZE": 100,  # Maximum allowed page size
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),

@@ -9,7 +9,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserPreferences
-        exclude = ["user", "created_at", "updated_at"]
+        exclude = ["user"]
 
     def to_representation(self, instance):
         """Add computed fields for frontend"""
@@ -22,6 +22,26 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
         data["notification_settings"] = instance.get_notification_settings()
 
         return data
+
+    def validate_default_search_settings(self, value):
+        """Validate search settings JSON structure"""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Search settings must be a JSON object")
+        return value
+
+    def validate_table_filter_preferences(self, value):
+        """Validate table filter preferences JSON structure"""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(
+                "Table filter preferences must be a JSON object"
+            )
+        return value
+
+    def validate_ui_preferences(self, value):
+        """Validate UI preferences JSON structure"""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("UI preferences must be a JSON object")
+        return value
 
 
 class UserJWTObjectSerializer(serializers.ModelSerializer):
@@ -151,6 +171,10 @@ class UserBasicSerializer(serializers.ModelSerializer):
             "role",
             "role_display",
             "is_authenticated",
+            # Add admin fields for sidebar access control
+            "is_staff",
+            "is_superuser",
+            "is_active",
         ]
 
     def get_full_name(self, obj):
@@ -192,6 +216,7 @@ class UserTinySerializer(serializers.ModelSerializer):
             "role_display",
             "is_active",
             "is_staff",
+            "is_superuser",  # Added for role badge display consistency
             "date_joined",
             "last_login",
         ]

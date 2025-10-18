@@ -2,52 +2,20 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from decimal import Decimal
 from .models import (
-    Defendant,
     Submission,
+    SubmissionPhaseHistory,
     DrugBag,
     BotanicalAssessment,
     Certificate,
     Invoice,
     AdditionalInvoiceFee,
 )
+from defendants.serializers import DefendantTinySerializer
+from police.models import PoliceOfficer, PoliceStation
 
 User = get_user_model()
 
 
-# ============================================================================
-# DEFENDANT SERIALIZERS
-# ============================================================================
-
-
-class DefendantSerializer(serializers.ModelSerializer):
-    """Complete serializer for defendants"""
-
-    pdf_name = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Defendant
-        fields = [
-            "id",
-            "first_name",
-            "last_name",
-            "pdf_name",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]
-
-
-class DefendantTinySerializer(serializers.ModelSerializer):
-    """Lightweight serializer for defendant references"""
-
-    pdf_name = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Defendant
-        fields = ["id", "first_name", "last_name", "pdf_name"]
-
-
-# ============================================================================
 # BOTANICAL ASSESSMENT SERIALIZERS
 # ============================================================================
 
@@ -95,10 +63,8 @@ class DrugBagSerializer(serializers.ModelSerializer):
             "id",
             "content_type",
             "content_type_display",
-            "quantity",
-            "suspected_as",
-            "seal_tag_number",
-            "new_seal_tag_number",
+            "seal_tag_numbers",
+            "new_seal_tag_numbers",
             "property_reference",
             "gross_weight",
             "net_weight",
@@ -123,25 +89,23 @@ class DrugBagCreateSerializer(serializers.ModelSerializer):
         fields = [
             "submission",
             "content_type",
-            "quantity",
-            "suspected_as",
-            "seal_tag_number",
-            "new_seal_tag_number",
+            "seal_tag_numbers",
+            "new_seal_tag_numbers",
             "property_reference",
             "gross_weight",
             "net_weight",
         ]
 
-    def validate_seal_tag_number(self, value):
+    def validate_seal_tag_numbers(self, value):
         """Ensure seal tag numbers are unique within a submission"""
         submission = self.initial_data.get("submission")
         if (
-            DrugBag.objects.filter(submission=submission, seal_tag_number=value)
+            DrugBag.objects.filter(submission=submission, seal_tag_numbers=value)
             .exclude(pk=self.instance.pk if self.instance else None)
             .exists()
         ):
             raise serializers.ValidationError(
-                "Seal tag number must be unique within submission."
+                "Seal tag numbers must be unique within submission."
             )
         return value
 
@@ -266,7 +230,7 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
     station_name = serializers.CharField(source="station.name", read_only=True)
 
     class Meta:
-        model = "police.PoliceOfficer"  # String reference to avoid import issues
+        model = PoliceOfficer
         fields = ["id", "full_name", "badge_number", "station_name"]
 
 
@@ -311,6 +275,55 @@ class SubmissionListSerializer(serializers.ModelSerializer):
         return obj.defendants.count()
 
 
+# ============================================================================
+# SUBMISSION PHASE HISTORY SERIALIZERS
+# ============================================================================
+
+
+class SubmissionPhaseHistorySerializer(serializers.ModelSerializer):
+    """Serializer for submission phase history audit trail"""
+
+    from_phase_display = serializers.CharField(
+        source="get_from_phase_display", read_only=True
+    )
+    to_phase_display = serializers.CharField(
+        source="get_to_phase_display", read_only=True
+    )
+    action_display = serializers.CharField(source="get_action_display", read_only=True)
+    user_details = UserTinySerializer(source="user", read_only=True, allow_null=True)
+
+    class Meta:
+        model = SubmissionPhaseHistory
+        fields = [
+            "id",
+            "from_phase",
+            "from_phase_display",
+            "to_phase",
+            "to_phase_display",
+            "action",
+            "action_display",
+            "user",
+            "user_details",
+            "reason",
+            "timestamp",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "from_phase",
+            "to_phase",
+            "action",
+            "user",
+            "timestamp",
+            "created_at",
+        ]
+
+
+# ============================================================================
+# SUBMISSION SERIALIZERS
+# ============================================================================
+
+
 class SubmissionSerializer(serializers.ModelSerializer):
     """Complete serializer for submissions"""
 
@@ -338,6 +351,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
     certificates = CertificateSerializer(many=True, read_only=True)
     invoices = InvoiceSerializer(many=True, read_only=True)
     additional_fees = AdditionalInvoiceFeeSerializer(many=True, read_only=True)
+    phase_history = SubmissionPhaseHistorySerializer(many=True, read_only=True)
 
     # Computed properties
     cannabis_present = serializers.ReadOnlyField()
@@ -353,7 +367,11 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "phase",
             "phase_display",
             "security_movement_envelope",
-            "assessment_notes",
+            "internal_comments",
+            "is_draft",
+            # Finance fields
+            "forensic_hours",
+            "fuel_distance_km",
             # Staff assignments
             "approved_botanist",
             "approved_botanist_details",
@@ -371,6 +389,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "certificates",
             "invoices",
             "additional_fees",
+            "phase_history",
             # Computed properties
             "cannabis_present",
             "bags_received",
@@ -409,12 +428,30 @@ class SubmissionCreateSerializer(serializers.ModelSerializer):
             "requesting_officer",
             "submitting_officer",
             "defendants",
+            "is_draft",
         ]
 
     def validate_case_number(self, value):
         """Ensure case numbers are unique"""
         if Submission.objects.filter(case_number=value).exists():
             raise serializers.ValidationError("Case number must be unique.")
+        return value
+
+    def validate_received(self, value):
+        """
+        Handle date-only input by defaulting time to 9:00 AM.
+        Accepts both date strings (YYYY-MM-DD) and datetime strings.
+        """
+        from datetime import datetime, time
+
+        # If value is already a datetime object with time, use it as-is
+        if isinstance(value, datetime) and value.time() != time(0, 0):
+            return value
+
+        # If it's a date object or datetime at midnight, set time to 9:00 AM
+        if isinstance(value, datetime):
+            return value.replace(hour=9, minute=0, second=0, microsecond=0)
+
         return value
 
 
@@ -426,9 +463,10 @@ class SubmissionUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "approved_botanist",
             "finance_officer",
-            "assessment_notes",
+            "internal_comments",
             "defendants",
             "phase",
+            "is_draft",
         ]
 
     def validate_phase(self, value):

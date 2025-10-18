@@ -8,40 +8,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 
-class Defendant(AuditModel):
-    """
-    Defendants listed in submissions - separate for reusability on frontend
-    """
-
-    first_name = models.CharField(
-        max_length=100,
-        null=True,
-        blank=True,
-        verbose_name=("First Name"),
-        help_text=("First name or given names."),
-    )
-    last_name = models.CharField(
-        max_length=100,
-        null=True,
-        blank=True,
-        verbose_name=("Last Name"),
-        help_text=("Last name or surname."),
-    )
-
-    @property
-    def pdf_name(self):
-        return f"{self.last_name.capitalize()}, {self.first_name}"
-
-    def __str__(self):
-        return f"{self.id} {self.first_name} {self.last_name}"
-
-    class Meta:
-        verbose_name = "Defendant"
-        verbose_name_plural = "Defendants"
-        # Prevent duplicate defendants
-        # unique_together = ['first_name', 'last_name']
-
-
 class Submission(AuditModel):
     """
     A submission / request for determination, containing multiple baggies
@@ -115,29 +81,25 @@ class Submission(AuditModel):
 
     # Defendants (many-to-many since multiple defendants can be in one case)
     defendants = models.ManyToManyField(
-        Defendant,
+        "defendants.Defendant",
         related_name="submissions",
         blank=True,
         help_text="Defendants involved in this case",
     )
 
-    # Workflow phase
+    # Draft status - for work-in-progress submissions
+    is_draft = models.BooleanField(
+        default=True,
+        help_text="Whether this submission is a draft (work-in-progress)",
+    )
+
+    # Workflow phase - Updated to 6-phase workflow
     class PhaseChoices(models.TextChoices):
-        # Finance Officer or Botanist can start data entry / new submission
-        DATA_ENTRY = "data_entry_start", "Data Entry"
-        # Finance Officer phase
-        FINANCE_APPROVAL_PROVIDED = "finance_approval_provided", "Finance Approval"
-        # Botanist phases
-        BOTANIST_APPROVAL_PROVIDED = "botanist_approval_provided", "Botanist Approval"
-        # Finance Officer review
-        IN_REVIEW = "in_review", "Review"
-        # System automated phases
-        CERTIFICATE_GENERATION = (
-            "certificate_generation_start",
-            "Certificate Generation",
-        )
-        INVOICE_GENERATION = "invoice_generation_start", "Invoice Generation"
-        SENDING_EMAILS = "sending_emails", "Sending Emails"
+        DATA_ENTRY = "data_entry", "Data Entry"
+        FINANCE_APPROVAL = "finance_approval", "Finance Approval"
+        BOTANIST_REVIEW = "botanist_review", "Botanist Review"
+        DOCUMENTS = "documents", "Documents"
+        SEND_EMAILS = "send_emails", "Send Emails"
         COMPLETE = "complete", "Complete"
 
     phase = models.CharField(
@@ -160,6 +122,24 @@ class Submission(AuditModel):
         help_text="Any internal comments not showing on certificate",
     )
 
+    # Finance-related fields (for invoice calculation)
+    forensic_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Number of forensic hours (e.g., 2.5 for 2 hours 30 minutes)",
+    )
+    fuel_distance_km = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Distance traveled in kilometers for fuel cost calculation",
+    )
+
     # Workflow timestamps
     finance_approved_at = models.DateTimeField(blank=True, null=True)
     botanist_approved_at = models.DateTimeField(blank=True, null=True)
@@ -172,7 +152,7 @@ class Submission(AuditModel):
     def cannabis_present(self):
         """Check if any bag contains cannabis"""
         return self.bags.filter(
-            assessments__determination__icontains="cannabis"
+            assessment__determination__icontains="cannabis"
         ).exists()
 
     @property
@@ -182,8 +162,8 @@ class Submission(AuditModel):
 
     @property
     def total_plants(self):
-        """Total plant specimens across all bags"""
-        return self.bags.aggregate(total=models.Sum("quantity"))["total"] or 0
+        """Total plant specimens across all bags (count of bags)"""
+        return self.bags.count()
 
     def __str__(self):
         return f"Case {self.case_number} - {self.get_phase_display()}"
@@ -192,6 +172,70 @@ class Submission(AuditModel):
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
         ordering = ["-received"]
+
+
+class SubmissionPhaseHistory(AuditModel):
+    """Track all phase transitions for audit trail"""
+
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="phase_history",
+        help_text="The submission this history entry belongs to",
+    )
+
+    from_phase = models.CharField(
+        max_length=30,
+        choices=Submission.PhaseChoices.choices,
+        help_text="Phase the submission was in before this transition",
+    )
+
+    to_phase = models.CharField(
+        max_length=30,
+        choices=Submission.PhaseChoices.choices,
+        help_text="Phase the submission moved to",
+    )
+
+    action = models.CharField(
+        max_length=20,
+        choices=[
+            ("advance", "Advanced"),
+            ("send_back", "Sent Back"),
+        ],
+        help_text="Type of action that caused this transition",
+    )
+
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="submission_phase_actions",
+        help_text="User who performed this action",
+    )
+
+    reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for send-back actions",
+    )
+
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this transition occurred",
+    )
+
+    def __str__(self):
+        action_text = "sent back" if self.action == "send_back" else "advanced"
+        user_text = self.user.get_full_name() if self.user else "System"
+        return f"{self.submission.case_number}: {user_text} {action_text} from {self.get_from_phase_display()} to {self.get_to_phase_display()}"
+
+    class Meta:
+        verbose_name = "Phase History Entry"
+        verbose_name_plural = "Phase History Entries"
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["submission", "-timestamp"]),
+        ]
 
 
 class DrugBag(AuditModel):
@@ -414,6 +458,10 @@ class Certificate(AuditModel):
         verbose_name = "Certificate"
         verbose_name_plural = "Certificates"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["submission", "-created_at"]),
+            models.Index(fields=["certificate_number"]),
+        ]
 
 
 class Invoice(AuditModel):
@@ -516,6 +564,10 @@ class Invoice(AuditModel):
         verbose_name = "Invoice"
         verbose_name_plural = "Invoices"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["submission", "-created_at"]),
+            models.Index(fields=["invoice_number"]),
+        ]
 
 
 class AdditionalInvoiceFee(AuditModel):

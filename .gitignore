@@ -1,8 +1,12 @@
 .vscode
 
 # Frontend
-frontend
+# frontend
 frontend/node_modules
+frontend/src
+frontend/public
+frontend/docs
+frontend/dist
 
 # Backend
 backend/files

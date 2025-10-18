@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitation to {{ site_name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8fafc;
+            padding: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        .footer {
+            background-color: #64748b;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #16a34a;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .credentials {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .warning {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to {{ site_name }}</h1>
+    </div>
+    
+    <div class="content">
+        <h2>Hello {{ user.first_name|default:user.email }},</h2>
+        
+        <p>You have been invited by <strong>{{ inviter.get_full_name|default:inviter.email }}</strong> to join the {{ site_name }}.</p>
+        
+        <p>An account has been created for you with the following details:</p>
+        
+        <div class="credentials">
+            <h3>Your Account Details</h3>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Name:</strong> {{ user.get_full_name|default:"Not specified" }}</p>
+            <p><strong>Role:</strong> {{ user.get_role_display }}</p>
+            <p><strong>Temporary Password:</strong> <code>{{ temporary_password }}</code></p>
+        </div>
+        
+        <div class="warning">
+            <h3>⚠️ Important Security Notice</h3>
+            <p>For your security, you <strong>must change your password</strong> immediately after your first login. The temporary password above will expire after first use.</p>
+        </div>
+        
+        <p>Click the button below to access the system and set up your account:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ protocol }}://{{ domain }}/auth/reset-password/{{ uid }}/{{ reset_token }}/" class="button">
+                Join {{ site_name }}
+            </a>
+        </div>
+        
+        <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background-color: #e2e8f0; padding: 10px; border-radius: 4px;">
+            {{ protocol }}://{{ domain }}/auth/reset-password/{{ uid }}/{{ reset_token }}/
+        </p>
+        
+        <h3>What's Next?</h3>
+        <ol>
+            <li>Click the link above to access the system</li>
+            <li>Set a new, secure password</li>
+            <li>Complete your profile setup</li>
+            <li>Start using the {{ site_name }}</li>
+        </ol>
+        
+        <p>If you have any questions or need assistance, please contact your system administrator or the person who invited you.</p>
+        
+        <p>Welcome aboard!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from {{ site_name }}. Please do not reply to this email.</p>
+        <p>If you did not expect this invitation, please contact your system administrator.</p>
+    </div>
+</body>
+</html>

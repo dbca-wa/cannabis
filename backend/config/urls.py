@@ -9,8 +9,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/users/", include("users.urls")),
     path("api/v1/police/", include("police.urls")),
-    path('api/communications/', include('communications.urls')),
-    path('api/submissions/', include('submissions.urls')),  
+    path("api/v1/communications/", include("communications.urls")),
+    path("api/v1/submissions/", include("submissions.urls")),
+    path("api/v1/defendants/", include("defendants.urls")),
+    path("api/v1/system/", include("common.urls")),
     re_path(r"^files/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
 ] + static(
     settings.MEDIA_URL,

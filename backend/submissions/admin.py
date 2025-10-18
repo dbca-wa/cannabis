@@ -3,8 +3,8 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
-    Defendant,
     Submission,
+    SubmissionPhaseHistory,
     DrugBag,
     BotanicalAssessment,
     Certificate,
@@ -67,49 +67,29 @@ class AdditionalInvoiceFeeInline(admin.TabularInline):
     readonly_fields = ("calculated_cost",)
 
 
+class SubmissionPhaseHistoryInline(admin.TabularInline):
+    """Inline for phase history in submission admin"""
+
+    model = SubmissionPhaseHistory
+    extra = 0
+    fields = ("from_phase", "to_phase", "action", "user", "reason", "timestamp")
+    readonly_fields = (
+        "from_phase",
+        "to_phase",
+        "action",
+        "user",
+        "reason",
+        "timestamp",
+    )
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 # ============================================================================
 # MODEL ADMIN CLASSES
 # ============================================================================
-
-
-@admin.register(Defendant)
-class DefendantAdmin(admin.ModelAdmin):
-    list_display = ("id", "pdf_name", "submission_count", "created_at")
-    search_fields = ("first_name", "last_name")
-    ordering = ("last_name", "first_name")
-
-    fieldsets = (
-        (
-            "Personal Information",
-            {
-                "fields": ("first_name", "last_name"),
-                "classes": ("wide",),
-            },
-        ),
-        (
-            "Timestamps",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-
-    readonly_fields = ("created_at", "updated_at")
-
-    def submission_count(self, obj):
-        """Count of submissions this defendant is involved in"""
-        count = obj.submissions.count()
-        if count > 0:
-            return format_html(
-                '<a href="{}?defendants__id__exact={}">{} submissions</a>',
-                reverse("admin:submissions_submission_changelist"),
-                obj.id,
-                count,
-            )
-        return "No submissions"
-
-    submission_count.short_description = "Submissions"
 
 
 @admin.register(Submission)
@@ -214,6 +194,7 @@ class SubmissionAdmin(admin.ModelAdmin):
 
     inlines = [
         DrugBagInline,
+        SubmissionPhaseHistoryInline,
         CertificateInline,
         InvoiceInline,
         AdditionalInvoiceFeeInline,
@@ -225,14 +206,12 @@ class SubmissionAdmin(admin.ModelAdmin):
     def phase_colored(self, obj):
         """Color-coded phase display"""
         colors = {
-            "data_entry_start": "#6c757d",
-            "finance_approval_provided": "#17a2b8",
-            "botanist_approval_provided": "#28a745",
-            "in_review": "#ffc107",
-            "certificate_generation_start": "#6f42c1",
-            "invoice_generation_start": "#e83e8c",
-            "sending_emails": "#fd7e14",
-            "complete": "#28a745",
+            "data_entry": "#6c757d",  # Gray
+            "finance_approval": "#17a2b8",  # Cyan
+            "botanist_review": "#28a745",  # Green
+            "documents": "#6f42c1",  # Purple
+            "send_emails": "#fd7e14",  # Orange
+            "complete": "#28a745",  # Green
         }
         color = colors.get(obj.phase, "#6c757d")
         return format_html(
@@ -268,21 +247,17 @@ class SubmissionAdmin(admin.ModelAdmin):
 
     def advance_to_finance(self, request, queryset):
         """Move submissions to finance approval"""
-        updated = queryset.update(
-            phase=Submission.PhaseChoices.FINANCE_APPROVAL_PROVIDED
-        )
+        updated = queryset.update(phase=Submission.PhaseChoices.FINANCE_APPROVAL)
         self.message_user(request, f"{updated} submissions moved to finance approval")
 
     advance_to_finance.short_description = "Advance to finance approval"
 
     def advance_to_botanist(self, request, queryset):
-        """Move submissions to botanist approval"""
-        updated = queryset.update(
-            phase=Submission.PhaseChoices.BOTANIST_APPROVAL_PROVIDED
-        )
-        self.message_user(request, f"{updated} submissions moved to botanist approval")
+        """Move submissions to botanist review"""
+        updated = queryset.update(phase=Submission.PhaseChoices.BOTANIST_REVIEW)
+        self.message_user(request, f"{updated} submissions moved to botanist review")
 
-    advance_to_botanist.short_description = "Advance to botanist approval"
+    advance_to_botanist.short_description = "Advance to botanist review"
 
     def mark_complete(self, request, queryset):
         """Mark submissions as complete"""
@@ -611,3 +586,149 @@ class AdditionalInvoiceFeeAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', url, obj.submission.case_number)
 
     submission_link.short_description = "Submission"
+
+
+@admin.register(SubmissionPhaseHistory)
+class SubmissionPhaseHistoryAdmin(admin.ModelAdmin):
+    """Admin for phase history audit trail"""
+
+    list_display = (
+        "submission_link",
+        "from_phase_colored",
+        "to_phase_colored",
+        "action_colored",
+        "user_link",
+        "timestamp",
+    )
+    list_filter = (
+        "action",
+        "from_phase",
+        "to_phase",
+        "timestamp",
+    )
+    search_fields = (
+        "submission__case_number",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "reason",
+    )
+    ordering = ("-timestamp",)
+
+    readonly_fields = (
+        "submission",
+        "from_phase",
+        "to_phase",
+        "action",
+        "user",
+        "reason",
+        "timestamp",
+        "created_at",
+        "updated_at",
+    )
+
+    fieldsets = (
+        (
+            "Phase Transition",
+            {
+                "fields": ("submission", "from_phase", "to_phase", "action"),
+                "classes": ("wide",),
+            },
+        ),
+        (
+            "Action Details",
+            {
+                "fields": ("user", "reason", "timestamp"),
+                "classes": ("wide",),
+            },
+        ),
+        (
+            "Audit",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        """Phase history is created automatically, not manually"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Phase history should not be deleted (audit trail)"""
+        return False
+
+    def submission_link(self, obj):
+        """Link to submission"""
+        url = reverse("admin:submissions_submission_change", args=[obj.submission.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.submission.case_number)
+
+    submission_link.short_description = "Submission"
+
+    def from_phase_colored(self, obj):
+        """Color-coded from phase"""
+        colors = {
+            "data_entry": "#6c757d",
+            "finance_approval": "#17a2b8",
+            "botanist_review": "#28a745",
+            "documents": "#6f42c1",
+            "send_emails": "#fd7e14",
+            "complete": "#28a745",
+        }
+        color = colors.get(obj.from_phase, "#6c757d")
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">{}</span>',
+            color,
+            obj.get_from_phase_display(),
+        )
+
+    from_phase_colored.short_description = "From Phase"
+
+    def to_phase_colored(self, obj):
+        """Color-coded to phase"""
+        colors = {
+            "data_entry": "#6c757d",
+            "finance_approval": "#17a2b8",
+            "botanist_review": "#28a745",
+            "documents": "#6f42c1",
+            "send_emails": "#fd7e14",
+            "complete": "#28a745",
+        }
+        color = colors.get(obj.to_phase, "#6c757d")
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">{}</span>',
+            color,
+            obj.get_to_phase_display(),
+        )
+
+    to_phase_colored.short_description = "To Phase"
+
+    def action_colored(self, obj):
+        """Color-coded action"""
+        colors = {
+            "advance": "#28a745",  # Green for advance
+            "send_back": "#dc3545",  # Red for send back
+        }
+        color = colors.get(obj.action, "#6c757d")
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">{}</span>',
+            color,
+            obj.get_action_display(),
+        )
+
+    action_colored.short_description = "Action"
+
+    def user_link(self, obj):
+        """Link to user"""
+        if obj.user:
+            url = reverse("admin:users_user_change", args=[obj.user.pk])
+            return format_html(
+                '<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.email
+            )
+        return "System"
+
+    user_link.short_description = "User"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("submission", "user")

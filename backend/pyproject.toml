@@ -6,7 +6,7 @@ authors = ["idabblewith <jprincedev@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "<3.14,>=3.12.11"
+python = "<3.15,>=3.13"
 djangorestframework = "^3.16.0"
 sentry-sdk = { extras = ["django"], version = "^2.25.1" }
 whitenoise = { extras = ["brotli"], version = "^6.9.0" }

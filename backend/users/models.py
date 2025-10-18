@@ -241,6 +241,40 @@ class UserPreferences(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Frontend UI preferences (for cross-device sync)
+    class LoaderStyleChoices(models.TextChoices):
+        COOK = "cook", "Cook Loader"
+        BASE = "base", "Base Loader"
+        MINIMAL = "minimal", "Minimal Loader"
+
+    loader_style = models.CharField(
+        max_length=10,
+        choices=LoaderStyleChoices.choices,
+        default=LoaderStyleChoices.MINIMAL,
+        help_text="Preferred loading animation style",
+    )
+
+    # Search and filter preferences (JSON field for flexibility)
+    default_search_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Default search and filter settings for various pages",
+    )
+
+    # Table-specific filter preferences (JSON field for data table persistence)
+    table_filter_preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Persistent filter and sort preferences for data tables (officers, stations, users)",
+    )
+
+    # General UI preferences (JSON field for extensibility)
+    ui_preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional UI preferences and settings",
+    )
+
     # Date/Time preferences
     class DateFormatChoices(models.TextChoices):
         DMY = "d/m/Y", "DD/MM/YYYY"
