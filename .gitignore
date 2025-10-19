@@ -4,9 +4,9 @@
 # frontend
 frontend/node_modules
 frontend/dist
-frontend/src/features
-frontend/src/pages
-frontend/src/shared
+frontend/src/features/submissions
+frontend/src/pages/submissions
+# frontend/src/shared
 
 
 # Backend

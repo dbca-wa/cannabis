@@ -5,7 +5,7 @@
 		{ "path": "./tsconfig.node.json" }
 	],
 	"compilerOptions": {
-		"baseUrl": ".",
+		// "baseUrl": ".", // deprecated in TS v7 (upcoming)
 		"paths": {
 			"@/*": ["./src/*"]
 		}
