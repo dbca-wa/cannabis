@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { logger } from "@/shared/services/logger.service";
 import {
 	policeStationsService,
 	type StationsQueryParams,
@@ -60,15 +61,15 @@ export function useCreateStation() {
 				newStation
 			);
 
-			// Invalidate all stations list queries to refresh the table immediately
+			// Invalidate all stations queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.lists(),
+				queryKey: stationsQueryKeys.all,
 			});
 
 			toast.success("Police station created successfully!");
 		},
 		onError: (error: unknown) => {
-			console.error("Failed to create police station:", error);
+			logger.error("Failed to create police station", { error });
 			toast.error(
 				(error as Error)?.message || "Failed to create police station"
 			);
@@ -97,15 +98,15 @@ export function useUpdateStation() {
 				updatedStation
 			);
 
-			// Invalidate all stations list queries to refresh the table immediately
+			// Invalidate all stations queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.lists(),
+				queryKey: stationsQueryKeys.all,
 			});
 
 			toast.success("Police station updated successfully!");
 		},
 		onError: (error: unknown) => {
-			console.error("Failed to update police station:", error);
+			logger.error("Failed to update police station", { error });
 			toast.error(
 				(error as Error)?.message || "Failed to update police station"
 			);
@@ -127,15 +128,15 @@ export function useDeleteStation() {
 				queryKey: stationsQueryKeys.detail(deletedId),
 			});
 
-			// Invalidate all stations list queries to refresh the table immediately
+			// Invalidate all stations queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.lists(),
+				queryKey: stationsQueryKeys.all,
 			});
 
 			toast.success("Police station deleted successfully!");
 		},
 		onError: (error: unknown) => {
-			console.error("Failed to delete police station:", error);
+			logger.error("Failed to delete police station", { error });
 
 			// Handle specific error for stations with assigned officers
 			const errorMessage = (error as Error)?.message || "";

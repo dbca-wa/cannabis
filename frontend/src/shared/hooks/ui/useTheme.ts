@@ -88,25 +88,17 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 		};
 	}, [enableSystemTheme, theme]);
 
-	// Apply theme to document
+	// NOTE: Document theme application is disabled to avoid conflicts with UI Store
+	// The UI Store (MobX) handles theme application to the document
+	// This hook is only used for component-level theme detection
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
-		const root = window.document.documentElement;
-		
-		// Remove existing theme classes
-		root.classList.remove("light", "dark");
-		
-		// Add current theme class
-		root.classList.add(resolvedTheme);
-
-		// Set data attribute for CSS
-		root.setAttribute("data-theme", resolvedTheme);
-
-		logger.debug("Theme applied to document", {
+		logger.debug("useTheme hook - theme state (document application disabled)", {
 			theme,
 			resolvedTheme,
 			systemTheme,
+			note: "UI Store handles document theme application"
 		});
 	}, [resolvedTheme, theme, systemTheme]);
 

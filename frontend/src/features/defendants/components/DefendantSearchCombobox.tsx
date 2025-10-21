@@ -16,23 +16,13 @@ import {
 	CommandList,
 } from "@/shared/components/ui/command";
 import { CommandInputWithLoading } from "@/shared/components/ui/custom/command-input-with-loading";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/shared/components/ui/dialog";
-
 import { useDefendantSearch } from "../hooks/useDefendantSearch";
 import { useDefendantById } from "../hooks/useDefendants";
-import { useCreateDefendant } from "../hooks/useDefendants";
 import { DefendantsService } from "../services/defendants.service";
-import { CreateDefendantForm } from "./forms/CreateDefendantForm";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
-import type { CreateDefendantFormData } from "../schemas/defendantSchemas";
 import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loading-overlay";
 import { useTheme } from "@/shared/hooks/ui/useTheme";
+import { CreateDefendantModal } from "./CreateDefendantModal";
 
 interface DefendantSearchComboboxProps {
 	value?: number | null;
@@ -91,8 +81,6 @@ export const DefendantSearchCombobox = React.forwardRef<
 			isLoading: isLoadingSelectedDefendant,
 		} = useDefendantById(value ?? null);
 
-		const createDefendantMutation = useCreateDefendant();
-
 		// Reset search when closing
 		useEffect(() => {
 			if (!open) {
@@ -115,22 +103,9 @@ export const DefendantSearchCombobox = React.forwardRef<
 			setShowCreateModal(true);
 		};
 
-		const handleCreateSubmit = async (data: CreateDefendantFormData) => {
-			// Transform form data for API
-			const apiData = {
-				first_name: data.first_name || null,
-				last_name: data.last_name,
-			};
-			const newDefendant = await createDefendantMutation.mutateAsync(
-				apiData
-			);
-			setShowCreateModal(false);
+		const handleDefendantCreated = (newDefendant: DefendantTiny) => {
 			// Auto-select the newly created defendant
 			onValueChange(newDefendant.id);
-		};
-
-		const handleCreateCancel = () => {
-			setShowCreateModal(false);
 		};
 
 		const displayValue = selectedDefendant
@@ -314,19 +289,14 @@ export const DefendantSearchCombobox = React.forwardRef<
 													? emptyText
 													: "No defendants available"}
 											</div>
-											{searchQuery && (
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={
-														handleCreateDefendant
-													}
-													className="w-full"
-												>
-													<Plus className="h-4 w-4 mr-2" />
-													Create New Defendant
-												</Button>
-											)}
+											<Button
+												size="sm"
+												onClick={handleCreateDefendant}
+												className="w-full bg-green-600 hover:bg-green-700 text-white"
+											>
+												<Plus className="h-4 w-4 mr-2" />
+												Create New Defendant
+											</Button>
 										</div>
 									) : (
 										<CommandGroup>
@@ -389,25 +359,12 @@ export const DefendantSearchCombobox = React.forwardRef<
 				</Popover>
 
 				{/* Create Defendant Modal */}
-				<Dialog
+				<CreateDefendantModal
 					open={showCreateModal}
 					onOpenChange={setShowCreateModal}
-				>
-					<DialogContent className="sm:max-w-[500px]">
-						<DialogHeader>
-							<DialogTitle>Create New Defendant</DialogTitle>
-							<DialogDescription>
-								Add a new defendant to the system. Last name is
-								required, first name is optional.
-							</DialogDescription>
-						</DialogHeader>
-						<CreateDefendantForm
-							onSubmit={handleCreateSubmit}
-							onCancel={handleCreateCancel}
-							isSubmitting={createDefendantMutation.isPending}
-						/>
-					</DialogContent>
-				</Dialog>
+					onCreate={handleDefendantCreated}
+					isRouteModal={false}
+				/>
 			</>
 		);
 	}

@@ -64,9 +64,9 @@ export function useCreateDefendant() {
 				newDefendant
 			);
 
-			// Invalidate all defendants list queries to refresh the table immediately
+			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.lists(),
+				queryKey: defendantsQueryKeys.all,
 			});
 
 			toast.success("Defendant created successfully!");
@@ -101,9 +101,9 @@ export function useUpdateDefendant() {
 				updatedDefendant
 			);
 
-			// Invalidate all defendants list queries to refresh the table immediately
+			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.lists(),
+				queryKey: defendantsQueryKeys.all,
 			});
 
 			toast.success("Defendant updated successfully!");
@@ -131,9 +131,9 @@ export function useDeleteDefendant() {
 				queryKey: defendantsQueryKeys.detail(deletedId),
 			});
 
-			// Invalidate all defendants list queries to refresh the table immediately
+			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.lists(),
+				queryKey: defendantsQueryKeys.all,
 			});
 
 			toast.success("Defendant deleted successfully!");

@@ -44,6 +44,33 @@ class SubmissionListView(ListCreateAPIView):
 
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        """Override create to add detailed logging"""
+        user = request.user
+        settings.LOGGER.info(
+            f"{user.get_full_name() if hasattr(user, 'get_full_name') else user} is attempting to create a submission"
+        )
+        settings.LOGGER.debug(f"Request data: {request.data}")
+
+        try:
+            response = super().create(request, *args, **kwargs)
+            settings.LOGGER.info(
+                f"Submission created successfully with status {response.status_code}"
+            )
+            return response
+        except ValidationError as e:
+            settings.LOGGER.error(
+                f"Validation error creating submission for user {user.get_full_name() if hasattr(user, 'get_full_name') else user}: {e.detail}",
+                exc_info=True,
+            )
+            raise
+        except Exception as e:
+            settings.LOGGER.error(
+                f"Unexpected error creating submission for user {user.get_full_name() if hasattr(user, 'get_full_name') else user}: {str(e)}",
+                exc_info=True,
+            )
+            raise
+
     def get_serializer_class(self):
         if self.request.method == "POST":
             return SubmissionCreateSerializer
@@ -52,6 +79,55 @@ class SubmissionListView(ListCreateAPIView):
         return SubmissionListSerializer
 
     def get_queryset(self):
+        user = self.request.user
+
+        # Build detailed filter description for logging
+        filters = []
+        phase = self.request.query_params.get("phase")
+        if phase:
+            filters.append(f"phase={phase}")
+
+        botanist_id = self.request.query_params.get("botanist")
+        if botanist_id:
+            filters.append(f"botanist={botanist_id}")
+
+        finance_id = self.request.query_params.get("finance")
+        if finance_id:
+            filters.append(f"finance={finance_id}")
+
+        requesting_officer_id = self.request.query_params.get("requesting_officer")
+        if requesting_officer_id:
+            filters.append(f"requesting_officer={requesting_officer_id}")
+
+        draft_only = self.request.query_params.get("draft_only")
+        if draft_only:
+            filters.append(f"draft_only={draft_only}")
+
+        cannabis_only = self.request.query_params.get("cannabis_only")
+        if cannabis_only:
+            filters.append(f"cannabis_only={cannabis_only}")
+
+        search = self.request.query_params.get("search")
+        if search:
+            filters.append(f"search='{search}'")
+
+        date_from = self.request.query_params.get("date_from")
+        if date_from:
+            filters.append(f"date_from={date_from}")
+
+        date_to = self.request.query_params.get("date_to")
+        if date_to:
+            filters.append(f"date_to={date_to}")
+
+        ordering = self.request.query_params.get("ordering", "-received")
+        filters.append(f"ordering={ordering}")
+
+        # Log with all filters
+        filter_str = ", ".join(filters) if filters else "no filters"
+        settings.LOGGER.info(
+            f"User {user.email} is requesting submissions list ({filter_str})"
+        )
+
         queryset = Submission.objects.select_related(
             "approved_botanist",
             "finance_officer",
@@ -60,29 +136,22 @@ class SubmissionListView(ListCreateAPIView):
         ).prefetch_related("defendants", "bags")
 
         # Filter by phase
-        phase = self.request.query_params.get("phase")
         if phase:
             queryset = queryset.filter(phase=phase)
 
         # Filter by assigned staff
-        botanist_id = self.request.query_params.get("botanist")
         if botanist_id:
             queryset = queryset.filter(approved_botanist_id=botanist_id)
 
-        finance_id = self.request.query_params.get("finance")
         if finance_id:
             queryset = queryset.filter(finance_officer_id=finance_id)
 
-        # Filter by cannabis presence
-        cannabis_only = self.request.query_params.get("cannabis_only")
-        if cannabis_only and cannabis_only.lower() == "true":
-            queryset = queryset.filter(
-                bags__assessments__determination__in=[
-                    BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA,
-                    BotanicalAssessment.DeterminationChoices.CANNABIS_INDICA,
-                    BotanicalAssessment.DeterminationChoices.CANNABIS_HYBRID,
-                ]
-            ).distinct()
+        if requesting_officer_id:
+            queryset = queryset.filter(requesting_officer_id=requesting_officer_id)
+
+        # Filter by draft status
+        if draft_only and draft_only.lower() == "true":
+            queryset = queryset.filter(is_draft=True)
 
         # Search functionality
         search = self.request.query_params.get("search")
@@ -111,7 +180,7 @@ class SubmissionListView(ListCreateAPIView):
         ordering = self.request.query_params.get("ordering", "-received")
 
         # Validate and apply ordering
-        # Support ordering by: case_number, received, phase, approved_botanist__last_name, finance_officer__last_name
+        # Support ordering by: case_number, received, phase, is_draft, approved_botanist__last_name, finance_officer__last_name, requesting_officer__last_name
         valid_orderings = [
             "case_number",
             "-case_number",
@@ -119,14 +188,18 @@ class SubmissionListView(ListCreateAPIView):
             "-received",
             "phase",
             "-phase",
+            "is_draft",
+            "-is_draft",
             "approved_botanist__last_name",
             "-approved_botanist__last_name",
             "finance_officer__last_name",
             "-finance_officer__last_name",
+            "requesting_officer__last_name",
+            "-requesting_officer__last_name",
         ]
 
         if ordering in valid_orderings:
-            # Handle NULL values for botanist and finance officer sorting
+            # Handle NULL values for officer sorting
             # NULL values should always appear at the end regardless of sort direction
             if ordering == "approved_botanist__last_name":
                 queryset = queryset.order_by(
@@ -144,6 +217,14 @@ class SubmissionListView(ListCreateAPIView):
                 queryset = queryset.order_by(
                     F("finance_officer__last_name").desc(nulls_last=True)
                 )
+            elif ordering == "requesting_officer__last_name":
+                queryset = queryset.order_by(
+                    F("requesting_officer__last_name").asc(nulls_last=True)
+                )
+            elif ordering == "-requesting_officer__last_name":
+                queryset = queryset.order_by(
+                    F("requesting_officer__last_name").desc(nulls_last=True)
+                )
             else:
                 queryset = queryset.order_by(ordering)
         else:
@@ -153,10 +234,23 @@ class SubmissionListView(ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
-        submission = serializer.save()
+        user = self.request.user
         settings.LOGGER.info(
-            f"User {self.request.user} created submission: {submission.case_number}"
+            f"{user.get_full_name() if hasattr(user, 'get_full_name') else user} is trying to save a submission as a draft"
         )
+        settings.LOGGER.debug(f"Submission data: {serializer.validated_data}")
+
+        try:
+            submission = serializer.save()
+            settings.LOGGER.info(
+                f"User {user.get_full_name() if hasattr(user, 'get_full_name') else user} successfully created submission: {submission.case_number}"
+            )
+        except Exception as e:
+            settings.LOGGER.error(
+                f"Failed to create submission for user {user.get_full_name() if hasattr(user, 'get_full_name') else user}. Error: {str(e)}",
+                exc_info=True,
+            )
+            raise
 
 
 class SubmissionDetailView(RetrieveUpdateDestroyAPIView):

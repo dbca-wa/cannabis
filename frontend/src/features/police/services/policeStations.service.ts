@@ -1,10 +1,12 @@
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
+import { logger } from "@/shared/services/logger.service";
 import type {
 	PoliceStation,
 	PoliceStationCreateRequest,
 	PoliceStationUpdateRequest,
 	PaginatedResponse,
 } from "@/shared/types/backend-api.types";
+import { buildQueryParams } from "@/shared/utils/queryParams.utils";
 
 export interface StationsQueryParams {
 	page?: number;
@@ -19,16 +21,16 @@ export const policeStationsService = {
 	async getStations(
 		params: StationsQueryParams = {}
 	): Promise<PaginatedResponse<PoliceStation>> {
-		const searchParams = new URLSearchParams();
+		const cleanParams = buildQueryParams({
+			page: params.page,
+			search: params.search,
+			ordering: params.ordering,
+		});
 
-		if (params.page) searchParams.append("page", params.page.toString());
-		if (params.search) searchParams.append("search", params.search);
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-
-		const url = `${ENDPOINTS.POLICE.STATIONS.LIST}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
-		return apiClient.get<PaginatedResponse<PoliceStation>>(url);
+		return apiClient.get<PaginatedResponse<PoliceStation>>(
+			ENDPOINTS.POLICE.STATIONS.LIST,
+			{ params: cleanParams }
+		);
 	},
 
 	/**
@@ -46,10 +48,12 @@ export const policeStationsService = {
 	async createStation(
 		data: PoliceStationCreateRequest
 	): Promise<PoliceStation> {
-		return apiClient.post<PoliceStation>(
+		const result = await apiClient.post<PoliceStation>(
 			ENDPOINTS.POLICE.STATIONS.CREATE,
 			data
 		);
+		logger.debug("createStation service response", { result });
+		return result;
 	},
 
 	/**
@@ -79,18 +83,20 @@ export const policeStationsService = {
 		format: "csv" | "json" = "csv",
 		params: Omit<StationsQueryParams, "page"> = {}
 	): Promise<Blob> {
+		const cleanParams = buildQueryParams({
+			format: format,
+			search: params.search,
+			ordering: params.ordering,
+		});
+
 		const searchParams = new URLSearchParams();
+		Object.entries(cleanParams).forEach(([key, value]) => {
+			searchParams.append(key, String(value));
+		});
 
-		// Add format parameter
-		searchParams.append("format", format);
-
-		// Add filtering parameters (but not pagination)
-		if (params.search) searchParams.append("search", params.search);
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-
-		const url = `${ENDPOINTS.POLICE.STATIONS.EXPORT}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const url = `${
+			ENDPOINTS.POLICE.STATIONS.EXPORT
+		}?${searchParams.toString()}`;
 
 		return apiClient.getBlob(url);
 	},

@@ -5,6 +5,7 @@ import type {
 	PaginatedCertificatesResponse,
 	CertificateSearchParams,
 } from "@/shared/types/backend-api.types";
+import { buildQueryParams } from "@/shared/utils/queryParams.utils";
 
 export interface CertificatesQueryParams {
 	page?: number;
@@ -19,14 +20,22 @@ export class CertificatesService {
 	static async getCertificates(
 		params: CertificatesQueryParams = {}
 	): Promise<PaginatedCertificatesResponse> {
-		const searchParams = new URLSearchParams();
+		const cleanParams = buildQueryParams({
+			page: params.page,
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+			limit: params.limit,
+		});
 
-		if (params.page) searchParams.append("page", params.page.toString());
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
+		const searchParams = new URLSearchParams();
+		Object.entries(cleanParams).forEach(([key, value]) => {
+			if (Array.isArray(value)) {
+				value.forEach((v) => searchParams.append(key, String(v)));
+			} else {
+				searchParams.append(key, String(value));
+			}
+		});
 
 		const url = `${ENDPOINTS.CERTIFICATES.LIST}${
 			searchParams.toString() ? `?${searchParams.toString()}` : ""
@@ -102,15 +111,22 @@ export class CertificatesService {
 	static async searchCertificates(
 		params: CertificateSearchParams
 	): Promise<PaginatedCertificatesResponse> {
-		const searchParams = new URLSearchParams();
+		const cleanParams = buildQueryParams({
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+			limit: params.limit,
+			offset: params.offset,
+		});
 
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
-		if (params.offset)
-			searchParams.append("offset", params.offset.toString());
+		const searchParams = new URLSearchParams();
+		Object.entries(cleanParams).forEach(([key, value]) => {
+			if (Array.isArray(value)) {
+				value.forEach((v) => searchParams.append(key, String(v)));
+			} else {
+				searchParams.append(key, String(value));
+			}
+		});
 
 		const url = `${ENDPOINTS.CERTIFICATES.LIST}${
 			searchParams.toString() ? `?${searchParams.toString()}` : ""
@@ -176,16 +192,21 @@ export class CertificatesService {
 		format: "csv" | "json" = "csv",
 		params: Omit<CertificatesQueryParams, "page" | "limit"> = {}
 	): Promise<Blob> {
+		const cleanParams = buildQueryParams({
+			export_format: format,
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+		});
+
 		const searchParams = new URLSearchParams();
-
-		// Add format parameter
-		searchParams.append("export_format", format);
-
-		// Add filtering parameters (but not pagination)
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
+		Object.entries(cleanParams).forEach(([key, value]) => {
+			if (Array.isArray(value)) {
+				value.forEach((v) => searchParams.append(key, String(v)));
+			} else {
+				searchParams.append(key, String(value));
+			}
+		});
 
 		const url = `${ENDPOINTS.CERTIFICATES.EXPORT}${
 			searchParams.toString() ? `?${searchParams.toString()}` : ""

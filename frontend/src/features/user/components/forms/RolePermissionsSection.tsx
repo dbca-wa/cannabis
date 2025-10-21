@@ -16,12 +16,14 @@ interface RolePermissionsSectionProps {
 	control: Control<any>;
 	errors: FieldErrors<any>;
 	selectedRole: string;
+	lockedRole?: "botanist" | "finance" | null;
 }
 
 export const RolePermissionsSection = ({
 	control,
 	errors,
 	selectedRole,
+	lockedRole = null,
 }: RolePermissionsSectionProps) => {
 	const { user } = useAuth();
 
@@ -38,6 +40,7 @@ export const RolePermissionsSection = ({
 						<Select
 							onValueChange={field.onChange}
 							value={field.value}
+							disabled={!!lockedRole}
 						>
 							<SelectTrigger className="w-full mt-1">
 								<SelectValue placeholder="Select a role" />
@@ -45,22 +48,26 @@ export const RolePermissionsSection = ({
 							<SelectContent className="z-[1000]">
 								<SelectGroup>
 									<SelectLabel>Available Roles</SelectLabel>
-									<SelectItem value="none">
-										No Role
-									</SelectItem>
-
-									{(user?.is_superuser ||
-										user?.role === "botanist") && (
-										<SelectItem value="botanist">
-											Approved Botanist
+									{!lockedRole && (
+										<SelectItem value="none">
+											No Role
 										</SelectItem>
 									)}
 
-									{user?.is_superuser && (
-										<SelectItem value="finance">
-											Finance Officer
-										</SelectItem>
-									)}
+									{(!lockedRole || lockedRole === "botanist") &&
+										(user?.is_superuser ||
+											user?.role === "botanist") && (
+											<SelectItem value="botanist">
+												Approved Botanist
+											</SelectItem>
+										)}
+
+									{(!lockedRole || lockedRole === "finance") &&
+										user?.is_superuser && (
+											<SelectItem value="finance">
+												Finance Officer
+											</SelectItem>
+										)}
 								</SelectGroup>
 							</SelectContent>
 						</Select>

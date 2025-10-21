@@ -265,6 +265,7 @@ class SubmissionListSerializer(serializers.ModelSerializer):
             "bags_count",
             "defendants_count",
             "cannabis_present",
+            "is_draft",
             "created_at",
         ]
 
@@ -431,10 +432,31 @@ class SubmissionCreateSerializer(serializers.ModelSerializer):
             "is_draft",
         ]
 
+    def validate(self, data):
+        """
+        Validate submission data based on draft status.
+        Drafts can have empty/missing required fields.
+        """
+        is_draft = data.get("is_draft", False)
+
+        # If not a draft, ensure required fields are present and not blank
+        if not is_draft:
+            required_fields = ["case_number", "security_movement_envelope"]
+            for field in required_fields:
+                value = data.get(field)
+                if not value or (isinstance(value, str) and not value.strip()):
+                    raise serializers.ValidationError(
+                        {field: f"This field is required for non-draft submissions."}
+                    )
+
+        return data
+
     def validate_case_number(self, value):
-        """Ensure case numbers are unique"""
-        if Submission.objects.filter(case_number=value).exists():
-            raise serializers.ValidationError("Case number must be unique.")
+        """Ensure case numbers are unique (only for non-empty values)"""
+        # Allow empty case numbers for drafts
+        if value and value.strip():
+            if Submission.objects.filter(case_number=value).exists():
+                raise serializers.ValidationError("Case number must be unique.")
         return value
 
     def validate_received(self, value):

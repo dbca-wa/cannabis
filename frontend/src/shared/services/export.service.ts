@@ -1,6 +1,7 @@
 import { apiClient } from "@/shared/services/api";
 import { generateFilename } from "@/shared/utils/export.utils";
 import { toast } from "sonner";
+import { logger } from "@/shared/services/logger.service";
 
 export interface ExportConfig {
 	entityName: string;
@@ -41,10 +42,7 @@ export class ExportService {
 			searchParams.toString() ? `?${searchParams.toString()}` : ""
 		}`;
 
-		console.log(
-			`Exporting ${config.entityName} as ${format.toUpperCase()}:`,
-			{ url, config }
-		);
+		logger.info(`Exporting ${config.entityName} as ${format.toUpperCase()}`, { url, config });
 
 		try {
 			const blob = await apiClient.getBlob(url);
@@ -55,7 +53,7 @@ export class ExportService {
 			});
 			return blob;
 		} catch (error) {
-			console.error(`Export failed:`, error);
+			logger.error("Export failed", { error });
 			throw error;
 		}
 	}
@@ -97,7 +95,7 @@ export class ExportService {
 				`Exported all ${config.entityName} to ${format.toUpperCase()}`
 			);
 		} catch (error) {
-			console.error("Export failed:", error);
+			logger.error("Export failed", { error });
 			toast.error("Export failed. Please try again.");
 		} finally {
 			onComplete?.();

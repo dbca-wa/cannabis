@@ -7,6 +7,7 @@ import type {
 	PaginatedDefendantsResponse,
 	DefendantSearchParams,
 } from "@/shared/types/backend-api.types";
+import { buildQueryParams } from "@/shared/utils/queryParams.utils";
 
 export interface DefendantsQueryParams {
 	page?: number;
@@ -22,20 +23,17 @@ export class DefendantsService {
 	static async getDefendants(
 		params: DefendantsQueryParams = {}
 	): Promise<PaginatedDefendantsResponse> {
-		const searchParams = new URLSearchParams();
-
-		if (params.page) searchParams.append("page", params.page.toString());
-		if (params.search) searchParams.append("search", params.search);
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
-
-		const url = `${ENDPOINTS.DEFENDANTS.LIST}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			page: params.page,
+			search: params.search,
+			ordering: params.ordering,
+			limit: params.limit,
+		});
 
 		try {
 			const result = await apiClient.get<PaginatedDefendantsResponse>(
-				url
+				ENDPOINTS.DEFENDANTS.LIST,
+				{ params: cleanParams }
 			);
 
 			return result;
@@ -113,21 +111,17 @@ export class DefendantsService {
 	static async searchDefendants(
 		params: DefendantSearchParams
 	): Promise<PaginatedDefendantsResponse> {
-		const searchParams = new URLSearchParams();
-
-		if (params.search) searchParams.append("search", params.search);
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
-		if (params.offset)
-			searchParams.append("offset", params.offset.toString());
-
-		const url = `${ENDPOINTS.DEFENDANTS.LIST}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			search: params.search,
+			ordering: params.ordering,
+			limit: params.limit,
+			offset: params.offset,
+		});
 
 		try {
 			const result = await apiClient.get<PaginatedDefendantsResponse>(
-				url
+				ENDPOINTS.DEFENDANTS.LIST,
+				{ params: cleanParams }
 			);
 
 			return result;
@@ -161,19 +155,18 @@ export class DefendantsService {
 	 * Get defendant cases badge color class for UI components
 	 */
 	static getDefendantCasesBadgeColorClass(
-		defendant: DefendantTiny | Defendant,
-		isDark: boolean = false
+		defendant: DefendantTiny | Defendant
 	): string {
 		const count = defendant.cases_count;
 
 		if (count === 0) {
-			return isDark ? "text-gray-400" : "text-gray-600";
+			return "text-gray-600";
 		} else if (count <= 2) {
-			return isDark ? "text-blue-400" : "text-blue-600";
+			return "text-blue-600";
 		} else if (count <= 5) {
-			return isDark ? "text-yellow-400" : "text-yellow-600";
+			return "text-yellow-600";
 		} else {
-			return isDark ? "text-red-400" : "text-red-600";
+			return "text-red-600";
 		}
 	}
 
@@ -221,38 +214,20 @@ export class DefendantsService {
 		format: "csv" | "json" = "csv",
 		params: Omit<DefendantsQueryParams, "page" | "limit"> = {}
 	): Promise<Blob> {
-		const searchParams = new URLSearchParams();
-
-		// Add format parameter
-		searchParams.append("format", format);
-
-		// Add filtering parameters (but not pagination)
-		if (params.search) searchParams.append("search", params.search);
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-
-		const url = `${ENDPOINTS.DEFENDANTS.EXPORT}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			format: format,
+			search: params.search,
+			ordering: params.ordering,
+		});
 
 		try {
-			// Debug logging
-			console.log("Export request:", { url, format, params });
-
 			// Use apiClient.getBlob for proper authentication and base URL handling
-			const blob = await apiClient.getBlob(url);
-
-			// Debug logging
-			console.log("Export response:", {
-				blob,
-				size: blob.size,
-				type: blob.type,
+			const blob = await apiClient.getBlob(ENDPOINTS.DEFENDANTS.EXPORT, {
+				params: cleanParams,
 			});
 
 			return blob;
 		} catch (error) {
-			// Debug logging
-			console.error("Export error:", error);
-
 			throw error;
 		}
 	}

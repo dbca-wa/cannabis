@@ -73,7 +73,8 @@ class Submission(AuditModel):
     case_number = models.CharField(
         max_length=50,
         unique=True,
-        help_text="Unique case identifier",
+        blank=True,
+        help_text="Unique case identifier (can be empty for drafts)",
     )
     received = models.DateTimeField(
         help_text="When the submission was received",
@@ -111,8 +112,9 @@ class Submission(AuditModel):
 
     security_movement_envelope = models.CharField(
         max_length=20,
+        blank=True,
         verbose_name="Security Movement Envelope",
-        help_text="Security Movement Envelope number for the bags",
+        help_text="Security Movement Envelope number for the bags (can be empty for drafts)",
     )
 
     internal_comments = models.TextField(

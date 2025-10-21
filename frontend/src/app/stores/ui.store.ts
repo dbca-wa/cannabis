@@ -107,26 +107,34 @@ export class UIStore extends BaseStore<UIStoreState> {
 	async initialise(): Promise<void> {
 		await this.executeAsync(
 			async () => {
-				logger.info("🚀 Initialising UI store", {
-					currentTheme: this.state.theme,
-					currentLoader: this.state.selectedLoader,
-					lastSyncTimestamp: this.state.lastSyncTimestamp,
-				});
+				// If user is authenticated, try to load server preferences first
+				if (this.isUserAuthenticated()) {
+					try {
+						const { PreferencesSyncService } = await import(
+							"@/shared/services/preferencesSync.service"
+						);
+						const serverPreferences = await PreferencesSyncService.loadPreferencesOnLogin();
+						
+						if (serverPreferences) {
+							this.loadFromServerPreferences(serverPreferences);
+						} else {
+							this.initFromStorage();
+						}
+					} catch (error) {
+						logger.error("Failed to load server preferences", { error });
+						this.initFromStorage();
+					}
+				} else {
+					this.initFromStorage();
+				}
 
-				this.initFromStorage();
 				this.applyTheme();
-
-
 
 				runInAction(() => {
 					this.state.initialised = true;
 				});
 
-				logger.info("✅ UI store initialised", {
-					theme: this.state.theme,
-					loader: this.state.selectedLoader,
-					documentClasses: document.documentElement.className,
-				});
+				logger.info("UI store initialised");
 			},
 			"initialise_ui",
 			{ silent: true }
@@ -154,49 +162,13 @@ export class UIStore extends BaseStore<UIStoreState> {
 			// Don't override server preferences if we have recent server data
 			if (this.state.lastSyncTimestamp) {
 				logger.info(
-					"⏭️ Skipping localStorage init - server preferences already loaded",
+					"Skipping localStorage init - server preferences already loaded",
 					{
 						lastSyncTimestamp: this.state.lastSyncTimestamp,
 						timeSinceSync:
 							Date.now() - this.state.lastSyncTimestamp,
 					}
 				);
-				return;
-			}
-
-			// Also skip if we detect that server preferences might be loaded soon
-			// (this prevents race conditions during login)
-			const hasValidTokens =
-				typeof window !== "undefined" &&
-				localStorage.getItem("cannabis_access_token") &&
-				localStorage.getItem("cannabis_refresh_token");
-
-			if (hasValidTokens && !this.state.initialised) {
-				logger.info(
-					"⏭️ Skipping localStorage init - user has tokens, server preferences may load soon"
-				);
-				// Set defaults but don't apply theme yet - BUT load itemsPerPage from localStorage
-				runInAction(() => {
-					if (!this.state.theme || this.state.theme === "system") {
-						this.state.theme = "system";
-					}
-					if (!this.state.selectedLoader) {
-						this.state.selectedLoader = "minimal";
-					}
-					// Always load itemsPerPage from localStorage even when skipping other preferences
-					if (
-						storedItemsPerPage &&
-						[10, 25, 50, 100].includes(storedItemsPerPage)
-					) {
-						this.state.itemsPerPage = storedItemsPerPage;
-						logger.info(
-							"📄 Items per page loaded from localStorage (during skip)",
-							{
-								itemsPerPage: storedItemsPerPage,
-							}
-						);
-					}
-				});
 				return;
 			}
 
@@ -215,7 +187,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 				runInAction(() => {
 					this.state.selectedLoader = storedLoader;
 				});
-				logger.info("⚙️ Loader loaded from localStorage", {
+				logger.info("Loader loaded from localStorage", {
 					loader: storedLoader,
 				});
 			}
@@ -232,7 +204,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 				});
 			}
 
-			logger.info("✅ UI store initialized from localStorage", {
+			logger.info("UI store initialized from localStorage", {
 				finalTheme: this.state.theme,
 				finalLoader: this.state.selectedLoader,
 				finalItemsPerPage: this.state.itemsPerPage,
@@ -255,18 +227,19 @@ export class UIStore extends BaseStore<UIStoreState> {
 
 		// Sync to server if user is authenticated
 		if (syncToServer && this.isUserAuthenticated()) {
-			const syncSuccess = await this.syncThemeToServer(newTheme);
-			if (syncSuccess) {
-				runInAction(() => {
-					this.state.lastSyncTimestamp = Date.now();
-				});
+			try {
+				const syncSuccess = await this.syncThemeToServer(newTheme);
+				if (syncSuccess) {
+					runInAction(() => {
+						this.state.lastSyncTimestamp = Date.now();
+					});
+				}
+			} catch (error) {
+				logger.error("Failed to sync theme to server", { theme: newTheme, error });
 			}
 		}
 
-		logger.info("Theme changed", {
-			theme: newTheme,
-			synced: syncToServer && this.isUserAuthenticated(),
-		});
+		logger.info(`Theme changed to ${newTheme} mode`);
 	};
 
 	toggleTheme = async () => {
@@ -306,12 +279,6 @@ export class UIStore extends BaseStore<UIStoreState> {
 
 	applyTheme = () => {
 		const root = window.document.documentElement;
-
-		logger.info("🎨 Applying theme", {
-			currentTheme: this.state.theme,
-			beforeClasses: root.className,
-		});
-
 		root.classList.remove("light", "dark");
 
 		if (this.state.theme === "system") {
@@ -321,20 +288,10 @@ export class UIStore extends BaseStore<UIStoreState> {
 				? "dark"
 				: "light";
 			root.classList.add(systemTheme);
-
-			logger.info("🎨 System theme applied", {
-				systemTheme,
-				afterClasses: root.className,
-			});
 			return;
 		}
 
 		root.classList.add(this.state.theme);
-
-		logger.info("🎨 Theme applied", {
-			appliedTheme: this.state.theme,
-			afterClasses: root.className,
-		});
 	};
 
 	setSidebarOpen = (open: boolean) => {
@@ -447,7 +404,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 		itemsPerPage: ItemsPerPage,
 		syncToServer: boolean = true
 	) => {
-		logger.info("🔄 Setting items per page", {
+		logger.info("Setting items per page", {
 			itemsPerPage,
 			syncToServer,
 			isAuthenticated: this.isUserAuthenticated(),
@@ -476,7 +433,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 					this.state.lastSyncTimestamp = Date.now();
 				});
 
-				logger.info("✅ Items per page synced to server", {
+				logger.info("Items per page synced to server", {
 					itemsPerPage,
 				});
 			} catch (error) {
@@ -487,7 +444,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 				// Continue with local change - don't block UI
 			}
 		} else {
-			logger.info("⏭️ Skipping server sync for items per page", {
+			logger.info("Skipping server sync for items per page", {
 				syncToServer,
 				isAuthenticated: this.isUserAuthenticated(),
 			});
@@ -505,6 +462,18 @@ export class UIStore extends BaseStore<UIStoreState> {
 	}
 
 	get currentTheme() {
+		return this.state.theme;
+	}
+
+	/**
+	 * Get the resolved theme (what's actually applied to the document)
+	 */
+	get resolvedTheme(): "light" | "dark" {
+		if (this.state.theme === "system") {
+			return window.matchMedia("(prefers-color-scheme: dark)").matches
+				? "dark"
+				: "light";
+		}
 		return this.state.theme;
 	}
 
@@ -601,7 +570,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 	 */
 	loadFromServerPreferences = (preferences: UserPreferences) => {
 		try {
-			logger.info("🔄 Loading preferences from server", {
+			logger.info("Loading preferences from server", {
 				theme: preferences.theme,
 				loader: preferences.loader_style,
 				currentTheme: this.state.theme,
@@ -633,7 +602,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 					preferences.items_per_page &&
 					[10, 25, 50, 100].includes(preferences.items_per_page)
 				) {
-					logger.info("🔄 Loading items per page from server", {
+					logger.info("Loading items per page from server", {
 						serverValue: preferences.items_per_page,
 						currentValue: this.state.itemsPerPage,
 					});
@@ -641,7 +610,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 						preferences.items_per_page as ItemsPerPage;
 				} else {
 					logger.warn(
-						"⚠️ Invalid or missing items_per_page from server",
+						"Invalid or missing items_per_page from server",
 						{
 							serverValue: preferences.items_per_page,
 							currentValue: this.state.itemsPerPage,
@@ -684,7 +653,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 			// Apply theme immediately
 			this.applyTheme();
 
-			logger.info("✅ UI preferences loaded from server", {
+			logger.info("UI preferences loaded from server", {
 				theme: preferences.theme,
 				loader: preferences.loader_style,
 				syncTimestamp: this.state.lastSyncTimestamp,
@@ -729,18 +698,49 @@ export class UIStore extends BaseStore<UIStoreState> {
 	}
 
 	/**
-	 * Sync theme to server
+	 * Debug method to check current theme state
 	 */
-	private async syncThemeToServer(theme: Theme): Promise<boolean> {
+	debugThemeState() {
+		const debugInfo = {
+			currentTheme: this.state.theme,
+			lastSyncTimestamp: this.state.lastSyncTimestamp,
+			isAuthenticated: this.isUserAuthenticated(),
+			localStorageTheme: storage.getItem<Theme>(this.storageKey),
+			documentClasses: document.documentElement.className,
+			hasTokens: !!(localStorage.getItem("cannabis_access_token") && localStorage.getItem("cannabis_refresh_token")),
+		};
+		
+		logger.info("🔍 Theme Debug State", debugInfo);
+		console.table(debugInfo);
+		
+		return debugInfo;
+	}
+
+	/**
+	 * Sync theme to server with retry logic
+	 */
+	private async syncThemeToServer(theme: Theme, retryCount: number = 0): Promise<boolean> {
+		const maxRetries = 2;
+		
 		try {
 			const { UserPreferencesService } = await import(
 				"@/features/user/services/userPreferences.service"
 			);
-
+			
 			await UserPreferencesService.updateTheme(theme);
 			return true;
 		} catch (error) {
-			logger.error("Failed to sync theme to server", { error, theme });
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('timeout');
+
+			// Retry on network errors
+			if (isNetworkError && retryCount < maxRetries) {
+				const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+				await new Promise(resolve => setTimeout(resolve, delay));
+				return this.syncThemeToServer(theme, retryCount + 1);
+			}
+			
+			logger.error("Failed to sync theme to server", { theme, error: errorMessage });
 			return false;
 		}
 	}

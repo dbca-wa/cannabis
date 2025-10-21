@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { policeOfficersService } from "../services/policeOfficers.service";
+import { logger } from "@/shared/services/logger.service";
 
 import type {
 	PoliceOfficerCreateRequest,
@@ -26,7 +27,7 @@ export const usePoliceOfficers = (params: PoliceOfficerSearchParams = {}) => {
 		queryKey: policeOfficersQueryKeys.list(params),
 		queryFn: async () => {
 			const response = await policeOfficersService.getOfficers(params);
-			console.log("🚔 Police Officers API Response:", {
+			logger.debug("Police Officers API Response", {
 				count: response.count,
 				totalOfficers: response.results?.length || 0,
 				officers:
@@ -79,9 +80,9 @@ export const useCreatePoliceOfficer = () => {
 				newOfficer
 			);
 
-			// Invalidate all officers list queries to refresh the table immediately
+			// Invalidate all officers queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.lists(),
+				queryKey: policeOfficersQueryKeys.all,
 			});
 
 			toast.success("Officer created successfully!");
@@ -118,9 +119,9 @@ export const useUpdatePoliceOfficer = () => {
 				updatedOfficer
 			);
 
-			// Invalidate all officers list queries to refresh the table immediately
+			// Invalidate all officers queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.lists(),
+				queryKey: policeOfficersQueryKeys.all,
 			});
 
 			toast.success("Officer updated successfully!");
@@ -150,9 +151,9 @@ export const useDeletePoliceOfficer = () => {
 				queryKey: policeOfficersQueryKeys.detail(deletedId),
 			});
 
-			// Invalidate all officers list queries to refresh the table immediately
+			// Invalidate all officers queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.lists(),
+				queryKey: policeOfficersQueryKeys.all,
 			});
 
 			toast.success("Officer deleted successfully!");

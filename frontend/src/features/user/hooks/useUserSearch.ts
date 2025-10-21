@@ -11,7 +11,7 @@ import {
 
 export interface UseUserSearchOptions {
 	query?: string;
-	role?: Role;
+	role?: Role | "all";
 	exclude?: number[];
 	enabled?: boolean;
 	debounceMs?: number;
@@ -69,8 +69,8 @@ export const useUserSearch = (
 	);
 
 	const initialDataQueryKey = useMemo(
-		() => ["users", "initial", { exclude, limit: initialDataLimit }] as const,
-		[exclude, initialDataLimit]
+		() => ["users", "initial", { role, exclude, limit: initialDataLimit }] as const,
+		[role, exclude, initialDataLimit]
 	);
 
 	// Search query (when user types or has role filter)
@@ -79,13 +79,31 @@ export const useUserSearch = (
 		queryFn: async (): Promise<PaginatedUsersResponse> => {
 			const result = await usersService.searchUsers({
 				query: debouncedQuery,
-				role,
+				role: role !== "all" ? role : undefined,
 				exclude,
 				limit,
 			});
 
 			if (!result.success) {
 				throw new Error(result.error || "Failed to search users");
+			}
+
+			// Apply client-side role filtering with admin always visible
+			if (role && role !== "all") {
+				const filteredResults = result.data.results.filter((user: IUser) => {
+					// Admin users are always visible regardless of roleFilter
+					if (user.is_superuser || user.is_staff) {
+						return true;
+					}
+					// Filter by specific role
+					return user.role === role;
+				});
+
+				return {
+					...result.data,
+					results: filteredResults,
+					count: filteredResults.length,
+				};
 			}
 
 			return result.data;
@@ -102,12 +120,31 @@ export const useUserSearch = (
 		queryFn: async (): Promise<PaginatedUsersResponse> => {
 			const result = await usersService.searchUsers({
 				query: "",
+				role: role !== "all" ? role : undefined,
 				exclude,
 				limit: initialDataLimit,
 			});
 
 			if (!result.success) {
 				throw new Error(result.error || "Failed to load initial users");
+			}
+
+			// Apply client-side role filtering with admin always visible
+			if (role && role !== "all") {
+				const filteredResults = result.data.results.filter((user: IUser) => {
+					// Admin users are always visible regardless of roleFilter
+					if (user.is_superuser || user.is_staff) {
+						return true;
+					}
+					// Filter by specific role
+					return user.role === role;
+				});
+
+				return {
+					...result.data,
+					results: filteredResults,
+					count: filteredResults.length,
+				};
 			}
 
 			return result.data;

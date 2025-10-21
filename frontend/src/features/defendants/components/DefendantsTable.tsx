@@ -580,15 +580,7 @@ export const DefendantsTable = () => {
 									{/* Cases Count */}
 									<TableCell>
 										<Badge
-											variant={
-												defendant.cases_count === 0
-													? "secondary"
-													: defendant.cases_count <= 2
-													? "default"
-													: defendant.cases_count <= 5
-													? "outline"
-													: "destructive"
-											}
+											variant={"secondary"}
 											className="font-mono"
 										>
 											{DefendantsService.getDefendantCasesBadge(

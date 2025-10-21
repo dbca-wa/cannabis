@@ -109,19 +109,15 @@ const DeleteDefendantRouteModal = lazy(() =>
 	)
 );
 
-// Submissions modals
-const CreateSubmissionRouteModal = lazy(() =>
-	import(
-		"@/features/submissions/components/modals/CreateSubmissionRouteModal"
-	).then((m) => ({
-		default: m.CreateSubmissionRouteModal,
+// Submission pages
+const CreateSubmission = lazy(() =>
+	import("@/pages/submissions/CreateSubmission").then((m) => ({
+		default: m.CreateSubmission,
 	}))
 );
-const EditSubmissionRouteModal = lazy(() =>
-	import(
-		"@/features/submissions/components/modals/EditSubmissionRouteModal"
-	).then((m) => ({
-		default: m.EditSubmissionRouteModal,
+const EditSubmission = lazy(() =>
+	import("@/pages/submissions/EditSubmission").then((m) => ({
+		default: m.EditSubmission,
 	}))
 );
 const DeleteSubmissionRouteModal = lazy(() =>
@@ -235,16 +231,15 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		adminOnly: false,
 		showInSidebar: true,
 		element: SubmissionsPage,
-		crudRoutes: {
-			entityParam: "submissionId",
-			components: {
-				add: CreateSubmissionRouteModal,
-				edit: EditSubmissionRouteModal,
-				delete: DeleteSubmissionRouteModal,
-			},
-		},
 		children: [
-			// Custom routes (not standard CRUD)
+			// CRUD routes
+			{ path: "add", element: CreateSubmission },
+			{ path: ":submissionId", element: EditSubmission },
+			{
+				path: ":submissionId/delete",
+				element: DeleteSubmissionRouteModal,
+			},
+			// Custom routes
 			{ path: "demo", element: SubmissionFormDemoPage },
 			{ path: "workflow-demo", element: PhaseWorkflowDemoPage },
 			{ path: "phase-progress-demo", element: PhaseProgressDemoPage },

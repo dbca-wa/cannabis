@@ -3,6 +3,7 @@ import axios, {
 	type AxiosRequestConfig,
 	AxiosError,
 } from "axios";
+import { logger } from "@/shared/services/logger.service";
 
 // Extend AxiosRequestConfig to include retry flag
 declare module "axios" {
@@ -73,15 +74,11 @@ export class ApiClientService {
 					originalRequest &&
 					!originalRequest._retry
 				) {
-					console.log(
-						"Received 401 response, attempting token refresh..."
-					);
+					logger.info("Received 401 response, attempting token refresh...");
 
 					// Don't try to refresh if this is already a refresh request
 					if (originalRequest.url?.includes("/auth/refresh/")) {
-						console.log(
-							"401 on refresh endpoint, logging out user"
-						);
+						logger.warn("401 on refresh endpoint, logging out user");
 						await this.handleUnauthorized();
 						throw this.createApiError(error);
 					}
@@ -146,11 +143,11 @@ export class ApiClientService {
 		try {
 			const refreshToken = storage.getRefreshToken();
 			if (!refreshToken) {
-				console.warn("No refresh token available for refresh");
+				logger.warn("No refresh token available for refresh");
 				return false;
 			}
 
-			console.log("Attempting to refresh access token...");
+			logger.info("Attempting to refresh access token...");
 
 			// Make refresh request without going through interceptors
 			const response = await axios.post<{ access: string }>(
@@ -165,14 +162,14 @@ export class ApiClientService {
 			if (response.data?.access) {
 				// Update stored access token, keep existing refresh token
 				storage.setTokens(response.data.access, refreshToken);
-				console.log("Access token refreshed successfully");
+				logger.info("Access token refreshed successfully");
 				return true;
 			}
 
-			console.warn("Refresh response did not contain access token");
+			logger.warn("Refresh response did not contain access token");
 			return false;
 		} catch (error) {
-			console.error("Token refresh failed:", error);
+			logger.error("Token refresh failed", { error });
 			return false;
 		}
 	}

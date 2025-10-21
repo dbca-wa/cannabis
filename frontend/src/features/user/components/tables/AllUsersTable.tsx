@@ -129,9 +129,11 @@ const AllUsersTable = observer(() => {
 				filters.roleFilter !== "all"
 					? (filters.roleFilter as UserRole)
 					: undefined,
-			status:
-				filters.statusFilter !== "all"
-					? filters.statusFilter
+			is_active:
+				filters.statusFilter === "active"
+					? true
+					: filters.statusFilter === "inactive"
+					? false
 					: undefined,
 			ordering: ordering,
 		}),
@@ -174,20 +176,23 @@ const AllUsersTable = observer(() => {
 	const exportHook = useExport({
 		entityName: "users",
 		exportEndpoint: ENDPOINTS.USERS.EXPORT,
-		getCurrentFilters: () => ({
-			searchQuery: debouncedSearchQuery || undefined,
-			ordering: ordering,
-			additionalParams: {
-				role:
-					filters.roleFilter !== "all"
-						? filters.roleFilter
-						: undefined,
-				status:
-					filters.statusFilter !== "all"
-						? filters.statusFilter
-						: undefined,
-			},
-		}),
+		getCurrentFilters: () => {
+			const additionalParams: Record<string, string | number | boolean> =
+				{};
+			if (filters.roleFilter !== "all") {
+				additionalParams.role = filters.roleFilter as string;
+			}
+			if (filters.statusFilter === "active") {
+				additionalParams.is_active = "true";
+			} else if (filters.statusFilter === "inactive") {
+				additionalParams.is_active = "false";
+			}
+			return {
+				searchQuery: debouncedSearchQuery || undefined,
+				ordering: ordering || undefined,
+				additionalParams,
+			};
+		},
 	});
 
 	// Reset filters function
@@ -247,16 +252,6 @@ const AllUsersTable = observer(() => {
 			botanist: <MdScience />,
 			finance: <FaUserShield />,
 		}),
-		[]
-	);
-
-	const getRoleDisplay = useMemo(
-		() => (user: IUser) => {
-			if (user.is_superuser) return "Super Admin";
-			if (user.role === "botanist") return "Botanist";
-			if (user.role === "finance") return "Finance";
-			return "No Role";
-		},
 		[]
 	);
 
@@ -545,20 +540,12 @@ const AllUsersTable = observer(() => {
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="all">
-											All Status
-										</SelectItem>
+										<SelectItem value="all">All</SelectItem>
 										<SelectItem value="active">
 											Active
 										</SelectItem>
 										<SelectItem value="inactive">
 											Inactive
-										</SelectItem>
-										<SelectItem value="staff">
-											Staff
-										</SelectItem>
-										<SelectItem value="superuser">
-											Super Admin
 										</SelectItem>
 									</SelectContent>
 								</Select>
@@ -608,7 +595,7 @@ const AllUsersTable = observer(() => {
 
 								{/* ID Column (hidden on mobile) */}
 								{!isMobile && (
-									<TableHead className="w-20">
+									<TableHead className="w-20 text-center">
 										<Button
 											variant="ghost"
 											size="sm"
@@ -650,24 +637,30 @@ const AllUsersTable = observer(() => {
 								)}
 
 								{/* Role Column */}
-								<TableHead>Role & Status</TableHead>
+								<TableHead>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-auto p-0 font-semibold hover:bg-transparent"
+										onClick={() => handleSort("role")}
+									>
+										Role
+										{getSortIcon("role")}
+									</Button>
+								</TableHead>
 
-								{/* Date Joined Column (desktop only) */}
-								{!isMobile && (
-									<TableHead>
-										<Button
-											variant="ghost"
-											size="sm"
-											className="h-auto p-0 font-semibold hover:bg-transparent"
-											onClick={() =>
-												handleSort("date_joined")
-											}
-										>
-											Joined
-											{getSortIcon("date_joined")}
-										</Button>
-									</TableHead>
-								)}
+								{/* Status Column */}
+								<TableHead>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-auto p-0 font-semibold hover:bg-transparent"
+										onClick={() => handleSort("is_active")}
+									>
+										Status
+										{getSortIcon("is_active")}
+									</Button>
+								</TableHead>
 
 								{/* Actions Column */}
 								<TableHead className="w-16">
@@ -712,7 +705,7 @@ const AllUsersTable = observer(() => {
 							) : error ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 4 : 7}
+										colSpan={isMobile ? 5 : 7}
 										className="h-24 text-center"
 									>
 										<div className="text-muted-foreground">
@@ -726,7 +719,7 @@ const AllUsersTable = observer(() => {
 							) : users.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 4 : 7}
+										colSpan={isMobile ? 5 : 7}
 										className="h-24 text-center"
 									>
 										<div className="flex flex-col items-center gap-2">
@@ -785,7 +778,7 @@ const AllUsersTable = observer(() => {
 
 										{/* ID (hidden on mobile) */}
 										{!isMobile && (
-											<TableCell className="font-mono text-xs text-gray-500">
+											<TableCell className="font-mono text-xs text-gray-500 text-center">
 												{user.id}
 											</TableCell>
 										)}
@@ -817,63 +810,63 @@ const AllUsersTable = observer(() => {
 											</TableCell>
 										)}
 
-										{/* Role & Status */}
+										{/* Role */}
 										<TableCell>
-											<div className="flex flex-col gap-1">
-												<div className="flex items-center gap-2">
-													<div
-														className={cn(
-															"text-start font-medium",
-															user.role ===
-																"botanist"
-																? "text-green-600"
-																: user.role ===
-																  "finance"
-																? "text-purple-600"
-																: user.is_superuser
-																? "text-yellow-600"
-																: "text-gray-600"
-														)}
-													>
-														{roleIconMapping[
+											<div className="flex items-center gap-2">
+												<div
+													className={cn(
+														"text-start font-medium",
+														user.is_superuser
+															? "text-yellow-600"
+															: user.role ===
+															  "botanist"
+															? "text-green-600"
+															: user.role ===
+															  "finance"
+															? "text-purple-600"
+															: "text-gray-600"
+													)}
+												>
+													{user.is_superuser ? (
+														<FaUserShield />
+													) : (
+														roleIconMapping[
 															user.role as keyof typeof roleIconMapping
-														] || <CgSmileNone />}
-													</div>
-													<span className="text-sm font-medium">
-														{getRoleDisplay(user)}
-													</span>
-												</div>
-												<div className="flex gap-1">
-													{user.is_staff && (
-														<Badge
-															variant="secondary"
-															className="text-xs"
-														>
-															Staff
-														</Badge>
-													)}
-													{!user.is_active && (
-														<Badge
-															variant="destructive"
-															className="text-xs"
-														>
-															Inactive
-														</Badge>
+														] || <CgSmileNone />
 													)}
 												</div>
+												<span className="text-sm font-medium">
+													{user.is_superuser
+														? "Super Admin"
+														: user.role ===
+														  "botanist"
+														? "Botanist"
+														: user.role ===
+														  "finance"
+														? "Finance"
+														: "No Role"}
+												</span>
 											</div>
 										</TableCell>
 
-										{/* Date Joined (desktop only) */}
-										{!isMobile && (
-											<TableCell>
-												<div className="text-sm text-gray-600">
-													{new Date(
-														user.date_joined
-													).toLocaleDateString()}
-												</div>
-											</TableCell>
-										)}
+										{/* Status */}
+										<TableCell>
+											{user.is_active ? (
+												<Badge
+													variant="default"
+													className="bg-green-100 text-green-800 w-fit"
+												>
+													Active
+												</Badge>
+											) : (
+												<Badge
+													variant="destructive"
+													className="w-fit"
+												>
+													Inactive
+												</Badge>
+											)}
+										</TableCell>
 
 										{/* Actions */}
 										<TableCell>

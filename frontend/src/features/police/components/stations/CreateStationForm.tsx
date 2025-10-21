@@ -9,9 +9,10 @@ import {
 	type CreateStationFormData,
 } from "../../schemas/policeStationSchemas";
 import { useCreateStation } from "../../hooks/usePoliceStations";
+import type { PoliceStation } from "@/shared/types/backend-api.types";
 
 interface CreateStationFormProps {
-	onSuccess?: () => void;
+	onSuccess?: (station?: PoliceStation) => void;
 	onCancel?: () => void;
 }
 
@@ -35,11 +36,16 @@ export function CreateStationForm({
 		},
 	});
 
-	const onSubmit = async (data: CreateStationFormData) => {
+	const onSubmit = async (data: CreateStationFormData, event?: React.BaseSyntheticEvent) => {
+		if (event) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		
 		try {
-			await createStationMutation.mutateAsync(data);
+			const newStation = await createStationMutation.mutateAsync(data);
 			reset();
-			onSuccess?.();
+			onSuccess?.(newStation);
 		} catch (error) {
 			// Error handling is done in the mutation hook
 			console.error("Form submission error:", error);
@@ -48,8 +54,12 @@ export function CreateStationForm({
 
 	const isLoading = isSubmitting || createStationMutation.isPending;
 
+	const handleCreateStation = async () => {
+		const isValid = await handleSubmit(onSubmit)();
+	};
+
 	return (
-		<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+		<div className="space-y-4">
 			{/* Station Name */}
 			<div className="space-y-2">
 				<Label htmlFor="name">
@@ -117,10 +127,14 @@ export function CreateStationForm({
 						Cancel
 					</Button>
 				)}
-				<Button type="submit" disabled={isLoading}>
+				<Button 
+					type="button" 
+					onClick={handleCreateStation}
+					disabled={isLoading}
+				>
 					{isLoading ? "Creating..." : "Create Station"}
 				</Button>
 			</div>
-		</form>
+		</div>
 	);
 }

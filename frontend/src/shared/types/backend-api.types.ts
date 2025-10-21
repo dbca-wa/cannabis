@@ -887,6 +887,7 @@ export interface SubmissionTiny {
 	bags_count: number; // Computed field
 	defendants_count: number; // Computed field
 	cannabis_present: boolean; // Computed property
+	is_draft: boolean; // Whether this is a draft submission
 	created_at: string; // ISO datetime string
 }
 
@@ -952,6 +953,7 @@ export interface SubmissionsSearchParams {
 	botanist?: number; // Filter by assigned botanist ID
 	finance?: number; // Filter by assigned finance officer ID
 	cannabis_only?: boolean; // Show only submissions with cannabis present
+	draft_only?: boolean; // Show only draft submissions
 	date_from?: string; // Filter by received date (from) - ISO date string
 	date_to?: string; // Filter by received date (to) - ISO date string
 	full?: boolean; // Return full serializer instead of list serializer
@@ -989,9 +991,10 @@ export interface SubmissionsTableFilterPreferences {
 	phase?: SubmissionPhase | "all";
 	botanist?: number | "all";
 	finance?: number | "all";
+	requestingOfficer?: number | "all";
 	dateFrom?: string;
 	dateTo?: string;
-	cannabisOnly?: boolean;
+	draftOnly?: boolean;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 }

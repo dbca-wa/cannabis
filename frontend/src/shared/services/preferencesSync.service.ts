@@ -19,11 +19,11 @@ export class PreferencesSyncService {
 			logger.info("Loading user preferences on login");
 
 			// Try to fetch from server first
-			logger.info("🔄 Fetching preferences from server...");
+			logger.info("Fetching preferences from server...");
 			const serverPreferences =
 				await UserPreferencesService.getPreferences();
 
-			logger.info("📥 Server preferences received", {
+			logger.info("Server preferences received", {
 				serverPreferences,
 				type: typeof serverPreferences,
 				keys: serverPreferences
@@ -115,7 +115,7 @@ export class PreferencesSyncService {
 			if (localTheme && localTheme !== serverPreferences.theme) {
 				migrationData.theme = localTheme as UserPreferences["theme"];
 				hasChanges = true;
-				logger.info("🔄 Migrating theme preference", {
+				logger.info("Migrating theme preference", {
 					local: localTheme,
 					server: serverPreferences.theme,
 				});
@@ -126,7 +126,7 @@ export class PreferencesSyncService {
 				migrationData.loader_style =
 					localLoader as UserPreferences["loader_style"];
 				hasChanges = true;
-				logger.info("🔄 Migrating loader preference", {
+				logger.info("Migrating loader preference", {
 					local: localLoader,
 					server: serverPreferences.loader_style,
 				});
@@ -144,7 +144,7 @@ export class PreferencesSyncService {
 					await UserPreferencesService.updatePreferences(
 						migrationData
 					);
-				logger.info("✅ Successfully migrated preferences to server", {
+				logger.info("Successfully migrated preferences to server", {
 					sent: migrationData,
 					result: updatedPreferences,
 				});
@@ -153,7 +153,7 @@ export class PreferencesSyncService {
 				return updatedPreferences;
 			} else {
 				logger.info(
-					"ℹ️ No preferences to migrate - localStorage matches server"
+					"No preferences to migrate - localStorage matches server"
 				);
 			}
 

@@ -26,12 +26,14 @@ interface InviteUserFormProps {
 		data: InviteUserFormData & { external_user_data: ExternalUser }
 	) => void;
 	isSubmitting?: boolean;
+	lockedRole?: "botanist" | "finance" | null;
 }
 
 const InviteUserForm = ({
 	onCancel,
 	onSubmit,
 	isSubmitting = false,
+	lockedRole = null,
 }: InviteUserFormProps) => {
 	const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(
 		null
@@ -51,7 +53,7 @@ const InviteUserForm = ({
 		mode: "onChange",
 		defaultValues: {
 			external_user_email: "",
-			role: "none" as const,
+			role: lockedRole || "none",
 			is_staff: false,
 			is_active: true,
 		},
@@ -110,6 +112,7 @@ const InviteUserForm = ({
 					control={control}
 					errors={errors}
 					selectedRole={selectedRole}
+					lockedRole={lockedRole}
 				/>
 			</ModalSection>
 

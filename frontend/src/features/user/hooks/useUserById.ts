@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { usersService } from "../services/users.service";
+import { usersQueryKeys } from "./useUsers";
 import { APP_CONFIG } from "@/app/config/app.config";
 
 export const useUserById = (id: number | null) => {
 	return useQuery({
-		queryKey: ["user", id],
+		queryKey: id ? usersQueryKeys.detail(id) : ["users", "detail", null],
 		queryFn: async () => {
 			if (!id) return null;
 

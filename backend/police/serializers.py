@@ -114,12 +114,14 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PoliceOfficer
         fields = [
+            "id",
             "badge_number",
             "first_name",
             "last_name",
             "rank",
             "station",
         ]
+        read_only_fields = ["id"]
 
     def validate(self, attrs):
         """Ensure at least first or last name is provided"""

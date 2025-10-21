@@ -5,6 +5,7 @@ import type {
 	PaginatedInvoicesResponse,
 	InvoiceSearchParams,
 } from "@/shared/types/backend-api.types";
+import { buildQueryParams } from "@/shared/utils/queryParams.utils";
 
 export interface InvoicesQueryParams {
 	page?: number;
@@ -21,21 +22,19 @@ export class InvoicesService {
 	static async getInvoices(
 		params: InvoicesQueryParams = {}
 	): Promise<PaginatedInvoicesResponse> {
-		const searchParams = new URLSearchParams();
-
-		if (params.page) searchParams.append("page", params.page.toString());
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
-
-		const url = `${ENDPOINTS.INVOICES.LIST}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			page: params.page,
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+			limit: params.limit,
+		});
 
 		try {
-			const result = await apiClient.get<PaginatedInvoicesResponse>(url);
+			const result = await apiClient.get<PaginatedInvoicesResponse>(
+				ENDPOINTS.INVOICES.LIST,
+				{ params: cleanParams }
+			);
 
 			return result;
 		} catch (error) {
@@ -110,22 +109,19 @@ export class InvoicesService {
 	static async searchInvoices(
 		params: InvoiceSearchParams
 	): Promise<PaginatedInvoicesResponse> {
-		const searchParams = new URLSearchParams();
-
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-		if (params.limit) searchParams.append("limit", params.limit.toString());
-		if (params.offset)
-			searchParams.append("offset", params.offset.toString());
-
-		const url = `${ENDPOINTS.INVOICES.LIST}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+			limit: params.limit,
+			offset: params.offset,
+		});
 
 		try {
-			const result = await apiClient.get<PaginatedInvoicesResponse>(url);
+			const result = await apiClient.get<PaginatedInvoicesResponse>(
+				ENDPOINTS.INVOICES.LIST,
+				{ params: cleanParams }
+			);
 
 			return result;
 		} catch (error) {
@@ -205,23 +201,17 @@ export class InvoicesService {
 		format: "csv" | "json" = "csv",
 		params: Omit<InvoicesQueryParams, "page" | "limit"> = {}
 	): Promise<Blob> {
-		const searchParams = new URLSearchParams();
-
-		// Add format parameter
-		searchParams.append("export_format", format);
-
-		// Add filtering parameters (but not pagination)
-		if (params.search) searchParams.append("search", params.search);
-		if (params.submission)
-			searchParams.append("submission", params.submission.toString());
-		if (params.ordering) searchParams.append("ordering", params.ordering);
-
-		const url = `${ENDPOINTS.INVOICES.EXPORT}${
-			searchParams.toString() ? `?${searchParams.toString()}` : ""
-		}`;
+		const cleanParams = buildQueryParams({
+			export_format: format,
+			search: params.search,
+			submission: params.submission,
+			ordering: params.ordering,
+		});
 
 		try {
-			const blob = await apiClient.getBlob(url);
+			const blob = await apiClient.getBlob(ENDPOINTS.INVOICES.EXPORT, {
+				params: cleanParams,
+			});
 
 			return blob;
 		} catch (error) {

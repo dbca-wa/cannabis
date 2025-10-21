@@ -55,9 +55,9 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				newUser
 			);
 
-			// Invalidate users list queries to refresh tables immediately
+			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.lists(),
+				queryKey: usersQueryKeys.all,
 			});
 
 			toast.success(`User "${newUser.full_name}" created successfully!`);
@@ -102,9 +102,9 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				updatedUser
 			);
 
-			// Invalidate users list queries to refresh tables immediately
+			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.lists(),
+				queryKey: usersQueryKeys.all,
 			});
 
 			toast.success(
@@ -142,9 +142,9 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				),
 			});
 
-			// Invalidate users list queries to refresh tables immediately
+			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.lists(),
+				queryKey: usersQueryKeys.all,
 			});
 
 			toast.success("User deleted successfully!");
@@ -187,9 +187,9 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				newUser
 			);
 
-			// Invalidate users list queries to refresh tables immediately
+			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.lists(),
+				queryKey: usersQueryKeys.all,
 			});
 
 			toast.success(

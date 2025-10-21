@@ -22,20 +22,15 @@ const UserMenu = observer(
 		};
 
 		const handleThemeToggle = () => {
-			// Toggle based on current appearance, not just theme setting
-			const isCurrentlyDark =
-				uiStore.currentTheme === "dark" ||
-				(uiStore.currentTheme === "system" &&
-					window.matchMedia("(prefers-color-scheme: dark)").matches);
+			// Toggle based on resolved theme (what's actually applied)
+			const resolvedTheme = uiStore.resolvedTheme;
+			const newTheme = resolvedTheme === "dark" ? "light" : "dark";
 
-			const newTheme = isCurrentlyDark ? "light" : "dark";
+			// console.log(`Theme changed to ${newTheme} mode`);
 			uiStore.setTheme(newTheme);
 		};
 
-		const isDarkMode =
-			uiStore.currentTheme === "dark" ||
-			(uiStore.currentTheme === "system" &&
-				window.matchMedia("(prefers-color-scheme: dark)").matches);
+		const isDarkMode = uiStore.resolvedTheme === "dark";
 
 		// Different styles for different variants
 		const triggerStyles =
@@ -134,8 +129,8 @@ const UserMenu = observer(
 										{user?.is_superuser
 											? "Super Admin"
 											: user?.is_staff
-											? "Staff"
-											: "User"}
+												? "Staff"
+												: "User"}
 									</div>
 								</div>
 							</div>
