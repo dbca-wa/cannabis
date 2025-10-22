@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
             margin: 0 auto;
             padding: 20px;
         }
+
         .header {
             background-color: #2563eb;
             color: white;
@@ -20,11 +22,13 @@
             text-align: center;
             border-radius: 8px 8px 0 0;
         }
+
         .content {
             background-color: #f8fafc;
             padding: 30px;
             border: 1px solid #e2e8f0;
         }
+
         .footer {
             background-color: #64748b;
             color: white;
@@ -33,6 +37,7 @@
             border-radius: 0 0 8px 8px;
             font-size: 14px;
         }
+
         .button {
             display: inline-block;
             background-color: #16a34a;
@@ -43,14 +48,24 @@
             font-weight: bold;
             margin: 20px 0;
         }
-        .credentials {
+
+        .invitation-details {
             background-color: #fef3c7;
             border: 1px solid #f59e0b;
             padding: 15px;
             border-radius: 6px;
             margin: 20px 0;
         }
-        .warning {
+
+        .security-notice {
+            background-color: #dbeafe;
+            border: 1px solid #3b82f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .expiry-warning {
             background-color: #fee2e2;
             border: 1px solid #ef4444;
             padding: 15px;
@@ -59,60 +74,79 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>Welcome to {{ site_name }}</h1>
     </div>
-    
+
     <div class="content">
-        <h2>Hello {{ user.first_name|default:user.email }},</h2>
-        
-        <p>You have been invited by <strong>{{ inviter.get_full_name|default:inviter.email }}</strong> to join the {{ site_name }}.</p>
-        
-        <p>An account has been created for you with the following details:</p>
-        
-        <div class="credentials">
-            <h3>Your Account Details</h3>
-            <p><strong>Email:</strong> {{ user.email }}</p>
-            <p><strong>Name:</strong> {{ user.get_full_name|default:"Not specified" }}</p>
-            <p><strong>Role:</strong> {{ user.get_role_display }}</p>
-            <p><strong>Temporary Password:</strong> <code>{{ temporary_password }}</code></p>
+        <h2>Hello {{ external_user_data.given_name|default:invite_record.email }},</h2>
+
+        <p>You have been invited by <strong>{{ inviter.full_name|default:inviter.email }}</strong> to join the {{
+            site_name }}.</p>
+
+        <p>Your invitation includes the following details:</p>
+
+        <div class="invitation-details">
+            <h3>📋 Invitation Details</h3>
+            <p><strong>Email:</strong> {{ invite_record.email }}</p>
+            <p><strong>Name:</strong> {{ external_user_data.given_name }} {{ external_user_data.surname|default:"" }}
+            </p>
+            <p><strong>Role:</strong> {{ role_display }}</p>
+            <p><strong>Invited by:</strong> {{ inviter.full_name|default:inviter.email }}</p>
         </div>
-        
-        <div class="warning">
-            <h3>⚠️ Important Security Notice</h3>
-            <p>For your security, you <strong>must change your password</strong> immediately after your first login. The temporary password above will expire after first use.</p>
+
+        <div class="security-notice">
+            <h3>🔐 Secure Account Setup</h3>
+            <p>To complete your account setup, click the activation link below. This will:</p>
+            <ul>
+                <li>Create your secure user account</li>
+                <li>Automatically log you in</li>
+                <li>Redirect you to set up your password</li>
+            </ul>
         </div>
-        
-        <p>Click the button below to access the system and set up your account:</p>
-        
+
+        <p>Click the button below to activate your account and join the system:</p>
+
         <div style="text-align: center;">
-            <a href="{{ protocol }}://{{ domain }}/auth/reset-password/{{ uid }}/{{ reset_token }}/" class="button">
-                Join {{ site_name }}
+            <a href="{{ activation_url }}" class="button">
+                Activate Account & Join {{ site_name }}
             </a>
         </div>
-        
+
         <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
         <p style="word-break: break-all; background-color: #e2e8f0; padding: 10px; border-radius: 4px;">
-            {{ protocol }}://{{ domain }}/auth/reset-password/{{ uid }}/{{ reset_token }}/
+            {{ activation_url }}
         </p>
-        
-        <h3>What's Next?</h3>
+
+        <div class="expiry-warning">
+            <h3>⏰ Important: Link Expires Soon</h3>
+            <p>This invitation link will expire on <strong>{{ expires_at|date:"F j, Y" }} at {{ expires_at|time:"g:i A"
+                    }}</strong> (24 hours from when it was sent).</p>
+            <p>Please activate your account before this time to avoid needing a new invitation.</p>
+        </div>
+
+        <h3>What Happens Next?</h3>
         <ol>
-            <li>Click the link above to access the system</li>
-            <li>Set a new, secure password</li>
+            <li>Click the activation link above</li>
+            <li>Your account will be created automatically</li>
+            <li>You'll be logged in and redirected to set up your password</li>
             <li>Complete your profile setup</li>
             <li>Start using the {{ site_name }}</li>
         </ol>
-        
-        <p>If you have any questions or need assistance, please contact your system administrator or the person who invited you.</p>
-        
-        <p>Welcome aboard!</p>
+
+        <p>If you have any questions or need assistance, please contact <strong>{{
+                inviter.full_name|default:inviter.email }}</strong> or your system administrator.</p>
+
+        <p>We look forward to having you on the team!</p>
     </div>
-    
+
     <div class="footer">
         <p>This is an automated message from {{ site_name }}. Please do not reply to this email.</p>
         <p>If you did not expect this invitation, please contact your system administrator.</p>
+        <p>For security reasons, this invitation link can only be used once and will expire in 24 hours.</p>
     </div>
 </body>
+
 </html>

@@ -3,10 +3,17 @@ import { normalizeError } from "@/shared/utils/error.utils";
 import { storage } from "@/shared/services/storage.service";
 import { generateRequestId } from "@/shared/utils/uuid";
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
+import { errorHandlingService } from "@/shared/services/errorHandling.service";
 import type {
 	AuthResponse,
 	ServiceResult,
 	User,
+	InviteActivationResponse,
+	PasswordValidationResponse,
+	PasswordUpdateRequest,
+	PasswordUpdateResponse,
+	ForgotPasswordResponse,
+	PasswordResetResponse,
 } from "@/shared/types/backend-api.types";
 import type { LoginCredentials, RegisterData } from "../types/auth.types";
 
@@ -92,24 +99,22 @@ class AuthService {
 				success: true,
 			};
 		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
 			// Clear any existing tokens on login failure
 			storage.clearTokens();
 			this.clearCache();
 
-			logger.error("JWT login failed", {
+			const enhancedError = errorHandlingService.handleError(error, {
+				action: "login",
 				email: credentials.email,
-				message: normalizedError.message,
-				code: normalizedError.code,
-				requestId,
-				error: normalizedError.originalError,
+				requestId
+			}, {
+				showToast: false // Don't show toast here, let the component handle it
 			});
 
 			return {
 				data: {} as AuthResponse,
 				success: false,
-				error: normalizedError.message,
+				error: enhancedError.userFriendlyMessage,
 			};
 		}
 	}
@@ -136,17 +141,6 @@ class AuthService {
 			try {
 				const { rootStore } = await import("@/app/stores/root.store");
 				rootStore.uiStore.reset(); // Clear all UI preferences
-
-				// Clear preferences from TanStack Query cache
-				const { userPreferencesQueryKeys } = await import(
-					"@/features/user/hooks/useUserPreferences"
-				);
-				const { queryClient } = await import(
-					"@/app/providers/query.provider"
-				);
-				queryClient.removeQueries({
-					queryKey: userPreferencesQueryKeys.all,
-				});
 
 				logger.info("Preferences cleared on logout");
 			} catch (error) {
@@ -180,17 +174,6 @@ class AuthService {
 			try {
 				const { rootStore } = await import("@/app/stores/root.store");
 				rootStore.uiStore.reset(); // Clear all UI preferences
-
-				// Clear preferences from TanStack Query cache
-				const { userPreferencesQueryKeys } = await import(
-					"@/features/user/hooks/useUserPreferences"
-				);
-				const { queryClient } = await import(
-					"@/app/providers/query.provider"
-				);
-				queryClient.removeQueries({
-					queryKey: userPreferencesQueryKeys.all,
-				});
 
 				logger.info("Preferences cleared on logout (after error)");
 			} catch (error) {
@@ -371,6 +354,100 @@ class AuthService {
 				error: normalizedError.message,
 			};
 		}
+	}
+
+	async activateInvitation(token: string): Promise<ServiceResult<InviteActivationResponse>> {
+		const requestId = this.generateRequestId();
+		logger.info("Attempting invitation activation", {
+			token: token.substring(0, 8) + "...",
+			requestId,
+		});
+
+		try {
+			const response = await apiClient.get<InviteActivationResponse>(
+				ENDPOINTS.AUTH.ACTIVATE_INVITE(token)
+			);
+
+			if (!response || !response.user || !response.access || !response.refresh) {
+				throw new Error("Invalid activation response structure from API");
+			}
+
+			// Store JWT tokens
+			storage.setTokens(response.access, response.refresh);
+
+			// Cache user data
+			this.setCachedUser(response.user);
+
+			logger.info("Invitation activation successful", {
+				userId: response.user.id,
+				email: response.user.email,
+				requestId,
+			});
+
+			return {
+				data: response,
+				success: true,
+			};
+		} catch (error: unknown) {
+			// Clear any tokens on activation failure
+			storage.clearTokens();
+			this.clearCache();
+
+			const enhancedError = errorHandlingService.handleError(error, {
+				action: "invitation_activation",
+				token: token.substring(0, 8) + "...",
+				requestId
+			}, {
+				showToast: false // Let the component handle the toast
+			});
+
+			return {
+				data: {} as InviteActivationResponse,
+				success: false,
+				error: enhancedError.userFriendlyMessage,
+			};
+		}
+	}
+
+	/**
+	 * @deprecated Use passwordService.validatePassword() instead
+	 */
+	async validatePassword(password: string): Promise<ServiceResult<PasswordValidationResponse>> {
+		const { passwordService } = await import("./password.service");
+		return passwordService.validatePassword(password);
+	}
+
+	/**
+	 * @deprecated Use passwordService.updatePassword() instead
+	 */
+	async updatePassword(data: PasswordUpdateRequest): Promise<ServiceResult<PasswordUpdateResponse>> {
+		const { passwordService } = await import("./password.service");
+		return passwordService.updatePassword(data);
+	}
+
+	/**
+	 * @deprecated Use passwordService.forgotPassword() instead
+	 */
+	async forgotPassword(email: string): Promise<ServiceResult<ForgotPasswordResponse>> {
+		const { passwordService } = await import("./password.service");
+		return passwordService.forgotPassword(email);
+	}
+
+	/**
+	 * Reset password using token and auto-login if successful
+	 * This method handles the auth state management for password resets
+	 */
+	async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<ServiceResult<PasswordResetResponse>> {
+		const { passwordService } = await import("./password.service");
+		const result = await passwordService.resetPassword(token, newPassword, confirmPassword);
+
+		// If password reset was successful and includes auto-login, handle auth state
+		if (result.success && result.data.auto_login && result.data.access && result.data.refresh && result.data.user) {
+			storage.setTokens(result.data.access, result.data.refresh);
+			this.setCachedUser(result.data.user);
+		}
+
+		return result;
 	}
 
 	// JWT-specific methods

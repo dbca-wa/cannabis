@@ -205,8 +205,7 @@ const MobileSidebar = observer(({ isOpen, onClose }: MobileSidebarProps) => {
 							// Skip rendering admin-only items for non-admins
 							if (
 								item.adminOnly &&
-								!user?.is_superuser &&
-								!user?.is_staff
+								!user?.is_superuser
 							) {
 								return null;
 							}

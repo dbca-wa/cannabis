@@ -4,11 +4,35 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 interface LogContext {
 	userId?: string | number;
 	requestId?: string;
+	src?: string; // Source file name
 	[key: string]: unknown;
 }
 
 class LoggerService {
 	private isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+
+	private getCallerInfo(): string | undefined {
+		try {
+			const stack = new Error().stack;
+			if (!stack) return undefined;
+
+			const lines = stack.split('\n');
+			// Skip the first few lines (Error, getCallerInfo, formatMessage, and the logger method)
+			for (let i = 4; i < lines.length; i++) {
+				const line = lines[i];
+				if (line && line.includes('.tsx') || line.includes('.ts')) {
+					// Extract filename from the stack trace
+					const match = line.match(/([^\/\\]+\.tsx?)/);
+					if (match) {
+						return match[1];
+					}
+				}
+			}
+			return undefined;
+		} catch {
+			return undefined;
+		}
+	}
 
 	private formatTimestamp(): string {
 		try {
@@ -85,7 +109,15 @@ class LoggerService {
 		context?: LogContext
 	): { formattedArgs: [string, string, string]; contextObject?: LogContext } {
 		const timestamp = this.formatTimestamp();
-		const contextInfo = this.formatContext(context);
+		const callerFile = this.getCallerInfo();
+		
+		// Add source file to context if not already provided and we detected it
+		const enhancedContext = { ...context };
+		if (callerFile && !enhancedContext.src) {
+			enhancedContext.src = callerFile;
+		}
+		
+		const contextInfo = this.formatContext(enhancedContext);
 		
 		// Level-specific colors
 		let headerStyle: string;

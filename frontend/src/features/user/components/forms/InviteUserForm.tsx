@@ -14,8 +14,6 @@ import { z } from "zod";
 const inviteUserSchema = z.object({
 	external_user_email: z.string().email("Valid email is required"),
 	role: z.enum(["botanist", "finance", "none"]),
-	is_staff: z.boolean().default(false),
-	is_active: z.boolean().default(true),
 });
 
 export type InviteUserFormData = z.infer<typeof inviteUserSchema>;
@@ -54,8 +52,6 @@ const InviteUserForm = ({
 		defaultValues: {
 			external_user_email: "",
 			role: lockedRole || "none",
-			is_staff: false,
-			is_active: true,
 		},
 	});
 
@@ -89,7 +85,8 @@ const InviteUserForm = ({
 		});
 	};
 
-	const canSubmit = isValid && isDirty && selectedUserData;
+	// Button should be enabled when external user is selected and role is chosen
+	const canSubmit = isValid && selectedUserData && selectedRole;
 
 	return (
 		<form
@@ -130,8 +127,16 @@ const InviteUserForm = ({
 					type="submit"
 					variant="default"
 					disabled={isSubmitting || !canSubmit}
+					className="min-w-[140px]"
 				>
-					{isSubmitting ? "Sending Invitation..." : "Send Invitation"}
+					{isSubmitting ? (
+						<>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+							Sending...
+						</>
+					) : (
+						"Send Invitation"
+					)}
 				</Button>
 			</ResponsiveModalFooter>
 		</form>

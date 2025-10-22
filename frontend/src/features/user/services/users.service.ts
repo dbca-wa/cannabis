@@ -1,7 +1,11 @@
 import { logger } from "@/shared/services/logger.service";
 import { normalizeError } from "@/shared/utils/error.utils";
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
-import { type ServiceResult } from "@/shared/types/backend-api.types";
+import { 
+	type ServiceResult,
+	type InviteUserRequest,
+	type InviteRecord,
+} from "@/shared/types/backend-api.types";
 import { buildQueryParams } from "@/shared/utils/queryParams.utils";
 import {
 	type IUser,
@@ -308,55 +312,12 @@ class UsersService {
 		}
 	}
 
-	async inviteUser(inviteData: {
-		external_user_data: {
-			email: string;
-			[key: string]: unknown;
-		};
-		role: string;
-		is_staff?: boolean;
-		is_active?: boolean;
-	}): Promise<ServiceResult<IUser>> {
-		const requestId = this.generateRequestId();
-		logger.info("Sending user invitation", {
-			email: inviteData.external_user_data?.email,
-			role: inviteData.role,
-			requestId,
-		});
-
-		try {
-			const response = await apiClient.post<IUser>(
-				ENDPOINTS.USERS.INVITE,
-				inviteData
-			);
-
-			logger.info("User invitation sent successfully", {
-				userId: response.id,
-				email: inviteData.external_user_data?.email,
-				requestId,
-			});
-
-			return {
-				data: response,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
-			logger.error("Failed to send user invitation", {
-				email: inviteData.external_user_data?.email,
-				message: normalizedError.message,
-				code: normalizedError.code,
-				requestId,
-				error: normalizedError.originalError,
-			});
-
-			return {
-				data: {} as IUser,
-				success: false,
-				error: normalizedError.message,
-			};
-		}
+	/**
+	 * @deprecated Use invitationService.sendInvitation() instead
+	 */
+	async inviteUser(inviteData: InviteUserRequest): Promise<ServiceResult<InviteRecord>> {
+		const { invitationService } = await import("./invitation.service");
+		return invitationService.sendInvitation(inviteData);
 	}
 
 	static formatUserDisplayName(user: IUser): string {

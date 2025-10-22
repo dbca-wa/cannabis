@@ -17,6 +17,9 @@ import { useForm, Controller } from "react-hook-form";
 import { type AddUserFormData, addUserSchema } from "./schemas/addUserSchema";
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePasswordValidation, usePasswordConfirmation } from "@/features/auth/hooks/usePasswordValidation";
+import { PasswordStrengthIndicator } from "@/features/auth/components/PasswordStrengthIndicator";
+import { PasswordConfirmationIndicator } from "@/features/auth/components/PasswordConfirmationIndicator";
 import { logger } from "@/shared/services/logger.service";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
@@ -63,6 +66,11 @@ const AddUserForm = ({
 	// Watch role to conditionally show role descriptions
 	const selectedRole = watch("role");
 	const watchedPassword = watch("password");
+	const watchedPasswordConfirm = watch("password_confirm");
+
+	// Use validation hooks
+	const { validation: passwordValidation } = usePasswordValidation(watchedPassword);
+	const confirmationValidation = usePasswordConfirmation(watchedPassword, watchedPasswordConfirm);
 
 	const handleFormSubmit = (data: any) => {
 		logger.debug("Form submitted with data:", {
@@ -170,7 +178,7 @@ const AddUserForm = ({
 							<Input
 								{...register("password")}
 								type={showPassword ? "text" : "password"}
-								placeholder="Password (min. 8 characters)"
+								placeholder="Password (min. 10 characters)"
 								className={
 									errors.password
 										? "border-red-500 pr-10"
@@ -196,19 +204,11 @@ const AddUserForm = ({
 								{errors.password.message}
 							</p>
 						)}
-						{watchedPassword && watchedPassword.length > 0 && (
-							<div className="text-xs mt-1 space-y-1">
-								<div
-									className={
-										watchedPassword.length >= 8
-											? "text-green-600"
-											: "text-gray-500"
-									}
-								>
-									✓ At least 8 characters
-								</div>
-							</div>
-						)}
+						{/* Password strength indicator */}
+						<PasswordStrengthIndicator
+							password={watchedPassword}
+							className="mt-2"
+						/>
 					</div>
 
 					{/* Password Confirmation */}
@@ -245,6 +245,12 @@ const AddUserForm = ({
 								{errors.password_confirm.message}
 							</p>
 						)}
+						{/* Password confirmation indicator */}
+						<PasswordConfirmationIndicator
+							password={watchedPassword}
+							confirmPassword={watchedPasswordConfirm}
+							className="mt-1"
+						/>
 					</div>
 				</div>
 			</ModalSection>
@@ -278,10 +284,10 @@ const AddUserForm = ({
 
 											{(user?.is_superuser ||
 												user?.role === "botanist") && (
-												<SelectItem value="botanist">
-													Approved Botanist
-												</SelectItem>
-											)}
+													<SelectItem value="botanist">
+														Approved Botanist
+													</SelectItem>
+												)}
 
 											{user?.is_superuser && (
 												<SelectItem value="finance">
@@ -387,7 +393,13 @@ const AddUserForm = ({
 				<Button
 					type="submit"
 					variant="default"
-					disabled={isSubmitting || !isValid || !isDirty}
+					disabled={
+						isSubmitting ||
+						!isValid ||
+						!isDirty ||
+						!passwordValidation.isValid ||
+						!confirmationValidation.isMatching
+					}
 				>
 					{isSubmitting ? "Creating..." : "Create User"}
 				</Button>

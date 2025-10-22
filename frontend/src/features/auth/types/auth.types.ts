@@ -1,4 +1,15 @@
-import type { User, LoginCredentials } from "@/shared/types/backend-api.types";
+import type { 
+	User, 
+	LoginCredentials,
+	PasswordValidationResponse,
+	PasswordUpdateRequest,
+	PasswordUpdateResponse,
+	ForgotPasswordRequest,
+	ForgotPasswordResponse,
+	PasswordResetRequest,
+	PasswordResetResponse,
+	InviteActivationResponse,
+} from "@/shared/types/backend-api.types";
 
 // Registration request payload (frontend-specific)
 export interface RegisterData {
@@ -28,4 +39,25 @@ export interface AuthContextType {
 	error: string | null;
 }
 
-export type { User, LoginCredentials };
+// Password validation hook result
+export interface PasswordValidationHookResult {
+	isValid: boolean;
+	errors: string[];
+	isValidating: boolean;
+	validatePassword: (password: string) => Promise<void>;
+	clearValidation: () => void;
+}
+
+// Re-export types for convenience
+export type { 
+	User, 
+	LoginCredentials,
+	PasswordValidationResponse,
+	PasswordUpdateRequest,
+	PasswordUpdateResponse,
+	ForgotPasswordRequest,
+	ForgotPasswordResponse,
+	PasswordResetRequest,
+	PasswordResetResponse,
+	InviteActivationResponse,
+};

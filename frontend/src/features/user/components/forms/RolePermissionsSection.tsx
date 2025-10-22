@@ -7,7 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/shared/components/ui/select";
-import { Checkbox } from "@/shared/components/ui/checkbox";
+
 import { Label } from "@/shared/components/ui/label";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -54,7 +54,8 @@ export const RolePermissionsSection = ({
 										</SelectItem>
 									)}
 
-									{(!lockedRole || lockedRole === "botanist") &&
+									{(!lockedRole ||
+										lockedRole === "botanist") &&
 										(user?.is_superuser ||
 											user?.role === "botanist") && (
 											<SelectItem value="botanist">
@@ -62,7 +63,8 @@ export const RolePermissionsSection = ({
 											</SelectItem>
 										)}
 
-									{(!lockedRole || lockedRole === "finance") &&
+									{(!lockedRole ||
+										lockedRole === "finance") &&
 										user?.is_superuser && (
 											<SelectItem value="finance">
 												Finance Officer
@@ -107,51 +109,12 @@ export const RolePermissionsSection = ({
 				)}
 			</div>
 
-			{/* Additional Permissions - Only show for admin users */}
-			{user?.is_superuser && (
-				<div className="space-y-3">
-					<div className="flex items-center space-x-2">
-						<Controller
-							name="is_staff"
-							control={control}
-							render={({ field }) => (
-								<Checkbox
-									id="is_staff"
-									checked={field.value}
-									onCheckedChange={field.onChange}
-								/>
-							)}
-						/>
-						<Label htmlFor="is_staff" className="text-sm">
-							Staff Member
-						</Label>
-					</div>
-					<p className="text-xs text-gray-500 ml-6">
-						Staff members have access to administrative features and
-						can manage other users.
-					</p>
-
-					<div className="flex items-center space-x-2">
-						<Controller
-							name="is_active"
-							control={control}
-							render={({ field }) => (
-								<Checkbox
-									id="is_active"
-									checked={field.value}
-									onCheckedChange={field.onChange}
-								/>
-							)}
-						/>
-						<Label htmlFor="is_active" className="text-sm">
-							Active User
-						</Label>
-					</div>
-					<p className="text-xs text-gray-500 ml-6">
-						Inactive users cannot log in to the system.
-					</p>
-				</div>
-			)}
+			{/* Note: Invited users are automatically created as active, non-staff members */}
+			<div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+				<p className="text-xs text-blue-700 dark:text-blue-300">
+					<strong>Note:</strong> Invited users will be created as active, non-administrative members with the selected role.
+				</p>
+			</div>
 		</div>
 	);
 };

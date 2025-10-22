@@ -58,6 +58,29 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 
 	// Handle auth routes
 	if (pathname.startsWith("/auth/")) {
+		// Special case: password-update requires authentication
+		if (pathname === "/auth/password-update") {
+			if (!isAuthenticated) {
+				logger.debug(
+					"[RootAuthGuard] Password update requires authentication, redirecting to login"
+				);
+				return redirect("/auth/login");
+			}
+			logger.debug(
+				"[RootAuthGuard] User authenticated, allowing access to password update"
+			);
+			return null;
+		}
+		
+		// Special case: invitation activation doesn't require authentication (public route)
+		if (pathname.startsWith("/auth/activate-invite/") || pathname === "/auth/invite-error") {
+			logger.debug(
+				"[RootAuthGuard] Invitation activation/error is public, allowing access"
+			);
+			return null;
+		}
+		
+		// For other auth routes (login), redirect if already authenticated
 		if (isAuthenticated) {
 			logger.debug(
 				"[RootAuthGuard] User authenticated, redirecting from auth page to home"
@@ -81,6 +104,19 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		authStore.setRedirectPath(pathname);
 
 		return redirect("/auth/login");
+	}
+
+	// Check admin route protection - only superusers can access admin routes
+	if (pathname.startsWith("/admin")) {
+		const isAdmin = user?.is_superuser;
+		if (!isAdmin) {
+			logger.warn(
+				"[RootAuthGuard] Non-admin user attempted to access admin route",
+				{ userId: user?.id, isStaff: user?.is_staff, isSuperuser: user?.is_superuser, pathname }
+			);
+			return redirect("/"); // Redirect to home page
+		}
+		logger.debug("[RootAuthGuard] Admin user accessing admin route");
 	}
 
 	logger.debug("[RootAuthGuard] User authenticated, allowing access");

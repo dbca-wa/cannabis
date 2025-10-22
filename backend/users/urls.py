@@ -26,11 +26,40 @@ urlpatterns = [
         views.ExternalUserSearchView.as_view(),
         name="external_user_search",
     ),
+    # Password validation
+    path(
+        "validate-password/",
+        views.PasswordValidationView.as_view(),
+        name="validate_password",
+    ),
+    # Password reset
+    path(
+        "auth/forgot-password/",
+        views.ForgotPasswordView.as_view(),
+        name="forgot_password",
+    ),
+    path(
+        "auth/reset-password/<str:token>/",
+        views.PasswordResetView.as_view(),
+        name="reset_password",
+    ),
+    # Password update
+    path(
+        "auth/update-password/",
+        views.PasswordUpdateView.as_view(),
+        name="update_password",
+    ),
     # User invitation
     path(
         "invite/",
         views.InviteUserView.as_view(),
         name="invite_user",
+    ),
+    # Invitation activation
+    path(
+        "auth/activate-invite/<str:token>/",
+        views.InviteActivationView.as_view(),
+        name="activate_invite",
     ),
     # User management endpoints (admin/staff operations)
     path("", views.UserListView.as_view(), name="user_list"),  # GET, POST

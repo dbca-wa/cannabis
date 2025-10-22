@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { passwordSchema } from "@/features/auth/schemas/password.schema";
 
 // Matches UserCreateSerializer exactly
 export const addUserSchema = z
@@ -20,10 +21,8 @@ export const addUserSchema = z
 		role: z.enum(["botanist", "finance", "none"], {
 			message: "Please select a valid role",
 		}),
-		password: z.string().min(8, "Password must be at least 8 characters"),
-		password_confirm: z
-			.string()
-			.min(8, "Password confirmation is required"),
+		password: passwordSchema,
+		password_confirm: z.string(),
 		is_staff: z.boolean().default(false),
 		is_active: z.boolean().default(true),
 		it_asset_id: z

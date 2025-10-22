@@ -9,6 +9,9 @@ import ErrorPage from "@/shared/components/layout/ErrorPage";
 
 // Auth pages (not lazy loaded since they're critical)
 import Login from "@/pages/auth/Login";
+import PasswordUpdate from "@/pages/auth/PasswordUpdate";
+import InviteActivation from "@/pages/auth/InviteActivation";
+import InviteActivationError from "@/pages/auth/InviteActivationError";
 
 export const router = createBrowserRouter([
 	{
@@ -19,7 +22,12 @@ export const router = createBrowserRouter([
 			{
 				path: "auth",
 				element: <AuthLayout />,
-				children: [{ path: "login", element: <Login /> }],
+				children: [
+					{ path: "login", element: <Login /> },
+					{ path: "password-update", element: <PasswordUpdate /> },
+					{ path: "activate-invite/:token", element: <InviteActivation /> },
+					{ path: "invite-error", element: <InviteActivationError /> },
+				],
 			},
 			{
 				element: <MainLayout />,

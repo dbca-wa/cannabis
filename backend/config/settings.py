@@ -272,6 +272,8 @@ MIDDLEWARE = [
     # "config.dbca_middleware.DBCAMiddleware", # wont be creating accounts via Auth2/SSO
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "common.middleware.CSRFSecurityMiddleware",  # Enhanced CSRF security
+    "common.middleware.SecurityAuditMiddleware",  # Security audit logging
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -314,6 +316,15 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,  # Default page size for all paginated views (matches frontend default)
     "PAGE_SIZE_QUERY_PARAM": "limit",  # Allow frontend to control page size via ?limit=X
     "MAX_PAGE_SIZE": 100,  # Maximum allowed page size
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle"
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        "system_settings": "100/hour",  # Limit system settings updates (increased for admin use)
+    }
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),

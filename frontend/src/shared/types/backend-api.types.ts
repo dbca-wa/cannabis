@@ -235,6 +235,97 @@ export interface ExternalUserSearchResponse {
 }
 
 // ============================================================================
+// INVITATION SYSTEM TYPES (matches Django InviteRecord model)
+// ============================================================================
+
+// Invite Record (matches InviteRecordSerializer)
+export interface InviteRecord {
+	id: number;
+	email: string;
+	invited_by: number; // User ID
+	invited_by_details: UserTiny; // Nested user object
+	role: UserRole;
+	role_display: string;
+	token: string;
+	created_at: string; // ISO datetime string
+	expires_at: string; // ISO datetime string
+	is_valid: boolean;
+	is_used: boolean;
+	used_at: string | null; // ISO datetime string
+	external_user_data: ExternalUser; // JSON field containing external user data
+}
+
+// Invite creation request (matches backend InviteUserView)
+export interface InviteUserRequest {
+	external_user_data: ExternalUser;
+	role: UserRole;
+	is_staff?: boolean;
+	is_active?: boolean;
+}
+
+// Invite activation response (matches backend InviteActivationView)
+export interface InviteActivationResponse extends AuthResponse {
+	temporary_password: string;
+	requires_password_change: boolean;
+}
+
+// ============================================================================
+// PASSWORD MANAGEMENT TYPES
+// ============================================================================
+
+// Password validation request
+export interface PasswordValidationRequest {
+	password: string;
+}
+
+// Password validation response (matches backend PasswordValidator)
+export interface PasswordValidationResponse {
+	is_valid: boolean;
+	errors: string[];
+	strength_score?: number; // Optional: 1-5 scale for UI feedback
+}
+
+// Password update request
+export interface PasswordUpdateRequest {
+	current_password?: string; // Required for existing users, optional for first-time setup
+	new_password: string;
+	confirm_password: string;
+}
+
+// Password update response
+export interface PasswordUpdateResponse {
+	message: string;
+	password_changed_at: string; // ISO datetime string
+}
+
+// Forgot password request
+export interface ForgotPasswordRequest {
+	email: string;
+}
+
+// Forgot password response
+export interface ForgotPasswordResponse {
+	message: string;
+	email_sent: boolean;
+}
+
+// Password reset request (when clicking reset link)
+export interface PasswordResetRequest {
+	token: string;
+	new_password: string;
+	confirm_password: string;
+}
+
+// Password reset response
+export interface PasswordResetResponse {
+	message: string;
+	auto_login: boolean;
+	access?: string; // JWT access token if auto_login is true
+	refresh?: string; // JWT refresh token if auto_login is true
+	user?: User; // User object if auto_login is true
+}
+
+// ============================================================================
 // PAGINATION TYPES (matches Django REST framework pagination)
 // ============================================================================
 
@@ -1021,4 +1112,15 @@ export interface SystemSettings {
 	cost_per_forensic_hour: string;
 	cost_per_kilometer_fuel: string;
 	tax_percentage: string;
+	forward_certificate_emails_to: string;
+	send_emails_to_self: boolean;
+	environment: string;
+	send_emails_to_self_editable: boolean;
+	last_modified_by?: {
+		id: number;
+		email: string;
+		first_name: string;
+		last_name: string;
+	} | null;
+	last_modified_at?: string | null; // ISO datetime string
 }

@@ -1,255 +1,300 @@
-import ContentLayout from "@/shared/components/layout/ContentLayout";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
-import {
-	Settings,
-	Users,
-	Database,
-	Shield,
-	Activity,
-	AlertTriangle,
-	Server,
-	FileText,
-} from "lucide-react";
-import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
+import React, { useState, useEffect } from "react";
+import { AlertCircle, Settings, Shield, Clock } from "lucide-react";
+import { Alert, AlertDescription } from "@/shared/components/ui/alert";
+import { logger } from "@/shared/services/logger.service";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { securityService } from "@/features/admin/services/security.service";
+import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
+import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
+import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
 
-const Admin = () => {
-	// Breadcrumb configuration
-	const breadcrumbs: BreadcrumbItem[] = [
-		{
-			label: "Admin Panel",
-			current: true,
-		},
-	];
+// Import loading skeletons
+import { AdminPageSkeleton } from "@/features/admin/components/settings/LoadingSkeletons";
 
-	const adminSections = [
-		{
-			title: "User Management",
-			description: "Manage system users, roles, and permissions",
-			icon: <Users className="h-6 w-6" />,
-			status: "Active",
-			statusColor: "bg-green-500",
+import type { SystemSettings } from "@/shared/types/backend-api.types";
+import { PricingSettingsCard, EmailSettingsCard, SystemInfoCard } from "@/features/admin";
+
+const AdminPage: React.FC = () => {
+	const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({});
+	const [showConfirmation, setShowConfirmation] = useState(false);
+
+	const { user } = useAuth();
+
+	// Use the new settings hook
+	const {
+		settings,
+		isLoading: loading,
+		isUpdating,
+		error,
+		validationErrors,
+		updateSettings,
+		clearError,
+		cacheStatus
+	} = useSystemSettings({
+		autoLoad: true,
+		enableChangeNotifications: true,
+		onSettingsChange: (notification) => {
+			// Handle settings change notifications
+			if (settings) {
+				settingsNotificationService.handleSettingsChange(
+					notification,
+					settings.environment,
+					settings
+				);
+			}
 		},
-		{
-			title: "System Settings",
-			description: "Configure application settings and preferences",
-			icon: <Settings className="h-6 w-6" />,
-			status: "Available",
-			statusColor: "bg-blue-500",
-		},
-		{
-			title: "Database Management",
-			description: "Monitor database health and perform maintenance",
-			icon: <Database className="h-6 w-6" />,
-			status: "Healthy",
-			statusColor: "bg-green-500",
-		},
-		{
-			title: "Security & Audit",
-			description: "Review security logs and audit trails",
-			icon: <Shield className="h-6 w-6" />,
-			status: "Monitoring",
-			statusColor: "bg-yellow-500",
-		},
-		{
-			title: "System Monitoring",
-			description: "View system performance and health metrics",
-			icon: <Activity className="h-6 w-6" />,
-			status: "Online",
-			statusColor: "bg-green-500",
-		},
-		{
-			title: "Error Logs",
-			description: "Review application errors and system issues",
-			icon: <AlertTriangle className="h-6 w-6" />,
-			status: "2 New",
-			statusColor: "bg-red-500",
-		},
-		{
-			title: "Server Status",
-			description: "Monitor server health and resource usage",
-			icon: <Server className="h-6 w-6" />,
-			status: "Running",
-			statusColor: "bg-green-500",
-		},
-		{
-			title: "Reports",
-			description: "Generate and view system reports",
-			icon: <FileText className="h-6 w-6" />,
-			status: "Available",
-			statusColor: "bg-blue-500",
-		},
-	];
+		onError: (errorMessage) => {
+			logger.error("Settings hook error", { error: errorMessage });
+		}
+	});
+
+	useEffect(() => {
+		// Check admin access on component mount
+		const accessCheck = securityService.checkAdminAccess(user);
+		if (!accessCheck.allowed) {
+			securityService.logSecurityEvent("access_denied", {
+				userId: user?.id,
+				reason: accessCheck.reason,
+				component: "AdminPage"
+			});
+		}
+	}, [user]);
+
+	const handleSettingsUpdate = async (field: string, value: any) => {
+		if (!settings || !user) return;
+
+		// Clear any previous errors
+		clearError();
+
+		// Check admin access
+		const accessCheck = securityService.checkAdminAccess(user);
+		if (!accessCheck.allowed) {
+			settingsNotificationService.showUpdateError(
+				accessCheck.reason || "Access denied",
+				[field],
+				settings.environment
+			);
+			return;
+		}
+
+		// Prepare changes for security check
+		const changes = [{
+			field,
+			oldValue: String(settings[field as keyof SystemSettings] || ""),
+			newValue: String(value)
+		}];
+
+		// Check if confirmation is required
+		const confirmationCheck = securityService.requiresConfirmation(changes, settings.environment);
+
+		if (confirmationCheck.requiresConfirmation) {
+			setPendingChanges({ [field]: value });
+			setShowConfirmation(true);
+			securityService.logSecurityEvent("confirmation_required", {
+				userId: user.id,
+				field,
+				environment: settings.environment,
+				confirmationLevel: confirmationCheck.confirmationLevel
+			});
+			return;
+		}
+
+		// Apply changes directly if no confirmation needed
+		await applySettingsChanges({ [field]: value });
+	};
+
+	const applySettingsChanges = async (changes: Record<string, any>) => {
+		if (!settings || !user) return;
+
+		const success = await updateSettings(changes);
+
+		if (success) {
+			// Show success notification
+			settingsNotificationService.showUpdateSuccess(
+				Object.keys(changes),
+				settings.environment,
+				settings.last_modified_by || undefined
+			);
+
+			// Clear pending changes and close confirmation
+			setPendingChanges({});
+			setShowConfirmation(false);
+
+			// Log successful changes
+			securityService.logSecurityEvent("settings_modified", {
+				userId: user.id,
+				changes: Object.keys(changes),
+				environment: settings.environment
+			});
+		} else {
+			// Show error notification
+			if (Object.keys(validationErrors).length > 0) {
+				settingsNotificationService.showValidationError(
+					validationErrors,
+					settings.environment
+				);
+			} else if (error) {
+				settingsNotificationService.showUpdateError(
+					error,
+					Object.keys(changes),
+					settings.environment
+				);
+			}
+		}
+	};
+
+	const handleConfirmChanges = () => {
+		applySettingsChanges(pendingChanges);
+	};
+
+	const handleCancelChanges = () => {
+		setPendingChanges({});
+		setShowConfirmation(false);
+	};
+
+
+
+
+
+	// Check admin access
+	const accessCheck = securityService.checkAdminAccess(user);
+	if (!accessCheck.allowed) {
+		return (
+			<div className="container mx-auto p-6">
+				<Alert variant="destructive">
+					<Shield className="h-4 w-4" />
+					<AlertDescription>
+						{accessCheck.reason || "You don't have permission to access admin settings."}
+					</AlertDescription>
+				</Alert>
+			</div>
+		);
+	}
+
+	if (loading) {
+		return <AdminPageSkeleton />;
+	}
+
+	if (!settings && error) {
+		return (
+			<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4">
+				<div className="flex items-center gap-3">
+					<Settings className="h-6 w-6" />
+					<h1 className="text-2xl font-bold">Admin Settings</h1>
+				</div>
+
+				<div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+					<Alert variant={cacheStatus.isRateLimited ? "destructive" : "default"} className="transition-all duration-300">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>
+							{cacheStatus.isRateLimited
+								? `Rate limited: ${error}. Please wait before refreshing.`
+								: `Failed to load system settings: ${error}`
+							}
+						</AlertDescription>
+					</Alert>
+				</div>
+			</div>
+		);
+	}
+
+	if (!settings) {
+		return (
+			<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+				<div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+					<Alert className="transition-all duration-300">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>
+							Failed to load system settings. Please refresh the page.
+						</AlertDescription>
+					</Alert>
+				</div>
+			</div>
+		);
+	}
+
+	// Prepare confirmation dialog data
+	const confirmationChanges = Object.entries(pendingChanges).map(([field, newValue]) => ({
+		field: securityService.formatFieldName(field),
+		oldValue: securityService.formatValue(field, String(settings[field as keyof SystemSettings] || "")),
+		newValue: securityService.formatValue(field, String(newValue))
+	}));
+
+	const confirmationConfig = securityService.getConfirmationConfig(
+		confirmationChanges.map((_change) => ({
+			field: Object.keys(pendingChanges)[0], // Use actual field name for security check
+			oldValue: String(settings[Object.keys(pendingChanges)[0] as keyof SystemSettings] || ""),
+			newValue: String(Object.values(pendingChanges)[0])
+		})),
+		settings.environment
+	);
 
 	return (
-		<ContentLayout breadcrumbs={breadcrumbs} maxWidth="xl">
-			<div className="space-y-6">
-				{/* Quick Stats */}
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">
-								Total Users
-							</CardTitle>
-							<Users className="h-4 w-4 text-muted-foreground" />
-						</CardHeader>
-						<CardContent>
-							<div className="text-2xl font-bold">24</div>
-							<p className="text-xs text-muted-foreground">
-								+2 from last month
-							</p>
-						</CardContent>
-					</Card>
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">
-								Active Sessions
-							</CardTitle>
-							<Activity className="h-4 w-4 text-muted-foreground" />
-						</CardHeader>
-						<CardContent>
-							<div className="text-2xl font-bold">12</div>
-							<p className="text-xs text-muted-foreground">
-								Currently online
-							</p>
-						</CardContent>
-					</Card>
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">
-								System Health
-							</CardTitle>
-							<Server className="h-4 w-4 text-muted-foreground" />
-						</CardHeader>
-						<CardContent>
-							<div className="text-2xl font-bold text-green-600">
-								98%
-							</div>
-							<p className="text-xs text-muted-foreground">
-								Uptime this month
-							</p>
-						</CardContent>
-					</Card>
-					<Card>
-						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">
-								Pending Issues
-							</CardTitle>
-							<AlertTriangle className="h-4 w-4 text-muted-foreground" />
-						</CardHeader>
-						<CardContent>
-							<div className="text-2xl font-bold text-yellow-600">
-								3
-							</div>
-							<p className="text-xs text-muted-foreground">
-								Require attention
-							</p>
-						</CardContent>
-					</Card>
+		<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6" role="main" aria-label="Admin Settings">
+			{/* Header with responsive layout */}
+			<header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in-50 slide-in-from-top-4 duration-500">
+				<div className="flex items-center gap-3">
+					<Settings className="h-6 w-6" aria-hidden="true" />
+					<h1 className="text-2xl font-bold">Admin Settings</h1>
 				</div>
 
-				{/* Admin Sections */}
-				<div>
-					<h2 className="text-xl font-semibold mb-4 dark:text-white">
-						Administration Tools
-					</h2>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{adminSections.map((section, index) => (
-							<Card
-								key={index}
-								className="hover:shadow-md transition-shadow cursor-pointer"
-							>
-								<CardHeader className="pb-3">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-3">
-											<div className="p-2 bg-muted rounded-lg">
-												{section.icon}
-											</div>
-											<div>
-												<CardTitle className="text-base">
-													{section.title}
-												</CardTitle>
-											</div>
-										</div>
-										<div className="flex items-center gap-2">
-											<div
-												className={`w-2 h-2 rounded-full ${section.statusColor}`}
-											/>
-											<span className="text-xs text-muted-foreground">
-												{section.status}
-											</span>
-										</div>
-									</div>
-								</CardHeader>
-								<CardContent className="pt-0">
-									<p className="text-sm text-muted-foreground mb-3">
-										{section.description}
-									</p>
-									<Button
-										variant="outline"
-										size="sm"
-										className="w-full dark:text-white!"
-									>
-										Access Tool
-									</Button>
-								</CardContent>
-							</Card>
-						))}
-					</div>
-				</div>
+				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+					{/* Rate limit status */}
+					{cacheStatus.isRateLimited && (
+						<Alert className="w-full sm:w-auto transition-all duration-300" role="alert" aria-live="polite">
+							<Clock className="h-4 w-4" aria-hidden="true" />
+							<AlertDescription>
+								Rate limited - please wait before refreshing
+							</AlertDescription>
+						</Alert>
+					)}
 
-				{/* Recent Activity */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Recent Admin Activity</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							<div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-								<Users className="h-4 w-4 text-blue-500" />
-								<div className="flex-1">
-									<p className="text-sm font-medium">
-										New user created
-									</p>
-									<p className="text-xs text-muted-foreground">
-										john.doe@example.com - 2 hours ago
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-								<Settings className="h-4 w-4 text-green-500" />
-								<div className="flex-1">
-									<p className="text-sm font-medium">
-										System settings updated
-									</p>
-									<p className="text-xs text-muted-foreground">
-										Email configuration changed - 4 hours
-										ago
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-								<Shield className="h-4 w-4 text-yellow-500" />
-								<div className="flex-1">
-									<p className="text-sm font-medium">
-										Security scan completed
-									</p>
-									<p className="text-xs text-muted-foreground">
-										No issues found - 6 hours ago
-									</p>
-								</div>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-		</ContentLayout>
+
+				</div>
+			</header>
+
+			{/* Settings cards with staggered animations */}
+			<main className="space-y-6" role="region" aria-label="Settings sections">
+				{/* System Information */}
+				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-100" aria-labelledby="system-info-heading">
+					<SystemInfoCard
+						settings={settings}
+						onSettingsUpdate={() => { }} // SystemInfoCard is read-only
+					/>
+				</section>
+
+				{/* Email Settings */}
+				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-200" aria-labelledby="email-settings-heading">
+					<EmailSettingsCard
+						settings={settings}
+						onSettingsUpdate={handleSettingsUpdate}
+					/>
+				</section>
+
+				{/* Pricing Settings */}
+				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-300" aria-labelledby="pricing-settings-heading">
+					<PricingSettingsCard
+						settings={settings}
+						onSettingsUpdate={handleSettingsUpdate}
+					/>
+				</section>
+			</main>
+
+			{/* Confirmation Dialog */}
+			<ConfirmationDialog
+				isOpen={showConfirmation}
+				onClose={handleCancelChanges}
+				onConfirm={handleConfirmChanges}
+				title={confirmationConfig.title}
+				description={confirmationConfig.description}
+				variant={confirmationConfig.variant}
+				confirmText={confirmationConfig.confirmText}
+				environment={settings.environment}
+				isLoading={isUpdating}
+				changes={confirmationChanges}
+			/>
+		</div>
 	);
 };
 
-export default Admin;
+export default AdminPage;

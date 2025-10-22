@@ -4,6 +4,7 @@ import SidebarButton from "./SidebarButton";
 import { getSidebarItems } from "@/app/config/routes.config";
 import { cn } from "@/shared/utils/index";
 import { useAuth } from "@/features/auth";
+import { logger } from "@/shared/services/logger.service";
 import { Fragment } from "react";
 
 const Sidebar = observer(() => {
@@ -37,23 +38,22 @@ const Sidebar = observer(() => {
 						.map((item) => {
 							// Debug logging for admin filtering
 							if (item.name === "Admin") {
-								console.log("Admin item check:", {
+								logger.info("Admin item check", {
 									itemName: item.name,
 									adminOnly: item.adminOnly,
 									userIsStaff: user?.is_staff,
 									userIsSuperuser: user?.is_superuser,
 									shouldShow:
 										!item.adminOnly ||
-										user?.is_superuser ||
-										user?.is_staff,
+										user?.is_superuser,
 								});
 							}
+
 
 							return (
 								// Skip rendering admin-only items for non-admins
 								(!item.adminOnly ||
-									user?.is_superuser ||
-									user?.is_staff) && (
+									user?.is_superuser) && (
 									<Fragment key={item.name}>
 										<SidebarButton
 											name={item.name}

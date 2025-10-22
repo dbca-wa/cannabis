@@ -6,6 +6,11 @@ export const ENDPOINTS = {
 		LOGOUT: "/users/auth/logout/",
 		REFRESH: "/users/auth/refresh/",
 		ME: "/users/whoami/", // Back to whoami endpoint - will fix backend to include admin fields
+		UPDATE_PASSWORD: "/users/auth/update-password/",
+		FORGOT_PASSWORD: "/users/auth/forgot-password/",
+		RESET_PASSWORD: (token: string) => `/users/auth/reset-password/${token}/`,
+		ACTIVATE_INVITE: (token: string) => `/users/auth/activate-invite/${token}/`,
+		VALIDATE_PASSWORD: "/users/validate-password/",
 	},
 
 	// User endpoints
@@ -19,6 +24,8 @@ export const ENDPOINTS = {
 		PREFERENCES: "/users/preferences/", // Dedicated preferences endpoint
 		EXTERNAL_SEARCH: "/users/external-search/", // External user search for invitations
 		INVITE: "/users/invite/", // Send user invitation
+		INVITATIONS: "/users/invitations/", // List invitations
+		CANCEL_INVITATION: (id: string | number) => `/users/invitations/${id}/cancel/`, // Cancel invitation
 	},
 
 	// Police endpoints

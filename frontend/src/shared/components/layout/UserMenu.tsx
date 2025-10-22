@@ -1,4 +1,4 @@
-import { LogOut, Moon, Sun, User } from "lucide-react";
+import { LogOut, Moon, Sun, User, Key } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/index";
 import { useAuth } from "@/features/auth";
 import { useUIStore } from "@/app/providers/store.provider";
 import { LoaderToggle } from "./LoaderToggle";
+import { useNavigate } from "react-router";
 
 interface UserMenuProps {
 	variant?: "sidebar" | "breadcrumb";
@@ -16,9 +17,14 @@ const UserMenu = observer(
 	({ variant = "breadcrumb", className }: UserMenuProps) => {
 		const { user, logout } = useAuth();
 		const uiStore = useUIStore();
+		const navigate = useNavigate();
 
 		const handleLogout = () => {
 			logout();
+		};
+
+		const handleChangePassword = () => {
+			navigate("/auth/password-update");
 		};
 
 		const handleThemeToggle = () => {
@@ -185,11 +191,23 @@ const UserMenu = observer(
 						{/* Actions Section */}
 						<div
 							className={cn(
-								"p-4 transition-colors duration-200",
+								"p-4 space-y-2 transition-colors duration-200",
 								"dark:bg-gray-800/50",
 								"light:bg-gray-50"
 							)}
 						>
+							<Button
+								variant="outline"
+								onClick={handleChangePassword}
+								className={cn(
+									"w-full justify-center gap-2 border transition-colors duration-200",
+									"text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-300",
+									"dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/50 dark:border-blue-800"
+								)}
+							>
+								<Key size={16} />
+								<span>Change Password</span>
+							</Button>
 							<Button
 								variant="outline"
 								onClick={handleLogout}

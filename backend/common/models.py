@@ -119,6 +119,12 @@ class SystemSettings(models.Model):
         ),
         help_text="Email address to forward certificate notifications to",
     )
+    
+    # Development/Testing email settings
+    send_emails_to_self = models.BooleanField(
+        default=True,  # Will be overridden by get_default_send_emails_to_self
+        help_text="Send invitation emails to the admin instead of actual recipients (for testing)",
+    )
 
     # Auto-incrementing counters
     certificate_counter = models.PositiveIntegerField(
@@ -128,6 +134,19 @@ class SystemSettings(models.Model):
     invoice_counter = models.PositiveIntegerField(
         default=1,
         help_text="Next invoice number to assign",
+    )
+
+    # Audit fields
+    last_modified_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="User who last modified these settings",
+    )
+    last_modified_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Timestamp of last modification",
     )
 
     def save(self, *args, **kwargs):
@@ -140,9 +159,37 @@ class SystemSettings(models.Model):
         pass
 
     @classmethod
+    def get_default_send_emails_to_self(cls):
+        """Get default value for send_emails_to_self based on environment"""
+        environment = getattr(settings, 'ENVIRONMENT', 'local').lower()
+        
+        if environment == 'production':
+            return False  # Always send to actual recipients in production
+        elif environment == 'staging':
+            return True   # Default to self in staging, but allow toggle
+        else:  # local, development
+            return True   # Always send to self in development
+    
+    @classmethod
+    def is_send_emails_to_self_editable(cls):
+        """Check if send_emails_to_self field should be editable"""
+        environment = getattr(settings, 'ENVIRONMENT', 'local').lower()
+        
+        # Editable in all environments for testing purposes
+        # In local/development, it's useful to toggle for testing
+        # In staging/production, it's needed for proper email routing control
+        return True
+
+    @classmethod
     def load(cls):
         """Get or create the singleton SystemSettings instance"""
         obj, created = cls.objects.get_or_create(pk=1)
+        
+        # Set default value based on environment if newly created
+        if created:
+            obj.send_emails_to_self = cls.get_default_send_emails_to_self()
+            obj.save()
+        
         return obj
 
     def get_next_certificate_number(self):

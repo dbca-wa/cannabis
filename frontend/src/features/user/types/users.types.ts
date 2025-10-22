@@ -3,12 +3,11 @@ import type {
 	User,
 	UserRole,
 	UserSearchParams as BackendUserSearchParams,
-	// UserCreateRequest,
-	// UserUpdateRequest,
-	// PaginatedUsersResponse,
-	// UserPreferences,
-	// UserBasic,
-	// UserTiny,
+	InviteRecord,
+	InviteUserRequest,
+	ExternalUser,
+	ExternalUserSearchResponse,
+	PaginatedResponse,
 } from "@/shared/types/backend-api.types";
 
 // Re-export backend types with consistent naming
@@ -23,6 +22,10 @@ export type {
 	UserCreateRequest,
 	UserUpdateRequest,
 	PaginatedUsersResponse,
+	InviteRecord,
+	InviteUserRequest,
+	ExternalUser,
+	ExternalUserSearchResponse,
 } from "@/shared/types/backend-api.types";
 
 // User search parameters (frontend-specific interface)
@@ -39,6 +42,21 @@ export interface UserSearchParams {
 	exclude?: number[];
 	offset?: number;
 }
+
+// Invitation search parameters
+export interface InvitationSearchParams {
+	email?: string; // Filter by email
+	is_valid?: boolean; // Filter by validity status
+	is_used?: boolean; // Filter by usage status
+	invited_by?: number; // Filter by inviter user ID
+	role?: UserRole; // Filter by assigned role
+	limit?: number;
+	offset?: number;
+	ordering?: string; // Sort field and direction
+}
+
+// Paginated invitations response
+export interface PaginatedInvitationsResponse extends PaginatedResponse<InviteRecord> {}
 
 // IT Assets integration types
 export interface ITAssetsComboboxProps {

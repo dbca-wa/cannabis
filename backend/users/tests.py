@@ -5,6 +5,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import UserPreferences
+from users.services import PasswordValidator
 
 User = get_user_model()
 
@@ -178,3 +179,201 @@ class UserPreferencesAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["theme"], "dark")  # Updated value
         self.assertEqual(response.data["loader_style"], "cook")  # Updated value
+
+
+class PasswordUpdateAPITestCase(APITestCase):
+    """Test cases for password update API endpoint"""
+
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            email="test@example.com",
+            password="OldPassword123!",
+            first_name="Test",
+            last_name="User",
+        )
+
+        # Create JWT token for authentication
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+
+        # Set up API client with authentication
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+        # URL for password update endpoint
+        self.password_update_url = reverse("update_password")
+
+    def test_password_update_success(self):
+        """Test successful password update with valid current password"""
+        data = {
+            "current_password": "OldPassword123!",
+            "new_password": "NewPassword456@",
+            "confirm_password": "NewPassword456@",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+        self.assertIn("password_last_changed", response.data)
+
+        # Verify password was actually changed
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewPassword456@"))
+        self.assertIsNotNone(self.user.password_last_changed)
+
+    def test_password_update_first_time(self):
+        """Test first-time password update (no current password required)"""
+        data = {
+            "new_password": "FirstPassword789#",
+            "confirm_password": "FirstPassword789#",
+            "is_first_time": True
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+
+        # Verify password was changed
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("FirstPassword789#"))
+
+    def test_password_update_wrong_current_password(self):
+        """Test password update with incorrect current password"""
+        data = {
+            "current_password": "WrongPassword123!",
+            "new_password": "NewPassword456@",
+            "confirm_password": "NewPassword456@",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The current password you entered is incorrect", response.data["message"])
+
+    def test_password_update_passwords_dont_match(self):
+        """Test password update when new passwords don't match"""
+        data = {
+            "current_password": "OldPassword123!",
+            "new_password": "NewPassword456@",
+            "confirm_password": "DifferentPassword789#",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("The passwords you entered don't match", response.data["message"])
+
+    def test_password_update_weak_password(self):
+        """Test password update with weak password"""
+        data = {
+            "current_password": "OldPassword123!",
+            "new_password": "weak",
+            "confirm_password": "weak",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Your password doesn't meet the security requirements", response.data["message"])
+        self.assertIn("field_errors", response.data)
+
+    def test_password_update_missing_current_password(self):
+        """Test password update without current password for existing user"""
+        data = {
+            "new_password": "NewPassword456@",
+            "confirm_password": "NewPassword456@",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Current password is required", str(response.data.get("field_errors", {})))
+
+    def test_password_update_missing_new_password(self):
+        """Test password update without new password"""
+        data = {
+            "current_password": "OldPassword123!",
+            "confirm_password": "NewPassword456@",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("New password is required", str(response.data.get("field_errors", {})))
+
+    def test_password_update_unauthenticated(self):
+        """Test password update without authentication"""
+        self.client.credentials()  # Remove authentication
+        data = {
+            "current_password": "OldPassword123!",
+            "new_password": "NewPassword456@",
+            "confirm_password": "NewPassword456@",
+            "is_first_time": False
+        }
+        response = self.client.post(self.password_update_url, data)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PasswordValidatorTestCase(TestCase):
+    """Test cases for password validation service"""
+
+    def test_valid_password(self):
+        """Test validation of a strong password"""
+        password = "StrongPassword123!"
+        is_valid, errors = PasswordValidator.validate_password(password)
+        
+        self.assertTrue(is_valid)
+        self.assertEqual(len(errors), 0)
+
+    def test_password_too_short(self):
+        """Test validation of password that's too short"""
+        password = "Short1!"
+        is_valid, errors = PasswordValidator.validate_password(password)
+        
+        self.assertFalse(is_valid)
+        self.assertIn("Password must be at least 10 characters long", errors)
+
+    def test_password_no_letter(self):
+        """Test validation of password without letters"""
+        password = "1234567890!"
+        is_valid, errors = PasswordValidator.validate_password(password)
+        
+        self.assertFalse(is_valid)
+        self.assertIn("Password must contain at least one letter", errors)
+
+    def test_password_no_number(self):
+        """Test validation of password without numbers"""
+        password = "PasswordOnly!"
+        is_valid, errors = PasswordValidator.validate_password(password)
+        
+        self.assertFalse(is_valid)
+        self.assertIn("Password must contain at least one number", errors)
+
+    def test_password_no_special_char(self):
+        """Test validation of password without special characters"""
+        password = "Password123"
+        is_valid, errors = PasswordValidator.validate_password(password)
+        
+        self.assertFalse(is_valid)
+        self.assertTrue(any("Password must contain at least one special character" in error for error in errors))
+
+    def test_password_strength_calculation(self):
+        """Test password strength calculation"""
+        # Strong password
+        strong_password = "VeryStrongPassword123!"
+        strength_info = PasswordValidator.get_password_strength(strong_password)
+        
+        self.assertTrue(strength_info["is_valid"])
+        self.assertEqual(strength_info["score"], 100)
+        self.assertEqual(strength_info["strength_level"], "strong")
+        self.assertEqual(strength_info["criteria_met"], 4)
+        
+        # Weak password
+        weak_password = "weak"
+        strength_info = PasswordValidator.get_password_strength(weak_password)
+        
+        self.assertFalse(strength_info["is_valid"])
+        self.assertLess(strength_info["score"], 100)
+        self.assertEqual(strength_info["strength_level"], "very_weak")

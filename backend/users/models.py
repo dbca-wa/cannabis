@@ -91,6 +91,26 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # Email is already required as USERNAME_FIELD
 
+    # Invitation tracking fields
+    invited_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='invited_users',
+        help_text="User who sent the invitation"
+    )
+    invitation_accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the user accepted their invitation"
+    )
+    password_last_changed = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the user last changed their password"
+    )
+
     # Use custom manager
     objects = UserManager()
 
@@ -352,6 +372,78 @@ def save_user_preferences(sender, instance, **kwargs):
     """Save UserPreferences when User is saved"""
     if hasattr(instance, "preferences"):
         instance.preferences.save()
+
+
+class InviteRecord(models.Model):
+    """
+    Track user invitations with secure tokens and expiration
+    """
+    email = models.EmailField(
+        help_text="Email address of the invited user"
+    )
+    invited_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sent_invitations',
+        help_text="User who sent the invitation"
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=User.RoleChoices.choices,
+        help_text="Role to assign to the invited user"
+    )
+    token = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="Secure token for invitation activation"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the invitation was created"
+    )
+    expires_at = models.DateTimeField(
+        help_text="When the invitation expires (24 hours from creation)"
+    )
+    is_valid = models.BooleanField(
+        default=True,
+        help_text="Whether the invitation is still valid"
+    )
+    is_used = models.BooleanField(
+        default=False,
+        help_text="Whether the invitation has been used"
+    )
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the invitation was used"
+    )
+    external_user_data = models.JSONField(
+        help_text="External user data from IT Assets API"
+    )
+
+    class Meta:
+        db_table = 'user_invite_records'
+        verbose_name = "Invitation Record"
+        verbose_name_plural = "Invitation Records"
+        indexes = [
+            models.Index(fields=['token'], name='invite_token_idx'),
+            models.Index(fields=['email'], name='invite_email_idx'),
+            models.Index(fields=['expires_at'], name='invite_expires_idx'),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Invitation for {self.email} by {self.invited_by.full_name}"
+
+    @property
+    def is_expired(self):
+        """Check if the invitation has expired"""
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_active(self):
+        """Check if the invitation is active (valid, not used, not expired)"""
+        return self.is_valid and not self.is_used and not self.is_expired
 
 
 # JWT stuff

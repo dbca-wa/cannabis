@@ -1,5 +1,6 @@
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { loginSchema } from "@/features/auth/schemas/login.schema";
+import { ForgotPasswordForm } from "@/features/auth/components/ForgotPasswordForm";
 import CannabisLogo from "@/shared/components/layout/CannabisLogo";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -17,8 +18,9 @@ import {
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { logger } from "@/shared/services/logger.service";
@@ -40,6 +42,8 @@ const Login = () => {
 
 	const { login, isLoggingIn, loginError, user, isAuthenticated, isLoading } =
 		useAuth();
+
+	const [showForgotPassword, setShowForgotPassword] = useState(false);
 
 	const form = useForm<z.infer<typeof loginSchema>>({
 		resolver: zodResolver(loginSchema),
@@ -185,6 +189,18 @@ const Login = () => {
 							{isLoggingIn ? "Logging in..." : "Login"}
 						</Button>
 
+						{/* Forgot Password Link */}
+						<div className="text-center">
+							<button
+								type="button"
+								onClick={() => setShowForgotPassword(true)}
+								className="text-sm text-cannabis-600 hover:text-cannabis-700 underline"
+								disabled={isLoggingIn}
+							>
+								Forgot your password?
+							</button>
+						</div>
+
 						<div className="text-xs text-muted-foreground text-center space-y-1">
 							<div>
 								Cannabis version: {VERSION} ({ENVIRON})
@@ -200,6 +216,19 @@ const Login = () => {
 					</form>
 				</Form>
 			</CardContent>
+
+			{/* Forgot Password Modal */}
+			<Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="sr-only">Reset Password</DialogTitle>
+					</DialogHeader>
+					<ForgotPasswordForm
+						onSuccess={() => setShowForgotPassword(false)}
+						onCancel={() => setShowForgotPassword(false)}
+					/>
+				</DialogContent>
+			</Dialog>
 		</Card>
 	);
 };

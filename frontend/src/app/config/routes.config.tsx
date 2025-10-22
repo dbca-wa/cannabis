@@ -25,7 +25,7 @@ const UsersPage = lazy(() => import("@/pages/users/Users"));
 const PolicePage = lazy(() => import("@/pages/police/Police"));
 const DefendantsPage = lazy(() => import("@/pages/defendants/Defendants"));
 const DocumentsPage = lazy(() => import("@/pages/documents/Documents"));
-// const AdminPage = lazy(() => import("@/pages/admin/Admin")); // dummy page
+const AdminPage = lazy(() => import("@/pages/admin/Admin"));
 
 // User modals
 const AddUserModal = lazy(() =>
@@ -349,17 +349,16 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 			},
 		],
 	},
-	// Dummy admin route. TODO
-	// {
-	// 	name: "Admin",
-	// 	path: "/admin",
-	// 	icon: <Settings size={20} />,
-	// 	activeIcon: <Settings size={20} />,
-	// 	tooltipContent: <p>System administration and management tools</p>,
-	// 	adminOnly: true, // Only visible to admin users
-	// 	showInSidebar: true,
-	// 	element: AdminPage,
-	// },
+	{
+		name: "Admin",
+		path: "/admin",
+		icon: <Settings size={20} />,
+		activeIcon: <Settings size={20} />,
+		tooltipContent: <p>System administration and management tools</p>,
+		adminOnly: true, // Only visible to admin users
+		showInSidebar: true,
+		element: AdminPage,
+	},
 ];
 
 // Loading fallback component

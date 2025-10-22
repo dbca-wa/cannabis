@@ -37,6 +37,17 @@ import json
 import io
 import logging
 
+# Import error handling utilities
+from .error_handlers import (
+    ErrorCodes,
+    UserFriendlyMessages,
+    SecurityEventLogger,
+    ErrorResponseBuilder,
+    InvitationErrorHandler,
+    PasswordErrorHandler,
+    handle_network_errors
+)
+
 logger = logging.getLogger(__name__)
 
 from rest_framework.permissions import (
@@ -282,9 +293,11 @@ class ExternalUserSearchView(APIView):
             return Response({"results": cached_results}, status=HTTP_200_OK)
 
         try:
-            # Call external IT Assets API
-            external_api_url = "https://itassets.dbca.wa.gov.au/api/v3/departmentuser/"
-            response = requests.get(external_api_url, timeout=10)
+            # Call external IT Assets API using configured URL and Basic auth
+            # Add limit parameter to prevent massive responses
+            external_api_url = f"{settings.IT_ASSETS_URLS}?limit=100"
+            auth = (settings.IT_ASSETS_USER, settings.IT_ASSETS_ACCESS_TOKEN)
+            response = requests.get(external_api_url, auth=auth, timeout=10)
             response.raise_for_status()
 
             external_users = response.json()
@@ -350,6 +363,315 @@ class ExternalUserSearchView(APIView):
 
 
 # ============================================================================
+# region PASSWORD VALIDATION
+# ============================================================================
+
+
+class PasswordValidationView(APIView):
+    """
+    POST: Validate password strength and requirements
+    Provides real-time validation for frontend forms
+    """
+    
+    permission_classes = [AllowAny]  # Allow unauthenticated access for registration forms
+    
+    def post(self, request):
+        """Validate password and return detailed strength information"""
+        from .services import PasswordValidator
+        
+        password = request.data.get('password', '')
+        
+        if not password:
+            return Response(
+                {"error": "Password is required"}, 
+                status=HTTP_400_BAD_REQUEST
+            )
+        
+        # Get detailed password strength information
+        strength_info = PasswordValidator.get_password_strength(password)
+        
+        return Response(strength_info, status=HTTP_200_OK)
+
+
+# endregion
+
+
+# ============================================================================
+# region PASSWORD RESET SYSTEM
+# ============================================================================
+
+
+class ForgotPasswordView(APIView):
+    """
+    POST: Handle password reset requests
+    Validates email and sends password reset link
+    """
+    
+    permission_classes = [AllowAny]
+    
+    @handle_network_errors
+    def post(self, request):
+        """Send password reset email to user"""
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
+        from django.utils import timezone
+        from datetime import timedelta
+        import secrets
+        from .models import RefreshToken
+        
+        email = request.data.get('email', '').strip().lower()
+        
+        if not email:
+            return ErrorResponseBuilder.build_validation_error_response({
+                "email": ["Email address is required"]
+            })
+        
+        user_exists = False
+        
+        try:
+            # Check if user exists
+            user = User.objects.get(email=email, is_active=True)
+            user_exists = True
+            
+            # Generate secure reset token with 1-hour expiration
+            reset_token = secrets.token_urlsafe(32)
+            expires_at = timezone.now() + timedelta(hours=1)
+            
+            # Store reset token (reusing RefreshToken model for simplicity)
+            # In production, you might want a dedicated PasswordResetToken model
+            RefreshToken.objects.create(
+                user=user,
+                token=reset_token,
+                expires_at=expires_at,
+                is_blacklisted=False
+            )
+            
+            # Prepare email context
+            context = {
+                "user": user,
+                "reset_url": f"{request.scheme}://{request.get_host()}/auth/reset-password/{reset_token}/",
+                "site_name": "Cannabis Management System",
+                "expires_at": expires_at,
+            }
+            
+            # Render email templates
+            subject = f'Password Reset Request - {context["site_name"]}'
+            html_message = render_to_string("users/password_reset_email.html", context)
+            plain_message = strip_tags(html_message)
+            
+            # Determine recipient based on system settings
+            from common.models import SystemSettings
+            system_settings = SystemSettings.load()
+            
+            if system_settings.send_emails_to_self:
+                # Send to admin instead of actual recipient
+                recipient_list = [system_settings.forward_certificate_emails_to]
+                logger.info(f"Sending password reset email to admin ({system_settings.forward_certificate_emails_to}) instead of {email}")
+            else:
+                # Send to actual recipient
+                recipient_list = [email]
+            
+            # Send password reset email
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                html_message=html_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+            
+            # Log the password reset request
+            SecurityEventLogger.log_password_reset_requested(email, user_exists=True)
+            
+        except User.DoesNotExist:
+            # Log the attempt but continue with success message
+            SecurityEventLogger.log_password_reset_requested(email, user_exists=False)
+            
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {email}: {str(e)}")
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.EMAIL_SEND_FAILED,
+                message="Failed to process password reset request. Please try again later.",
+                status_code=HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Always return success to prevent email enumeration attacks
+        return Response(
+            {
+                "success": True,
+                "message": "If an account with this email exists, a password reset link has been sent.",
+                "email": email
+            },
+            status=HTTP_200_OK,
+        )
+
+
+class PasswordResetView(APIView):
+    """
+    GET: Validate reset token and redirect to password update form
+    Handles password reset link validation
+    """
+    
+    permission_classes = [AllowAny]
+    
+    def get(self, request, token):
+        """Validate reset token and provide reset context"""
+        from django.utils import timezone
+        from .models import RefreshToken
+        
+        token_prefix = token[:8] + "..." if len(token) > 8 else token
+        
+        try:
+            # Find and validate reset token
+            reset_record = RefreshToken.objects.get(
+                token=token,
+                is_blacklisted=False,
+                expires_at__gt=timezone.now()
+            )
+            
+            user = reset_record.user
+            
+            # Check if user is still active
+            if not user.is_active:
+                SecurityEventLogger.log_password_reset_failed(
+                    email=user.email,
+                    reason="user_inactive",
+                    token_prefix=token_prefix
+                )
+                return ErrorResponseBuilder.build_error_response(
+                    error_code=ErrorCodes.AUTHENTICATION_FAILED,
+                    message="User account is not active",
+                    status_code=HTTP_400_BAD_REQUEST
+                )
+            
+            # Return user info for password reset form
+            return Response(
+                {
+                    "success": True,
+                    "message": "Reset token is valid",
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "full_name": user.full_name,
+                    },
+                    "reset_token": token,
+                    "expires_at": reset_record.expires_at.isoformat(),
+                },
+                status=HTTP_200_OK,
+            )
+            
+        except RefreshToken.DoesNotExist:
+            # Check if token exists but is expired or blacklisted
+            try:
+                expired_record = RefreshToken.objects.get(token=token)
+                if expired_record.expires_at <= timezone.now():
+                    return InvitationErrorHandler.handle_invalid_token(token_prefix, "expired")
+                elif expired_record.is_blacklisted:
+                    return InvitationErrorHandler.handle_invalid_token(token_prefix, "already_used")
+            except RefreshToken.DoesNotExist:
+                pass
+            
+            # Token doesn't exist at all
+            return InvitationErrorHandler.handle_invalid_token(token_prefix, "not_found")
+            
+        except Exception as e:
+            logger.error(f"Failed to validate password reset token {token_prefix}: {str(e)}")
+            return ErrorResponseBuilder.build_internal_error_response()
+
+
+# endregion
+
+
+# ============================================================================
+# region PASSWORD UPDATE SYSTEM
+# ============================================================================
+
+
+class PasswordUpdateView(APIView):
+    """
+    POST: Handle password changes for both first-time setup and regular updates
+    Validates current password for existing users and applies security requirements
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Update user password with validation"""
+        from django.contrib.auth import authenticate
+        from django.utils import timezone
+        from .services import PasswordValidator
+        
+        user = request.user
+        current_password = request.data.get('current_password', '')
+        new_password = request.data.get('new_password', '')
+        confirm_password = request.data.get('confirm_password', '')
+        is_first_time = request.data.get('is_first_time', False)
+        
+        # Convert is_first_time to boolean if it's a string
+        if isinstance(is_first_time, str):
+            is_first_time = is_first_time.lower() in ('true', '1', 'yes')
+        
+        # Validate required fields
+        field_errors = {}
+        
+        if not new_password:
+            field_errors["new_password"] = ["New password is required"]
+        
+        if not confirm_password:
+            field_errors["confirm_password"] = ["Password confirmation is required"]
+        
+        # Check if passwords match
+        if new_password and confirm_password and new_password != confirm_password:
+            return PasswordErrorHandler.handle_passwords_dont_match()
+        
+        # Validate new password strength
+        if new_password:
+            is_valid, validation_errors = PasswordValidator.validate_password(new_password)
+            if not is_valid:
+                return PasswordErrorHandler.handle_weak_password(validation_errors)
+        
+        # For existing users (not first-time), verify current password
+        if not is_first_time:
+            if not current_password:
+                field_errors["current_password"] = ["Current password is required"]
+            elif not user.check_password(current_password):
+                return PasswordErrorHandler.handle_incorrect_current_password(user.email)
+        
+        # Return validation errors if any
+        if field_errors:
+            return ErrorResponseBuilder.build_validation_error_response(field_errors)
+        
+        try:
+            # Update password
+            user.set_password(new_password)
+            user.password_last_changed = timezone.now()
+            user.save()
+            
+            # Log the password change
+            SecurityEventLogger.log_password_update_success(user.email, is_first_time)
+            
+            # Return success response
+            return Response(
+                {
+                    "success": True,
+                    "message": "Password updated successfully",
+                    "password_last_changed": user.password_last_changed.isoformat(),
+                },
+                status=HTTP_200_OK,
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to update password for user {user.email}: {str(e)}")
+            SecurityEventLogger.log_password_update_failed(user.email, "internal_error")
+            return ErrorResponseBuilder.build_internal_error_response()
+
+
+# endregion
+
+
+# ============================================================================
 # region USER INVITATION SYSTEM
 # ============================================================================
 
@@ -357,79 +679,90 @@ class ExternalUserSearchView(APIView):
 class InviteUserView(APIView):
     """
     POST: Send invitation to external user
-    Creates user account and sends invitation email
+    Creates invitation record and sends invitation email with activation link
     """
 
     permission_classes = [IsAuthenticated]
 
+    @handle_network_errors
     def post(self, request):
         """Send invitation to external user"""
         from django.core.mail import send_mail
         from django.template.loader import render_to_string
         from django.utils.html import strip_tags
-        from django.contrib.auth.tokens import default_token_generator
-        from django.utils.encoding import force_bytes
-        from django.utils.http import urlsafe_base64_encode
+        from django.utils import timezone
+        from datetime import timedelta
         import secrets
-        import string
+        from .models import InviteRecord
 
         # Validate request data
         external_user_data = request.data.get("external_user_data", {})
         role = request.data.get("role", "none")
-        is_staff = request.data.get("is_staff", False)
-        is_active = request.data.get("is_active", True)
 
+        # Validate external user data
         if not external_user_data or not external_user_data.get("email"):
-            return Response(
-                {"error": "External user data with email is required"},
-                status=HTTP_400_BAD_REQUEST,
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.INVALID_EXTERNAL_DATA,
+                message=UserFriendlyMessages.INVALID_EXTERNAL_DATA,
+                field_errors={"external_user_data": ["External user data with email is required"]},
+                status_code=HTTP_400_BAD_REQUEST
             )
 
         email = external_user_data.get("email").lower()
 
+        # Validate role
+        valid_roles = [choice[0] for choice in User.RoleChoices.choices]
+        if role not in valid_roles:
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.INVALID_ROLE,
+                message=UserFriendlyMessages.INVALID_ROLE,
+                field_errors={"role": [f"Role must be one of: {', '.join(valid_roles)}"]},
+                status_code=HTTP_400_BAD_REQUEST
+            )
+
         # Check if user already exists
         if User.objects.filter(email=email).exists():
-            return Response(
-                {"error": "User with this email already exists"},
-                status=HTTP_409_CONFLICT,
-            )
+            return InvitationErrorHandler.handle_user_already_exists(email)
 
-        # Only allow staff/admin to set staff status
-        if is_staff and not request.user.is_staff:
-            is_staff = False
+        # Check if there's already a valid invitation for this email
+        existing_invite = InviteRecord.objects.filter(
+            email=email,
+            is_valid=True,
+            is_used=False,
+            expires_at__gt=timezone.now()
+        ).first()
+        
+        if existing_invite:
+            return InvitationErrorHandler.handle_invitation_already_exists(email)
 
+        invite_record = None
+        
         try:
-            # Generate secure random password
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            password = "".join(secrets.choice(alphabet) for _ in range(12))
+            # Generate secure 32-character token
+            token = secrets.token_urlsafe(32)
+            
+            # Set 24-hour expiration
+            expires_at = timezone.now() + timedelta(hours=24)
 
-            # Create user account
-            user = User.objects.create_user(
+            # Create invitation record (no user account yet)
+            invite_record = InviteRecord.objects.create(
                 email=email,
-                first_name=external_user_data.get("given_name", ""),
-                last_name=external_user_data.get("surname", ""),
+                invited_by=request.user,
                 role=role,
-                is_staff=is_staff,
-                is_active=is_active,
-                password=password,
-                employee_id=external_user_data.get("employee_id"),
-                it_asset_id=external_user_data.get("id"),
+                token=token,
+                expires_at=expires_at,
+                external_user_data=external_user_data
             )
-
-            # Generate password reset token for first login
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
 
             # Prepare email context
             context = {
-                "user": user,
+                "invite_record": invite_record,
                 "inviter": request.user,
-                "temporary_password": password,
-                "reset_token": token,
-                "uid": uid,
+                "external_user_data": external_user_data,
+                "activation_url": f"{request.scheme}://{request.get_host()}/auth/activate-invite/{token}/",
                 "site_name": "Cannabis Management System",
-                "protocol": "https" if request.is_secure() else "http",
-                "domain": request.get_host(),
+                "role_display": dict(User.RoleChoices.choices).get(role, "None"),
+                "expires_at": expires_at,
             }
 
             # Render email templates
@@ -437,42 +770,176 @@ class InviteUserView(APIView):
             html_message = render_to_string("users/invitation_email.html", context)
             plain_message = strip_tags(html_message)
 
+            # Determine recipient based on system settings
+            from common.models import SystemSettings
+            system_settings = SystemSettings.load()
+            
+            if system_settings.send_emails_to_self:
+                # Send to admin instead of actual recipient
+                recipient_list = [system_settings.forward_certificate_emails_to]
+                logger.info(f"Sending invitation email to admin ({system_settings.forward_certificate_emails_to}) instead of {email}")
+            else:
+                # Send to actual recipient
+                recipient_list = [email]
+            
             # Send invitation email
             send_mail(
                 subject=subject,
                 message=plain_message,
                 html_message=html_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
+                recipient_list=recipient_list,
                 fail_silently=False,
             )
 
             # Log the invitation
-            settings.LOGGER.info(
-                f"User invitation sent: {request.user} invited {email} with role {role}"
+            SecurityEventLogger.log_invitation_sent(
+                inviter_email=request.user.email,
+                invited_email=email,
+                role=role,
+                token_prefix=token[:8] + "..."
             )
 
-            # Return created user data (without password)
-            from .serializers import UserJWTObjectSerializer
-
-            serializer = UserJWTObjectSerializer(user)
-
+            # Return invitation record data
             return Response(
-                {"message": "Invitation sent successfully", "user": serializer.data},
+                {
+                    "success": True,
+                    "message": "Invitation sent successfully",
+                    "invitation": {
+                        "id": invite_record.id,
+                        "email": invite_record.email,
+                        "role": invite_record.role,
+                        "expires_at": invite_record.expires_at.isoformat(),
+                        "created_at": invite_record.created_at.isoformat(),
+                    }
+                },
                 status=HTTP_201_CREATED,
             )
 
         except Exception as e:
-            settings.LOGGER.error(f"Failed to send invitation: {str(e)}")
+            # Clean up invitation record if created but email failed
+            if invite_record:
+                invite_record.delete()
 
-            # Clean up user if created but email failed
-            if "user" in locals():
-                user.delete()
+            return InvitationErrorHandler.handle_email_send_failed(email, e)
+
+
+class InviteActivationView(APIView):
+    """
+    GET: Handle invitation activation links
+    Validates token, creates user account, and auto-logs in the user
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        """Activate invitation and create user account"""
+        from django.utils import timezone
+        from .models import InviteRecord
+        from .services import PasswordValidator
+        import secrets
+        import string
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        token_prefix = token[:8] + "..." if len(token) > 8 else token
+
+        try:
+            # Find and validate invitation record
+            invite_record = InviteRecord.objects.get(token=token)
+            
+            # Check if invitation is still valid
+            if not invite_record.is_active:
+                if invite_record.is_used:
+                    return InvitationErrorHandler.handle_invalid_token(token_prefix, "already_used")
+                elif invite_record.is_expired:
+                    return InvitationErrorHandler.handle_invalid_token(token_prefix, "expired")
+                else:
+                    return InvitationErrorHandler.handle_invalid_token(token_prefix, "invalid")
+
+            # Check if user already exists (shouldn't happen, but safety check)
+            if User.objects.filter(email=invite_record.email).exists():
+                SecurityEventLogger.log_invitation_activation_failed(
+                    email=invite_record.email,
+                    reason="user_already_exists",
+                    token_prefix=token_prefix
+                )
+                return InvitationErrorHandler.handle_user_already_exists(invite_record.email)
+
+            # Generate temporary password meeting security requirements
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+            
+            # Validate the generated password meets requirements
+            is_valid, errors = PasswordValidator.validate_password(temp_password)
+            if not is_valid:
+                # This should never happen with our generation logic, but safety check
+                logger.error(f"Generated password failed validation: {errors}")
+                SecurityEventLogger.log_invitation_activation_failed(
+                    email=invite_record.email,
+                    reason="password_generation_failed",
+                    token_prefix=token_prefix
+                )
+                return ErrorResponseBuilder.build_internal_error_response()
+
+            # Create user account from stored external data
+            external_data = invite_record.external_user_data
+            user = User.objects.create_user(
+                email=invite_record.email,
+                first_name=external_data.get("given_name", ""),
+                last_name=external_data.get("surname", ""),
+                role=invite_record.role,
+                password=temp_password,
+                employee_id=external_data.get("employee_id"),
+                it_asset_id=external_data.get("id"),
+                invited_by=invite_record.invited_by,
+                invitation_accepted_at=timezone.now(),
+                password_last_changed=timezone.now(),
+            )
+
+            # Mark invitation as used
+            invite_record.is_used = True
+            invite_record.used_at = timezone.now()
+            invite_record.save()
+
+            # Generate JWT tokens for auto-login
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Log successful activation
+            SecurityEventLogger.log_invitation_activation_success(
+                email=user.email,
+                inviter_email=invite_record.invited_by.email
+            )
+
+            # Return authentication tokens and user data
+            from .serializers import UserJWTObjectSerializer
+            user_serializer = UserJWTObjectSerializer(user)
 
             return Response(
-                {"error": "Failed to send invitation"},
-                status=HTTP_500_INTERNAL_SERVER_ERROR,
+                {
+                    "success": True,
+                    "message": "Invitation activated successfully",
+                    "user": user_serializer.data,
+                    "access": str(access_token),
+                    "refresh": str(refresh),
+                    "token_type": "Bearer",
+                    "expires_in": settings.SIMPLE_JWT.get("ACCESS_TOKEN_LIFETIME").total_seconds(),
+                    "temporary_password": temp_password,
+                    "requires_password_change": True,
+                },
+                status=HTTP_200_OK,
             )
+
+        except InviteRecord.DoesNotExist:
+            return InvitationErrorHandler.handle_invalid_token(token_prefix, "not_found")
+        except Exception as e:
+            logger.error(f"Failed to activate invitation {token_prefix}: {str(e)}")
+            SecurityEventLogger.log_invitation_activation_failed(
+                email="unknown",
+                reason="internal_error",
+                token_prefix=token_prefix
+            )
+            return ErrorResponseBuilder.build_internal_error_response()
 
 
 # endregion

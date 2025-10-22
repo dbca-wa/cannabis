@@ -4,6 +4,7 @@ export * from "./types/users.types";
 // User services
 export * from "./services/users.service";
 export * from "./services/userPreferences.service";
+export * from "./services/invitation.service";
 
 // User hooks
 export * from "./hooks/useUsers";
