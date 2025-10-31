@@ -1,0 +1,187 @@
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cannabis{% endblock %}</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8faf9;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #0f172a;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .system-name {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 24px;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 25px 30px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+        }
+
+        .footer-logo {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            flex-shrink: 0;
+            border-radius: 15px;
+        }
+
+        .footer-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 15px;
+        }
+
+        .footer-text {
+            flex: 1;
+        }
+
+        .disclaimer {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .copyright {
+            display: flex;
+            font-size: 11px;
+            color: #94a3b8;
+            gap: 4px;
+        }
+
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 25px 20px;
+            }
+
+            .system-name {
+                font-size: 20px;
+            }
+
+            .footer {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-logo {
+                width: 90px;
+                height: 90px;
+                border-radius: 15px;
+                overflow: hidden;
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+
+            .footer-logo img {
+                border-radius: 15px;
+            }
+
+            .copyright {
+                flex-direction: column;
+            }
+        }
+
+        {% block extra_styles %}
+        {% endblock %}
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            {% if cannabis_svg %}
+            <div class="logo">
+                <img src="{{ cannabis_svg }}" alt="Cannabis Logo">
+            </div>
+            {% endif %}
+            <h1 class="system-name">Cannabis</h1>
+        </div>
+
+        <div class="content">
+            {% block content %}
+            <!-- Child templates will insert content here -->
+            {% endblock %}
+        </div>
+
+        <div class="footer">
+            {% if dbca_image_path %}
+            <div class="footer-logo">
+                <img src="{{ dbca_image_path }}" alt="DBCA Logo">
+            </div>
+            {% endif %}
+
+            <div class="footer-text">
+                <div class="disclaimer">
+                    This email was intended for {{ first_name }} {{ last_name }}. If you have
+                    received this email by mistake, please disregard it.
+                </div>
+
+                <div class="copyright">
+                    <span>© {{ current_year|default:"2025" }} Department of Biodiversity,
+                        Conservation and Attractions.</span>
+                    <span>All rights reserved.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

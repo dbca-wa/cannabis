@@ -39,9 +39,14 @@ urlpatterns = [
         name="forgot_password",
     ),
     path(
+        "auth/verify-reset-code/",
+        views.VerifyResetCodeView.as_view(),
+        name="verify_reset_code",
+    ),
+    path(
         "auth/reset-password/<str:token>/",
         views.PasswordResetView.as_view(),
-        name="reset_password",
+        name="reset_password_deprecated",
     ),
     # Password update
     path(

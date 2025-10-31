@@ -285,6 +285,57 @@ class SystemSettingsView(APIView):
 
 
 @method_decorator(csrf_protect, name='dispatch')
+class SecurityMonitoringView(APIView):
+    """
+    GET: View current security status and rate limits (superuser only)
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get current security monitoring information"""
+        if not request.user.is_superuser:
+            logger.warning(
+                f"Non-superuser {request.user.email} (ID: {request.user.id}) "
+                f"attempted to access security monitoring"
+            )
+            return Response(
+                {"error": "Superuser access required"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Get basic security metrics
+            # Note: This is a simplified version - in production you'd want more detailed metrics
+            security_info = {
+                "timestamp": timezone.now().isoformat(),
+                "rate_limits": {
+                    "password_reset": "5/hour per IP",
+                    "password_reset_email": "10/hour per IP, 3/hour per target email",
+                    "reset_code_verification": "20/hour per IP, 10/hour per email globally"
+                },
+                "brute_force_protection": {
+                    "email_lockout_threshold": "5 failed attempts",
+                    "email_lockout_duration": "1 hour",
+                    "ip_lockout_threshold": "20 failed attempts",
+                    "ip_lockout_duration": "2 hours"
+                },
+                "active_lockouts": {
+                    "note": "Use management command 'manage_rate_limits --action status' for detailed lockout information"
+                }
+            }
+            
+            logger.info(f"Security monitoring accessed by {request.user.email} (ID: {request.user.id})")
+            
+            return Response(security_info, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Failed to get security monitoring info: {str(e)}")
+            return Response(
+                {"error": "Failed to retrieve security information"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class ResetRateLimitsView(APIView):
     """
     POST: Reset rate limits by clearing cache (superuser only)

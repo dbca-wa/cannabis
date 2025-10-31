@@ -10,6 +10,8 @@ import ErrorPage from "@/shared/components/layout/ErrorPage";
 // Auth pages (not lazy loaded since they're critical)
 import Login from "@/pages/auth/Login";
 import PasswordUpdate from "@/pages/auth/PasswordUpdate";
+import PasswordResetCodeEntry from "@/pages/auth/PasswordResetCodeEntry";
+import PasswordResetSuccess from "@/pages/auth/PasswordResetSuccess";
 import InviteActivation from "@/pages/auth/InviteActivation";
 import InviteActivationError from "@/pages/auth/InviteActivationError";
 
@@ -25,6 +27,8 @@ export const router = createBrowserRouter([
 				children: [
 					{ path: "login", element: <Login /> },
 					{ path: "password-update", element: <PasswordUpdate /> },
+					{ path: "reset-code", element: <PasswordResetCodeEntry /> },
+					{ path: "reset-success", element: <PasswordResetSuccess /> },
 					{ path: "activate-invite/:token", element: <InviteActivation /> },
 					{ path: "invite-error", element: <InviteActivationError /> },
 				],

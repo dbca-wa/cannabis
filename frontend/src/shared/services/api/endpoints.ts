@@ -8,7 +8,8 @@ export const ENDPOINTS = {
 		ME: "/users/whoami/", // Back to whoami endpoint - will fix backend to include admin fields
 		UPDATE_PASSWORD: "/users/auth/update-password/",
 		FORGOT_PASSWORD: "/users/auth/forgot-password/",
-		RESET_PASSWORD: (token: string) => `/users/auth/reset-password/${token}/`,
+		VERIFY_RESET_CODE: "/users/auth/verify-reset-code/",
+
 		ACTIVATE_INVITE: (token: string) => `/users/auth/activate-invite/${token}/`,
 		VALIDATE_PASSWORD: "/users/validate-password/",
 	},

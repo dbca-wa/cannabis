@@ -1,0 +1,80 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Cannabis System Invitation{% endblock %}
+
+{% block extra_styles %}
+.greeting {
+    font-size: 20px;
+    color: #1e293b;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.invitation-text {
+    font-size: 16px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.inviter-info {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.role-highlight {
+    font-weight: 600;
+    color: #334155;
+}
+
+.join-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    margin: 15px 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.join-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+@media (max-width: 600px) {
+    .invitation-text {
+        font-size: 15px;
+    }
+    
+    .join-button {
+        padding: 12px 28px;
+        font-size: 15px;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="greeting">
+    Hi {{ recipient_first_name }},
+</div>
+
+<div class="invitation-text">
+    <span class="inviter-info">{{ inviter_first_name }} {{ inviter_last_name }}</span> 
+    ({{ inviter_email }}) has invited you to join Cannabis as 
+    {{ invitee_proposed_role|article }} 
+    <span class="role-highlight">{{ invitee_proposed_role }}</span>. 
+    To accept, click the link below and set a password. For security reasons, this invitation link can only be used once and will expire in 24 hours.
+</div>
+
+<div style="text-align: center;">
+    <a href="{{ invitation_link }}" class="join-button">
+        Accept Invitation
+    </a>
+</div>
+{% endblock %}

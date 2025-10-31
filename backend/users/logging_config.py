@@ -49,6 +49,18 @@ class SecurityEventFormatter(logging.Formatter):
             
         if hasattr(record, 'is_first_time'):
             log_entry['is_first_time'] = record.is_first_time
+            
+        if hasattr(record, 'code_prefix'):
+            log_entry['code_prefix'] = record.code_prefix
+            
+        if hasattr(record, 'success'):
+            log_entry['success'] = record.success
+            
+        if hasattr(record, 'attempt_count'):
+            log_entry['attempt_count'] = record.attempt_count
+            
+        if hasattr(record, 'ip_address'):
+            log_entry['ip_address'] = record.ip_address
         
         # Add request information if available
         if hasattr(record, 'request'):
@@ -174,6 +186,104 @@ class EnhancedLogger:
             request=request
         )
     
+    def log_reset_code_generated(
+        self,
+        email: str,
+        code_prefix: str,
+        request=None
+    ):
+        """Log reset code generation"""
+        self.log_security_event(
+            event_type="reset_code_generated",
+            message=f"Password reset code generated for {email}",
+            level="info",
+            email=email,
+            code_prefix=code_prefix,
+            request=request
+        )
+    
+    def log_reset_code_verification_attempt(
+        self,
+        email: str,
+        code_prefix: str,
+        success: bool,
+        reason: str = None,
+        attempt_count: int = None,
+        request=None
+    ):
+        """Log reset code verification attempt"""
+        status = "success" if success else "failed"
+        message = f"Reset code verification {status} for {email}"
+        if reason:
+            message += f": {reason}"
+        
+        self.log_security_event(
+            event_type="reset_code_verification",
+            message=message,
+            level="info" if success else "warning",
+            severity="info" if success else "warning",
+            email=email,
+            code_prefix=code_prefix,
+            success=success,
+            reason=reason,
+            attempt_count=attempt_count,
+            request=request
+        )
+    
+    def log_reset_code_expired(
+        self,
+        email: str,
+        code_prefix: str,
+        request=None
+    ):
+        """Log expired reset code usage attempt"""
+        self.log_security_event(
+            event_type="reset_code_expired",
+            message=f"Expired reset code used for {email}",
+            level="warning",
+            severity="warning",
+            email=email,
+            code_prefix=code_prefix,
+            request=request
+        )
+    
+    def log_reset_code_brute_force_attempt(
+        self,
+        email: str,
+        attempt_count: int,
+        ip_address: str = None,
+        request=None
+    ):
+        """Log potential brute force attempt on reset codes"""
+        self.log_security_event(
+            event_type="reset_code_brute_force",
+            message=f"Potential brute force attack detected for {email} - {attempt_count} failed attempts",
+            level="error",
+            severity="high",
+            email=email,
+            attempt_count=attempt_count,
+            ip_address=ip_address,
+            request=request
+        )
+    
+    def log_reset_code_invalidated(
+        self,
+        email: str,
+        code_prefix: str,
+        reason: str,
+        request=None
+    ):
+        """Log reset code invalidation"""
+        self.log_security_event(
+            event_type="reset_code_invalidated",
+            message=f"Reset code invalidated for {email}: {reason}",
+            level="info",
+            email=email,
+            code_prefix=code_prefix,
+            reason=reason,
+            request=request
+        )
+    
     def log_password_reset_failed(
         self,
         email: str,
@@ -295,3 +405,18 @@ def log_password_update_failed(email: str, reason: str, request=None):
 
 def log_authentication_failed(email: str, reason: str, request=None):
     security_logger.log_authentication_failed(email, reason, request)
+
+def log_reset_code_generated(email: str, code_prefix: str, request=None):
+    security_logger.log_reset_code_generated(email, code_prefix, request)
+
+def log_reset_code_verification_attempt(email: str, code_prefix: str, success: bool, reason: str = None, attempt_count: int = None, request=None):
+    security_logger.log_reset_code_verification_attempt(email, code_prefix, success, reason, attempt_count, request)
+
+def log_reset_code_expired(email: str, code_prefix: str, request=None):
+    security_logger.log_reset_code_expired(email, code_prefix, request)
+
+def log_reset_code_brute_force_attempt(email: str, attempt_count: int, ip_address: str = None, request=None):
+    security_logger.log_reset_code_brute_force_attempt(email, attempt_count, ip_address, request)
+
+def log_reset_code_invalidated(email: str, code_prefix: str, reason: str, request=None):
+    security_logger.log_reset_code_invalidated(email, code_prefix, reason, request)

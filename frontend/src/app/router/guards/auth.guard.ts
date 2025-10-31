@@ -14,13 +14,23 @@ const checkAuthStatus = async () => {
 	try {
 		if (authService.hasValidTokens()) {
 			const result = await authService.getCurrentUser();
-			if (result.success) {
+			if (result.success && result.data) {
 				isAuthenticated = true;
 				user = result.data;
+				logger.debug("[AuthGuard] User authenticated", { 
+					userId: user.id, 
+					email: user.email 
+				});
+			} else {
+				logger.debug("[AuthGuard] Auth check failed - no user data", { 
+					error: result.error 
+				});
 			}
+		} else {
+			logger.debug("[AuthGuard] No valid tokens found");
 		}
 	} catch (error) {
-		logger.debug("[AuthGuard] Auth check failed", { error });
+		logger.debug("[AuthGuard] Auth check failed with exception", { error });
 	}
 
 	return { isAuthenticated, user };
@@ -47,19 +57,11 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		);
 	}
 
-	// Check authentication using consolidated helper
-	const { isAuthenticated, user } = await checkAuthStatus();
-
-	logger.debug("[RootAuthGuard] Auth status", {
-		isAuthenticated,
-		hasUser: !!user,
-		pathname,
-	});
-
-	// Handle auth routes
+	// For auth routes, handle them first to avoid unnecessary auth checks
 	if (pathname.startsWith("/auth/")) {
 		// Special case: password-update requires authentication
 		if (pathname === "/auth/password-update") {
+			const { isAuthenticated } = await checkAuthStatus();
 			if (!isAuthenticated) {
 				logger.debug(
 					"[RootAuthGuard] Password update requires authentication, redirecting to login"
@@ -80,7 +82,16 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 			return null;
 		}
 		
-		// For other auth routes (login), redirect if already authenticated
+		// Special case: password reset code entry and success pages are public
+		if (pathname === "/auth/reset-code" || pathname === "/auth/reset-success") {
+			logger.debug(
+				"[RootAuthGuard] Password reset pages are public, allowing access"
+			);
+			return null;
+		}
+		
+		// For other auth routes (login), check if already authenticated
+		const { isAuthenticated } = await checkAuthStatus();
 		if (isAuthenticated) {
 			logger.debug(
 				"[RootAuthGuard] User authenticated, redirecting from auth page to home"
@@ -92,6 +103,15 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		);
 		return null;
 	}
+
+	// For all other routes, require authentication
+	const { isAuthenticated, user } = await checkAuthStatus();
+
+	logger.debug("[RootAuthGuard] Auth status for protected route", {
+		isAuthenticated,
+		hasUser: !!user,
+		pathname,
+	});
 
 	// For all other routes, require authentication
 	if (!isAuthenticated) {

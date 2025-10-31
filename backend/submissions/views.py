@@ -1,3 +1,10 @@
+import os
+import subprocess
+from django.template.loader import get_template
+from django.http import HttpResponse
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -510,6 +517,221 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
             f"User {self.request.user} deleted certificate {instance.certificate_number}"
         )
         instance.delete()
+
+
+class GenerateTestCertificateView(APIView):
+    """
+    POST: Generate a test certificate using PrinceXML
+    This creates/reuses a test submission and certificate for testing purposes
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Extract and validate data (these are for PDF template context, not DB fields - at least not for certificate model)
+        certificate_number = request.data.get("certificate_number", "").strip()
+        police_number = request.data.get("police_number", "").strip()
+        approved_botanist = request.data.get("approved_botanist", "").strip()
+        defendant_first_name = request.data.get("defendantFirstName", "").strip()
+        defendant_last_name = request.data.get("defendantLastName", "").strip()
+        additional_notes = request.data.get("additional_notes", "").strip()
+        certified_date = request.data.get("certified_date", "").strip()
+
+        # Validate required fields
+        errors = {}
+        if not certificate_number or len(certificate_number) < 5:
+            errors["certificate_number"] = "5 characters minimum"
+        if not police_number:
+            errors["police_number"] = "Police number required"
+        if not approved_botanist:
+            errors["approved_botanist"] = "Approved botanist required"
+        if not defendant_first_name:
+            errors["defendantFirstName"] = "Defendant first name required"
+        if not defendant_last_name:
+            errors["defendantLastName"] = "Defendant last name required"
+        if not certified_date:
+            errors["certified_date"] = "Certified date required"
+
+        if errors:
+            return Response({"errors": errors}, status=HTTP_400_BAD_REQUEST)
+
+        settings.LOGGER.info(
+            f"User {request.user} is generating test certificate {certificate_number}"
+        )
+
+        # ============================================================================
+        # Create or get test submission and certificate
+        # ============================================================================
+        try:
+            # Get or create a test submission (reuse if exists)
+            test_submission, created = Submission.objects.get_or_create(
+                case_number="TEST-CERTIFICATE-SUBMISSION",
+                defaults={
+                    "received": timezone.now(),
+                    "is_draft": True,
+                    "phase": Submission.PhaseChoices.DATA_ENTRY,
+                },
+            )
+
+            if created:
+                settings.LOGGER.info(
+                    f"Created new test submission: {test_submission.case_number}"
+                )
+            else:
+                settings.LOGGER.info(
+                    f"Reusing existing test submission: {test_submission.case_number}"
+                )
+
+            # Get or create a test certificate for this submission (reuse if exists)
+            test_certificate, cert_created = Certificate.objects.get_or_create(
+                submission=test_submission,
+                defaults={
+                    "pdf_generating": False,
+                },
+            )
+
+            if cert_created:
+                settings.LOGGER.info(
+                    f"Created new test certificate: {test_certificate.certificate_number}"
+                )
+            else:
+                settings.LOGGER.info(
+                    f"Reusing existing test certificate: {test_certificate.certificate_number}"
+                )
+
+            # Mark PDF as generating
+            test_certificate.pdf_generating = True
+            test_certificate.save(update_fields=["pdf_generating"])
+
+        except Exception as e:
+            settings.LOGGER.error(f"Error creating/getting test objects: {str(e)}")
+            return Response(
+                {"error": "Failed to create test submission/certificate"},
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        # ============================================================================
+        # Generate PDF
+        # ============================================================================
+
+        # Define CSS paths for PrinceXML styling
+        certificate_css_path = os.path.join(
+            settings.BASE_DIR, "templates/pdf/styles/certificate_styles.css"
+        )
+
+        # Prepare template context (these are just for the PDF, not saved to DB)
+        context = {
+            "certificate_number": certificate_number,
+            "police_number": police_number,
+            "approved_botanist": approved_botanist,
+            "defendant_first_name": defendant_first_name,
+            "defendant_last_name": defendant_last_name,
+            "additional_notes": additional_notes,
+            "certified_date": certified_date,
+            "css_path": certificate_css_path,
+            "base_url": settings.BASE_DIR,
+        }
+
+        # Render HTML template
+        try:
+            html_content = get_template("pdf/certificate.html").render(context)
+        except Exception as e:
+            settings.LOGGER.error(f"Template rendering failed: {str(e)}")
+            test_certificate.pdf_generating = False
+            test_certificate.save(update_fields=["pdf_generating"])
+            return Response(
+                {"error": "Failed to render certificate template"},
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        # Generate PDF using PrinceXML
+        try:
+            p = subprocess.Popen(
+                [
+                    "prince",
+                    "-",  # Read from stdin
+                    f"--style={certificate_css_path}",
+                    "--javascript",  # Enable JavaScript if needed
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            # Send HTML to prince and get PDF back
+            pdf_output, errors = p.communicate(html_content.encode("utf-8"))
+
+            if p.returncode != 0:
+                # PrinceXML failed
+                settings.LOGGER.error(
+                    f"PrinceXML generation failed: {errors.decode('utf-8')}"
+                )
+                test_certificate.pdf_generating = False
+                test_certificate.save(update_fields=["pdf_generating"])
+                return Response(
+                    {
+                        "error": "PDF generation failed",
+                        "details": errors.decode("utf-8"),
+                    },
+                    status=HTTP_400_BAD_REQUEST,
+                )
+
+            # Success - PDF generated
+            settings.LOGGER.info(
+                f"Certificate PDF generated successfully. Size: {len(pdf_output)} bytes"
+            )
+
+            # Create filename
+            pdf_filename = f"test_certificate_{certificate_number}.pdf"
+
+            # ============================================================================
+            # Save PDF to the test certificate (replacing existing if present)
+            # ============================================================================
+            file_content = ContentFile(pdf_output, name=pdf_filename)
+
+            # If certificate already has a PDF file, delete the old one first
+            if test_certificate.pdf_file:
+                try:
+                    old_file_path = test_certificate.pdf_file.path
+                    if default_storage.exists(old_file_path):
+                        default_storage.delete(old_file_path)
+                        settings.LOGGER.info(f"Deleted old PDF file: {old_file_path}")
+                except Exception as e:
+                    settings.LOGGER.warning(f"Could not delete old PDF file: {str(e)}")
+
+            # Save the new PDF file
+            test_certificate.pdf_file = file_content
+            test_certificate.pdf_size = len(pdf_output)
+            test_certificate.pdf_generating = False
+            test_certificate.save()
+
+            settings.LOGGER.info(
+                f"Saved PDF to test certificate {test_certificate.certificate_number}"
+            )
+            # ============================================================================
+
+            # Return PDF as downloadable response
+            response = HttpResponse(pdf_output, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{pdf_filename}"'
+
+            return response
+
+        except FileNotFoundError:
+            settings.LOGGER.error("PrinceXML not found in system PATH")
+            test_certificate.pdf_generating = False
+            test_certificate.save(update_fields=["pdf_generating"])
+            return Response(
+                {"error": "PrinceXML is not installed or not in PATH"},
+                status=HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            settings.LOGGER.error(f"Unexpected error during PDF generation: {str(e)}")
+            test_certificate.pdf_generating = False
+            test_certificate.save(update_fields=["pdf_generating"])
+            return Response(
+                {"error": "Unexpected error during PDF generation"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
 
 class InvoiceListView(ListCreateAPIView):

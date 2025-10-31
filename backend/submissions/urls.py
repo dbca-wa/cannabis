@@ -50,6 +50,11 @@ urlpatterns = [
         views.CertificateDetailView.as_view(),
         name="certificate_detail",
     ),
+    path(
+        "certificates/test/generate",
+        views.GenerateTestCertificateView.as_view(),
+        name="test_certificate",
+    ),
     # Invoice endpoints
     path(
         "<int:submission_id>/invoices/",

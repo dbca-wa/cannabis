@@ -1,9 +1,24 @@
-import { Home, Settings, Users, Shield, User, FileText } from "lucide-react";
+import {
+	Home,
+	Settings,
+	Users,
+	Shield,
+	User,
+	FileText,
+	TestTube,
+} from "lucide-react";
 import { lazy, Suspense } from "react";
+import { FaTriangleExclamation } from "react-icons/fa6";
 import { Navigate } from "react-router";
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import("@/pages/dashboard/Home"));
+const TestsHomePage = lazy(() => import("@/pages/tests/TestsHomePage"));
+const TestEmailPage = lazy(() => import("@/pages/tests/TestEmailPage"));
+const TestCertificatePage = lazy(
+	() => import("@/pages/tests/TestCertificatePage")
+);
+const TestInvoicePage = lazy(() => import("@/pages/tests/TestInvoicePage"));
 const SubmissionsPage = lazy(() => import("@/pages/submissions/Submissions"));
 const SubmissionFormDemoPage = lazy(
 	() => import("@/pages/submissions/SubmissionFormDemo")
@@ -221,10 +236,25 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		element: HomePage,
 	},
 	{
+		name: "Test",
+		path: "/tests",
+		icon: <FaTriangleExclamation size={20} />,
+		activeIcon: <FaTriangleExclamation size={20} />,
+		tooltipContent: <p>Tests</p>,
+		adminOnly: false,
+		showInSidebar: true,
+		element: TestsHomePage,
+		children: [
+			{ path: "emails", element: TestEmailPage },
+			{ path: "certificates", element: TestCertificatePage },
+			{ path: "invoices", element: TestInvoicePage },
+		],
+	},
+	{
 		name: "Submissions",
 		path: "/submissions",
-		icon: <FileText size={20} />,
-		activeIcon: <FileText size={20} />,
+		icon: <TestTube size={20} />,
+		activeIcon: <TestTube size={20} />,
 		tooltipContent: (
 			<p>Manage cannabis sample submissions and assessments</p>
 		),

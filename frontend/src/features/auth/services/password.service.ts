@@ -1,5 +1,4 @@
 import { logger } from "@/shared/services/logger.service";
-import { normalizeError } from "@/shared/utils/error.utils";
 import { generateRequestId } from "@/shared/utils/uuid";
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
 import { errorHandlingService } from "@/shared/services/errorHandling.service";
@@ -11,8 +10,6 @@ import type {
 	PasswordUpdateResponse,
 	ForgotPasswordRequest,
 	ForgotPasswordResponse,
-	PasswordResetRequest,
-	PasswordResetResponse,
 } from "@/shared/types/backend-api.types";
 
 class PasswordService {
@@ -131,51 +128,7 @@ class PasswordService {
 		}
 	}
 
-	async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<ServiceResult<PasswordResetResponse>> {
-		const requestId = this.generateRequestId();
-		logger.info("Attempting password reset", {
-			token: token.substring(0, 8) + "...",
-			requestId,
-		});
 
-		try {
-			const resetData: PasswordResetRequest = {
-				token,
-				new_password: newPassword,
-				confirm_password: confirmPassword,
-			};
-
-			const response = await apiClient.post<PasswordResetResponse>(
-				ENDPOINTS.AUTH.RESET_PASSWORD(token),
-				resetData
-			);
-
-			logger.info("Password reset successful", {
-				token: token.substring(0, 8) + "...",
-				autoLogin: response.auto_login,
-				requestId,
-			});
-
-			return {
-				data: response,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const enhancedError = errorHandlingService.handleError(error, {
-				action: "password_reset",
-				token: token.substring(0, 8) + "...",
-				requestId
-			}, {
-				showToast: false // Let the component handle the toast
-			});
-
-			return {
-				data: {} as PasswordResetResponse,
-				success: false,
-				error: enhancedError.userFriendlyMessage,
-			};
-		}
-	}
 }
 
 // Export singleton instance

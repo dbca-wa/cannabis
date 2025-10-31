@@ -1,5 +1,6 @@
 import { AllUsersTable } from "@/features/user";
 import ContentLayout from "@/shared/components/layout/ContentLayout";
+import { Head } from "@/shared/components/layout/Head";
 import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
 
 const Users = () => {
@@ -13,6 +14,7 @@ const Users = () => {
 
 	return (
 		<ContentLayout breadcrumbs={breadcrumbs} maxWidth="xl">
+			<Head title="Users" />
 			<AllUsersTable />
 		</ContentLayout>
 	);

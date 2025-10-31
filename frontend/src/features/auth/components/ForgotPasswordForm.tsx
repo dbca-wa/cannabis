@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/features/auth/schemas/password.schema";
@@ -18,8 +19,8 @@ interface ForgotPasswordFormProps {
 }
 
 export const ForgotPasswordForm = ({ onSuccess, onCancel }: ForgotPasswordFormProps) => {
+    const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
 
     const form = useForm<ForgotPasswordFormData>({
         resolver: zodResolver(forgotPasswordSchema),
@@ -34,26 +35,54 @@ export const ForgotPasswordForm = ({ onSuccess, onCancel }: ForgotPasswordFormPr
 
         try {
             // Use proper API client (no auth required for forgot password)
-            const response = await apiClient.postPublic<{ message: string }>(
+            await apiClient.postPublic<{ message: string }>(
                 ENDPOINTS.AUTH.FORGOT_PASSWORD,
                 {
                     email: values.email,
                 }
             );
 
-            logger.info("Password reset email sent successfully", { email: values.email });
-            setIsSuccess(true);
-            toast.success("Password reset email sent! Check your inbox.");
+            logger.info("Password reset code sent successfully", { email: values.email });
+            toast.success("Reset code sent! Redirecting...");
 
-            // Call success callback after a short delay
-            setTimeout(() => {
-                onSuccess?.();
-            }, 2000);
+            // Navigate to success page with email in state
+            navigate("/auth/reset-success", {
+                state: {
+                    email: values.email
+                }
+            });
+
+            // Call success callback if provided (for modal usage)
+            onSuccess?.();
         } catch (error) {
+            console.log("Full error object:", error);
+            console.log("Error response data:", (error as any)?.response?.data);
+
+            const errorResponse = (error as any)?.response?.data;
             const errorMessage = getErrorMessage(error);
+
+            // Check if this is a duplicate request error
+            if (errorResponse?.error_code === "DUPLICATE_REQUEST") {
+                logger.info("Duplicate password reset request, navigating to code entry", { email: values.email });
+                toast.success("A reset code was already sent. Redirecting to code entry...");
+
+                // Navigate to code entry page with email and duplicate flag
+                navigate("/auth/reset-code", {
+                    state: {
+                        email: values.email,
+                        isDuplicate: true
+                    }
+                });
+
+                // Call success callback if provided (for modal usage)
+                onSuccess?.();
+                return;
+            }
+
             logger.error("Forgot password request failed", {
                 email: values.email,
                 error: errorMessage,
+                fullError: error,
             });
             toast.error(errorMessage);
         } finally {
@@ -61,30 +90,14 @@ export const ForgotPasswordForm = ({ onSuccess, onCancel }: ForgotPasswordFormPr
         }
     };
 
-    if (isSuccess) {
-        return (
-            <div className="space-y-4 text-center">
-                <div className="text-green-600 text-4xl mb-4">✓</div>
-                <div>
-                    <h3 className="text-lg font-semibold text-green-600">Email Sent!</h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        We've sent a password reset link to your email address.
-                        Please check your inbox and follow the instructions to reset your password.
-                    </p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                    Didn't receive the email? Check your spam folder or try again in a few minutes.
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <div className="space-y-4">
             <div className="text-center">
                 <h3 className="text-lg font-semibold">Reset Your Password</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Enter your email address and we'll send you a link to reset your password.
+                    Enter your email address and we'll send you a 4-digit code to reset your password.
                 </p>
             </div>
 
@@ -117,7 +130,7 @@ export const ForgotPasswordForm = ({ onSuccess, onCancel }: ForgotPasswordFormPr
                             variant="cannabis"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Sending..." : "Send Reset Link"}
+                            {isSubmitting ? "Sending..." : "Send Reset Code"}
                         </Button>
                         {onCancel && (
                             <Button

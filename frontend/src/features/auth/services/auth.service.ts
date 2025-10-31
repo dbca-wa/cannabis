@@ -13,7 +13,6 @@ import type {
 	PasswordUpdateRequest,
 	PasswordUpdateResponse,
 	ForgotPasswordResponse,
-	PasswordResetResponse,
 } from "@/shared/types/backend-api.types";
 import type { LoginCredentials, RegisterData } from "../types/auth.types";
 
@@ -197,6 +196,7 @@ class AuthService {
 		try {
 			// Check if we have valid tokens first
 			if (!this.hasValidTokens()) {
+				logger.debug("No valid tokens found, user not authenticated", { requestId });
 				return {
 					data: {} as User,
 					success: false,
@@ -433,22 +433,7 @@ class AuthService {
 		return passwordService.forgotPassword(email);
 	}
 
-	/**
-	 * Reset password using token and auto-login if successful
-	 * This method handles the auth state management for password resets
-	 */
-	async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<ServiceResult<PasswordResetResponse>> {
-		const { passwordService } = await import("./password.service");
-		const result = await passwordService.resetPassword(token, newPassword, confirmPassword);
 
-		// If password reset was successful and includes auto-login, handle auth state
-		if (result.success && result.data.auto_login && result.data.access && result.data.refresh && result.data.user) {
-			storage.setTokens(result.data.access, result.data.refresh);
-			this.setCachedUser(result.data.user);
-		}
-
-		return result;
-	}
 
 	// JWT-specific methods
 	hasValidTokens(): boolean {
@@ -476,12 +461,16 @@ class AuthService {
 		return this.userCache.user;
 	}
 
-	private setCachedUser(user: User): void {
+	public setCachedUser(user: User): void {
 		if (user && user.id) {
 			this.userCache = {
 				user,
 				timestamp: Date.now(),
 			};
+			logger.debug("User cached in auth service", {
+				userId: user.id,
+				email: user.email
+			});
 		}
 	}
 

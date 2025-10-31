@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from datetime import timedelta
 
 
 # For putting the email and username together/requiring email
@@ -444,6 +445,87 @@ class InviteRecord(models.Model):
     def is_active(self):
         """Check if the invitation is active (valid, not used, not expired)"""
         return self.is_valid and not self.is_used and not self.is_expired
+
+
+class PasswordResetCode(models.Model):
+    """
+    Track password reset codes with secure hashing and expiration
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='password_reset_codes',
+        help_text="User requesting password reset"
+    )
+    code_hash = models.CharField(
+        max_length=255,
+        help_text="Hashed 4-digit reset code"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the reset code was created"
+    )
+    expires_at = models.DateTimeField(
+        help_text="When the reset code expires (24 hours from creation)"
+    )
+    is_used = models.BooleanField(
+        default=False,
+        help_text="Whether the reset code has been used"
+    )
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the reset code was used"
+    )
+    attempts = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of verification attempts made"
+    )
+    max_attempts = models.PositiveIntegerField(
+        default=3,
+        help_text="Maximum allowed verification attempts"
+    )
+
+    class Meta:
+        db_table = 'password_reset_codes'
+        verbose_name = "Password Reset Code"
+        verbose_name_plural = "Password Reset Codes"
+        indexes = [
+            models.Index(fields=['user'], name='reset_code_user_idx'),
+            models.Index(fields=['expires_at'], name='reset_code_expires_idx'),
+            models.Index(fields=['is_used'], name='reset_code_used_idx'),
+        ]
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_used=False),
+                name='unique_active_reset_code_per_user'
+            )
+        ]
+
+    def __str__(self):
+        return f"Password reset code for {self.user.email}"
+
+    @property
+    def is_expired(self):
+        """Check if the reset code has expired"""
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_valid(self):
+        """Check if the reset code is valid (not used, not expired, attempts not exceeded)"""
+        return (
+            not self.is_used and 
+            not self.is_expired and 
+            self.attempts < self.max_attempts
+        )
+
+    def save(self, *args, **kwargs):
+        """Set expiration time to 24 hours from creation if not set"""
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
 
 
 # JWT stuff

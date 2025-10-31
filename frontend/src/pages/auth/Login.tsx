@@ -18,13 +18,20 @@ import {
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/shared/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useLocation } from "react-router";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { logger } from "@/shared/services/logger.service";
 import * as z from "zod";
+import { Head } from "@/shared/components/layout/Head";
 
 const Login = () => {
 	const VERSION = import.meta.env.VITE_APP_VERSION || "Unset";
@@ -44,6 +51,14 @@ const Login = () => {
 		useAuth();
 
 	const [showForgotPassword, setShowForgotPassword] = useState(false);
+	const location = useLocation();
+
+	// Check if we should show forgot password modal from navigation state
+	useEffect(() => {
+		if (location.state?.showForgotPassword) {
+			setShowForgotPassword(true);
+		}
+	}, [location.state]);
 
 	const form = useForm<z.infer<typeof loginSchema>>({
 		resolver: zodResolver(loginSchema),
@@ -84,26 +99,28 @@ const Login = () => {
 		}
 	};
 
-	// Show loading while checking authentication
-	if (isLoading) {
+	// Show loading only if we're actually checking authentication and not already determined to be unauthenticated
+	if (isLoading && !loginError) {
 		return (
-			<Card className="bg-card">
-				<CardHeader>
-					<CardTitle className="text-2xl text-center">
-						<CannabisLogo shouldAnimate />
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="text-center">
-					<div className="text-lg mb-4">
-						Checking authentication...
-					</div>
-				</CardContent>
-			</Card>
+			<>
+				<Head title="Loading..." />
+				<Card className="bg-card">
+					<CardHeader>
+						<CardTitle className="text-2xl text-center">
+							<CannabisLogo shouldAnimate />
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="text-center">
+						<div className="text-lg mb-4">Loading...</div>
+					</CardContent>
+				</Card>
+			</>
 		);
 	}
 
 	return (
 		<Card className="bg-card">
+			<Head title="Login" />
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />
@@ -218,10 +235,15 @@ const Login = () => {
 			</CardContent>
 
 			{/* Forgot Password Modal */}
-			<Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+			<Dialog
+				open={showForgotPassword}
+				onOpenChange={setShowForgotPassword}
+			>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle className="sr-only">Reset Password</DialogTitle>
+						<DialogTitle className="sr-only">
+							Reset Password
+						</DialogTitle>
 					</DialogHeader>
 					<ForgotPasswordForm
 						onSuccess={() => setShowForgotPassword(false)}

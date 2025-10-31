@@ -28,6 +28,7 @@ from rest_framework.status import (
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
     HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+    HTTP_429_TOO_MANY_REQUESTS,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
@@ -49,6 +50,8 @@ from .error_handlers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
 
 from rest_framework.permissions import (
     IsAuthenticated,
@@ -404,21 +407,29 @@ class PasswordValidationView(APIView):
 class ForgotPasswordView(APIView):
     """
     POST: Handle password reset requests
-    Validates email and sends password reset link
+    Validates email and sends password reset code via email
     """
     
     permission_classes = [AllowAny]
+    throttle_classes = []  # Will be set in post method for custom throttling
     
     @handle_network_errors
     def post(self, request):
-        """Send password reset email to user"""
+        """Send password reset code to user"""
         from django.core.mail import send_mail
         from django.template.loader import render_to_string
         from django.utils.html import strip_tags
-        from django.utils import timezone
-        from datetime import timedelta
-        import secrets
-        from .models import RefreshToken
+        from .services import PasswordResetCodeService
+        from .throttles import PasswordResetEmailThrottle
+        
+        # Apply custom throttling
+        throttle = PasswordResetEmailThrottle()
+        if not throttle.allow_request(request, self):
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.RATE_LIMITED,
+                message="Too many password reset requests. Please wait before trying again.",
+                status_code=HTTP_429_TOO_MANY_REQUESTS
+            )
         
         email = request.data.get('email', '').strip().lower()
         
@@ -434,29 +445,39 @@ class ForgotPasswordView(APIView):
             user = User.objects.get(email=email, is_active=True)
             user_exists = True
             
-            # Generate secure reset token with 1-hour expiration
-            reset_token = secrets.token_urlsafe(32)
-            expires_at = timezone.now() + timedelta(hours=1)
+            # Check if user is eligible for password reset
+            is_eligible, reason = PasswordResetCodeService.validate_password_change_eligibility(user)
+            if not is_eligible:
+                return ErrorResponseBuilder.build_error_response(
+                    error_code=ErrorCodes.RATE_LIMITED,
+                    message=reason,
+                    status_code=HTTP_400_BAD_REQUEST
+                )
             
-            # Store reset token (reusing RefreshToken model for simplicity)
-            # In production, you might want a dedicated PasswordResetToken model
-            RefreshToken.objects.create(
-                user=user,
-                token=reset_token,
-                expires_at=expires_at,
-                is_blacklisted=False
-            )
+            # Generate secure 4-digit reset code
+            try:
+                reset_code = PasswordResetCodeService.generate_reset_code(user)
+                plain_code = reset_code._plain_code  # Get the plain code for email
+            except ValueError as e:
+                # User already has an active reset code
+                return ErrorResponseBuilder.build_error_response(
+                    error_code=ErrorCodes.DUPLICATE_REQUEST,
+                    message=UserFriendlyMessages.DUPLICATE_REQUEST,
+                    status_code=HTTP_400_BAD_REQUEST
+                )
             
             # Prepare email context
             context = {
                 "user": user,
-                "reset_url": f"{request.scheme}://{request.get_host()}/auth/reset-password/{reset_token}/",
+                "reset_code": plain_code,
+                "frontend_url": f"http://127.0.0.1:3000/auth/reset-code",
                 "site_name": "Cannabis Management System",
-                "expires_at": expires_at,
+                "expires_at": reset_code.expires_at,
+                "max_attempts": reset_code.max_attempts,
             }
             
             # Render email templates
-            subject = f'Password Reset Request - {context["site_name"]}'
+            subject = f'Password Reset Code - {context["site_name"]}'
             html_message = render_to_string("users/password_reset_email.html", context)
             plain_message = strip_tags(html_message)
             
@@ -467,10 +488,11 @@ class ForgotPasswordView(APIView):
             if system_settings.send_emails_to_self:
                 # Send to admin instead of actual recipient
                 recipient_list = [system_settings.forward_certificate_emails_to]
-                logger.info(f"Sending password reset email to admin ({system_settings.forward_certificate_emails_to}) instead of {email}")
+                logger.info(f"Sending password reset code to admin ({system_settings.forward_certificate_emails_to}) instead of {email}")
             else:
                 # Send to actual recipient
                 recipient_list = [email]
+                logger.info(f"Sending password reset code to actual recipient: {email}")
             
             # Send password reset email
             send_mail(
@@ -483,17 +505,17 @@ class ForgotPasswordView(APIView):
             )
             
             # Log the password reset request
-            SecurityEventLogger.log_password_reset_requested(email, user_exists=True)
+            SecurityEventLogger.log_password_reset_requested(email, exists=True)
             
         except User.DoesNotExist:
             # Log the attempt but continue with success message
-            SecurityEventLogger.log_password_reset_requested(email, user_exists=False)
+            SecurityEventLogger.log_password_reset_requested(email, exists=False)
             
         except Exception as e:
-            logger.error(f"Failed to send password reset email to {email}: {str(e)}")
+            logger.error(f"Failed to send password reset code to {email}: {str(e)}")
             return ErrorResponseBuilder.build_error_response(
                 error_code=ErrorCodes.EMAIL_SEND_FAILED,
-                message="Failed to process password reset request. Please try again later.",
+                message=UserFriendlyMessages.EMAIL_SEND_FAILED,
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR
             )
         
@@ -501,17 +523,172 @@ class ForgotPasswordView(APIView):
         return Response(
             {
                 "success": True,
-                "message": "If an account with this email exists, a password reset link has been sent.",
-                "email": email
+                "message": "If an account with this email exists, a 4-digit reset code has been sent to your email.",
+                "email": email,
+                "next_step": "Check your email and enter the 4-digit code on the reset page."
             },
             status=HTTP_200_OK,
         )
 
 
+class VerifyResetCodeView(APIView):
+    """
+    POST: Verify password reset code and authenticate user
+    Handles 4-digit code verification and automatic login
+    """
+    
+    permission_classes = [AllowAny]
+    throttle_classes = []  # Will be set in post method for custom throttling
+    
+    def post(self, request):
+        """Verify reset code and authenticate user"""
+        from django.contrib.auth import login
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from .services import PasswordResetCodeService
+        from .throttles import ResetCodeVerificationThrottle, BruteForceProtectionThrottle
+        
+        # Apply custom throttling
+        throttle = ResetCodeVerificationThrottle()
+        if not throttle.allow_request(request, self):
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.RATE_LIMITED,
+                message="Too many verification attempts. Please wait before trying again.",
+                status_code=HTTP_429_TOO_MANY_REQUESTS
+            )
+        
+        email = request.data.get('email', '').strip().lower()
+        code = request.data.get('code', '').strip()
+        
+        # Validate required fields
+        field_errors = {}
+        
+        if not email:
+            field_errors["email"] = ["Email address is required"]
+        
+        if not code:
+            field_errors["code"] = ["Reset code is required"]
+        elif len(code) != 4 or not code.isdigit():
+            field_errors["code"] = ["Reset code must be exactly 4 digits"]
+        
+        if field_errors:
+            return ErrorResponseBuilder.build_validation_error_response(field_errors)
+        
+        # Get client IP address for brute force protection
+        def get_client_ip(request):
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            return ip
+        
+        client_ip = get_client_ip(request)
+        
+        # Check brute force protection
+        is_allowed, reason, wait_time = BruteForceProtectionThrottle.check_brute_force_protection(email, client_ip)
+        if not is_allowed:
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.RATE_LIMITED,
+                message=f"{reason}. Please try again in {wait_time} seconds.",
+                status_code=HTTP_429_TOO_MANY_REQUESTS
+            )
+        
+        try:
+            # Find the user
+            user = User.objects.get(email=email, is_active=True)
+            
+            # Verify the reset code
+            is_valid, reset_code_instance, message = PasswordResetCodeService.verify_reset_code(user, code)
+            
+            if not is_valid:
+                # Record failed attempt for brute force protection
+                attempt_count = reset_code_instance.attempts if reset_code_instance else 1
+                BruteForceProtectionThrottle.record_failed_attempt(email, client_ip, attempt_count)
+                
+                # Log the failed attempt
+                SecurityEventLogger.log_password_reset_failed(
+                    email=email,
+                    reason="invalid_code",
+                    token_prefix=f"code_{code}"
+                )
+                
+                # Provide specific error messages based on the failure reason
+                if "expired" in message.lower():
+                    return ErrorResponseBuilder.build_error_response(
+                        error_code=ErrorCodes.TOKEN_EXPIRED,
+                        message=UserFriendlyMessages.EXPIRED_TOKEN,
+                        status_code=HTTP_400_BAD_REQUEST
+                    )
+                elif "maximum" in message.lower():
+                    return ErrorResponseBuilder.build_error_response(
+                        error_code=ErrorCodes.MAX_ATTEMPTS_EXCEEDED,
+                        message=UserFriendlyMessages.MAX_ATTEMPTS_EXCEEDED,
+                        status_code=HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    return ErrorResponseBuilder.build_error_response(
+                        error_code=ErrorCodes.INVALID_CODE,
+                        message=UserFriendlyMessages.INVALID_CODE,
+                        status_code=HTTP_400_BAD_REQUEST
+                    )
+            
+            # Code is valid - generate JWT tokens for automatic login
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            
+            # Update password change timestamp
+            PasswordResetCodeService.update_password_change_timestamp(user)
+            
+            # Clear failed attempts after successful verification
+            BruteForceProtectionThrottle.clear_failed_attempts(email, client_ip)
+            
+            # Log successful verification
+            SecurityEventLogger.log_password_reset_success(email)
+            
+            # Return authentication tokens and user data
+            from .serializers import UserJWTObjectSerializer
+            user_serializer = UserJWTObjectSerializer(user)
+            
+            return Response(
+                {
+                    "success": True,
+                    "message": "Reset code verified successfully. You are now logged in.",
+                    "user": user_serializer.data,
+                    "access": str(access_token),
+                    "refresh": str(refresh),
+                    "token_type": "Bearer",
+                    "expires_in": settings.SIMPLE_JWT.get("ACCESS_TOKEN_LIFETIME").total_seconds(),
+                    "requires_password_change": True,
+                    "next_step": "Please update your password to complete the reset process."
+                },
+                status=HTTP_200_OK,
+            )
+            
+        except User.DoesNotExist:
+            # Record failed attempt for brute force protection
+            BruteForceProtectionThrottle.record_failed_attempt(email, client_ip, 1)
+            
+            # Log the attempt but return generic error
+            SecurityEventLogger.log_password_reset_failed(
+                email=email,
+                reason="user_not_found",
+                token_prefix=f"code_{code}"
+            )
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.INVALID_CREDENTIALS,
+                message=UserFriendlyMessages.INVALID_CREDENTIALS,
+                status_code=HTTP_400_BAD_REQUEST
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to verify reset code for {email}: {str(e)}")
+            return ErrorResponseBuilder.build_internal_error_response()
+
+
 class PasswordResetView(APIView):
     """
     GET: Validate reset token and redirect to password update form
-    Handles password reset link validation
+    Handles password reset link validation (DEPRECATED - use VerifyResetCodeView)
     """
     
     permission_classes = [AllowAny]
@@ -781,6 +958,7 @@ class InviteUserView(APIView):
             else:
                 # Send to actual recipient
                 recipient_list = [email]
+                logger.info(f"Sending invitation email to actual recipient: {email}")
             
             # Send invitation email
             send_mail(

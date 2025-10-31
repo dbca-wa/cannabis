@@ -6,8 +6,6 @@ import type {
 	PasswordUpdateResponse,
 	ForgotPasswordRequest,
 	ForgotPasswordResponse,
-	PasswordResetRequest,
-	PasswordResetResponse,
 	InviteActivationResponse,
 } from "@/shared/types/backend-api.types";
 
@@ -57,7 +55,5 @@ export type {
 	PasswordUpdateResponse,
 	ForgotPasswordRequest,
 	ForgotPasswordResponse,
-	PasswordResetRequest,
-	PasswordResetResponse,
 	InviteActivationResponse,
 };

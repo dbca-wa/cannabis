@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearchParams, useLocation } from "react-router";
-import { toast } from "sonner";
-import { errorHandlingService, showSuccess } from "@/shared/services/errorHandling.service";
+import {
+	errorHandlingService,
+	showSuccess,
+} from "@/shared/services/errorHandling.service";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { usePasswordValidation, usePasswordConfirmation } from "@/features/auth/hooks/usePasswordValidation";
+import {
+	usePasswordValidation,
+	usePasswordConfirmation,
+} from "@/features/auth/hooks/usePasswordValidation";
 import {
 	passwordUpdateSchema,
 	type PasswordUpdateFormData,
@@ -32,8 +37,8 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import CannabisLogo from "@/shared/components/layout/CannabisLogo";
 import { logger } from "@/shared/services/logger.service";
-import { getErrorMessage } from "@/shared/utils/error.utils";
 import { apiClient, ENDPOINTS, type ApiError } from "@/shared/services/api";
+import { Head } from "@/shared/components/layout/Head";
 
 const PasswordUpdate = () => {
 	const navigate = useNavigate();
@@ -52,6 +57,9 @@ const PasswordUpdate = () => {
 	const fromInvitation = location.state?.fromInvitation === true;
 	const temporaryPassword = location.state?.temporaryPassword;
 
+	// Check if coming from reset code verification
+	const fromResetCode = location.state?.fromResetCode === true;
+
 	const form = useForm<PasswordUpdateFormData>({
 		resolver: zodResolver(passwordUpdateSchema),
 		defaultValues: {
@@ -66,8 +74,12 @@ const PasswordUpdate = () => {
 	const watchedConfirmPassword = form.watch("confirmPassword");
 
 	// Use validation hooks
-	const { validation: passwordValidation, validateOnServer } = usePasswordValidation(watchedNewPassword);
-	const confirmationValidation = usePasswordConfirmation(watchedNewPassword, watchedConfirmPassword);
+	const { validation: passwordValidation, validateOnServer } =
+		usePasswordValidation(watchedNewPassword);
+	const confirmationValidation = usePasswordConfirmation(
+		watchedNewPassword,
+		watchedConfirmPassword
+	);
 
 	// Redirect if not authenticated
 	useEffect(() => {
@@ -99,7 +111,10 @@ const PasswordUpdate = () => {
 
 	// Clear confirm password error when passwords match
 	useEffect(() => {
-		if (confirmationValidation.isMatching && form.formState.errors.confirmPassword) {
+		if (
+			confirmationValidation.isMatching &&
+			form.formState.errors.confirmPassword
+		) {
 			form.clearErrors("confirmPassword");
 		}
 	}, [confirmationValidation.isMatching, form]);
@@ -108,7 +123,7 @@ const PasswordUpdate = () => {
 		if (!user) {
 			errorHandlingService.handleError(new Error("User not found"), {
 				action: "password_update",
-				component: "PasswordUpdate"
+				component: "PasswordUpdate",
 			});
 			return;
 		}
@@ -121,15 +136,17 @@ const PasswordUpdate = () => {
 
 		try {
 			// Use proper API client with authentication
-			await apiClient.post<{ message: string; password_last_changed: string }>(
-				ENDPOINTS.AUTH.UPDATE_PASSWORD,
-				{
-					current_password: isFirstTime ? undefined : values.currentPassword,
-					new_password: values.newPassword,
-					confirm_password: values.confirmPassword,
-					is_first_time: isFirstTime,
-				}
-			);
+			await apiClient.post<{
+				message: string;
+				password_last_changed: string;
+			}>(ENDPOINTS.AUTH.UPDATE_PASSWORD, {
+				current_password: isFirstTime
+					? undefined
+					: values.currentPassword,
+				new_password: values.newPassword,
+				confirm_password: values.confirmPassword,
+				is_first_time: isFirstTime,
+			});
 
 			logger.info("Password updated successfully", { userId: user.id });
 			showSuccess("Password updated successfully!");
@@ -138,14 +155,14 @@ const PasswordUpdate = () => {
 			navigate("/");
 		} catch (error) {
 			// Use enhanced error handling
-			const enhancedError = errorHandlingService.handleError(error, {
+			errorHandlingService.handleError(error, {
 				action: "password_update",
 				component: "PasswordUpdate",
-				userId: user.id
+				userId: user.id,
 			});
 
 			// Handle API errors with specific field validation
-			if (error && typeof error === 'object' && 'message' in error) {
+			if (error && typeof error === "object" && "message" in error) {
 				const apiError = error as ApiError;
 
 				// Check if it's a current password error
@@ -156,17 +173,27 @@ const PasswordUpdate = () => {
 					});
 				} else if (apiError.fieldErrors) {
 					// Handle other field errors
-					Object.entries(apiError.fieldErrors).forEach(([field, errors]) => {
-						if (errors && errors.length > 0) {
-							const fieldName = field === 'current_password' ? 'currentPassword' :
-								field === 'new_password' ? 'newPassword' :
-									field === 'confirm_password' ? 'confirmPassword' : field;
-							form.setError(fieldName as keyof PasswordUpdateFormData, {
-								type: "manual",
-								message: errors[0],
-							});
+					Object.entries(apiError.fieldErrors).forEach(
+						([field, errors]) => {
+							if (errors && errors.length > 0) {
+								const fieldName =
+									field === "current_password"
+										? "currentPassword"
+										: field === "new_password"
+										? "newPassword"
+										: field === "confirm_password"
+										? "confirmPassword"
+										: field;
+								form.setError(
+									fieldName as keyof PasswordUpdateFormData,
+									{
+										type: "manual",
+										message: errors[0],
+									}
+								);
+							}
 						}
-					});
+					);
 				}
 			}
 		} finally {
@@ -180,6 +207,7 @@ const PasswordUpdate = () => {
 
 	return (
 		<Card className="w-full max-w-xl md:min-w-lg lg:min-w-xl">
+			<Head title="Update Password" />
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />
@@ -191,13 +219,19 @@ const PasswordUpdate = () => {
 					<p className="text-sm text-muted-foreground mt-1">
 						{fromInvitation
 							? "Welcome! Please set a secure password to complete your account setup"
+							: fromResetCode
+							? "Your reset code has been verified. Please set a new secure password"
 							: isFirstTime
-								? "Please set a secure password for your account"
-								: "Update your current password"}
+							? "Please set a secure password for your account"
+							: "Update your current password"}
 					</p>
 					{fromInvitation && temporaryPassword && (
 						<div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-							<p><strong>Note:</strong> Your temporary password has been automatically set. Please create a new secure password below.</p>
+							<p>
+								<strong>Note:</strong> Your temporary password
+								has been automatically set. Please create a new
+								secure password below.
+							</p>
 						</div>
 					)}
 				</div>
@@ -300,8 +334,8 @@ const PasswordUpdate = () => {
 							{isSubmitting
 								? "Updating Password..."
 								: isFirstTime
-									? "Set Password"
-									: "Update Password"}
+								? "Set Password"
+								: "Update Password"}
 						</Button>
 
 						{/* Cancel button for non-first-time updates */}

@@ -30,6 +30,9 @@ class ErrorCodes:
     CURRENT_PASSWORD_INCORRECT = "CURRENT_PASSWORD_INCORRECT"
     PASSWORDS_DONT_MATCH = "PASSWORDS_DONT_MATCH"
     PASSWORD_VALIDATION_FAILED = "PASSWORD_VALIDATION_FAILED"
+    MAX_ATTEMPTS_EXCEEDED = "MAX_ATTEMPTS_EXCEEDED"
+    INVALID_CODE = "INVALID_CODE"
+    INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     
     # General errors
     VALIDATION_ERROR = "VALIDATION_ERROR"
@@ -38,6 +41,7 @@ class ErrorCodes:
     INTERNAL_ERROR = "INTERNAL_ERROR"
     NETWORK_ERROR = "NETWORK_ERROR"
     RATE_LIMITED = "RATE_LIMITED"
+    DUPLICATE_REQUEST = "DUPLICATE_REQUEST"
 
 
 class UserFriendlyMessages:
@@ -61,6 +65,9 @@ class UserFriendlyMessages:
     CURRENT_PASSWORD_INCORRECT = "The current password you entered is incorrect."
     PASSWORDS_DONT_MATCH = "The passwords you entered don't match. Please try again."
     PASSWORD_VALIDATION_FAILED = "Password validation failed. Please check the requirements and try again."
+    MAX_ATTEMPTS_EXCEEDED = "Maximum verification attempts exceeded. Please request a new reset code."
+    INVALID_CODE = "Invalid reset code. Please check your email and try again."
+    INVALID_CREDENTIALS = "Invalid email or reset code."
     
     # General messages
     VALIDATION_ERROR = "The information you provided is not valid. Please check your input and try again."
@@ -69,6 +76,7 @@ class UserFriendlyMessages:
     INTERNAL_ERROR = "Something went wrong on our end. Please try again later."
     NETWORK_ERROR = "Network connection failed. Please check your internet connection and try again."
     RATE_LIMITED = "Too many requests. Please wait a moment before trying again."
+    DUPLICATE_REQUEST = "A password reset code has already been sent. Please check your email or wait for the current code to expire."
 
 
 class SecurityEventLogger:
@@ -170,6 +178,100 @@ class SecurityEventLogger:
         )
     
     @staticmethod
+    def log_reset_code_generated(email: str, code_prefix: str):
+        """Log reset code generation"""
+        logger.info(
+            "SECURITY_EVENT: Password reset code generated",
+            extra={
+                "event_type": "reset_code_generated",
+                "email": email,
+                "code_prefix": code_prefix,
+                "severity": "info"
+            }
+        )
+    
+    @staticmethod
+    def log_reset_code_verification_attempt(email: str, code_prefix: str, success: bool, reason: str = None, attempt_count: int = None):
+        """Log reset code verification attempt"""
+        status = "success" if success else "failed"
+        message = f"SECURITY_EVENT: Reset code verification {status}"
+        
+        extra_data = {
+            "event_type": "reset_code_verification",
+            "email": email,
+            "code_prefix": code_prefix,
+            "success": success,
+            "severity": "info" if success else "warning"
+        }
+        
+        if reason:
+            extra_data["reason"] = reason
+        if attempt_count:
+            extra_data["attempt_count"] = attempt_count
+        
+        if success:
+            logger.info(message, extra=extra_data)
+        else:
+            logger.warning(message, extra=extra_data)
+    
+    @staticmethod
+    def log_reset_code_expired(email: str, code_prefix: str):
+        """Log expired reset code usage attempt"""
+        logger.warning(
+            "SECURITY_EVENT: Expired reset code used",
+            extra={
+                "event_type": "reset_code_expired",
+                "email": email,
+                "code_prefix": code_prefix,
+                "severity": "warning"
+            }
+        )
+    
+    @staticmethod
+    def log_reset_code_brute_force_attempt(email: str, attempt_count: int, ip_address: str = None):
+        """Log potential brute force attempt on reset codes"""
+        extra_data = {
+            "event_type": "reset_code_brute_force",
+            "email": email,
+            "attempt_count": attempt_count,
+            "severity": "high"
+        }
+        
+        if ip_address:
+            extra_data["ip_address"] = ip_address
+        
+        logger.error(
+            "SECURITY_EVENT: Potential brute force attack detected on reset codes",
+            extra=extra_data
+        )
+    
+    @staticmethod
+    def log_reset_code_invalidated(email: str, code_prefix: str, reason: str):
+        """Log reset code invalidation"""
+        logger.info(
+            "SECURITY_EVENT: Reset code invalidated",
+            extra={
+                "event_type": "reset_code_invalidated",
+                "email": email,
+                "code_prefix": code_prefix,
+                "reason": reason,
+                "severity": "info"
+            }
+        )
+    
+    @staticmethod
+    def log_password_reset_success(email: str):
+        """Log successful password reset code verification"""
+        logger.info(
+            "SECURITY_EVENT: Password reset code verified successfully",
+            extra={
+                "event_type": "password_reset_success",
+                "email": email,
+                "severity": "info"
+            }
+        )
+    
+    @staticmethod
     def log_authentication_failed(email: str, reason: str):
         """Log authentication failures"""
         logger.warning(
@@ -195,24 +297,27 @@ class ErrorResponseBuilder:
         extra_data: Dict[str, Any] = None
     ) -> Response:
         """
-        Build a standardized error response
+        Build a standardized error response using DRF conventions
         
         Args:
-            error_code: Standardized error code
+            error_code: Standardized error code (included as extra data)
             message: User-friendly error message
             field_errors: Field-specific validation errors
             status_code: HTTP status code
             extra_data: Additional data to include in response
         """
+        # Use DRF standard format: {"detail": "message"}
         response_data = {
-            "error": True,
-            "error_code": error_code,
-            "message": message or "An error occurred",
-            "timestamp": settings.SIMPLE_JWT.get("ACCESS_TOKEN_LIFETIME", "").total_seconds() if hasattr(settings, 'SIMPLE_JWT') else None
+            "detail": message or "An error occurred",
         }
         
+        # Include error code as extra data for debugging/logging
+        if error_code:
+            response_data["error_code"] = error_code
+        
         if field_errors:
-            response_data["field_errors"] = field_errors
+            # Merge field errors directly into response (DRF style)
+            response_data.update(field_errors)
         
         if extra_data:
             response_data.update(extra_data)
@@ -221,13 +326,12 @@ class ErrorResponseBuilder:
     
     @staticmethod
     def build_validation_error_response(field_errors: Dict[str, Any]) -> Response:
-        """Build response for validation errors"""
-        return ErrorResponseBuilder.build_error_response(
-            error_code=ErrorCodes.VALIDATION_ERROR,
-            message=UserFriendlyMessages.VALIDATION_ERROR,
-            field_errors=field_errors,
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        """Build response for validation errors using DRF format"""
+        # For validation errors, use field errors directly without a detail message
+        response_data = field_errors.copy()
+        response_data["error_code"] = ErrorCodes.VALIDATION_ERROR
+        
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
     
     @staticmethod
     def build_authentication_error_response(reason: str = None) -> Response:

@@ -40,9 +40,9 @@ export function isApiError(error: unknown): error is ApiError {
 		typeof error === "object" &&
 		error !== null &&
 		"message" in error &&
-		"code" in error &&
 		"status" in error &&
-		"timestamp" in error
+		typeof (error as ApiError).message === "string" &&
+		typeof (error as ApiError).status === "number"
 	);
 }
 
@@ -108,6 +108,8 @@ export function isDjangoFieldErrors(
 		!isStringError(errorData)
 	);
 }
+
+
 
 /**
  * Enhanced error message extraction that handles Django, ApiClient, and generic errors

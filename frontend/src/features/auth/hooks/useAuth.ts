@@ -28,15 +28,27 @@ export const useAuth = () => {
 			if (!result.success) {
 				if (
 					result.error?.includes("403") ||
-					result.error?.includes("401")
+					result.error?.includes("401") ||
+					result.error?.includes("No valid authentication tokens found")
 				) {
+					// Return null for auth errors instead of throwing
+					// This prevents the query from being in error state for unauthenticated users
 					return null;
 				}
 				throw new Error(result.error || "Failed to get current user");
 			}
 			return result.data;
 		},
-		retry: false,
+		retry: (failureCount, error) => {
+			// Don't retry auth errors
+			if (error?.message?.includes("403") || 
+				error?.message?.includes("401") ||
+				error?.message?.includes("No valid authentication tokens found")) {
+				return false;
+			}
+			// Retry other errors up to 2 times
+			return failureCount < 2;
+		},
 		refetchOnWindowFocus: false,
 		staleTime: 5 * 60 * 1000,
 		gcTime: 10 * 60 * 1000,

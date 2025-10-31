@@ -23,5 +23,12 @@ export const forgotPasswordSchema = z.object({
 	email: z.string().email("Please enter a valid email address"),
 });
 
+export const resetCodeSchema = z.object({
+	code: z.string()
+		.length(4, "Code must be exactly 4 digits")
+		.regex(/^\d{4}$/, "Code must contain only numbers"),
+});
+
 export type PasswordUpdateFormData = z.infer<typeof passwordUpdateSchema>;
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ResetCodeFormData = z.infer<typeof resetCodeSchema>;

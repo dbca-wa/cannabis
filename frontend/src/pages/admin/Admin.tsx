@@ -12,10 +12,17 @@ import ConfirmationDialog from "@/features/admin/components/settings/Confirmatio
 import { AdminPageSkeleton } from "@/features/admin/components/settings/LoadingSkeletons";
 
 import type { SystemSettings } from "@/shared/types/backend-api.types";
-import { PricingSettingsCard, EmailSettingsCard, SystemInfoCard } from "@/features/admin";
+import {
+	PricingSettingsCard,
+	EmailSettingsCard,
+	SystemInfoCard,
+} from "@/features/admin";
+import { Head } from "@/shared/components/layout/Head";
 
 const AdminPage: React.FC = () => {
-	const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({});
+	const [pendingChanges, setPendingChanges] = useState<Record<string, any>>(
+		{}
+	);
 	const [showConfirmation, setShowConfirmation] = useState(false);
 
 	const { user } = useAuth();
@@ -29,7 +36,7 @@ const AdminPage: React.FC = () => {
 		validationErrors,
 		updateSettings,
 		clearError,
-		cacheStatus
+		cacheStatus,
 	} = useSystemSettings({
 		autoLoad: true,
 		enableChangeNotifications: true,
@@ -45,7 +52,7 @@ const AdminPage: React.FC = () => {
 		},
 		onError: (errorMessage) => {
 			logger.error("Settings hook error", { error: errorMessage });
-		}
+		},
 	});
 
 	useEffect(() => {
@@ -55,7 +62,7 @@ const AdminPage: React.FC = () => {
 			securityService.logSecurityEvent("access_denied", {
 				userId: user?.id,
 				reason: accessCheck.reason,
-				component: "AdminPage"
+				component: "AdminPage",
 			});
 		}
 	}, [user]);
@@ -78,14 +85,19 @@ const AdminPage: React.FC = () => {
 		}
 
 		// Prepare changes for security check
-		const changes = [{
-			field,
-			oldValue: String(settings[field as keyof SystemSettings] || ""),
-			newValue: String(value)
-		}];
+		const changes = [
+			{
+				field,
+				oldValue: String(settings[field as keyof SystemSettings] || ""),
+				newValue: String(value),
+			},
+		];
 
 		// Check if confirmation is required
-		const confirmationCheck = securityService.requiresConfirmation(changes, settings.environment);
+		const confirmationCheck = securityService.requiresConfirmation(
+			changes,
+			settings.environment
+		);
 
 		if (confirmationCheck.requiresConfirmation) {
 			setPendingChanges({ [field]: value });
@@ -94,7 +106,7 @@ const AdminPage: React.FC = () => {
 				userId: user.id,
 				field,
 				environment: settings.environment,
-				confirmationLevel: confirmationCheck.confirmationLevel
+				confirmationLevel: confirmationCheck.confirmationLevel,
 			});
 			return;
 		}
@@ -124,7 +136,7 @@ const AdminPage: React.FC = () => {
 			securityService.logSecurityEvent("settings_modified", {
 				userId: user.id,
 				changes: Object.keys(changes),
-				environment: settings.environment
+				environment: settings.environment,
 			});
 		} else {
 			// Show error notification
@@ -152,10 +164,6 @@ const AdminPage: React.FC = () => {
 		setShowConfirmation(false);
 	};
 
-
-
-
-
 	// Check admin access
 	const accessCheck = securityService.checkAdminAccess(user);
 	if (!accessCheck.allowed) {
@@ -164,7 +172,8 @@ const AdminPage: React.FC = () => {
 				<Alert variant="destructive">
 					<Shield className="h-4 w-4" />
 					<AlertDescription>
-						{accessCheck.reason || "You don't have permission to access admin settings."}
+						{accessCheck.reason ||
+							"You don't have permission to access admin settings."}
 					</AlertDescription>
 				</Alert>
 			</div>
@@ -184,13 +193,19 @@ const AdminPage: React.FC = () => {
 				</div>
 
 				<div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-					<Alert variant={cacheStatus.isRateLimited ? "destructive" : "default"} className="transition-all duration-300">
+					<Alert
+						variant={
+							cacheStatus.isRateLimited
+								? "destructive"
+								: "default"
+						}
+						className="transition-all duration-300"
+					>
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
 							{cacheStatus.isRateLimited
 								? `Rate limited: ${error}. Please wait before refreshing.`
-								: `Failed to load system settings: ${error}`
-							}
+								: `Failed to load system settings: ${error}`}
 						</AlertDescription>
 					</Alert>
 				</div>
@@ -205,7 +220,8 @@ const AdminPage: React.FC = () => {
 					<Alert className="transition-all duration-300">
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
-							Failed to load system settings. Please refresh the page.
+							Failed to load system settings. Please refresh the
+							page.
 						</AlertDescription>
 					</Alert>
 				</div>
@@ -214,23 +230,37 @@ const AdminPage: React.FC = () => {
 	}
 
 	// Prepare confirmation dialog data
-	const confirmationChanges = Object.entries(pendingChanges).map(([field, newValue]) => ({
-		field: securityService.formatFieldName(field),
-		oldValue: securityService.formatValue(field, String(settings[field as keyof SystemSettings] || "")),
-		newValue: securityService.formatValue(field, String(newValue))
-	}));
+	const confirmationChanges = Object.entries(pendingChanges).map(
+		([field, newValue]) => ({
+			field: securityService.formatFieldName(field),
+			oldValue: securityService.formatValue(
+				field,
+				String(settings[field as keyof SystemSettings] || "")
+			),
+			newValue: securityService.formatValue(field, String(newValue)),
+		})
+	);
 
 	const confirmationConfig = securityService.getConfirmationConfig(
 		confirmationChanges.map((_change) => ({
 			field: Object.keys(pendingChanges)[0], // Use actual field name for security check
-			oldValue: String(settings[Object.keys(pendingChanges)[0] as keyof SystemSettings] || ""),
-			newValue: String(Object.values(pendingChanges)[0])
+			oldValue: String(
+				settings[
+					Object.keys(pendingChanges)[0] as keyof SystemSettings
+				] || ""
+			),
+			newValue: String(Object.values(pendingChanges)[0]),
 		})),
 		settings.environment
 	);
 
 	return (
-		<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6" role="main" aria-label="Admin Settings">
+		<div
+			className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6"
+			role="main"
+			aria-label="Admin Settings"
+		>
+			<Head title="Admin" />
 			{/* Header with responsive layout */}
 			<header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in-50 slide-in-from-top-4 duration-500">
 				<div className="flex items-center gap-3">
@@ -241,30 +271,42 @@ const AdminPage: React.FC = () => {
 				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 					{/* Rate limit status */}
 					{cacheStatus.isRateLimited && (
-						<Alert className="w-full sm:w-auto transition-all duration-300" role="alert" aria-live="polite">
+						<Alert
+							className="w-full sm:w-auto transition-all duration-300"
+							role="alert"
+							aria-live="polite"
+						>
 							<Clock className="h-4 w-4" aria-hidden="true" />
 							<AlertDescription>
 								Rate limited - please wait before refreshing
 							</AlertDescription>
 						</Alert>
 					)}
-
-
 				</div>
 			</header>
 
 			{/* Settings cards with staggered animations */}
-			<main className="space-y-6" role="region" aria-label="Settings sections">
+			<main
+				className="space-y-6"
+				role="region"
+				aria-label="Settings sections"
+			>
 				{/* System Information */}
-				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-100" aria-labelledby="system-info-heading">
+				<section
+					className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-100"
+					aria-labelledby="system-info-heading"
+				>
 					<SystemInfoCard
 						settings={settings}
-						onSettingsUpdate={() => { }} // SystemInfoCard is read-only
+						onSettingsUpdate={() => {}} // SystemInfoCard is read-only
 					/>
 				</section>
 
 				{/* Email Settings */}
-				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-200" aria-labelledby="email-settings-heading">
+				<section
+					className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-200"
+					aria-labelledby="email-settings-heading"
+				>
 					<EmailSettingsCard
 						settings={settings}
 						onSettingsUpdate={handleSettingsUpdate}
@@ -272,7 +314,10 @@ const AdminPage: React.FC = () => {
 				</section>
 
 				{/* Pricing Settings */}
-				<section className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-300" aria-labelledby="pricing-settings-heading">
+				<section
+					className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500 delay-300"
+					aria-labelledby="pricing-settings-heading"
+				>
 					<PricingSettingsCard
 						settings={settings}
 						onSettingsUpdate={handleSettingsUpdate}

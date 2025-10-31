@@ -103,9 +103,19 @@ else:
 # endregion ========================================================================================
 
 # region Email Config =========================================================
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "mail-relay.lan.fyi")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+if ENVIRONMENT in ["staging", "production"]:
+    EMAIL_USE_SSL = True
+else:
+    EMAIL_USE_SSL = False
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.mandrillapp.com")
+EMAIL_PORT = int(env("EMAIL_PORT", default=587))
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="")
+
 ENVELOPE_EMAIL_RECIPIENTS = [env("MAINTAINER_EMAIL")]
 ENVELOPE_USE_HTML_EMAIL = True
 
@@ -318,13 +328,16 @@ REST_FRAMEWORK = {
     "MAX_PAGE_SIZE": 100,  # Maximum allowed page size
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle"
+        "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
         "system_settings": "100/hour",  # Limit system settings updates (increased for admin use)
-    }
+        "password_reset": "5/hour",  # Limit password reset requests per IP
+        "password_reset_email": "10/hour",  # Limit password reset emails per IP
+        "reset_code_verification": "20/hour",  # Limit reset code verification attempts per IP
+    },
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
