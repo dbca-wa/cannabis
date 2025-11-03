@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="cannabis.svg" alt="C" width="350" height="350"/>
+  <img src="frontend/public/cannabis.svg" alt="C" width="350" height="350"/>
   <div>👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️</div>
 </div>
 
