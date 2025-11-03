@@ -31,7 +31,9 @@ const SidebarButton = ({
 
 	// Memoize the click handler to prevent unnecessary re-renders
 	const handleClick = useCallback(
-		(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+		(
+			e: React.MouseEvent<HTMLDivElement | HTMLButtonElement, MouseEvent>
+		) => {
 			// Prevent default to stop any button behavior that might cause jumping
 			e.preventDefault();
 
@@ -68,6 +70,7 @@ const SidebarButton = ({
 				onClick={handleClick}
 				variant="ghost"
 				className={cn(
+					"select-none",
 					"w-full justify-start gap-3 px-3 py-2.5 h-auto rounded-lg",
 					"text-left font-medium transition-all duration-200",
 					"hover:bg-gray-100 dark:hover:bg-gray-800",
@@ -98,140 +101,22 @@ const SidebarButton = ({
 	// Desktop version - with animations and aura
 	return (
 		<>
-			{/* Inline styles exactly matching CannabisLogo approach */}
-			<style
-				dangerouslySetInnerHTML={{
-					__html: `
-					@keyframes gentle-pulse {
-						0%, 100% { opacity: 0.4; transform: scale(1); }
-						50% { opacity: 0.7; transform: scale(1.05); }
-					}
-
-					@keyframes float {
-						0%, 100% { transform: translateY(0px); }
-						50% { transform: translateY(-3px); }
-					}
-
-					@keyframes ease-back {
-						0% { transform: translateY(-3px); }
-						100% { transform: translateY(0px); }
-					}
-
-					.cannabis-logo-container {
-						position: relative;
-						z-index: 10;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						cursor: pointer;
-					}
-
-					/* Cannabis Logo should float when Home is active (like sidebar buttons) */
-					.cannabis-logo-active {
-						animation: float 2s ease-in-out infinite !important;
-					}
-
-					/* Cannabis Logo should float on hover */
-					.cannabis-logo-container:hover {
-						animation: float 2s ease-in-out infinite;
-					}
-
-					/* Smooth return when not hovering (unless active) */
-					.cannabis-logo-container:not(:hover):not(.cannabis-logo-active) {
-						animation: ease-back 0.6s ease-out forwards;
-					}
-
-					/* Prevent jumping during click */
-					.cannabis-logo-container:active {
-						animation: none !important;
-						transform: none !important;
-					}
-
-					.sidebar-aura-container {
-						position: relative;
-						z-index: 10;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-					}
-
-					/* Dark theme sidebar aura */
-					.dark .sidebar-aura {
-						content: '';
-						position: absolute;
-						width: 50px;
-						height: 50px;
-						background: radial-gradient(circle, rgba(255,200,0,0.5), rgba(200,255,0,0.4), rgba(0,255,200,0.4), rgba(0,200,255,0.4), rgba(200,0,255,0.3), rgba(255,0,200,0.3), transparent);
-						border-radius: 35% 65% 55% 45% / 25% 55% 45% 75%;
-						filter: blur(8px);
-						pointer-events: none;
-						z-index: 0;
-						opacity: 0;
-						transition: opacity 0.3s ease;
-					}
-
-					/* Light theme sidebar aura - EXACT match to CannabisLogo */
-					.light .sidebar-aura {
-						content: '';
-						position: absolute;
-						width: 50px;
-						height: 50px;
-						background: radial-gradient(circle, rgba(67,56,202,0.4), rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(168,85,247,0.3), rgba(192,132,252,0.2), rgba(217,70,239,0.2), transparent);
-						border-radius: 35% 65% 55% 45% / 25% 55% 45% 75%;
-						filter: blur(8px);
-						pointer-events: none;
-						z-index: 0;
-						opacity: 0;
-						transition: opacity 0.3s ease;
-					}
-
-					/* Default (light theme when no .light class) - EXACT match to CannabisLogo */
-					.sidebar-aura {
-						content: '';
-						position: absolute;
-						width: 50px;
-						height: 50px;
-						background: radial-gradient(circle, rgba(67,56,202,0.4), rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(168,85,247,0.3), rgba(192,132,252,0.2), rgba(217,70,239,0.2), transparent);
-						border-radius: 35% 65% 55% 45% / 25% 55% 45% 75%;
-						filter: blur(8px);
-						pointer-events: none;
-						z-index: 0;
-						opacity: 0;
-						transition: opacity 0.3s ease;
-						inset: 0;
-						margin: auto;
-					}
-
-					.sidebar-aura-active {
-						opacity: 1 !important;
-						animation: gentle-pulse 2.5s ease-in-out infinite;
-					}
-
-					.sidebar-aura-container:hover .sidebar-aura {
-						opacity: 0.6;
-					}
-
-					/* Active buttons should always float (like they're being hovered) */
-					.sidebar-button-stable[data-active="true"] {
-						animation: float 2s ease-in-out infinite !important;
-					}
-
-					/* Prevent ALL animations during click/hold state to stop jumping */
-					.sidebar-button-stable:active {
-						animation: none !important;
-						transform: none !important;
-					}
-
-					/* Also prevent animations during the navigation transition period */
-					.sidebar-button-stable[data-active="false"]:active {
-						animation: none !important;
-						transform: none !important;
-					}
-				`,
-				}}
-			/>
-			<div className="w-full flex justify-center py-2.5 relative">
-				<div className="sidebar-aura-container relative flex flex-col items-center justify-center w-full min-h-[50px]">
+			<div
+				className={cn(
+					"w-full flex justify-center py-2.5 relative",
+					"select-none"
+				)}
+				onClick={handleClick}
+			>
+				<div
+					className={cn(
+						// Hover animations for smooth transitions
+						// "hover:!bg-transparent hover:animate-[float_2s_ease-in-out_infinite]",
+						// Ease-back animation when not hovering for smooth return
+						// "[&:not(:hover)]:animate-[ease-back_0.6s_ease-out_forwards]",
+						"sidebar-aura-container relative flex flex-col items-center justify-center w-full min-h-[50px]"
+					)}
+				>
 					{/* Sidebar Aura - always present, controlled by active state */}
 					<div
 						className={cn(
@@ -242,7 +127,6 @@ const SidebarButton = ({
 
 					{/* Button using the floating sidebar variant */}
 					<Button
-						onClick={handleClick}
 						variant="floatingSidebarButton"
 						size="floating"
 						data-active={isActive}

@@ -4,6 +4,8 @@ import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
 import StatsPanel from "@/features/dash/components/StatsPanel";
 import MySubmissionTable from "@/features/dash/components/MySubmissionTable";
 import { Head } from "@/shared/components/layout/Head";
+import { cn } from "@/shared";
+import "@/features/dash/components/Stats.css";
 
 const Home = () => {
 	// For Home page, use empty breadcrumbs array to let the automatic "Home" item handle it
@@ -13,18 +15,16 @@ const Home = () => {
 		<ContentLayout
 			breadcrumbs={breadcrumbs}
 			showHomeBreadcrumb={true}
-			className="space-y-6"
+			className="space-y-6 "
 		>
 			<Head title="Home" />
-			<div className="flex w-full gap-2">
-				<div className="w-full bg-white">
-					<MySubmissionTable />
-				</div>
-				<div className="flex flex-col w-full">
+			<div className={cn("flex flex-col w-full gap-5")}>
+				<div className="w-full flex flex-col gap-8 stat-panel">
 					<CreateSubmissionButton />
-					<div className="mt-2 bg-white p-5 rounded-xl">
-						<StatsPanel />
-					</div>
+					<StatsPanel />
+				</div>
+				<div className="rounded-[10px] bg-white p-4 w-full h-full">
+					<MySubmissionTable />
 				</div>
 			</div>
 		</ContentLayout>

@@ -54,9 +54,9 @@ export const buttonVariants = cva(
 					"data-[active=true]:text-[#059669] data-[active=true]:hover:text-[#059669]",
 					"dark:data-[active=true]:text-emerald-400 dark:data-[active=true]:hover:text-emerald-400",
 					// Hover animations for smooth transitions
-					"hover:!bg-transparent hover:animate-[float_2s_ease-in-out_infinite]",
+					// "hover:!bg-transparent hover:animate-[float_2s_ease-in-out_infinite]",
 					// Ease-back animation when not hovering for smooth return
-					"[&:not(:hover)]:animate-[ease-back_0.6s_ease-out_forwards]",
+					// "[&:not(:hover)]:animate-[ease-back_0.6s_ease-out_forwards]",
 					// Simple click feedback
 					"active:opacity-80 active:transition-opacity active:duration-75",
 					// Focus state
