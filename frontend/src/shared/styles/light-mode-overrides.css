@@ -1,0 +1,424 @@
+/* Light Mode UI Component Overrides */
+/* Fixes visibility and contrast issues for shadcn/ui components in light mode */
+
+/* Dropdown Menu Components - Improve contrast */
+html:not(.dark) .dropdown-light-mode {
+	background-color: white !important;
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+		0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .dropdown-light-mode [role="menuitem"]:hover,
+html:not(.dark) .dropdown-light-mode [data-highlighted] {
+	background-color: #f3f4f6 !important; /* gray-100 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .dropdown-light-mode [role="menuitem"] {
+	color: #374151 !important; /* gray-700 */
+}
+
+/* Select Components - Improve visibility */
+html:not(.dark) .select-light-mode {
+	background-color: white !important;
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .select-light-mode:focus {
+	border-color: #3b82f6 !important; /* blue-500 */
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+html:not(.dark) .select-light-mode [data-placeholder] {
+	color: #6b7280 !important; /* gray-500 */
+}
+
+/* Select Content Dropdown */
+html:not(.dark) .select-content-light-mode {
+	background-color: white !important;
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+		0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .select-content-light-mode [role="option"]:hover,
+html:not(.dark) .select-content-light-mode [data-highlighted] {
+	background-color: #f3f4f6 !important; /* gray-100 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .select-content-light-mode [role="option"] {
+	color: #374151 !important; /* gray-700 */
+}
+
+/* Input Components - Ensure proper contrast */
+html:not(.dark) .input-light-mode {
+	background-color: white !important;
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .input-light-mode:focus {
+	border-color: #3b82f6 !important; /* blue-500 */
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+html:not(.dark) .input-light-mode::placeholder {
+	color: #6b7280 !important; /* gray-500 */
+}
+
+/* Badge Components - Improve contrast in light mode */
+html:not(.dark) .badge-light-mode.bg-red-100 {
+	background-color: #fee2e2 !important; /* red-100 */
+	color: #991b1b !important; /* red-800 */
+	border: 1px solid #fecaca !important; /* red-200 */
+}
+
+html:not(.dark) .badge-light-mode.bg-green-100 {
+	background-color: #dcfce7 !important; /* green-100 */
+	color: #166534 !important; /* green-800 */
+	border: 1px solid #bbf7d0 !important; /* green-200 */
+}
+
+html:not(.dark) .badge-light-mode.bg-blue-100 {
+	background-color: #dbeafe !important; /* blue-100 */
+	color: #1e40af !important; /* blue-800 */
+	border: 1px solid #bfdbfe !important; /* blue-200 */
+}
+
+html:not(.dark) .badge-light-mode.bg-yellow-100 {
+	background-color: #fef3c7 !important; /* yellow-100 */
+	color: #92400e !important; /* yellow-800 */
+	border: 1px solid #fde68a !important; /* yellow-200 */
+}
+
+html:not(.dark) .badge-light-mode.bg-purple-100 {
+	background-color: #f3e8ff !important; /* purple-100 */
+	color: #6b21a8 !important; /* purple-800 */
+	border: 1px solid #e9d5ff !important; /* purple-200 */
+}
+
+/* Button Components - Ghost variant improvements */
+html:not(.dark) .button-ghost-light-mode:hover {
+	background-color: #f3f4f6 !important; /* gray-100 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .button-ghost-light-mode {
+	color: #374151 !important; /* gray-700 */
+}
+
+/* Skeleton Components - Better visibility */
+html:not(.dark) .skeleton-light-mode {
+	background-color: #f3f4f6 !important; /* gray-100 */
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+/* Popover Components - Improve contrast */
+html:not(.dark) .popover-light-mode {
+	background-color: white !important;
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+		0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+	color: #1f2937 !important; /* gray-800 */
+}
+
+/* Tooltip Components */
+html:not(.dark) .tooltip-light-mode {
+	background-color: #1f2937 !important; /* gray-800 */
+	color: white !important;
+	border: 1px solid #374151 !important; /* gray-700 */
+}
+
+/* Card Components - Ensure proper contrast */
+html:not(.dark) .card-light-mode {
+	background-color: white !important;
+	border: 1px solid #e5e7eb !important; /* gray-200 */
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+html:not(.dark) .card-light-mode .card-header {
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .card-light-mode .card-content {
+	color: #374151 !important; /* gray-700 */
+}
+
+/* Separator Components */
+html:not(.dark) .separator-light-mode {
+	background-color: #e5e7eb !important; /* gray-200 */
+}
+
+/* Alert Components */
+html:not(.dark) .alert-light-mode {
+	background-color: #f9fafb !important; /* gray-50 */
+	border: 1px solid #d1d5db !important; /* gray-300 */
+	color: #1f2937 !important; /* gray-800 */
+}
+
+html:not(.dark) .alert-light-mode.alert-destructive {
+	background-color: #fef2f2 !important; /* red-50 */
+	border: 1px solid #fecaca !important; /* red-200 */
+	color: #991b1b !important; /* red-800 */
+}
+
+/* Additional Text Contrast Fixes */
+/* Ensure muted text is readable in light mode */
+html:not(.dark) .text-muted-foreground {
+	color: #6b7280 !important; /* gray-500 */
+}
+
+/* Fix small text visibility */
+html:not(.dark) .text-sm {
+	color: #374151 !important; /* gray-700 */
+}
+
+/* Ensure font-mono text is readable */
+html:not(.dark) .font-mono {
+	color: #1f2937 !important; /* gray-800 */
+}
+
+/* Fix loading states and empty states */
+html:not(.dark) .text-center.text-muted-foreground p {
+	color: #6b7280 !important; /* gray-500 */
+}
+
+/* Ensure icons have proper contrast */
+html:not(.dark) .opacity-50 {
+	opacity: 0.7 !important; /* Slightly less transparent for better visibility */
+}
+
+/* Fix focus states for better accessibility */
+html:not(.dark) .focus\:outline-none:focus {
+	outline: 2px solid #3b82f6 !important; /* blue-500 */
+	outline-offset: 2px !important;
+}
+
+/* Ensure proper contrast for disabled elements */
+html:not(.dark) .disabled\:opacity-50:disabled {
+	opacity: 0.6 !important;
+	color: #9ca3af !important; /* gray-400 */
+}
+
+/* Button Text Color Fixes */
+/* Ensure cannabis-green buttons always have white text */
+html:not(.dark) .bg-cannabis-green {
+	color: white !important;
+}
+
+html:not(.dark) button.bg-cannabis-green,
+html:not(.dark) .bg-cannabis-green button {
+	color: white !important;
+}
+
+/* Fix default button variant text color */
+html:not(.dark) button[class*="bg-cannabis-green"] {
+	color: white !important;
+}
+
+/* Ensure all cannabis button variants have white text */
+html:not(.dark) .bg-cannabis-light,
+html:not(.dark) .bg-cannabis-earth,
+html:not(.dark) .bg-cannabis-purple {
+	color: white !important;
+}
+
+/* Section Title Visibility Fixes */
+/* Fix SectionWrapper title visibility in light mode */
+html:not(.dark) .stat-panel .text-xl,
+html:not(.dark) .stats-container .text-xl {
+	color: #1f2937 !important; /* gray-800 - dark text for light backgrounds */
+}
+
+html:not(.dark) .text-gray-800 {
+	color: #1f2937 !important; /* Ensure gray-800 is actually dark */
+}
+
+/* Fix title visibility in minimal variant */
+html:not(.dark) .stat-panel h3,
+html:not(.dark) .stats-container h3 {
+	color: #1f2937 !important; /* gray-800 */
+	font-weight: 600;
+}
+
+/* Ensure all section titles are visible */
+html:not(.dark) .section-title,
+html:not(.dark) h1,
+html:not(.dark) h2,
+html:not(.dark) h3,
+html:not(.dark) h4 {
+	color: #1f2937 !important; /* gray-800 */
+}
+
+/* Fix specific gradient background title issues */
+html:not(.dark) .bg-gradient-to-br h3,
+html:not(.dark) .bg-gradient-to-br .text-xl {
+	color: #1f2937 !important; /* Dark text for light gradient backgrounds */
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8); /* Subtle white shadow for better contrast */
+}
+
+/* Specific fixes for table headers and titles */
+/* Fix main page titles that are hard to see on gradient backgrounds */
+html:not(.dark) .text-2xl.font-bold {
+	color: #1f2937 !important; /* gray-800 - ensure dark text */
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important; /* White shadow for better contrast */
+}
+
+/* Fix subtitle text */
+html:not(.dark) .text-muted-foreground {
+	color: #6b7280 !important; /* gray-500 */
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Ensure all headings in gradient containers are visible */
+html:not(.dark) .stat-panel h1,
+html:not(.dark) .stat-panel h2,
+html:not(.dark) .stat-panel h3,
+html:not(.dark) .stats-container h1,
+html:not(.dark) .stats-container h2,
+html:not(.dark) .stats-container h3 {
+	color: #1f2937 !important; /* gray-800 */
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Fix tracking-tight text specifically */
+html:not(.dark) .tracking-tight {
+	color: #1f2937 !important; /* gray-800 */
+}
+
+/* Ensure button text in cannabis variants stays white - more specific selectors */
+html:not(.dark) button[class*="bg-cannabis-green"],
+html:not(.dark) button[class*="bg-cannabis-light"],
+html:not(.dark) button[class*="bg-cannabis-earth"],
+html:not(.dark) button[class*="bg-cannabis-purple"] {
+	color: white !important;
+}
+
+/* Ensure default variant buttons (which use cannabis-green) have white text */
+html:not(.dark) button[data-slot="button"][class*="bg-cannabis-green"] {
+	color: white !important;
+}
+
+/* Override any conflicting text color classes for cannabis buttons */
+html:not(.dark) button[class*="bg-cannabis-green"] *,
+html:not(.dark) button[class*="bg-cannabis-light"] *,
+html:not(.dark) button[class*="bg-cannabis-earth"] *,
+html:not(.dark) button[class*="bg-cannabis-purple"] * {
+	color: white !important;
+}
+
+/* Specific fix for cannabis background classes */
+html:not(.dark) .bg-cannabis-green,
+html:not(.dark) .bg-cannabis-light,
+html:not(.dark) .bg-cannabis-earth,
+html:not(.dark) .bg-cannabis-purple {
+	color: white !important;
+}
+
+/* Specific fix for default button variant (cannabis-green background) */
+html:not(.dark)
+	button[data-slot="button"]:not([class*="outline"]):not(
+		[class*="ghost"]
+	):not([class*="secondary"]):not([class*="destructive"]) {
+	color: white !important;
+}
+
+/* Ensure text-white class is respected */
+html:not(.dark) .text-white {
+	color: white !important;
+}
+
+/* Fix for buttons that should have white text but might be overridden */
+html:not(.dark) button.text-white,
+html:not(.dark) button[class*="text-white"] {
+	color: white !important;
+}
+
+/* Ensure cannabis color utilities work correctly */
+html:not(.dark) .cannabis-green {
+	color: #2d8a39 !important;
+}
+
+html:not(.dark) .bg-cannabis-green {
+	background-color: #2d8a39 !important;
+	color: white !important;
+}
+
+/* Override global text-foreground for buttons with cannabis backgrounds */
+html:not(.dark) button[class*="bg-cannabis-green"].text-foreground,
+html:not(.dark) button[class*="bg-cannabis-light"].text-foreground,
+html:not(.dark) button[class*="bg-cannabis-earth"].text-foreground,
+html:not(.dark) button[class*="bg-cannabis-purple"].text-foreground {
+	color: white !important;
+}
+
+/* Ensure button content (text and icons) is white on cannabis backgrounds */
+html:not(.dark) button[class*="bg-cannabis-green"] span,
+html:not(.dark) button[class*="bg-cannabis-green"] svg,
+html:not(.dark) button[class*="bg-cannabis-light"] span,
+html:not(.dark) button[class*="bg-cannabis-light"] svg,
+html:not(.dark) button[class*="bg-cannabis-earth"] span,
+html:not(.dark) button[class*="bg-cannabis-earth"] svg,
+html:not(.dark) button[class*="bg-cannabis-purple"] span,
+html:not(.dark) button[class*="bg-cannabis-purple"] svg {
+	color: white !important;
+}
+
+/* Force white text on any element with cannabis background */
+html:not(.dark) [class*="bg-cannabis-green"],
+html:not(.dark) [class*="bg-cannabis-light"],
+html:not(.dark) [class*="bg-cannabis-earth"],
+html:not(.dark) [class*="bg-cannabis-purple"] {
+	color: white !important;
+}
+
+/* Ensure this applies to all child elements too */
+html:not(.dark) [class*="bg-cannabis-green"] *,
+html:not(.dark) [class*="bg-cannabis-light"] *,
+html:not(.dark) [class*="bg-cannabis-earth"] *,
+html:not(.dark) [class*="bg-cannabis-purple"] * {
+	color: white !important;
+}
+/* Simple table fixes - minimal and targeted approach */
+
+/* Fix header checkbox centering and sizing */
+html:not(.dark) table thead th:first-child {
+	text-align: center;
+}
+
+html:not(.dark) table thead th [role="checkbox"] {
+	width: 16px !important;
+	height: 16px !important;
+	border-radius: 3px !important;
+	border: 1px solid #d1d5db !important;
+	background: white !important;
+}
+
+html:not(.dark) table thead th [role="checkbox"][data-state="checked"],
+html:not(.dark) table thead th [role="checkbox"][data-state="indeterminate"] {
+	background: #059669 !important;
+	border-color: #059669 !important;
+}
+
+/* Simple sorting button improvements - no layout changes */
+html:not(.dark) table thead th button {
+	border: none !important;
+	background: transparent !important;
+}
+
+html:not(.dark) table thead th button:hover {
+	background: rgba(0, 0, 0, 0.05) !important;
+}

@@ -44,13 +44,6 @@
 }
 
 /* Amount */
-
-/* .stat-amount-section {
-	font-size: 2.25rem;
-	font-weight: 700;
-	margin-bottom: 0.75rem;
-	color: #f8fafc;
-} */
 .stat-amount-section {
 	font-size: 2.25rem;
 	font-weight: 700;
@@ -59,6 +52,7 @@
 	font-variant-numeric: tabular-nums;
 	min-height: 3rem; /* Prevents vertical jumping */
 }
+
 /* Bottom */
 
 .stat-bottom-section {
@@ -91,6 +85,81 @@
 	color: #94a3b8;
 	font-weight: 400;
 	margin-left: 0.25rem;
+}
+
+.stat-pos {
+	color: #22c55e;
+	background: rgba(34, 197, 94, 0.1);
+}
+
+.stat-neg {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.1);
+}
+
+/* Light mode stats card - only applies when NOT in dark mode */
+html:not(.dark) .light-stats-card {
+	background: white;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	border-radius: 0.5rem;
+	padding: 1.5rem;
+}
+
+/* Light mode text colors */
+html:not(.dark) .light-stats-card .stat-title {
+	color: #64748b;
+}
+
+html:not(.dark) .light-stats-card .stat-amount-section {
+	color: #1e293b;
+}
+
+html:not(.dark) .light-stats-card .change-label {
+	color: #64748b;
+}
+
+/* Light mode icon styling overrides */
+html:not(.dark) .light-stats-card .bg-blue-900\/30 {
+	background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+html:not(.dark) .light-stats-card .bg-purple-900\/30 {
+	background-color: rgba(147, 51, 234, 0.1) !important;
+}
+
+html:not(.dark) .light-stats-card .bg-green-900\/30 {
+	background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+html:not(.dark) .light-stats-card .text-blue-500 {
+	color: #3b82f6 !important;
+}
+
+html:not(.dark) .light-stats-card .text-purple-500 {
+	color: #8b5cf6 !important;
+}
+
+html:not(.dark) .light-stats-card .text-green-500 {
+	color: #10b981 !important;
+}
+
+/* Light mode container - replaces stat-panel in light mode */
+html:not(.dark) .stats-container {
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border-radius: 10px;
+	padding: 2rem;
+}
+
+@media (max-width: 768px) {
+	.stat-panel {
+		padding: 1rem;
+	}
+
+	.stat-bottom-section {
+		flex-direction: column;
+		gap: 0.5rem;
+	}
 }
 
 .stat-pos {

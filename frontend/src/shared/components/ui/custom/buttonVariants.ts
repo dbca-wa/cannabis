@@ -16,7 +16,7 @@ export const buttonVariants = cva(
 				// "dark:border-input dark:bg-input/30 dark:hover:bg-accent/10"
 				secondary:
 					"bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-				ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+				ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 button-ghost-light-mode",
 				cancel: "bg-accent hover:bg-gray-200/80 hover:text-accent-foreground dark:hover:bg-accent/50",
 				link: "text-primary underline-offset-4 hover:underline",
 				cannabis:

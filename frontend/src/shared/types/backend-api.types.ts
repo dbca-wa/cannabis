@@ -995,6 +995,99 @@ export interface SubmissionCreateRequest {
 
 // Submission update request (matches SubmissionUpdateSerializer)
 export interface SubmissionUpdateRequest {
+	case_number?: string;
+	received?: string; // ISO datetime string
+	security_movement_envelope?: string;
+	internal_comments?: string | null;
+	forensic_hours?: string | null; // DecimalField as string
+	fuel_distance_km?: string | null; // DecimalField as string
+	approved_botanist?: number | null;
+	finance_officer?: number | null;
+	requesting_officer?: number | null;
+	submitting_officer?: number | null;
+	station?: number | null;
+	defendants?: number[]; // Array of defendant IDs
+	is_draft?: boolean; // Whether this is a draft submission
+}
+
+// Paginated submissions response
+export interface PaginatedSubmissionsResponse
+	extends PaginatedResponse<SubmissionTiny> {}
+
+// Submission search parameters
+export interface SubmissionSearchParams {
+	search?: string; // Search by case number
+	phase?: SubmissionPhase; // Filter by phase
+	approved_botanist?: number; // Filter by botanist ID
+	finance_officer?: number; // Filter by finance officer ID
+	requesting_officer?: number; // Filter by requesting officer ID
+	submitting_officer?: number; // Filter by submitting officer ID
+	station?: number; // Filter by station ID
+	defendants?: number[]; // Filter by defendant IDs
+	cannabis_present?: boolean; // Filter by cannabis presence
+	is_draft?: boolean; // Filter by draft status
+	received_after?: string; // ISO date string
+	received_before?: string; // ISO date string
+	ordering?: string; // Sort order (e.g., '-received', 'case_number')
+	limit?: number;
+	offset?: number;
+}
+
+// ============================================================================
+// DASHBOARD TYPES (matches dashboard API endpoints)
+// ============================================================================
+
+// User role in submission (for dashboard my submissions)
+export type UserRoleInSubmission = "botanist" | "finance" | "admin";
+
+// Dashboard user submission (matches dashboard my submissions endpoint)
+export interface DashboardUserSubmission {
+	id: number;
+	case_number: string;
+	phase: SubmissionPhase;
+	phase_display: string;
+	received: string; // ISO datetime string
+	is_draft: boolean;
+	role_in_submission: UserRoleInSubmission;
+}
+
+// Dashboard user submissions response (matches GET /submissions/my/)
+export interface DashboardUserSubmissionsResponse {
+	results: DashboardUserSubmission[];
+	count: number;
+}
+
+// Statistics period data (shared structure for both certificate and revenue stats)
+export interface StatisticsPeriodData {
+	count?: number; // For certificate statistics
+	total?: number; // For revenue statistics (as number, not string)
+	month: string;
+	year: number;
+}
+
+// Statistics comparison data (shared structure for month-over-month and year-over-year)
+export interface StatisticsComparisonData {
+	count?: number; // For certificate statistics
+	total?: number; // For revenue statistics (as number, not string)
+	change_percentage: number;
+}
+
+// Certificate statistics response (matches GET /submissions/stats/certificates/)
+export interface CertificateStatisticsResponse {
+	current_month: StatisticsPeriodData;
+	previous_month: StatisticsComparisonData | null;
+	previous_year_same_month: StatisticsComparisonData | null;
+}
+
+// Revenue statistics response (matches GET /submissions/stats/revenue/)
+export interface RevenueStatisticsResponse {
+	current_month: StatisticsPeriodData;
+	previous_month: StatisticsComparisonData | null;
+	previous_year_same_month: StatisticsComparisonData | null;
+}
+
+// Submission update request (matches SubmissionUpdateSerializer)
+export interface SubmissionUpdateRequest {
 	approved_botanist?: number | null;
 	finance_officer?: number | null;
 	internal_comments?: string | null;
@@ -1123,4 +1216,53 @@ export interface SystemSettings {
 		last_name: string;
 	} | null;
 	last_modified_at?: string | null; // ISO datetime string
+}
+// ============================================================================
+// DASHBOARD TYPES (for dashboard-specific API responses)
+// ============================================================================
+
+// Dashboard submission (matches MySubmissionsView response)
+export interface DashboardSubmission {
+	id: number;
+	case_number: string;
+	phase: SubmissionPhase;
+	phase_display: string;
+	received: string; // ISO datetime string
+	is_draft: boolean;
+	role_in_submission: "botanist" | "finance" | "admin" | "user";
+}
+
+// Dashboard submissions response (matches MySubmissionsView)
+export interface DashboardSubmissionsResponse {
+	results: DashboardSubmission[];
+	count: number;
+}
+
+// Monthly data for statistics (used in both certificate and revenue stats)
+export interface DashboardMonthlyData {
+	count?: number; // For certificates
+	total?: number; // For revenue
+	month: string;
+	year: number;
+}
+
+// Comparison data for statistics (month-over-month and year-over-year)
+export interface DashboardComparisonData {
+	count?: number; // For certificates
+	total?: number; // For revenue
+	change_percentage: number | null;
+}
+
+// Certificate statistics response (matches CertificateStatsView)
+export interface DashboardCertificateStats {
+	current_month: DashboardMonthlyData;
+	previous_month: DashboardComparisonData | null;
+	previous_year_same_month: DashboardComparisonData | null;
+}
+
+// Revenue statistics response (matches RevenueStatsView)
+export interface DashboardRevenueStats {
+	current_month: DashboardMonthlyData;
+	previous_month: DashboardComparisonData | null;
+	previous_year_same_month: DashboardComparisonData | null;
 }

@@ -1,5 +1,6 @@
 import { cn } from "@/shared/utils";
 import * as React from "react";
+import "@/features/dash/components/Stats.css";
 
 export type SectionWrapperVariant =
 	| "default"
@@ -25,8 +26,8 @@ const sectionVariants = {
 		title: "text-xl font-bold text-green-800 flex items-center",
 	},
 	minimal: {
-		container: "bg-white rounded-lg p-6 shadow-md border border-gray-100",
-		title: "text-xl font-semibold text-gray-800 flex items-center",
+		container: "stat-panel stats-container rounded-lg p-6 shadow-md",
+		title: "text-xl font-semibold text-gray-800 dark:text-gray-200 flex items-center",
 	},
 	dark: {
 		container:

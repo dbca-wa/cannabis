@@ -400,27 +400,16 @@ const AllUsersTable = observer(() => {
 					/>
 				)}
 
-				{/* Enhanced header with search and filters */}
-				<div className="flex flex-col gap-4 py-4">
-					{/* Top row: Search and actions */}
-					<div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-						<div className="flex items-center gap-2 flex-1 max-w-full sm:max-w-md">
-							<div className="relative flex-1 pl-[1px]">
-								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-								<Input
-									ref={searchInputRef}
-									placeholder={
-										isMobile
-											? "Search users..."
-											: "Search users by name, email, or ID..."
-									}
-									value={searchQuery}
-									onChange={(e) =>
-										setSearchQuery(e.target.value)
-									}
-									className="pl-10"
-								/>
-							</div>
+				{/* Header */}
+				<div className="flex flex-col gap-4">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h2 className="text-2xl font-bold tracking-tight">
+								Users
+							</h2>
+							<p className="text-muted-foreground">
+								Manage system users and their roles
+							</p>
 						</div>
 
 						<div className="flex gap-2 flex-wrap sm:flex-nowrap">
@@ -493,83 +482,111 @@ const AllUsersTable = observer(() => {
 						</div>
 					</div>
 
-					{/* Second row: Filters */}
-					<div className="flex flex-col sm:flex-row sm:items-center gap-4">
-						<div className="flex flex-col sm:flex-row gap-4">
-							<div className="flex items-center gap-2">
-								<span className="text-sm font-medium whitespace-nowrap">
-									Role:
-								</span>
-								<Select
-									value={filters.roleFilter}
-									onValueChange={(value) =>
-										updateFilter("roleFilter", value)
-									}
-								>
-									<SelectTrigger className="w-full sm:w-32">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">
-											All Roles
-										</SelectItem>
-										<SelectItem value="botanist">
-											Botanist
-										</SelectItem>
-										<SelectItem value="finance">
-											Finance
-										</SelectItem>
-										<SelectItem value="none">
-											No Role
-										</SelectItem>
-									</SelectContent>
-								</Select>
+					{/* Filters and Search Row */}
+					<div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+						{/* Left side: Search first, then filters */}
+						<div className="flex flex-col sm:flex-row gap-4 flex-1">
+							{/* Search */}
+							<div className="flex items-center gap-2 flex-1 max-w-full sm:max-w-md">
+								<div className="relative flex-1 pl-[1px]">
+									<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+									<Input
+										ref={searchInputRef}
+										placeholder={
+											isMobile
+												? "Search users..."
+												: "Search users by name, email, or ID..."
+										}
+										value={searchQuery}
+										onChange={(e) =>
+											setSearchQuery(e.target.value)
+										}
+										className="pl-10"
+									/>
+								</div>
 							</div>
 
-							<div className="flex items-center gap-2">
-								<span className="text-sm font-medium whitespace-nowrap">
-									Status:
-								</span>
-								<Select
-									value={filters.statusFilter}
-									onValueChange={(value) =>
-										updateFilter("statusFilter", value)
-									}
-								>
-									<SelectTrigger className="w-full sm:w-32">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">All</SelectItem>
-										<SelectItem value="active">
-											Active
-										</SelectItem>
-										<SelectItem value="inactive">
-											Inactive
-										</SelectItem>
-									</SelectContent>
-								</Select>
+							{/* Filters */}
+							<div className="flex items-center gap-4">
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-medium whitespace-nowrap">
+										Role:
+									</span>
+									<Select
+										value={filters.roleFilter}
+										onValueChange={(value) =>
+											updateFilter("roleFilter", value)
+										}
+									>
+										<SelectTrigger className="w-full sm:w-32">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Roles
+											</SelectItem>
+											<SelectItem value="botanist">
+												Botanist
+											</SelectItem>
+											<SelectItem value="finance">
+												Finance
+											</SelectItem>
+											<SelectItem value="none">
+												No Role
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-medium whitespace-nowrap">
+										Status:
+									</span>
+									<Select
+										value={filters.statusFilter}
+										onValueChange={(value) =>
+											updateFilter("statusFilter", value)
+										}
+									>
+										<SelectTrigger className="w-full sm:w-32">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All
+											</SelectItem>
+											<SelectItem value="active">
+												Active
+											</SelectItem>
+											<SelectItem value="inactive">
+												Inactive
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+
+								{/* Selection count (if any) */}
+								{bulkSelection.selectedCount > 0 && (
+									<div className="text-sm text-blue-600">
+										{bulkSelection.selectedCount} selected
+									</div>
+								)}
 							</div>
 						</div>
 
-						{/* Selection count (if any) */}
-						{bulkSelection.selectedCount > 0 && (
-							<div className="text-sm text-blue-600">
-								{bulkSelection.selectedCount} selected
-							</div>
-						)}
-
-						{/* Keyboard shortcuts help button (top right) */}
-						{!isMobile && (
-							<button
-								onClick={() => setShowShortcutsHelp(true)}
-								className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
-								title="Show keyboard shortcuts (Shift + ?)"
-							>
-								<Keyboard className="h-3 w-3" />
-								Shortcuts
-							</button>
-						)}
+						{/* Right side: Keyboard shortcuts help button */}
+						<div className="flex items-center">
+							{!isMobile && (
+								<button
+									onClick={() => setShowShortcutsHelp(true)}
+									className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+									title="Show keyboard shortcuts (Shift + ?)"
+								>
+									<Keyboard className="h-3 w-3" />
+									Shortcuts
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
 
@@ -579,18 +596,23 @@ const AllUsersTable = observer(() => {
 						<TableHeader>
 							<TableRow>
 								{/* Bulk selection header */}
-								<TableHead className="w-12">
-									<IndeterminateCheckbox
-										checked={bulkSelection.isAllSelected}
-										indeterminate={
-											bulkSelection.selectedCount > 0 &&
-											!bulkSelection.isAllSelected
-										}
-										onCheckedChange={
-											bulkSelection.toggleAll
-										}
-										aria-label="Select all users"
-									/>
+								<TableHead className="w-12 text-center">
+									<div className="flex items-center justify-center h-full">
+										<IndeterminateCheckbox
+											checked={
+												bulkSelection.isAllSelected
+											}
+											indeterminate={
+												bulkSelection.selectedCount >
+													0 &&
+												!bulkSelection.isAllSelected
+											}
+											onCheckedChange={
+												bulkSelection.toggleAll
+											}
+											aria-label="Select all users"
+										/>
+									</div>
 								</TableHead>
 
 								{/* ID Column (hidden on mobile) */}
@@ -599,7 +621,7 @@ const AllUsersTable = observer(() => {
 										<Button
 											variant="ghost"
 											size="sm"
-											className="h-auto p-0 font-semibold hover:bg-transparent"
+											className="h-full px-3 py-0 font-semibold hover:bg-accent/50 w-full justify-between border-0 rounded-none transition-colors"
 											onClick={() => handleSort("id")}
 										>
 											ID
@@ -613,7 +635,7 @@ const AllUsersTable = observer(() => {
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+										className="h-full px-3 py-0 font-semibold hover:bg-accent/50 w-full justify-between border-0 rounded-none transition-colors"
 										onClick={() => handleSort("full_name")}
 									>
 										Name
@@ -627,7 +649,7 @@ const AllUsersTable = observer(() => {
 										<Button
 											variant="ghost"
 											size="sm"
-											className="h-auto p-0 font-semibold hover:bg-transparent"
+											className="h-full px-3 py-0 font-semibold hover:bg-accent/50 w-full justify-between border-0 rounded-none transition-colors"
 											onClick={() => handleSort("email")}
 										>
 											Email
@@ -641,7 +663,7 @@ const AllUsersTable = observer(() => {
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+										className="h-full px-3 py-0 font-semibold hover:bg-accent/50 w-full justify-between border-0 rounded-none transition-colors"
 										onClick={() => handleSort("role")}
 									>
 										Role
@@ -654,7 +676,7 @@ const AllUsersTable = observer(() => {
 									<Button
 										variant="ghost"
 										size="sm"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+										className="h-full px-3 py-0 font-semibold hover:bg-accent/50 w-full justify-between border-0 rounded-none transition-colors"
 										onClick={() => handleSort("is_active")}
 									>
 										Status

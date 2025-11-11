@@ -11,7 +11,6 @@ import {
 import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
 import { CertificatesTable } from "@/features/certificates/components";
 import { InvoicesTable } from "@/features/invoices/components";
-import { Head } from "@/shared/components/layout/Head";
 
 const Documents = () => {
 	const location = useLocation();
@@ -57,9 +56,14 @@ const Documents = () => {
 	};
 
 	const breadcrumbs = getBreadcrumbs();
+	const pageTitle = activeTab === "invoices" ? "Invoices" : "Certificates";
 
 	return (
-		<ContentLayout breadcrumbs={breadcrumbs} maxWidth="xl">
+		<ContentLayout
+			breadcrumbs={breadcrumbs}
+			maxWidth="xl"
+			title={pageTitle}
+		>
 			<div className="space-y-6">
 				<Tabs
 					value={activeTab}
@@ -74,14 +78,12 @@ const Documents = () => {
 					</TabsList>
 
 					<TabsContent value="certificates" className="space-y-4">
-						<Head title="Certificates" />
 						<SectionWrapper variant="minimal">
 							<CertificatesTable />
 						</SectionWrapper>
 					</TabsContent>
 
 					<TabsContent value="invoices" className="space-y-4">
-						<Head title="Invoices" />
 						<SectionWrapper variant="minimal">
 							<InvoicesTable />
 						</SectionWrapper>

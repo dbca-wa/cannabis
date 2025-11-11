@@ -64,7 +64,7 @@ const CreateSubmissionButton = () => {
 				"test-tube-button",
 				"cursor-pointer p-4 rounded-lg",
 				"drop-shadow-lg",
-				"dark-foreground-card",
+				"dark-foreground-card light-submission-button",
 				"-mb-2"
 			)}
 		>
@@ -72,7 +72,7 @@ const CreateSubmissionButton = () => {
 				<div className="tube-container">
 					<TubeSVG />
 				</div>
-				<div className="text-lg text-white md:text-2xl font-bold text-center">
+				<div className="text-lg text-white dark:text-white md:text-2xl font-bold text-center">
 					<span>New Submission</span>
 				</div>
 			</div>

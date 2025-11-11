@@ -7,6 +7,8 @@ import { securityService } from "@/features/admin/services/security.service";
 import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
 import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
 import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
+import ContentLayout from "@/shared/components/layout/ContentLayout";
+import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
 
 // Import loading skeletons
 import { AdminPageSkeleton } from "@/features/admin/components/settings/LoadingSkeletons";
@@ -17,7 +19,6 @@ import {
 	EmailSettingsCard,
 	SystemInfoCard,
 } from "@/features/admin";
-import { Head } from "@/shared/components/layout/Head";
 
 const AdminPage: React.FC = () => {
 	const [pendingChanges, setPendingChanges] = useState<Record<string, any>>(
@@ -164,11 +165,19 @@ const AdminPage: React.FC = () => {
 		setShowConfirmation(false);
 	};
 
+	// Breadcrumb configuration
+	const breadcrumbs: BreadcrumbItem[] = [
+		{
+			label: "System Administration",
+			current: true,
+		},
+	];
+
 	// Check admin access
 	const accessCheck = securityService.checkAdminAccess(user);
 	if (!accessCheck.allowed) {
 		return (
-			<div className="container mx-auto p-6">
+			<ContentLayout breadcrumbs={breadcrumbs} title="Admin">
 				<Alert variant="destructive">
 					<Shield className="h-4 w-4" />
 					<AlertDescription>
@@ -176,7 +185,7 @@ const AdminPage: React.FC = () => {
 							"You don't have permission to access admin settings."}
 					</AlertDescription>
 				</Alert>
-			</div>
+			</ContentLayout>
 		);
 	}
 
@@ -186,12 +195,16 @@ const AdminPage: React.FC = () => {
 
 	if (!settings && error) {
 		return (
-			<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4">
-				<div className="flex items-center gap-3">
-					<Settings className="h-6 w-6" />
-					<h1 className="text-2xl font-bold">Admin Settings</h1>
-				</div>
-
+			<ContentLayout
+				breadcrumbs={breadcrumbs}
+				title="Admin"
+				header={
+					<div className="flex items-center gap-3">
+						<Settings className="h-6 w-6" />
+						<h1 className="text-2xl font-bold">Admin Settings</h1>
+					</div>
+				}
+			>
 				<div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
 					<Alert
 						variant={
@@ -209,13 +222,13 @@ const AdminPage: React.FC = () => {
 						</AlertDescription>
 					</Alert>
 				</div>
-			</div>
+			</ContentLayout>
 		);
 	}
 
 	if (!settings) {
 		return (
-			<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+			<ContentLayout breadcrumbs={breadcrumbs} title="Admin">
 				<div className="animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
 					<Alert className="transition-all duration-300">
 						<AlertCircle className="h-4 w-4" />
@@ -225,7 +238,7 @@ const AdminPage: React.FC = () => {
 						</AlertDescription>
 					</Alert>
 				</div>
-			</div>
+			</ContentLayout>
 		);
 	}
 
@@ -255,36 +268,35 @@ const AdminPage: React.FC = () => {
 	);
 
 	return (
-		<div
-			className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6"
-			role="main"
-			aria-label="Admin Settings"
+		<ContentLayout
+			breadcrumbs={breadcrumbs}
+			title="Admin"
+			className="space-y-6"
+			// header={
+			// 	<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in-50 slide-in-from-top-4 duration-500">
+			// 		<div className="flex items-center gap-3">
+			// 			<Settings className="h-6 w-6" aria-hidden="true" />
+			// 			<h1 className="text-2xl font-bold">Admin Settings</h1>
+			// 		</div>
+
+			// 		<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+			// 			{/* Rate limit status */}
+			// 			{cacheStatus.isRateLimited && (
+			// 				<Alert
+			// 					className="w-full sm:w-auto transition-all duration-300"
+			// 					role="alert"
+			// 					aria-live="polite"
+			// 				>
+			// 					<Clock className="h-4 w-4" aria-hidden="true" />
+			// 					<AlertDescription>
+			// 						Rate limited - please wait before refreshing
+			// 					</AlertDescription>
+			// 				</Alert>
+			// 			)}
+			// 		</div>
+			// 	</div>
+			// }
 		>
-			<Head title="Admin" />
-			{/* Header with responsive layout */}
-			<header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in-50 slide-in-from-top-4 duration-500">
-				<div className="flex items-center gap-3">
-					<Settings className="h-6 w-6" aria-hidden="true" />
-					<h1 className="text-2xl font-bold">Admin Settings</h1>
-				</div>
-
-				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-					{/* Rate limit status */}
-					{cacheStatus.isRateLimited && (
-						<Alert
-							className="w-full sm:w-auto transition-all duration-300"
-							role="alert"
-							aria-live="polite"
-						>
-							<Clock className="h-4 w-4" aria-hidden="true" />
-							<AlertDescription>
-								Rate limited - please wait before refreshing
-							</AlertDescription>
-						</Alert>
-					)}
-				</div>
-			</header>
-
 			{/* Settings cards with staggered animations */}
 			<main
 				className="space-y-6"
@@ -338,7 +350,7 @@ const AdminPage: React.FC = () => {
 				isLoading={isUpdating}
 				changes={confirmationChanges}
 			/>
-		</div>
+		</ContentLayout>
 	);
 };
 

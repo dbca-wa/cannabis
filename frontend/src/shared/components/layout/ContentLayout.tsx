@@ -8,7 +8,7 @@ import {
 	type BreadcrumbItem,
 } from "@/shared/components/ui/breadcrumb";
 import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
-import { PreferenceSyncNotification } from "@/shared/components/feedback/PreferenceSyncNotification";
+// import { PreferenceSyncNotification } from "@/shared/components/feedback/PreferenceSyncNotification";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import {
 	useKeyboardShortcuts,
@@ -16,6 +16,7 @@ import {
 } from "@/shared/hooks/ui/useKeyboardShortcuts";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useBreakpoint } from "@/shared/hooks/ui/useResponsive";
+import { Head } from "./Head";
 import UserMenu from "./UserMenu";
 import HamburgerMenu from "./HamburgerMenu";
 import MobileSidebar from "./MobileSidebar";
@@ -28,6 +29,12 @@ interface ContentLayoutProps {
 	className?: string;
 	maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 	showErrorBoundary?: boolean;
+	// Head component props
+	title?: string;
+	description?: string;
+	keywords?: string;
+	url?: string;
+	isStandalone?: boolean;
 }
 
 const ContentLayout = observer(
@@ -39,6 +46,12 @@ const ContentLayout = observer(
 		className,
 		maxWidth, // Optional override, defaults to UIStore preference
 		showErrorBoundary = true,
+		// Head component props
+		title,
+		description,
+		keywords,
+		url,
+		isStandalone,
 	}: ContentLayoutProps) => {
 		const navigate = useNavigate();
 		const uiStore = useUIStore();
@@ -72,7 +85,7 @@ const ContentLayout = observer(
 		const content = (
 			<div className="flex flex-col h-full">
 				{/* Preference sync notification - shows once per user */}
-				<PreferenceSyncNotification />
+				{/* <PreferenceSyncNotification /> */}
 
 				{/* Mobile Sidebar */}
 				<MobileSidebar
@@ -81,7 +94,7 @@ const ContentLayout = observer(
 				/>
 
 				{/* Breadcrumbs section - always show for user menu */}
-				<div className="w-full px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+				<div className="w-full px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							{/* Hamburger menu for mobile and tablet (below desktop) */}
@@ -138,6 +151,16 @@ const ContentLayout = observer(
 
 		const finalContent = (
 			<>
+				{/* Head component for page metadata */}
+				{title && (
+					<Head
+						title={title}
+						description={description}
+						keywords={keywords}
+						url={url}
+						isStandalone={isStandalone}
+					/>
+				)}
 				{content}
 				{/* Global Keyboard Shortcuts Help */}
 				<KeyboardShortcutsHelp

@@ -1,5 +1,6 @@
 .vscode
-
+*.DS_Store
+*.lnk
 # Frontend
 # frontend
 frontend/node_modules

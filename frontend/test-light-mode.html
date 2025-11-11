@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Mode Test</title>
+    <style>
+        /* Test CSS to verify light mode overrides are working */
+        html:not(.dark) .table-light-mode tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        html:not(.dark) .table-light-mode th {
+            color: #374151 !important;
+            font-weight: 600;
+        }
+        
+        .test-table {
+            border: 1px solid #ccc;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .test-table th, .test-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        /* Test button styles */
+        .bg-cannabis-green {
+            background-color: #2d8a39;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            margin: 10px;
+        }
+        
+        /* Test gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        /* Test title styles */
+        .text-2xl {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        html:not(.dark) .text-2xl.font-bold {
+            color: #1f2937 !important;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        html:not(.dark) .bg-cannabis-green {
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Light Mode UI Component Test</h1>
+    
+    <h2>Button Test</h2>
+    <button class="bg-cannabis-green">Invite User (Should have white text)</button>
+    <button class="bg-cannabis-green" style="background-color: #2d8a39;">Test Button</button>
+    
+    <h2>Title Visibility Test</h2>
+    <div class="gradient-bg">
+        <h2 class="text-2xl font-bold tracking-tight">
+            Submissions (Should be visible on gradient)
+        </h2>
+        <p style="color: #6b7280;">This subtitle should also be visible</p>
+    </div>
+    
+    <h2>Table Test</h2>
+    <table class="test-table table-light-mode">
+        <thead>
+            <tr>
+                <th>Header 1</th>
+                <th>Header 2</th>
+                <th>Header 3</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Row 1, Cell 1</td>
+                <td>Row 1, Cell 2</td>
+                <td>Row 1, Cell 3</td>
+            </tr>
+            <tr>
+                <td>Row 2, Cell 1</td>
+                <td>Row 2, Cell 2</td>
+                <td>Row 2, Cell 3</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <p>Hover over table rows to test light mode hover effects.</p>
+    
+    <script>
+        console.log('Light mode test loaded');
+        console.log('Dark mode class present:', document.documentElement.classList.contains('dark'));
+        
+        // Test button text color
+        const buttons = document.querySelectorAll('.bg-cannabis-green');
+        buttons.forEach((btn, index) => {
+            const computedStyle = window.getComputedStyle(btn);
+            console.log(`Button ${index + 1} color:`, computedStyle.color);
+        });
+        
+        // Test title visibility
+        const title = document.querySelector('.text-2xl');
+        if (title) {
+            const computedStyle = window.getComputedStyle(title);
+            console.log('Title color:', computedStyle.color);
+            console.log('Title text-shadow:', computedStyle.textShadow);
+        }
+    </script>
+</body>
+</html>

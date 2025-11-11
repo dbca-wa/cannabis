@@ -72,4 +72,20 @@ urlpatterns = [
         views.AdditionalInvoiceFeeListView.as_view(),
         name="additional_fee_list",
     ),
+    # Dashboard endpoints
+    path(
+        "my/",
+        views.MySubmissionsView.as_view(),
+        name="my_submissions",
+    ),
+    path(
+        "stats/certificates/",
+        views.CertificateStatsView.as_view(),
+        name="certificate_stats",
+    ),
+    path(
+        "stats/revenue/",
+        views.RevenueStatsView.as_view(),
+        name="revenue_stats",
+    ),
 ]

@@ -10,7 +10,6 @@ import {
 } from "@/shared/components/ui/tabs";
 import { PoliceStationsTable, PoliceOfficersTable } from "@/features/police";
 import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
-import { Head } from "@/shared/components/layout/Head";
 
 const Police = () => {
 	const location = useLocation();
@@ -56,9 +55,14 @@ const Police = () => {
 	};
 
 	const breadcrumbs = getBreadcrumbs();
+	const pageTitle = activeTab === "stations" ? "Stations" : "Officers";
 
 	return (
-		<ContentLayout breadcrumbs={breadcrumbs} maxWidth="xl">
+		<ContentLayout
+			breadcrumbs={breadcrumbs}
+			maxWidth="xl"
+			title={pageTitle}
+		>
 			<div className="space-y-6">
 				<Tabs
 					value={activeTab}
@@ -71,14 +75,12 @@ const Police = () => {
 					</TabsList>
 
 					<TabsContent value="officers" className="space-y-4">
-						<Head title="Officers" />
 						<SectionWrapper variant="minimal">
 							<PoliceOfficersTable />
 						</SectionWrapper>
 					</TabsContent>
 
 					<TabsContent value="stations" className="space-y-4">
-						<Head title="Stations" />
 						<SectionWrapper variant="minimal">
 							<PoliceStationsTable />
 						</SectionWrapper>

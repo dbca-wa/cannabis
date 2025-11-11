@@ -169,7 +169,7 @@ const StatsCard = ({
 	return (
 		<Tooltip>
 			<TooltipTrigger>
-				<div className="dark-foreground-card w-full">
+				<div className="dark-foreground-card light-stats-card w-full">
 					<div className="stat-top-section">
 						<span className="stat-title">{title}</span>
 						<div

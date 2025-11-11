@@ -11,10 +11,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.exceptions import ValidationError
-from django.db.models import Q, Count, Prefetch, F
+from django.db.models import Q, Count, Prefetch, F, Sum
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 
 from .models import (
     Submission,
@@ -1143,3 +1144,313 @@ class SubmissionWorkflowView(APIView):
             },
             status=HTTP_201_CREATED,
         )
+
+
+# ============================================================================
+# DASHBOARD VIEWS
+# ============================================================================
+
+
+class MySubmissionsView(APIView):
+    """
+    GET: List submissions the current user is involved in based on their role
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        settings.LOGGER.info(
+            f"User {user.email} requesting their submissions (role: {user.role})"
+        )
+
+        try:
+            # Filter submissions based on user role
+            queryset = Submission.objects.select_related(
+                "approved_botanist",
+                "finance_officer",
+                "requesting_officer",
+                "submitting_officer",
+            ).prefetch_related("defendants")
+
+            if user.role == "botanist":
+                queryset = queryset.filter(approved_botanist=user)
+                role_in_submission = "botanist"
+            elif user.role == "finance":
+                queryset = queryset.filter(finance_officer=user)
+                role_in_submission = "finance"
+            elif user.is_staff:  # Admin users see all submissions
+                role_in_submission = "admin"
+            else:
+                # Regular users see submissions they're involved in any capacity
+                queryset = queryset.filter(
+                    Q(approved_botanist=user) | Q(finance_officer=user)
+                )
+                role_in_submission = "user"
+
+            # Order by most recent first, limit to recent submissions for dashboard
+            queryset = queryset.order_by("-received")[:10]
+
+            # Serialize the data
+            submissions_data = []
+            for submission in queryset:
+                submissions_data.append(
+                    {
+                        "id": submission.id,
+                        "case_number": submission.case_number,
+                        "phase": submission.phase,
+                        "phase_display": submission.get_phase_display(),
+                        "received": submission.received.isoformat(),
+                        "is_draft": submission.is_draft,
+                        "role_in_submission": role_in_submission,
+                    }
+                )
+
+            settings.LOGGER.info(
+                f"Returning {len(submissions_data)} submissions for user {user.email}"
+            )
+
+            return Response(
+                {
+                    "results": submissions_data,
+                    "count": len(submissions_data),
+                },
+                status=HTTP_200_OK,
+            )
+
+        except Exception as e:
+            settings.LOGGER.error(
+                f"Error fetching submissions for user {user.email}: {str(e)}",
+                exc_info=True,
+            )
+            return Response(
+                {"error": "Failed to fetch submissions"},
+                status=HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class CertificateStatsView(APIView):
+    """
+    GET: Get certificate statistics with month-over-month and year-over-year comparisons
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        settings.LOGGER.info(f"User {user.email} requesting certificate statistics")
+
+        try:
+            from datetime import datetime, timedelta
+            from dateutil.relativedelta import relativedelta
+
+            now = timezone.now()
+            current_month_start = now.replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+
+            # Current month certificates
+            current_count = Certificate.objects.filter(
+                created_at__gte=current_month_start
+            ).count()
+
+            # Previous month comparison
+            prev_month_start = current_month_start - relativedelta(months=1)
+            prev_month_end = current_month_start
+            prev_month_count = Certificate.objects.filter(
+                created_at__gte=prev_month_start, created_at__lt=prev_month_end
+            ).count()
+
+            # Previous year same month comparison
+            prev_year_month_start = current_month_start - relativedelta(years=1)
+            prev_year_month_end = prev_year_month_start + relativedelta(months=1)
+            prev_year_count = Certificate.objects.filter(
+                created_at__gte=prev_year_month_start,
+                created_at__lt=prev_year_month_end,
+            ).count()
+
+            # Calculate percentage changes
+            prev_month_change = None
+            if prev_month_count > 0:
+                prev_month_change = (
+                    (current_count - prev_month_count) / prev_month_count
+                ) * 100
+            elif current_count > 0:
+                prev_month_change = 100  # 100% increase from 0
+
+            prev_year_change = None
+            if prev_year_count > 0:
+                prev_year_change = (
+                    (current_count - prev_year_count) / prev_year_count
+                ) * 100
+            elif current_count > 0:
+                prev_year_change = 100  # 100% increase from 0
+
+            response_data = {
+                "current_month": {
+                    "count": current_count,
+                    "month": current_month_start.strftime("%B"),
+                    "year": current_month_start.year,
+                },
+                "previous_month": (
+                    {
+                        "count": prev_month_count,
+                        "change_percentage": (
+                            round(prev_month_change, 1)
+                            if prev_month_change is not None
+                            else None
+                        ),
+                    }
+                    if prev_month_count > 0 or current_count > 0
+                    else None
+                ),
+                "previous_year_same_month": (
+                    {
+                        "count": prev_year_count,
+                        "change_percentage": (
+                            round(prev_year_change, 1)
+                            if prev_year_change is not None
+                            else None
+                        ),
+                    }
+                    if prev_year_count > 0 or current_count > 0
+                    else None
+                ),
+            }
+
+            settings.LOGGER.info(
+                f"Certificate stats for {user.email}: current={current_count}, "
+                f"prev_month={prev_month_count}, prev_year={prev_year_count}"
+            )
+
+            return Response(response_data, status=HTTP_200_OK)
+
+        except Exception as e:
+            settings.LOGGER.error(
+                f"Error fetching certificate statistics for user {user.email}: {str(e)}",
+                exc_info=True,
+            )
+            return Response(
+                {"error": "Failed to fetch certificate statistics"},
+                status=HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class RevenueStatsView(APIView):
+    """
+    GET: Get revenue statistics with month-over-month and year-over-year comparisons
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        settings.LOGGER.info(f"User {user.email} requesting revenue statistics")
+
+        try:
+            from datetime import datetime, timedelta
+            from dateutil.relativedelta import relativedelta
+            from django.db.models import Sum
+
+            now = timezone.now()
+            current_month_start = now.replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+
+            # Current month revenue
+            current_total = (
+                Invoice.objects.filter(created_at__gte=current_month_start).aggregate(
+                    total=Sum("total")
+                )["total"]
+                or 0
+            )
+
+            # Previous month comparison
+            prev_month_start = current_month_start - relativedelta(months=1)
+            prev_month_end = current_month_start
+            prev_month_total = (
+                Invoice.objects.filter(
+                    created_at__gte=prev_month_start, created_at__lt=prev_month_end
+                ).aggregate(total=Sum("total"))["total"]
+                or 0
+            )
+
+            # Previous year same month comparison
+            prev_year_month_start = current_month_start - relativedelta(years=1)
+            prev_year_month_end = prev_year_month_start + relativedelta(months=1)
+            prev_year_total = (
+                Invoice.objects.filter(
+                    created_at__gte=prev_year_month_start,
+                    created_at__lt=prev_year_month_end,
+                ).aggregate(total=Sum("total"))["total"]
+                or 0
+            )
+
+            # Calculate percentage changes
+            prev_month_change = None
+            if prev_month_total > 0:
+                prev_month_change = (
+                    (current_total - prev_month_total) / prev_month_total
+                ) * 100
+            elif current_total > 0:
+                prev_month_change = 100  # 100% increase from 0
+
+            prev_year_change = None
+            if prev_year_total > 0:
+                prev_year_change = (
+                    (current_total - prev_year_total) / prev_year_total
+                ) * 100
+            elif current_total > 0:
+                prev_year_change = 100  # 100% increase from 0
+
+            response_data = {
+                "current_month": {
+                    "total": float(current_total),
+                    "month": current_month_start.strftime("%B"),
+                    "year": current_month_start.year,
+                },
+                "previous_month": (
+                    {
+                        "total": float(prev_month_total),
+                        "change_percentage": (
+                            round(prev_month_change, 1)
+                            if prev_month_change is not None
+                            else None
+                        ),
+                    }
+                    if prev_month_total > 0 or current_total > 0
+                    else None
+                ),
+                "previous_year_same_month": (
+                    {
+                        "total": float(prev_year_total),
+                        "change_percentage": (
+                            round(prev_year_change, 1)
+                            if prev_year_change is not None
+                            else None
+                        ),
+                    }
+                    if prev_year_total > 0 or current_total > 0
+                    else None
+                ),
+            }
+
+            settings.LOGGER.info(
+                f"Revenue stats for {user.email}: current=${current_total}, "
+                f"prev_month=${prev_month_total}, prev_year=${prev_year_total}"
+            )
+
+            return Response(response_data, status=HTTP_200_OK)
+
+        except Exception as e:
+            settings.LOGGER.error(
+                f"Error fetching revenue statistics for user {user.email}: {str(e)}",
+                exc_info=True,
+            )
+            return Response(
+                {"error": "Failed to fetch revenue statistics"},
+                status=HTTP_500_INTERNAL_SERVER_ERROR,
+            )

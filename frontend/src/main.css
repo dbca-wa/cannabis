@@ -3,6 +3,7 @@
 @plugin "tailwindcss-animate";
 @import "react-pdf/dist/Page/AnnotationLayer.css";
 @import "react-pdf/dist/Page/TextLayer.css";
+@import "./shared/styles/light-mode-overrides.css";
 @layer theme, base, components, utilities;
 
 @custom-variant dark (&:is(.dark *));

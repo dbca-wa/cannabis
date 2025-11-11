@@ -10,6 +10,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 				className={cn(
 					"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none  disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
 					"bg-white border-gray-300 text-black",
+					"input-light-mode",
 					// "dark:text-white! dark:bg-gray-800 dark:border-gray-600",
 					className
 				)}
