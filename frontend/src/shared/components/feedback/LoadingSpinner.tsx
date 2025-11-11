@@ -3,7 +3,6 @@ import { cn } from "@/shared/utils";
 import { CannabisLoader } from "./CannabisLoader";
 import { MinimalCannabisLoader } from "./MinimalCannabisLoader";
 import { CookingCannabisLoader } from "./CookingCannabisLoader";
-// import type { LoaderProps } from "@/shared/types";
 
 interface LoadingSpinnerProps {
 	size?: "sm" | "md" | "lg";
@@ -34,9 +33,9 @@ export function LoadingSpinner({
 	if (variant === "cannabis") {
 		return (
 			<CannabisLoader
-				progress={progress}
-				message={text}
-				isComplete={isComplete}
+				progress={progress ?? 0}
+				message={text ?? "Loading..."}
+				isComplete={isComplete ?? false}
 				onComplete={onComplete}
 			/>
 		);
@@ -45,9 +44,9 @@ export function LoadingSpinner({
 	if (variant === "minimal") {
 		return (
 			<MinimalCannabisLoader
-				progress={progress}
-				message={text}
-				isComplete={isComplete}
+				progress={progress ?? 0}
+				message={text ?? "Loading..."}
+				isComplete={isComplete ?? false}
 				onComplete={onComplete}
 			/>
 		);
@@ -56,9 +55,9 @@ export function LoadingSpinner({
 	if (variant === "cooking") {
 		return (
 			<CookingCannabisLoader
-				progress={progress}
-				message={text}
-				isComplete={isComplete}
+				progress={progress ?? 0}
+				message={text ?? "Loading..."}
+				isComplete={isComplete ?? false}
 				onComplete={onComplete}
 			/>
 		);

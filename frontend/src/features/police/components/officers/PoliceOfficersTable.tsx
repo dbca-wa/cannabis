@@ -180,20 +180,21 @@ export const PoliceOfficersTable = () => {
 			searchQuery: debouncedSearchQuery || undefined,
 			ordering: ordering,
 			additionalParams: {
-				station:
-					filters.stationFilter && filters.stationFilter !== "all"
-						? parseInt(filters.stationFilter)
-						: undefined,
-				rank:
-					filters.rankFilter && filters.rankFilter !== "all"
-						? filters.rankFilter
-						: undefined,
-				is_sworn:
-					filters.swornFilter && filters.swornFilter !== "all"
-						? filters.swornFilter === "true"
-						: undefined,
-				include_unknown: filters.includeUnknown,
-				unknown_only: filters.unknownOnly,
+				...(filters.stationFilter && filters.stationFilter !== "all"
+					? { station: parseInt(filters.stationFilter) }
+					: {}),
+				...(filters.rankFilter && filters.rankFilter !== "all"
+					? { rank: filters.rankFilter }
+					: {}),
+				...(filters.swornFilter && filters.swornFilter !== "all"
+					? { is_sworn: filters.swornFilter === "true" }
+					: {}),
+				...(filters.includeUnknown !== undefined
+					? { include_unknown: filters.includeUnknown }
+					: {}),
+				...(filters.unknownOnly !== undefined
+					? { unknown_only: filters.unknownOnly }
+					: {}),
 			},
 		}),
 	});

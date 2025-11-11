@@ -9,6 +9,7 @@ import {
 	type UserSearchParams,
 } from "@/features/user/types/users.types";
 import type { AddUserFormData } from "../components/forms/schemas/addUserSchema";
+import type { InviteUserRequest } from "@/shared/types/backend-api.types";
 
 // Standardized query keys following police/defendants pattern
 export const usersQueryKeys = {
@@ -161,15 +162,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 
 	// Invite user mutation
 	const inviteUserMutation = useMutation({
-		mutationFn: async (inviteData: {
-			external_user_data: {
-				email: string;
-				[key: string]: any;
-			};
-			role: string;
-			is_staff?: boolean;
-			is_active?: boolean;
-		}) => {
+		mutationFn: async (inviteData: InviteUserRequest) => {
 			logger.info("Sending user invitation", {
 				email: inviteData.external_user_data?.email,
 				role: inviteData.role,
@@ -181,19 +174,13 @@ export const useUsers = (params: UserSearchParams = {}) => {
 			return result.data;
 		},
 		onSuccess: async (newUser) => {
-			// Update specific user cache
-			queryClient.setQueryData(
-				usersQueryKeys.detail(newUser.id),
-				newUser
-			);
-
 			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
 				queryKey: usersQueryKeys.all,
 			});
 
 			toast.success(
-				`Invitation sent to "${newUser.full_name}" successfully!`
+				`Invitation sent to "${newUser.external_user_data.full_name}" successfully!`
 			);
 			logger.info("User invitation sent via hook", {
 				userId: newUser.id,
@@ -262,23 +249,15 @@ export const useUsers = (params: UserSearchParams = {}) => {
 	};
 
 	const inviteUser = (
-		inviteData: {
-			external_user_data: {
-				email: string;
-				[key: string]: unknown;
-			};
-			role: string;
-			is_staff?: boolean;
-			is_active?: boolean;
-		},
+		inviteData: InviteUserRequest,
 		options?: {
-			onSuccess?: (user: IUser) => void;
+			onSuccess?: () => void;
 			onError?: (error: unknown) => void;
 		}
 	) => {
 		inviteUserMutation.mutate(inviteData, {
-			onSuccess: (user) => {
-				options?.onSuccess?.(user);
+			onSuccess: () => {
+				options?.onSuccess?.();
 			},
 			onError: (error) => {
 				options?.onError?.(error);

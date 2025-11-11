@@ -472,6 +472,8 @@ export interface PoliceStationTiny {
 	id: number;
 	name: string;
 	phone: string | null;
+	address: string;
+	postcode: string;
 }
 
 // Police Officer (matches PoliceOfficerSerializer)
@@ -501,6 +503,7 @@ export interface PoliceOfficerTiny {
 	rank_display: string;
 	station: number | null; // Added station ID for form pre-selection
 	station_name: string | null;
+	email: string;
 	is_sworn: boolean;
 }
 
@@ -893,6 +896,7 @@ export interface BotanicalAssessment {
 // Drug Bag (matches DrugBagSerializer)
 export interface DrugBag {
 	id: number;
+	submission: number; // Foreign key to submission
 	content_type: DrugBagContentType;
 	content_type_display: string; // Computed field from get_content_type_display()
 	seal_tag_numbers: string;
@@ -957,6 +961,8 @@ export interface Submission {
 	finance_approved_at: string | null; // ISO datetime string
 	botanist_approved_at: string | null; // ISO datetime string
 	documents_generated_at: string | null; // ISO datetime string (renamed from certificates_generated_at)
+	certificates_generated_at: string | null; // Legacy field
+	invoices_generated_at: string | null;
 	emails_sent_at: string | null; // ISO datetime string
 	completed_at: string | null; // ISO datetime string
 

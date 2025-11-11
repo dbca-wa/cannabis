@@ -14,16 +14,16 @@ export const CreateOfficerRouteModal = () => {
 		navigate("/police/officers");
 	};
 
-	const handleSubmit = async (data: unknown) => {
+	const handleSubmit = async (data: any) => {
 		try {
 			// Transform form data to API format
 			const transformedData = {
-				badge_number: (data as any).badge_number || undefined,
-				first_name: (data as any).first_name || undefined,
-				last_name: (data as any).last_name,
-				rank: (data as any).rank,
-				station: (data as any).station
-					? parseInt((data as unknown).station)
+				badge_number: data.badge_number || undefined,
+				first_name: data.first_name || undefined,
+				last_name: data.last_name,
+				rank: data.rank,
+				station: data.station
+					? parseInt(data.station)
 					: undefined,
 			};
 			await createOfficerMutation.mutateAsync(transformedData);

@@ -24,9 +24,6 @@ import { CommandInputWithLoading } from "@/shared/components/ui/custom/command-i
 import { useUserSearch } from "../../hooks/useUserSearch";
 import { useUserById } from "../../hooks/useUserById";
 import { InviteUserModal } from "./InviteUserModal";
-import type { User as UserType } from "@/shared/types/backend-api.types";
-
-// Import types for proper typing
 import type { IUser } from "../../types/users.types";
 
 // ===================================== COMPONENT =====================================
@@ -117,17 +114,21 @@ export const UserSearchCombobox = React.forwardRef<
 			setShowInviteModal(true);
 		};
 
-		const handleUserInvited = (newUser: UserType) => {
-			// Auto-select the newly invited user
-			onValueChange(newUser.id);
+		const handleUserInvited = () => {
+			// Note: inviteUser returns InviteRecord, not User
+			// The actual User is only created when the invitation is activated
+			// Cannot auto-select since we don't have a user ID yet
+			// Just close the dropdown
+			setOpen(false);
 		};
 
 		const handleExternalInviteUser = () => {
 			setShowExternalInviteModal(true);
 		};
 
-		const handleExternalUserInvited = (_newUser: UserType) => {
-			// Note: This will NOT auto-select users as invites need to be processed separately
+		const handleExternalUserInvited = () => {
+			// Note: inviteUser returns InviteRecord, not User
+			// The actual User is only created when the invitation is activated
 			// Just close the dropdown if it's open
 			setOpen(false);
 		};

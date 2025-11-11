@@ -146,5 +146,3 @@ jobs:
             org.opencontainers.image.title=Cannabis Backend
             org.opencontainers.image.version=${{ steps.tag.outputs.TAG_NAME }}
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-          secrets: |
-            build-secrets=${{ secrets.BUILD_SECRETS || '' }}

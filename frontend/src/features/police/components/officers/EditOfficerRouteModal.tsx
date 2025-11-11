@@ -27,7 +27,7 @@ export const EditOfficerRouteModal = () => {
 		navigate("/police/officers");
 	};
 
-	const handleSubmit = async (data: unknown) => {
+	const handleSubmit = async (data: any) => {
 		if (!officerId) return;
 
 		try {
@@ -104,6 +104,7 @@ export const EditOfficerRouteModal = () => {
 					officer={{
 						...officer,
 						station_name: officer.station_details?.name || null,
+						email: "",
 					}}
 					onSubmit={handleSubmit}
 					onCancel={handleClose}

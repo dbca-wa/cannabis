@@ -7,14 +7,14 @@ import {
 } from "@/shared/components/ui/dialog";
 import InviteUserForm from "./InviteUserForm";
 import type { InviteUserFormData } from "./InviteUserForm";
-import type { ExternalUser, User } from "@/shared/types/backend-api.types";
+import type { ExternalUser } from "@/shared/types/backend-api.types";
 import { useUsers } from "../../hooks/useUsers";
 
 interface InviteUserModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** Optional callback when user is successfully invited */
-	onCreate?: (user: User) => void;
+	/** Optional callback when invitation is successfully sent (Note: invitation ≠ user creation) */
+	onCreate?: () => void;
 	/** Optional locked role - when provided, role selection will be locked to this value */
 	lockedRole?: "botanist" | "finance" | null;
 }
@@ -31,16 +31,17 @@ export const InviteUserModal = ({
 		data: InviteUserFormData & { external_user_data: ExternalUser }
 	) => {
 		inviteUser(data, {
-			onSuccess: (newUser) => {
-				// Call onCreate callback if provided
+			onSuccess: () => {
+				// Note: inviteUser returns InviteRecord, not User
+				// The actual User is only created when the invitation is activated
+				// The invitation success toast is already shown by the mutation
 				if (onCreate) {
-					onCreate(newUser);
+					onCreate();
 				}
 				onOpenChange(false);
 			},
 			onError: (error) => {
 				console.error("Invite error:", error);
-				// Error is already handled by the hook (toast)
 			},
 		});
 	};

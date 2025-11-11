@@ -2,11 +2,7 @@
 import type {
 	User,
 	UserRole,
-	UserSearchParams as BackendUserSearchParams,
 	InviteRecord,
-	InviteUserRequest,
-	ExternalUser,
-	ExternalUserSearchResponse,
 	PaginatedResponse,
 } from "@/shared/types/backend-api.types";
 

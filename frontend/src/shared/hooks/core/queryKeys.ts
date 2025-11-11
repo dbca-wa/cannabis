@@ -123,9 +123,12 @@ export const queryKeyFactory = {
  */
 export const cacheUtils = {
 	/**
-	 * Invalidate all queries for a specific entity type
+	 * Invalidate all queries for a specific base entity type
 	 */
-	invalidateEntity: (queryClient: QueryClient, entityType: keyof typeof queryKeyFactory) => {
+	invalidateEntity: (
+		queryClient: QueryClient, 
+		entityType: 'users' | 'police' | 'defendants' | 'submissions' | 'system'
+	) => {
 		return queryClient.invalidateQueries({
 			queryKey: queryKeyFactory[entityType](),
 		});

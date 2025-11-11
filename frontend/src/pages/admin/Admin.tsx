@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AlertCircle, Settings, Shield, Clock } from "lucide-react";
+import { AlertCircle, Settings, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { logger } from "@/shared/services/logger.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";

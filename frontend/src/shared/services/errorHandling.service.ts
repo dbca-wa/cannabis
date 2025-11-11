@@ -5,7 +5,7 @@
 
 import { toast } from "sonner";
 import { logger } from "./logger.service";
-import { normalizeError, getErrorMessage, isApiError } from "@/shared/utils/error.utils";
+import { normalizeError } from "@/shared/utils/error.utils";
 import type { ServiceResult } from "@/shared/types/backend-api.types";
 
 // Error severity levels

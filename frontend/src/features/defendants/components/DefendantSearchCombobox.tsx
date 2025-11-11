@@ -21,7 +21,6 @@ import { useDefendantById } from "../hooks/useDefendants";
 import { DefendantsService } from "../services/defendants.service";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loading-overlay";
-import { useTheme } from "@/shared/hooks/ui/useTheme";
 import { CreateDefendantModal } from "./CreateDefendantModal";
 
 interface DefendantSearchComboboxProps {
@@ -56,8 +55,6 @@ export const DefendantSearchCombobox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showCreateModal, setShowCreateModal] = useState(false);
-		const { theme } = useTheme();
-		const isDark = theme === "dark";
 
 		// Enhanced search with initial data loading and error handling
 		const {
@@ -147,8 +144,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 												className={cn(
 													"text-xs",
 													DefendantsService.getDefendantCasesBadgeColorClass(
-														selectedDefendant,
-														isDark
+														selectedDefendant
 													)
 												)}
 											>
@@ -268,8 +264,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 																	className={cn(
 																		"text-xs",
 																		DefendantsService.getDefendantCasesBadgeColorClass(
-																			defendant,
-																			isDark
+																			defendant
 																		)
 																	)}
 																>
@@ -338,8 +333,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 																className={cn(
 																	"text-xs",
 																	DefendantsService.getDefendantCasesBadgeColorClass(
-																		defendant,
-																		isDark
+																		defendant
 																	)
 																)}
 															>

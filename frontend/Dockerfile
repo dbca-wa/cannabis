@@ -27,7 +27,8 @@ ARG BUILD_SCRIPT=build
 ENV VITE_PRODUCTION_BACKEND_API_URL=$VITE_PRODUCTION_BACKEND_API_URL
 ENV VITE_VERSION=$VITE_VERSION
 
-# Build the application (defaults to 'build' which includes type checking)
+# Build the application with TypeScript type checking enabled
+# Uses 'build' script which runs: tsc -b && vite build
 RUN bun run ${BUILD_SCRIPT}
 
 # ======================== PRODUCTION STAGE ========================

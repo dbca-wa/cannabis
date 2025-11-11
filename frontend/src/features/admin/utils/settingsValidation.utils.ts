@@ -5,7 +5,7 @@
  * with detailed error messages and formatting helpers
  */
 
-import type { SystemSettings, SystemSettingsUpdateRequest } from "../types/settings.types";
+import type { SystemSettings } from "../types/settings.types";
 
 // Validation result interface
 export interface ValidationResult {

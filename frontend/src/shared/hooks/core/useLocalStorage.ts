@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { storage } from "@/shared/services/storage.service";
 import { logger } from "@/shared/services/logger.service";
 
-interface UseLocalStorageOptions {
+export interface UseLocalStorageOptions {
 	ttl?: number;
 	encrypt?: boolean;
 	syncAcrossTabs?: boolean;
 }
 
-interface UseLocalStorageReturn<T> {
+export interface UseLocalStorageReturn<T> {
 	value: T;
 	setValue: (value: T | ((prev: T) => T)) => void;
 	removeValue: () => void;

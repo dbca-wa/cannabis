@@ -28,18 +28,14 @@ import {
 	TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import {
-	AlertCircle,
 	DollarSign,
 	HelpCircle,
 	Loader2,
 	Save,
 	X,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { apiClient, ENDPOINTS } from "@/shared/services/api";
 import {
 	errorHandlingService,
-	showSuccess,
 } from "@/shared/services/errorHandling.service";
 import { logger } from "@/shared/services/logger.service";
 import type { SystemSettings } from "@/shared/types/backend-api.types";

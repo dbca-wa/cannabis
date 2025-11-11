@@ -19,8 +19,7 @@ import type {
   SettingsValidationError,
   SettingsChangeNotification,
   SettingsCacheMetadata,
-  SettingsServiceConfig,
-  SettingsAuditUser
+  SettingsServiceConfig
 } from "../types/settings.types";
 
 // Default service configuration
@@ -143,7 +142,7 @@ class SystemSettingsService {
       // Create the request promise and store it for deduplication
       const requestPromise = this.makeApiCall<SystemSettings>(
         () => {
-          logger.debug("Making API call to", ENDPOINTS.SYSTEM.SETTINGS);
+          logger.debug("Making API call", { endpoint: ENDPOINTS.SYSTEM.SETTINGS });
           return apiClient.get(ENDPOINTS.SYSTEM.SETTINGS);
         },
         "fetch_settings"

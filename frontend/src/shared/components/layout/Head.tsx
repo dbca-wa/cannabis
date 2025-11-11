@@ -49,7 +49,7 @@ export const Head = ({
 		return formattedTitle.substring(0, 60);
 	};
 
-	const getRobotsContent = (path: string) => {
+	const getRobotsContent = (_path: string) => {
 		return "noindex, nofollow";
 	};
 

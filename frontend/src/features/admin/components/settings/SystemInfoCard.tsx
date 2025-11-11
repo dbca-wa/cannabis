@@ -11,7 +11,6 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import {
 	Info,
-	RefreshCw,
 	ChevronDown,
 	ChevronRight,
 	Server,
@@ -38,7 +37,6 @@ interface SystemInfoCardProps {
 
 export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 	settings,
-	onSettingsUpdate,
 }) => {
 	const [expandedSections, setExpandedSections] = useState<
 		Record<string, boolean>

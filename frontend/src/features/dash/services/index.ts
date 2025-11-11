@@ -1,9 +1,8 @@
 export { dashboardService, DashboardService } from "./dashboard.service";
+
+// Re-export types from backend-api.types.ts for convenience
 export type {
-	MySubmission,
-	MySubmissionsResponse,
-	MonthlyData,
-	ComparisonData,
-	CertificateStats,
-	RevenueStats,
-} from "./dashboard.service";
+	DashboardUserSubmissionsResponse,
+	CertificateStatisticsResponse,
+	RevenueStatisticsResponse,
+} from "@/shared/types/backend-api.types";

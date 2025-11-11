@@ -30,7 +30,6 @@ import {
 	TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import {
-	AlertCircle,
 	Mail,
 	HelpCircle,
 	Loader2,
@@ -42,8 +41,6 @@ import {
 	Info,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-
-import { apiClient, ENDPOINTS } from "@/shared/services/api";
 import {
 	errorHandlingService,
 	showSuccess,

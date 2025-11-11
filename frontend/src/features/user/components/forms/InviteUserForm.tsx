@@ -45,13 +45,13 @@ const InviteUserForm = ({
 		control,
 		watch,
 		setValue,
-		formState: { errors, isValid, isDirty },
-	} = useForm({
+		formState: { errors, isValid, /* isDirty */ },
+	} = useForm<InviteUserFormData>({
 		resolver: zodResolver(inviteUserSchema),
 		mode: "onChange",
 		defaultValues: {
 			external_user_email: "",
-			role: lockedRole || "none",
+			role: (lockedRole || "none") as "botanist" | "finance" | "none",
 		},
 	});
 

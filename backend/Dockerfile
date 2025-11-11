@@ -46,9 +46,20 @@ RUN rm -f ./license.dat
 RUN poetry config virtualenvs.create false
 RUN poetry install --only=main --no-root
 
-RUN --mount=type=secret,id=build-secrets \
-    set -a && . /run/secrets/build-secrets && set +a \
-    && python manage.py collectstatic --noinput
+# Collect static files (needs dummy env vars to load Django settings)
+# NOTE: Docker security scanner may warn about SECRET_KEY and IT_ASSETS_ACCESS_TOKEN
+# These are DUMMY values only used during build for collectstatic - NOT real secrets
+# Real secrets are injected at runtime via Rancher environment variables
+ENV SECRET_KEY="dummy-build-key" \
+    DATABASE_URL="sqlite:///dummy.db" \
+    EXTERNAL_PASS="dummy" \
+    IT_ASSETS_ACCESS_TOKEN="dummy" \
+    IT_ASSETS_USER="dummy" \
+    IT_ASSETS_URL="http://dummy" \
+    MAIN_DOMAIN="dummy.local" \
+    MAINTAINER_EMAIL="dummy@dummy.local" \
+    DEBUG="False"
+RUN python manage.py collectstatic --noinput
 
 # ====================== CODE OBFUSCATION ======================
 # Compile Python bytecode and remove source files for security and clean environment

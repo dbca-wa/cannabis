@@ -39,4 +39,3 @@ export * from "./ui/custom/search-combobox-skeleton-presets";
 export * from "./ui/custom/command-input-with-loading";
 export * from "./ui/custom/search-error-display";
 // Component types
-export type * from "./types";

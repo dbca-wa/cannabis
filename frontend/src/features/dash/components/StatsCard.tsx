@@ -114,7 +114,6 @@ const StatsCard = ({
 	iconColour,
 }: IStatCard) => {
 	const [displayAmount, setDisplayAmount] = useState<number>(0);
-	const [showTooltip, setShowTooltip] = useState<boolean>(false);
 	const animationRef = useRef<number>(0);
 
 	const runAnimation = () => {

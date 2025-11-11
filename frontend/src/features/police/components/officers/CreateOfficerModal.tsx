@@ -29,7 +29,20 @@ export const CreateOfficerModal = ({
 
 			// Call onCreate callback if provided
 			if (onCreate) {
-				onCreate(newOfficer);
+				const tinyOfficer: PoliceOfficerTiny = {
+					id: newOfficer.id,
+					badge_number: newOfficer.badge_number,
+					first_name: newOfficer.first_name,
+					last_name: newOfficer.last_name,
+					full_name: newOfficer.full_name,
+					rank: newOfficer.rank,
+					rank_display: newOfficer.rank_display,
+					station: newOfficer.station,
+					station_name: newOfficer.station_details?.name || null,
+					email: "",
+					is_sworn: newOfficer.is_sworn,
+				};
+				onCreate(tinyOfficer);
 			}
 
 			onOpenChange(false);

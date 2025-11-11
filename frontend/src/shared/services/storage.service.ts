@@ -16,9 +16,6 @@ interface StorageItem<T = unknown> {
 	version?: string;
 }
 
-// Import the correct UserPreferences type from backend API types
-import type { UserPreferences } from "@/shared/types/backend-api.types";
-
 // Type for storage info response
 interface StorageInfo {
 	localStorageSize: number;
@@ -38,7 +35,6 @@ interface StorageItemInfo {
 
 class StorageService {
 	private encryptionKey: string | null = null;
-	private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
 	constructor() {
 		this.initialiseEncryption();
@@ -52,7 +48,7 @@ class StorageService {
 
 	private startCleanupTimer(): void {
 		if (STORAGE_CONFIG.CLEANUP.ENABLED) {
-			this.cleanupInterval = setInterval(() => {
+			setInterval(() => {
 				this.cleanupExpiredItems();
 			}, STORAGE_CONFIG.CLEANUP.INTERVAL);
 		}

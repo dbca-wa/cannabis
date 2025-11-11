@@ -8,7 +8,6 @@ import {
 	type BreadcrumbItem,
 } from "@/shared/components/ui/breadcrumb";
 import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
-// import { PreferenceSyncNotification } from "@/shared/components/feedback/PreferenceSyncNotification";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import {
 	useKeyboardShortcuts,

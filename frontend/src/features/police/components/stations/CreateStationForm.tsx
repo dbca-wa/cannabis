@@ -55,7 +55,7 @@ export function CreateStationForm({
 	const isLoading = isSubmitting || createStationMutation.isPending;
 
 	const handleCreateStation = async () => {
-		const isValid = await handleSubmit(onSubmit)();
+		await handleSubmit(onSubmit)();
 	};
 
 	return (

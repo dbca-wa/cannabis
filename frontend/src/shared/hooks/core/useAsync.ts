@@ -8,13 +8,13 @@ interface UseAsyncState<T> {
 	error: string | null;
 }
 
-interface UseAsyncOptions {
+export interface UseAsyncOptions {
 	immediate?: boolean;
 	onSuccess?: (data: unknown) => void;
 	onError?: (error: string) => void;
 }
 
-interface UseAsyncReturn<T, Args extends unknown[]> {
+export interface UseAsyncReturn<T, Args extends unknown[]> {
 	data: T | null;
 	loading: boolean;
 	error: string | null;

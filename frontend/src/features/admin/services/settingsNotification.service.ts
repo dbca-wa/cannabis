@@ -10,7 +10,6 @@
 
 import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
-import { securityService } from "./security.service";
 import type {
   SettingsChangeNotification,
   SystemSettings,
@@ -64,7 +63,7 @@ class SettingsNotificationService {
   handleSettingsChange(
     notification: SettingsChangeNotification,
     environment: string,
-    settings?: SystemSettings
+    _settings?: SystemSettings
   ): void {
     try {
       const isCritical = this.isCriticalChange(notification);
@@ -298,12 +297,9 @@ class SettingsNotificationService {
   // Private helper methods
 
   private isCriticalChange(notification: SettingsChangeNotification): boolean {
-    // Use security service to determine if change is critical
-    const change = {
-      field: notification.field,
-      oldValue: notification.oldValue,
-      newValue: notification.newValue
-    };
+    //   oldValue: notification.oldValue,
+    //   newValue: notification.newValue
+    // };
 
     // Check for significant pricing changes (>20% change)
     if (isPricingField(notification.field)) {
