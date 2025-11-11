@@ -53,7 +53,7 @@ This system modernises the cannabis identification workflow by replacing an outd
 ## Development Setup
 
 This project has been setup to run entirely locally or in a Docker environment.
-You can use docker-compose.dev.yml to establish a local docker setup or use bun and poetry:
+You can use docker-compose.dev.yml to establish a local docker setup (after run migrations and createsuperuser) or use bun and poetry:
 
 ```shell
   # From frontend folder after bun install

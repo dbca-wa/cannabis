@@ -10,10 +10,17 @@ Dockerfile.dev
 .development.env
 .staging.env
 .production.env
-
+.build.env
 .env.test
 .env.example
+*.env
 *.log
+
+# Sensitive data directories
+files/
+etl/
+uploads/
+media/
 
 # Python cache and compiled files
 __pycache__/
@@ -118,6 +125,9 @@ temp/
 *.pfx
 secrets/
 .secrets/
+license.dat
+*license.dat
+*.dat
 
 # Development tools
 .pre-commit-config.yaml

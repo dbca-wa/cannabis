@@ -35,8 +35,8 @@ RUN DEB_FILE=prince.deb \
     && yes | gdebi ${DEB_FILE} \
     && rm -f ${DEB_FILE}
 
-COPY license.dat /usr/lib/prince/license/license.dat
-COPY license.dat /lib/prince/license/license.dat
+# COPY license.dat /usr/lib/prince/license/license.dat
+# COPY license.dat /lib/prince/license/license.dat
 
 
 # Configure Poetry (don't create virtual env since we're in container)
