@@ -55,7 +55,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=Cannabis Frontend (Test)
             org.opencontainers.image.version=${{ steps.tag.outputs.TAG_NAME }}
-            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
   build-frontend-production:
     name: Build Frontend (Production)
@@ -99,7 +99,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=Cannabis Frontend (Production)
             org.opencontainers.image.version=${{ steps.tag.outputs.TAG_NAME }}
-            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
   # ====================== BACKEND BUILD ======================
   # Backend doesn't need separate test/prod builds - same image, different runtime config
@@ -145,4 +145,4 @@ jobs:
           labels: |
             org.opencontainers.image.title=Cannabis Backend
             org.opencontainers.image.version=${{ steps.tag.outputs.TAG_NAME }}
-            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
