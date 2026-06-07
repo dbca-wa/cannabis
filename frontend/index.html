@@ -25,6 +25,21 @@
 		/>
 
 		<title>Cannabis</title>
+		<!-- Apply theme before React renders to prevent flash of wrong theme -->
+		<script>
+			(function () {
+				try {
+					var resolved = localStorage.getItem("cannabis-theme-resolved");
+					if (resolved === "dark" || resolved === "light") {
+						document.documentElement.classList.add(resolved);
+					} else if (
+						window.matchMedia("(prefers-color-scheme: dark)").matches
+					) {
+						document.documentElement.classList.add("dark");
+					}
+				} catch (e) {}
+			})();
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>
