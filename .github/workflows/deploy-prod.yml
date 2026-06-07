@@ -89,6 +89,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
           build-args: |
             VITE_VERSION=${{ steps.version.outputs.VERSION }}
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           cache-from: type=gha,scope=frontend-prod
           cache-to: type=gha,mode=min,scope=frontend-prod
           labels: |
