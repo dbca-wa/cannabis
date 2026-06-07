@@ -1,4 +1,3 @@
-import { Head } from "@/shared/components/layout/Head";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Inbox } from "lucide-react";
@@ -6,7 +5,6 @@ import { Inbox } from "lucide-react";
 const TestInvoicePage = () => {
 	return (
 		<>
-			<Head title="Invoice Test" />
 			<div className="mb-4">
 				<Button
 					variant="ghost"

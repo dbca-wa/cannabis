@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 import { PrimaryDefendantSelector } from "./PrimaryDefendantSelector";
 import { SecondaryDefendantSelector } from "./SecondaryDefendantSelector";
@@ -9,6 +10,7 @@ import { useDefendantMerge } from "../../hooks/useDefendantMerge";
 import { Button } from "@/shared/components/ui/button";
 
 export const DefendantMergePage = () => {
+	useDocumentTitle("Merge Defendants");
 	const [primary, setPrimary] = useState<DefendantTiny | null>(null);
 	const [secondaries, setSecondaries] = useState<DefendantTiny[]>([]);
 	const mergeMutation = useDefendantMerge();

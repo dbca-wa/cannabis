@@ -9,7 +9,6 @@ import {
 	CardTitle,
 } from "@/shared/components/ui/card";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { Head } from "@/shared/components/layout/Head";
 
 const InviteActivationError = () => {
 	const navigate = useNavigate();
@@ -36,7 +35,6 @@ const InviteActivationError = () => {
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background p-4">
-			<Head title="Activation Error" />
 			<Card className="w-full max-w-md mx-auto">
 				<CardHeader className="text-center">
 					<div className="flex justify-center mb-4">

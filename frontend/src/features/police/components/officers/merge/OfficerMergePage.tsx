@@ -18,6 +18,7 @@ import {
 	AlertTitle,
 } from "@/shared/components/ui/alert";
 import { cn } from "@/shared/utils";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { usePoliceOfficers } from "../../../hooks/usePoliceOfficers";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import { apiClient } from "@/shared/services/api";
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
 
 export const OfficerMergePage = () => {
+	useDocumentTitle("Merge Officers");
 	const [primary, setPrimary] = useState<PoliceOfficerTiny | null>(null);
 	const [secondaries, setSecondaries] = useState<PoliceOfficerTiny[]>([]);
 	const queryClient = useQueryClient();

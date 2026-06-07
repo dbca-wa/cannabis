@@ -50,3 +50,4 @@ export { useSystemSettings } from "./data/useSystemSettings";
 
 // App-specific hooks (remain in root for now)
 export { useAppInitialisation } from "./useAppInitialisation";
+export { useDocumentTitle } from "./useDocumentTitle";

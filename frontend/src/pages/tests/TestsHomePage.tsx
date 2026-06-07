@@ -1,4 +1,3 @@
-import { Head } from "@/shared/components/layout/Head";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNavigate } from "react-router";
@@ -44,7 +43,6 @@ const TestsHomePage = () => {
 
 	return (
 		<>
-			<Head title="Tests" />
 			<PageHeader
 				title="Development Tools"
 				subtitle="Test email delivery, PDF generation, and certificate workflows."

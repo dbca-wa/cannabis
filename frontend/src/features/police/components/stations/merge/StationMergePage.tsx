@@ -18,12 +18,14 @@ import {
 	AlertTitle,
 } from "@/shared/components/ui/alert";
 import { cn } from "@/shared/utils";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useStations } from "../../../hooks/usePoliceStations";
 import { useStationMerge } from "../../../hooks/useStationMerge";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import type { PoliceStation } from "@/shared/types/backend-api.types";
 
 export const StationMergePage = () => {
+	useDocumentTitle("Merge Stations");
 	const [primary, setPrimary] = useState<PoliceStation | null>(null);
 	const [secondaries, setSecondaries] = useState<PoliceStation[]>([]);
 	const mergeMutation = useStationMerge();

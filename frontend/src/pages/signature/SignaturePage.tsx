@@ -14,7 +14,7 @@ import {
 	ImageOff,
 } from "lucide-react";
 
-import { Head } from "@/shared/components/layout/Head";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import {
 	Tabs,
 	TabsContent,
@@ -59,6 +59,7 @@ const SignaturePage = () => {
 		hasSignature,
 		signature?.updated_at
 	);
+	useDocumentTitle("My Signature");
 
 	const botanistName = user
 		? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || "Botanist"
@@ -66,8 +67,6 @@ const SignaturePage = () => {
 
 	return (
 		<div className="flex flex-col h-full">
-			<Head title="My Signature" />
-
 			{/* Minimal back header */}
 			<div className="px-6 py-4 border-b border-border/60">
 				<button

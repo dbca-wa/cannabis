@@ -18,7 +18,7 @@ import {
 } from "@/features/cases/utils";
 import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
-import { Head } from "@/shared/components/layout/Head";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 /**
  * CaseDetailPage Component
@@ -51,6 +51,8 @@ export const CaseDetailPage: React.FC = observer(() => {
 		error,
 		refetch,
 	} = useCaseById(parsedCaseId);
+
+	useDocumentTitle(caseObj ? `Case ${caseObj.case_number}` : "Case");
 
 	// Phase viewing state (defaults to current phase or URL parameter)
 	const [viewingPhase, setViewingPhase] = useState<CasePhase | null>(null);
@@ -200,7 +202,7 @@ export const CaseDetailPage: React.FC = observer(() => {
 	// Loading state
 	if (isLoading) {
 		return (
-			<ContentLayout maxWidth="full">
+			<ContentLayout maxWidth="full" title="Case">
 				<div className="space-y-6">
 					{/* Back button skeleton */}
 					<Skeleton className="h-9 w-32 rounded-md" />
@@ -247,8 +249,7 @@ export const CaseDetailPage: React.FC = observer(() => {
 	// Error state - Not found
 	if (isError || !caseObj) {
 		return (
-			<ContentLayout maxWidth="full">
-				<Head title="Case Details" />
+			<ContentLayout maxWidth="full" title="Case">
 				<div className="flex items-center justify-center min-h-[400px]">
 					<div className="text-center max-w-md">
 						<AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
@@ -281,7 +282,7 @@ export const CaseDetailPage: React.FC = observer(() => {
 	// Permission denied state
 	if (!viewingPhase) {
 		return (
-			<ContentLayout maxWidth="full">
+			<ContentLayout maxWidth="full" title={`Case ${caseObj.case_number}`}>
 				<div className="flex items-center justify-center min-h-[400px]">
 					<div className="text-center max-w-md">
 						<AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
@@ -302,7 +303,7 @@ export const CaseDetailPage: React.FC = observer(() => {
 	const userRole = getUserRole();
 
 	return (
-		<ContentLayout maxWidth="full">
+		<ContentLayout maxWidth="full" title={`Case ${caseObj.case_number}`}>
 			<div className="space-y-6">
 				{/* Back Button */}
 				<div>

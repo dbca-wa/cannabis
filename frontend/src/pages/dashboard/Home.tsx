@@ -10,6 +10,7 @@ import {
 	ReferenceLine,
 } from "recharts";
 import { CountUp } from "@/shared/components/CountUp";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -133,6 +134,8 @@ const Home = () => {
 		revenueStats?.previous_year_same_month?.change_percentage ?? null;
 
 	const userName = user?.first_name || user?.full_name || "there";
+
+	useDocumentTitle("Dashboard");
 
 	return (
 		<>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useMatch } from "react-router";
 import { Merge } from "lucide-react";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { PageTransition } from "@/shared/components/PageTransition";
 import { PoliceButton } from "@/shared/components/NewCaseButton";
@@ -10,6 +11,8 @@ import { PoliceStationsTable } from "@/features/police/components/stations/Polic
 const Stations = () => {
 	const [totalCount, setTotalCount] = useState<number | undefined>(undefined);
 	const navigate = useNavigate();
+
+	useDocumentTitle("Stations");
 
 	// Full-page child routes that replace the list view
 	const isMergePage = useMatch("/stations/merge");

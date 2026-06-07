@@ -12,7 +12,6 @@ import {
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { activateInvitation as activateInvitationService } from "@/features/auth/services/auth.service";
 import { logger } from "@/shared/services/logger.service";
-import { Head } from "@/shared/components/layout/Head";
 
 interface ActivationResponse {
 	message: string;
@@ -279,7 +278,6 @@ const InviteActivation = () => {
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background p-4">
-			<Head title="Activate Account" />
 			{renderContent()}
 		</div>
 	);
