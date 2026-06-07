@@ -322,10 +322,21 @@ class TestCertificateViews:
 class TestGenerateTestCertificateView:
     """Tests for GenerateTestCertificateView — generates test PDF with mock data."""
 
-    def test_generates_pdf_with_empty_body(self, authenticated_client):
+    @patch("cases.services.pdf_service.subprocess.run")
+    @patch("cases.services.pdf_service.render_to_string")
+    def test_generates_pdf_with_empty_body(
+        self, mock_render, mock_subprocess, authenticated_client
+    ):
         """POST generates a PDF using hardcoded mock data (no input required)."""
+        mock_render.return_value = "<html>Test Certificate</html>"
+        mock_subprocess.return_value = Mock(returncode=0, stderr="")
+
         url = reverse("test_certificate")
-        response = authenticated_client.post(url, {}, format="json")
+        with patch("builtins.open", create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                b"%PDF-1.4 fake content"
+            )
+            response = authenticated_client.post(url, {}, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         assert response["Content-Type"] == "application/pdf"
