@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-	DefendantsService,
+	getDefendants,
+	getDefendantById,
+	createDefendant,
+	updateDefendant,
+	deleteDefendant,
 	type DefendantsQueryParams,
 } from "../services/defendants.service";
 
@@ -21,137 +25,102 @@ export const defendantsQueryKeys = {
 	detail: (id: number) => [...defendantsQueryKeys.details(), id] as const,
 };
 
-/**
- * Hook to fetch paginated defendants
- */
-export function useDefendants(params: DefendantsQueryParams = {}) {
+/** Hook to fetch paginated defendants */
+export const useDefendants = (params: DefendantsQueryParams = {}) => {
 	return useQuery({
 		queryKey: defendantsQueryKeys.list(params),
-		queryFn: () => DefendantsService.getDefendants(params),
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		queryFn: () => getDefendants(params),
+		staleTime: 5 * 60 * 1000,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
-}
+};
 
-/**
- * Hook to fetch a single defendant by ID
- */
-export function useDefendantById(id: number | null) {
+/** Hook to fetch a single defendant by ID */
+export const useDefendantById = (id: number | null) => {
 	return useQuery({
 		queryKey: defendantsQueryKeys.detail(id!),
-		queryFn: () => DefendantsService.getDefendantById(id!),
+		queryFn: () => getDefendantById(id!),
 		enabled: !!id,
-		...cacheConfig.detail, // Use optimized cache settings
+		...cacheConfig.detail,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
-}
+};
 
-/**
- * Hook to create a new defendant
- */
-export function useCreateDefendant() {
+/** Hook to create a new defendant */
+export const useCreateDefendant = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: DefendantCreateRequest) =>
-			DefendantsService.createDefendant(data),
+		mutationFn: (data: DefendantCreateRequest) => createDefendant(data),
 		onSuccess: async (newDefendant) => {
-			// Add the new defendant to the cache
 			queryClient.setQueryData(
 				defendantsQueryKeys.detail(newDefendant.id),
 				newDefendant
 			);
-
-			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
 				queryKey: defendantsQueryKeys.all,
 			});
-
 			toast.success("Defendant created successfully!");
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to create defendant:", error);
-			toast.error(
-				(error as Error)?.message || "Failed to create defendant"
-			);
+			toast.error((error as Error)?.message || "Failed to create defendant");
 		},
 	});
-}
+};
 
-/**
- * Hook to update a defendant
- */
-export function useUpdateDefendant() {
+/** Hook to update a defendant */
+export const useUpdateDefendant = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({
-			id,
-			data,
-		}: {
-			id: number;
-			data: DefendantUpdateRequest;
-		}) => DefendantsService.updateDefendant(id, data),
+		mutationFn: ({ id, data }: { id: number; data: DefendantUpdateRequest }) =>
+			updateDefendant(id, data),
 		onSuccess: async (updatedDefendant) => {
-			// Update the defendant in the cache
 			queryClient.setQueryData(
 				defendantsQueryKeys.detail(updatedDefendant.id),
 				updatedDefendant
 			);
-
-			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
 				queryKey: defendantsQueryKeys.all,
 			});
-
 			toast.success("Defendant updated successfully!");
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to update defendant:", error);
-			toast.error(
-				(error as Error)?.message || "Failed to update defendant"
-			);
+			toast.error((error as Error)?.message || "Failed to update defendant");
 		},
 	});
-}
+};
 
-/**
- * Hook to delete a defendant
- */
-export function useDeleteDefendant() {
+/** Hook to delete a defendant */
+export const useDeleteDefendant = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => DefendantsService.deleteDefendant(id),
+		mutationFn: (id: number) => deleteDefendant(id),
 		onSuccess: async (_, deletedId) => {
-			// Remove the defendant from the cache
 			queryClient.removeQueries({
 				queryKey: defendantsQueryKeys.detail(deletedId),
 			});
-
-			// Invalidate all defendants queries to refresh everywhere
 			queryClient.invalidateQueries({
 				queryKey: defendantsQueryKeys.all,
 			});
-
 			toast.success("Defendant deleted successfully!");
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to delete defendant:", error);
 
-			// Handle specific error for defendants with associated cases
 			const errorMessage = (error as Error)?.message || "";
 			const errorStatus = (error as { status?: number })?.status;
 
 			if (errorMessage.includes("cases") || errorStatus === 400) {
-				toast.error(
-					"Cannot delete defendant: Defendant has associated cases"
-				);
+				toast.error("Cannot delete defendant: Defendant has associated cases");
 			} else {
 				toast.error(errorMessage || "Failed to delete defendant");
 			}
 		},
 	});
-}
+};

@@ -29,12 +29,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { IndeterminateCheckbox } from "@/shared/components/ui/custom/indeterminate-checkbox";
 import { BulkActions } from "@/shared/components/ui/custom/bulk-actions";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import { TablePagination } from "@/shared/components/ui/custom/table-pagination";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import { useBulkSelection } from "@/shared/hooks/data/useBulkSelection";
 import { useBreakpoint } from "@/shared/hooks/ui/useResponsive";
@@ -74,6 +74,7 @@ export const InvoicesTable = () => {
 		data: invoicesResponse,
 		isLoading,
 		error,
+		refetch: refetchInvoices,
 	} = useInvoices({
 		page: pagination.currentPage,
 		limit: pagination.pageSize,
@@ -119,6 +120,7 @@ export const InvoicesTable = () => {
 		[sortField]
 	);
 
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const handleResetFilters = useCallback(() => {
 		setSearchQuery("");
 		setSortField("created_at");
@@ -136,9 +138,7 @@ export const InvoicesTable = () => {
 		const filename = generateFilename("invoices", "csv");
 
 		exportToCSV(dataToExport, columns, { filename });
-		toast.success(
-			`Exported ${dataToExport.length} invoice(s) to ${filename}`
-		);
+		toast.success(`Exported ${dataToExport.length} invoice(s) to ${filename}`);
 	}, [bulkSelection, invoices]);
 
 	const handleExportJSON = useCallback(() => {
@@ -151,9 +151,7 @@ export const InvoicesTable = () => {
 		const filename = generateFilename("invoices", "json");
 
 		exportToJSON(dataToExport, columns, { filename });
-		toast.success(
-			`Exported ${dataToExport.length} invoice(s) to ${filename}`
-		);
+		toast.success(`Exported ${dataToExport.length} invoice(s) to ${filename}`);
 	}, [bulkSelection, invoices]);
 
 	// Navigation handlers
@@ -167,6 +165,7 @@ export const InvoicesTable = () => {
 	const shortcuts = useMemo(
 		() => [
 			commonShortcuts.table.selectAll(() => bulkSelection.toggleAll()),
+			// eslint-disable-next-line react-hooks/refs
 			commonShortcuts.table.search(() => searchInputRef.current?.focus()),
 			commonShortcuts.table.export(() => handleExportCSV()),
 			{
@@ -213,10 +212,10 @@ export const InvoicesTable = () => {
 		return (
 			<div className="space-y-4">
 				<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-					<Skeleton className="h-10 w-full sm:w-[300px]" />
+					<Skeleton className="h-9 w-64 rounded-md" />
 					<div className="flex gap-2">
-						<Skeleton className="h-10 w-[120px]" />
-						<Skeleton className="h-10 w-[150px]" />
+						<Skeleton className="h-9 w-28 rounded-md" />
+						<Skeleton className="h-9 w-32 rounded-md" />
 					</div>
 				</div>
 				<div className="rounded-md border">
@@ -227,48 +226,48 @@ export const InvoicesTable = () => {
 									<Skeleton className="h-4 w-4" />
 								</TableHead>
 								<TableHead>
+									<Skeleton className="h-4 w-6" />
+								</TableHead>
+								<TableHead>
+									<Skeleton className="h-4 w-28" />
+								</TableHead>
+								<TableHead>
+									<Skeleton className="h-4 w-28" />
+								</TableHead>
+								<TableHead>
 									<Skeleton className="h-4 w-16" />
 								</TableHead>
 								<TableHead>
-									<Skeleton className="h-4 w-32" />
+									<Skeleton className="h-4 w-16" />
 								</TableHead>
 								<TableHead>
-									<Skeleton className="h-4 w-24" />
-								</TableHead>
-								<TableHead>
-									<Skeleton className="h-4 w-24" />
-								</TableHead>
-								<TableHead>
-									<Skeleton className="h-4 w-24" />
-								</TableHead>
-								<TableHead className="text-right">
-									<Skeleton className="h-4 w-16 ml-auto" />
+									<Skeleton className="h-4 w-14" />
 								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{[...Array(5)].map((_, i) => (
+							{Array.from({ length: 5 }).map((_, i) => (
 								<TableRow key={i}>
 									<TableCell>
 										<Skeleton className="h-4 w-4" />
 									</TableCell>
 									<TableCell>
-										<Skeleton className="h-4 w-12" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-32" />
+										<Skeleton className="h-4 w-8" />
 									</TableCell>
 									<TableCell>
 										<Skeleton className="h-4 w-24" />
 									</TableCell>
 									<TableCell>
-										<Skeleton className="h-4 w-24" />
+										<Skeleton className="h-4 w-20" />
 									</TableCell>
 									<TableCell>
-										<Skeleton className="h-4 w-24" />
+										<Skeleton className="h-4 w-16" />
 									</TableCell>
-									<TableCell className="text-right">
-										<Skeleton className="h-8 w-8 ml-auto" />
+									<TableCell>
+										<Skeleton className="h-4 w-20" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-8 rounded-md ml-auto" />
 									</TableCell>
 								</TableRow>
 							))}
@@ -283,16 +282,16 @@ export const InvoicesTable = () => {
 	if (error) {
 		return (
 			<div className="p-8 text-center">
-				<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-					Error Loading Invoices
-				</h3>
-				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+				<FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+				<h3 className="text-lg font-semibold mb-2">Error Loading Invoices</h3>
+				<p className="text-sm text-muted-foreground mb-4">
 					{error instanceof Error
 						? error.message
 						: "Failed to load invoices. Please try again."}
 				</p>
-				<Button onClick={() => window.location.reload()}>Retry</Button>
+				<Button onClick={() => refetchInvoices()} variant="outline">
+					Try Again
+				</Button>
 			</div>
 		);
 	}
@@ -315,17 +314,13 @@ export const InvoicesTable = () => {
 					</Button>
 				</div>
 				<div className="rounded-md border p-12 text-center">
-					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-						No Invoices Yet
+					<FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+					<h3 className="text-lg font-semibold mb-2">
+						No invoices generated yet
 					</h3>
-					<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-						Get started by creating your first invoice.
+					<p className="text-sm text-muted-foreground mb-4">
+						Invoices are generated when a case reaches the finance phase.
 					</p>
-					<Button onClick={handleCreate}>
-						<Plus className="mr-2 h-4 w-4" />
-						Create Invoice
-					</Button>
 				</div>
 			</div>
 		);
@@ -357,10 +352,7 @@ export const InvoicesTable = () => {
 						<RotateCcw className="mr-2 h-4 w-4" />
 						Reset Filters
 					</Button>
-					<Button
-						onClick={handleCreate}
-						className="flex-1 sm:flex-none"
-					>
+					<Button onClick={handleCreate} className="flex-1 sm:flex-none">
 						<Plus className="mr-2 h-4 w-4" />
 						New Invoice
 					</Button>
@@ -450,25 +442,20 @@ export const InvoicesTable = () => {
 									{getSortIcon("created_at")}
 								</Button>
 							</TableHead>
-							<TableHead className="text-right">
-								Actions
-							</TableHead>
+							<TableHead className="text-right">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{invoices.length === 0 ? (
 							<TableRow>
-								<TableCell
-									colSpan={7}
-									className="h-24 text-center"
-								>
-									<div className="flex flex-col items-center justify-center text-gray-500">
-										<FileText className="h-8 w-8 mb-2" />
-										<p>No invoices found</p>
+								<TableCell colSpan={7} className="h-48 text-center">
+									<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+										<FileText className="h-12 w-12 opacity-40 mb-4" />
+										<p className="text-lg font-medium mb-2">
+											No invoices found
+										</p>
 										{debouncedSearchQuery && (
-											<p className="text-sm mt-1">
-												Try adjusting your search
-											</p>
+											<p className="text-sm">Try adjusting your search.</p>
 										)}
 									</div>
 								</TableCell>
@@ -478,32 +465,22 @@ export const InvoicesTable = () => {
 								<TableRow key={invoice.id}>
 									<TableCell>
 										<IndeterminateCheckbox
-											checked={bulkSelection.isSelected(
-												invoice.id
-											)}
+											checked={bulkSelection.isSelected(invoice.id)}
 											onCheckedChange={() =>
-												bulkSelection.toggleItem(
-													invoice.id
-												)
+												bulkSelection.toggleItem(invoice.id)
 											}
 										/>
 									</TableCell>
-									<TableCell className="font-medium">
-										{invoice.id}
-									</TableCell>
+									<TableCell className="font-medium">{invoice.id}</TableCell>
 									<TableCell className="font-mono text-sm">
 										{invoice.invoice_number}
 									</TableCell>
-									<TableCell>
-										{invoice.customer_number}
-									</TableCell>
+									<TableCell>{invoice.customer_number}</TableCell>
 									<TableCell className="font-semibold">
 										{formatCurrency(invoice.total)}
 									</TableCell>
 									<TableCell>
-										{new Date(
-											invoice.created_at
-										).toLocaleDateString()}
+										{new Date(invoice.created_at).toLocaleDateString()}
 									</TableCell>
 									<TableCell className="text-right">
 										<DropdownMenu>
@@ -514,37 +491,26 @@ export const InvoicesTable = () => {
 													className="h-8 w-8 p-0"
 												>
 													<MoreHorizontal className="h-4 w-4" />
-													<span className="sr-only">
-														Open menu
-													</span>
+													<span className="sr-only">Open menu</span>
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
 												{invoice.pdf_url && (
 													<DropdownMenuItem
 														onClick={() =>
-															window.open(
-																invoice.pdf_url!,
-																"_blank"
-															)
+															window.open(invoice.pdf_url!, "_blank")
 														}
 													>
 														<Download className="mr-2 h-4 w-4" />
 														Download PDF
 													</DropdownMenuItem>
 												)}
-												<DropdownMenuItem
-													onClick={() =>
-														handleEdit(invoice)
-													}
-												>
+												<DropdownMenuItem onClick={() => handleEdit(invoice)}>
 													<Edit className="mr-2 h-4 w-4" />
 													Edit
 												</DropdownMenuItem>
 												<DropdownMenuItem
-													onClick={() =>
-														handleDelete(invoice)
-													}
+													onClick={() => handleDelete(invoice)}
 													className="text-red-600"
 												>
 													<Trash2 className="mr-2 h-4 w-4" />
@@ -564,8 +530,7 @@ export const InvoicesTable = () => {
 			{invoicesResponse && invoicesResponse.count > 0 && (
 				<div className="flex items-center justify-between px-2">
 					<div className="text-sm text-muted-foreground">
-						Showing {invoices.length} of {invoicesResponse.count}{" "}
-						invoices
+						Showing {invoices.length} of {invoicesResponse.count} invoices
 					</div>
 					<div className="flex items-center gap-4">
 						{!isMobile && (

@@ -20,15 +20,12 @@ export class PreferencesSyncService {
 
 			// Try to fetch from server first
 			logger.info("Fetching preferences from server...");
-			const serverPreferences =
-				await UserPreferencesService.getPreferences();
+			const serverPreferences = await UserPreferencesService.getPreferences();
 
 			logger.info("Server preferences received", {
 				serverPreferences,
 				type: typeof serverPreferences,
-				keys: serverPreferences
-					? Object.keys(serverPreferences)
-					: "null",
+				keys: serverPreferences ? Object.keys(serverPreferences) : "null",
 			});
 
 			// Validate server preferences
@@ -38,17 +35,14 @@ export class PreferencesSyncService {
 
 			// Always check for localStorage preferences that need to be migrated
 			// This handles cases where user made changes while logged out
-			const migratedPreferences = await this.migrateLocalStorageToServer(
-				serverPreferences
-			);
+			const migratedPreferences =
+				await this.migrateLocalStorageToServer(serverPreferences);
 
 			// Use migrated preferences if they were updated, otherwise use server preferences
 			const finalPreferences = migratedPreferences || serverPreferences;
 
 			// Check if this is the first time loading server preferences
-			const hasBeenMigrated = storage.getItem<boolean>(
-				this.MIGRATION_KEY
-			);
+			const hasBeenMigrated = storage.getItem<boolean>(this.MIGRATION_KEY);
 
 			if (!hasBeenMigrated) {
 				// Mark as migrated to avoid showing first-time notifications
@@ -90,9 +84,7 @@ export class PreferencesSyncService {
 
 			// If no server preferences, skip migration
 			if (!serverPreferences) {
-				logger.warn(
-					"No server preferences available, skipping migration"
-				);
+				logger.warn("No server preferences available, skipping migration");
 				return null;
 			}
 
@@ -132,8 +124,6 @@ export class PreferencesSyncService {
 				});
 			}
 
-
-
 			// Update server if we have changes to migrate
 			if (hasChanges) {
 				logger.info(
@@ -141,9 +131,7 @@ export class PreferencesSyncService {
 					migrationData
 				);
 				const updatedPreferences =
-					await UserPreferencesService.updatePreferences(
-						migrationData
-					);
+					await UserPreferencesService.updatePreferences(migrationData);
 				logger.info("Successfully migrated preferences to server", {
 					sent: migrationData,
 					result: updatedPreferences,
@@ -152,9 +140,7 @@ export class PreferencesSyncService {
 				// Return the updated preferences so they get applied
 				return updatedPreferences;
 			} else {
-				logger.info(
-					"No preferences to migrate - localStorage matches server"
-				);
+				logger.info("No preferences to migrate - localStorage matches server");
 			}
 
 			return null; // No migration needed
@@ -170,8 +156,7 @@ export class PreferencesSyncService {
 	 */
 	private static getLocalStorageFallback(): UserPreferences | null {
 		try {
-			const localTheme =
-				storage.getItem<string>("cannabis-theme") || "system";
+			const localTheme = storage.getItem<string>("cannabis-theme") || "system";
 			const localLoader =
 				storage.getItem<string>("cannabis-loader") || "minimal";
 			// Create a minimal preferences object from localStorage
@@ -208,15 +193,13 @@ export class PreferencesSyncService {
 
 		switch (strategy) {
 			case "server_wins":
-				// Server preferences take priority (default behavior)
+				// Server preferences take priority (default behaviour)
 				return serverPreferences;
 
-			case "local_wins": // Local preferences take priority
-			{
+			case "local_wins": {
+				// Local preferences take priority
 				const updatedPreferences =
-					await UserPreferencesService.updatePreferences(
-						localPreferences
-					);
+					await UserPreferencesService.updatePreferences(localPreferences);
 				return updatedPreferences;
 			}
 

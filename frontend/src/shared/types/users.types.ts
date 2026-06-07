@@ -111,8 +111,7 @@ export interface PoliceOfficerUpdateRequest {
 }
 
 // Paginated police responses
-export interface PaginatedPoliceStationsResponse
-	extends PaginatedResponse<PoliceStation> {}
+export type PaginatedPoliceStationsResponse = PaginatedResponse<PoliceStation>;
 export type PaginatedPoliceOfficersResponse =
 	PaginatedResponse<PoliceOfficerTiny>;
 
@@ -131,6 +130,7 @@ export interface PoliceOfficerSearchParams {
 	include_unknown?: boolean; // Include unknown/other ranks
 	unknown_only?: boolean; // Show ONLY unknown/other ranks (for data quality review)
 	ordering?: string; // Sort order (e.g., 'name', '-rank', 'station')
+	page?: number; // Page number (1-based) — converted to offset in service
 	limit?: number;
 	offset?: number;
 }
@@ -160,7 +160,7 @@ export interface StationsTableFilterPreferences {
 // Complete defendant object (matches DefendantSerializer)
 export interface Defendant {
 	id: number;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string;
 	full_name: string; // Computed field
 	pdf_name: string; // Computed field
@@ -172,7 +172,7 @@ export interface Defendant {
 // Lightweight defendant (matches DefendantTinySerializer)
 export interface DefendantTiny {
 	id: number;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string;
 	full_name: string; // Computed field
 	cases_count: number; // Computed field from serializer
@@ -180,19 +180,18 @@ export interface DefendantTiny {
 
 // Defendant creation request (matches DefendantSerializer fields)
 export interface DefendantCreateRequest {
-	first_name?: string | null;
+	given_names?: string | null;
 	last_name: string;
 }
 
 // Defendant update request (partial update)
 export interface DefendantUpdateRequest {
-	first_name?: string | null;
+	given_names?: string | null;
 	last_name?: string;
 }
 
 // Paginated defendants response
-export interface PaginatedDefendantsResponse
-	extends PaginatedResponse<DefendantTiny> {}
+export type PaginatedDefendantsResponse = PaginatedResponse<DefendantTiny>;
 
 // Defendant search parameters
 export interface DefendantSearchParams {

@@ -22,11 +22,7 @@ export type {
 // Table filter persistence
 export {
 	useTableFilterPersistence,
-	useOfficersTableFilters,
-	useStationsTableFilters,
 	useUsersTableFilters,
-	useDefendantsTableFilters,
-	useSubmissionsTableFilters,
 } from "./useTableFilterPersistence";
 
 // Export utilities

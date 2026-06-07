@@ -106,7 +106,7 @@ export interface UserPreferences {
 	is_dark_mode: boolean;
 	css_theme_class: string;
 	display_preferences: {
-		submissions: DisplayModeChoice;
+		cases: DisplayModeChoice;
 		certificates: DisplayModeChoice;
 	};
 	notification_settings: {
@@ -181,6 +181,7 @@ export interface UserTiny {
 	is_superuser: boolean; // Added for role badge display consistency
 	date_joined: string;
 	last_login: string | null;
+	cases_count?: number; // Annotated in list view
 }
 
 // User creation request (matches UserCreateSerializer)
@@ -254,7 +255,7 @@ export interface PaginatedResponse<T> {
 }
 
 // Paginated users response
-export interface PaginatedUsersResponse extends PaginatedResponse<User> {}
+export type PaginatedUsersResponse = PaginatedResponse<User>;
 
 // Users table filter preferences
 export interface UsersTableFilterPreferences {

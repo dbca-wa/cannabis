@@ -17,7 +17,9 @@ interface RootProviderProps {
 	children: ReactNode;
 }
 
-const LoadingOrchestrator = observer(({ children }: RootProviderProps) => {
+const LoadingOrchestrator = observer(function LoadingOrchestrator({
+	children,
+}: RootProviderProps) {
 	const { loadingState } = useLoading();
 	const [showContent, setShowContent] = useState(false);
 	const [isTransitioning, setIsTransitioning] = useState(false);
@@ -77,7 +79,6 @@ const AppContent = ({ children }: RootProviderProps) => {
 		<div
 			className={cn(
 				"flex h-screen w-screen items-center justify-center transition-colors duration-200",
-				// Theme-aware app container background
 				"dark:bg-gray-900 bg-gray-50"
 			)}
 		>
@@ -85,10 +86,8 @@ const AppContent = ({ children }: RootProviderProps) => {
 				<HelmetProvider>
 					<QueryProvider>
 						<TooltipProvider>
-							<LoadingOrchestrator>
-								{children}
-							</LoadingOrchestrator>
-							<Toaster />
+							<LoadingOrchestrator>{children}</LoadingOrchestrator>
+							<Toaster position="bottom-right" />
 						</TooltipProvider>
 					</QueryProvider>
 				</HelmetProvider>

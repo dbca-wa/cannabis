@@ -81,10 +81,7 @@ export class ErrorBoundary extends React.Component<
 						</Alert>
 
 						<div className="flex flex-col sm:flex-row gap-3">
-							<Button
-								onClick={this.handleRetry}
-								className="flex-1"
-							>
+							<Button onClick={this.handleRetry} className="flex-1">
 								<RefreshCw className="mr-2 h-4 w-4" />
 								Try Again
 							</Button>
@@ -124,7 +121,8 @@ export class ErrorBoundary extends React.Component<
 }
 
 // Hook version for functional components
-export function useErrorHandler() {
+// eslint-disable-next-line react-refresh/only-export-components
+export const useErrorHandler = () => {
 	const [error, setError] = React.useState<Error | null>(null);
 
 	const resetError = React.useCallback(() => {
@@ -141,4 +139,4 @@ export function useErrorHandler() {
 	}
 
 	return { handleError, resetError };
-}
+};

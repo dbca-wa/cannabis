@@ -149,9 +149,7 @@ export const QueryProvider = ({ children }: QueryProviderProps) => {
 		<QueryClientProvider client={queryClient}>
 			{children}
 			{/* Only show devtools in development */}
-			{import.meta.env.DEV && (
-				<ReactQueryDevtools initialIsOpen={false} />
-			)}
+			{import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
 		</QueryClientProvider>
 	);
 };

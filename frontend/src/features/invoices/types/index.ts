@@ -1,14 +1,9 @@
-/**
- * Invoice feature types
- * Re-exports types from backend-api.types.ts for convenience
- */
-
+// Invoice feature types — canonical definitions
 export type {
-	Invoice,
 	InvoiceFeeType,
 	AdditionalInvoiceFee,
+	Invoice,
 	InvoiceCreateRequest,
 	PaginatedInvoicesResponse,
 	InvoiceSearchParams,
-	InvoicesTableFilterPreferences,
-} from "@/shared/types/backend-api.types";
+} from "./invoices.types";

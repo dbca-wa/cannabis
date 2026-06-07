@@ -37,6 +37,7 @@ export function useLocalStorage<T>(
 		try {
 			const storedValue = storage.getItem<T>(key);
 			if (storedValue !== null) {
+				// eslint-disable-next-line react-hooks/set-state-in-effect
 				setValue(storedValue);
 			}
 			setError(null);

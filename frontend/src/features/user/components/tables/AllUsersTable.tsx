@@ -133,8 +133,8 @@ const AllUsersTable = observer(() => {
 				filters.statusFilter === "active"
 					? true
 					: filters.statusFilter === "inactive"
-					? false
-					: undefined,
+						? false
+						: undefined,
 			ordering: ordering,
 		}),
 		[
@@ -156,7 +156,7 @@ const AllUsersTable = observer(() => {
 	useEffect(() => {
 		if (usersData) {
 			// Update pagination total when data changes
-			(pagination as any).updateTotalItems(usersData.count || 0);
+			pagination.updateTotalItems(usersData.count || 0);
 			logger.debug("Users data loaded", {
 				count: users.length,
 				total: usersData.count,
@@ -177,8 +177,7 @@ const AllUsersTable = observer(() => {
 		entityName: "users",
 		exportEndpoint: ENDPOINTS.USERS.EXPORT,
 		getCurrentFilters: () => {
-			const additionalParams: Record<string, string | number | boolean> =
-				{};
+			const additionalParams: Record<string, string | number | boolean> = {};
 			if (filters.roleFilter !== "all") {
 				additionalParams.role = filters.roleFilter as string;
 			}
@@ -259,8 +258,7 @@ const AllUsersTable = observer(() => {
 	const handleSort = (field: string) => {
 		if (filters.sortField === field) {
 			// If already sorting by this field, toggle direction
-			const newDirection =
-				filters.sortDirection === "asc" ? "desc" : "asc";
+			const newDirection = filters.sortDirection === "asc" ? "desc" : "asc";
 			updateFilter("sortDirection", newDirection);
 		} else {
 			// If sorting by different field, start with ascending
@@ -297,7 +295,7 @@ const AllUsersTable = observer(() => {
 			{
 				key: "n",
 				ctrlKey: true,
-				action: () => navigate("/users/add"),
+				action: () => navigate("/staff/add"),
 				description: "Create new user",
 			},
 		],
@@ -306,32 +304,63 @@ const AllUsersTable = observer(() => {
 
 	useKeyboardShortcuts({ shortcuts });
 
-	// Loading state with better skeleton
+	// Loading state — show skeleton rows matching the table layout
 	if (isLoading) {
 		return (
 			<SectionWrapper variant="minimal">
-				<div className="w-full space-y-4">
-					{/* Header skeleton */}
-					<div className="flex items-center justify-between py-4">
-						<Skeleton className="h-10 w-64" />
-						<div className="flex gap-2">
-							<Skeleton className="h-10 w-24" />
-							<Skeleton className="h-10 w-32" />
+				<div className="w-full">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+						<div>
+							<Skeleton className="h-7 w-32 mb-2" />
+							<Skeleton className="h-4 w-56" />
 						</div>
+						<Skeleton className="h-9 w-28" />
 					</div>
-
-					{/* Table skeleton */}
 					<div className="rounded-md border">
-						<div className="p-4">
-							{Array(8)
-								.fill(0)
-								.map((_, i) => (
-									<Skeleton
-										key={i}
-										className="h-16 w-full mb-2"
-									/>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-12" />
+									{!isMobile && <TableHead className="w-20" />}
+									<TableHead />
+									{!isMobile && <TableHead />}
+									<TableHead />
+									<TableHead />
+									<TableHead className="w-16" />
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										<TableCell>
+											<Skeleton className="h-4 w-4" />
+										</TableCell>
+										{!isMobile && (
+											<TableCell>
+												<Skeleton className="h-4 w-8 mx-auto" />
+											</TableCell>
+										)}
+										<TableCell>
+											<Skeleton className="h-4 w-32" />
+										</TableCell>
+										{!isMobile && (
+											<TableCell>
+												<Skeleton className="h-4 w-40" />
+											</TableCell>
+										)}
+										<TableCell>
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-5 w-14 rounded-full" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-8 w-8" />
+										</TableCell>
+									</TableRow>
 								))}
-						</div>
+							</TableBody>
+						</Table>
 					</div>
 				</div>
 			</SectionWrapper>
@@ -349,18 +378,13 @@ const AllUsersTable = observer(() => {
 					<h3 className="mt-2 text-sm font-semibold text-gray-900">
 						Error loading users
 					</h3>
-					<p className="mt-1 text-sm text-gray-500">
-						{getErrorMessage(error)}
-					</p>
+					<p className="mt-1 text-sm text-gray-500">{getErrorMessage(error)}</p>
 					<div className="mt-6 flex gap-2 justify-center">
 						<Button onClick={handleResetFilters} variant="outline">
 							<RotateCcw className="mr-2 h-4 w-4" />
 							Reset Filters
 						</Button>
-						<Button
-							onClick={() => navigate("/users/add")}
-							variant="default"
-						>
+						<Button onClick={() => navigate("/staff/add")} variant="default">
 							<Plus className="mr-2 h-4 w-4" />
 							Invite User
 						</Button>
@@ -386,14 +410,10 @@ const AllUsersTable = observer(() => {
 						onExportAllCSV={exportHook.exportCSV}
 						onExportAllJSON={exportHook.exportJSON}
 						isExporting={exportHook.isExporting}
-						actions={[
-							commonBulkActions.delete(handleBulkDelete, false),
-						]}
+						actions={[commonBulkActions.delete(handleBulkDelete, false)]}
 						// Enhanced props for "Select All in Database"
 						totalDatabaseCount={usersData?.count}
-						isSelectAllInDatabase={
-							bulkSelection.isSelectAllInDatabase
-						}
+						isSelectAllInDatabase={bulkSelection.isSelectAllInDatabase}
 						onToggleSelectAllInDatabase={
 							bulkSelection.toggleSelectAllInDatabase
 						}
@@ -404,9 +424,7 @@ const AllUsersTable = observer(() => {
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<div>
-							<h2 className="text-2xl font-bold tracking-tight">
-								Users
-							</h2>
+							<h2 className="text-2xl font-bold tracking-tight">Users</h2>
 							<p className="text-muted-foreground">
 								Manage system users and their roles
 							</p>
@@ -430,9 +448,7 @@ const AllUsersTable = observer(() => {
 											<Button
 												variant="outline"
 												size="sm"
-												disabled={
-													exportHook.isExporting
-												}
+												disabled={exportHook.isExporting}
 											>
 												{exportHook.isExporting ? (
 													<>
@@ -441,8 +457,7 @@ const AllUsersTable = observer(() => {
 													</>
 												) : (
 													<>
-														Export{" "}
-														<ChevronDown className="ml-2 h-4 w-4" />
+														Export <ChevronDown className="ml-2 h-4 w-4" />
 													</>
 												)}
 											</Button>
@@ -450,17 +465,13 @@ const AllUsersTable = observer(() => {
 										<DropdownMenuContent align="end">
 											<DropdownMenuItem
 												onClick={exportHook.exportCSV}
-												disabled={
-													exportHook.isExporting
-												}
+												disabled={exportHook.isExporting}
 											>
 												Export All as CSV
 											</DropdownMenuItem>
 											<DropdownMenuItem
 												onClick={exportHook.exportJSON}
-												disabled={
-													exportHook.isExporting
-												}
+												disabled={exportHook.isExporting}
 											>
 												Export All as JSON
 											</DropdownMenuItem>
@@ -471,7 +482,7 @@ const AllUsersTable = observer(() => {
 							{/* Add user button */}
 							<Button
 								variant="default"
-								onClick={() => navigate("/users/add")}
+								onClick={() => navigate("/staff/add")}
 								size="sm"
 								title="Add new user (Ctrl+N)"
 								className="flex-shrink-0"
@@ -498,9 +509,7 @@ const AllUsersTable = observer(() => {
 												: "Search users by name, email, or ID..."
 										}
 										value={searchQuery}
-										onChange={(e) =>
-											setSearchQuery(e.target.value)
-										}
+										onChange={(e) => setSearchQuery(e.target.value)}
 										className="pl-10"
 									/>
 								</div>
@@ -514,26 +523,16 @@ const AllUsersTable = observer(() => {
 									</span>
 									<Select
 										value={filters.roleFilter}
-										onValueChange={(value) =>
-											updateFilter("roleFilter", value)
-										}
+										onValueChange={(value) => updateFilter("roleFilter", value)}
 									>
 										<SelectTrigger className="w-full sm:w-32">
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="all">
-												All Roles
-											</SelectItem>
-											<SelectItem value="botanist">
-												Botanist
-											</SelectItem>
-											<SelectItem value="finance">
-												Finance
-											</SelectItem>
-											<SelectItem value="none">
-												No Role
-											</SelectItem>
+											<SelectItem value="all">All Roles</SelectItem>
+											<SelectItem value="botanist">Botanist</SelectItem>
+											<SelectItem value="finance">Finance</SelectItem>
+											<SelectItem value="none">No Role</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -552,15 +551,9 @@ const AllUsersTable = observer(() => {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="all">
-												All
-											</SelectItem>
-											<SelectItem value="active">
-												Active
-											</SelectItem>
-											<SelectItem value="inactive">
-												Inactive
-											</SelectItem>
+											<SelectItem value="all">All</SelectItem>
+											<SelectItem value="active">Active</SelectItem>
+											<SelectItem value="inactive">Inactive</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -599,17 +592,12 @@ const AllUsersTable = observer(() => {
 								<TableHead className="w-12 text-center">
 									<div className="flex items-center justify-center h-full">
 										<IndeterminateCheckbox
-											checked={
-												bulkSelection.isAllSelected
-											}
+											checked={bulkSelection.isAllSelected}
 											indeterminate={
-												bulkSelection.selectedCount >
-													0 &&
+												bulkSelection.selectedCount > 0 &&
 												!bulkSelection.isAllSelected
 											}
-											onCheckedChange={
-												bulkSelection.toggleAll
-											}
+											onCheckedChange={bulkSelection.toggleAll}
 											aria-label="Select all users"
 										/>
 									</div>
@@ -692,38 +680,9 @@ const AllUsersTable = observer(() => {
 						</TableHeader>
 						<TableBody>
 							{isLoading ? (
-								// Loading skeleton
-								Array.from({ length: 5 }).map((_, index) => (
-									<TableRow key={index}>
-										<TableCell>
-											<Skeleton className="h-4 w-4" />
-										</TableCell>
-										{!isMobile && (
-											<TableCell>
-												<Skeleton className="h-4 w-8" />
-											</TableCell>
-										)}
-										<TableCell>
-											<Skeleton className="h-4 w-32" />
-										</TableCell>
-										{!isMobile && (
-											<TableCell>
-												<Skeleton className="h-4 w-48" />
-											</TableCell>
-										)}
-										<TableCell>
-											<Skeleton className="h-4 w-24" />
-										</TableCell>
-										{!isMobile && (
-											<TableCell>
-												<Skeleton className="h-4 w-20" />
-											</TableCell>
-										)}
-										<TableCell>
-											<Skeleton className="h-8 w-8" />
-										</TableCell>
-									</TableRow>
-								))
+								<TableRow>
+									<TableCell colSpan={isMobile ? 5 : 7} />
+								</TableRow>
 							) : error ? (
 								<TableRow>
 									<TableCell
@@ -732,9 +691,7 @@ const AllUsersTable = observer(() => {
 									>
 										<div className="text-muted-foreground">
 											<p>Error loading users</p>
-											<p className="text-sm">
-												{getErrorMessage(error)}
-											</p>
+											<p className="text-sm">{getErrorMessage(error)}</p>
 										</div>
 									</TableCell>
 								</TableRow>
@@ -752,24 +709,17 @@ const AllUsersTable = observer(() => {
 												</p>
 												<p className="text-sm text-gray-500">
 													{searchQuery ||
-													filters.roleFilter !==
-														"all" ||
-													filters.statusFilter !==
-														"all"
+													filters.roleFilter !== "all" ||
+													filters.statusFilter !== "all"
 														? "Try adjusting your search or filters"
 														: "Get started by adding your first user"}
 												</p>
 											</div>
 											{!searchQuery &&
 												filters.roleFilter === "all" &&
-												filters.statusFilter ===
-													"all" && (
+												filters.statusFilter === "all" && (
 													<Button
-														onClick={() =>
-															navigate(
-																"/users/add"
-															)
-														}
+														onClick={() => navigate("/users/add")}
 														variant="outline"
 														size="sm"
 													>
@@ -786,13 +736,9 @@ const AllUsersTable = observer(() => {
 										{/* Bulk selection checkbox */}
 										<TableCell>
 											<Checkbox
-												checked={bulkSelection.isSelected(
-													user.id
-												)}
+												checked={bulkSelection.isSelected(user.id)}
 												onCheckedChange={() =>
-													bulkSelection.toggleItem(
-														user.id
-													)
+													bulkSelection.toggleItem(user.id)
 												}
 												aria-label={`Select user ${user.full_name}`}
 											/>
@@ -808,9 +754,7 @@ const AllUsersTable = observer(() => {
 										{/* Name */}
 										<TableCell>
 											<div className="flex flex-col">
-												<div className="font-medium">
-													{user.full_name}
-												</div>
+												<div className="font-medium">{user.full_name}</div>
 												{user.employee_id && (
 													<div className="text-xs text-gray-500">
 														ID: {user.employee_id}
@@ -840,13 +784,11 @@ const AllUsersTable = observer(() => {
 														"text-start font-medium",
 														user.is_superuser
 															? "text-yellow-600"
-															: user.role ===
-															  "botanist"
-															? "text-green-600"
-															: user.role ===
-															  "finance"
-															? "text-purple-600"
-															: "text-gray-600"
+															: user.role === "botanist"
+																? "text-green-600"
+																: user.role === "finance"
+																	? "text-purple-600"
+																	: "text-gray-600"
 													)}
 												>
 													{user.is_superuser ? (
@@ -860,13 +802,11 @@ const AllUsersTable = observer(() => {
 												<span className="text-sm font-medium">
 													{user.is_superuser
 														? "Super Admin"
-														: user.role ===
-														  "botanist"
-														? "Botanist"
-														: user.role ===
-														  "finance"
-														? "Finance"
-														: "No Role"}
+														: user.role === "botanist"
+															? "Botanist"
+															: user.role === "finance"
+																? "Finance"
+																: "No Role"}
 												</span>
 											</div>
 										</TableCell>
@@ -881,10 +821,7 @@ const AllUsersTable = observer(() => {
 													Active
 												</Badge>
 											) : (
-												<Badge
-													variant="destructive"
-													className="w-fit"
-												>
+												<Badge variant="destructive" className="w-fit">
 													Inactive
 												</Badge>
 											)}
@@ -894,37 +831,22 @@ const AllUsersTable = observer(() => {
 										<TableCell>
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
-													<Button
-														variant="ghost"
-														className="h-8 w-8 p-0"
-													>
-														<span className="sr-only">
-															Open menu
-														</span>
+													<Button variant="ghost" className="h-8 w-8 p-0">
+														<span className="sr-only">Open menu</span>
 														<EllipsisVertical className="h-4 w-4" />
 													</Button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end">
 													<DropdownMenuItem
-														onClick={() =>
-															navigate(
-																`/users/${user.id}`
-															)
-														}
+														onClick={() => navigate(`/users/${user.id}`)}
 													>
 														<MdEdit className="mr-2 h-4 w-4 text-blue-500" />
 														Edit User
 													</DropdownMenuItem>
 													<DropdownMenuSeparator />
 													<DropdownMenuItem
-														onClick={() =>
-															navigate(
-																`/users/${user.id}/delete`
-															)
-														}
-														disabled={
-															user.is_superuser
-														}
+														onClick={() => navigate(`/users/${user.id}/delete`)}
+														disabled={user.is_superuser}
 														className={cn(
 															user.is_superuser &&
 																"opacity-50 cursor-not-allowed"

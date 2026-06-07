@@ -1,4 +1,4 @@
-import { DefendantsService } from "../services/defendants.service";
+import { searchDefendants } from "../services/defendants.service";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce } from "@/shared/hooks";
@@ -84,7 +84,7 @@ export const useDefendantSearch = (
 				limit,
 			};
 
-			return await DefendantsService.searchDefendants(searchParams);
+			return await searchDefendants(searchParams);
 		},
 		enabled: enabled && isSearchQuery,
 		...cacheConfig.search, // Use optimized cache settings
@@ -102,7 +102,7 @@ export const useDefendantSearch = (
 				limit: initialDataLimit,
 			};
 
-			return await DefendantsService.searchDefendants(searchParams);
+			return await searchDefendants(searchParams);
 		},
 		enabled: enabled && isInitialDataRequest,
 		...cacheConfig.initial, // Use optimized cache settings for initial data

@@ -23,7 +23,7 @@ class SecurityService {
 		if (!user) {
 			return {
 				allowed: false,
-				reason: "User not authenticated"
+				reason: "User not authenticated",
 			};
 		}
 
@@ -31,15 +31,17 @@ class SecurityService {
 			logger.warn("Non-staff user attempted admin access", { userId: user.id });
 			return {
 				allowed: false,
-				reason: "Staff privileges required"
+				reason: "Staff privileges required",
 			};
 		}
 
 		if (!user.is_superuser) {
-			logger.warn("Non-superuser staff attempted admin settings access", { userId: user.id });
+			logger.warn("Non-superuser staff attempted admin settings access", {
+				userId: user.id,
+			});
 			return {
 				allowed: false,
-				reason: "Superuser privileges required for system settings"
+				reason: "Superuser privileges required for system settings",
 			};
 		}
 
@@ -54,14 +56,16 @@ class SecurityService {
 		environment: string
 	): SecurityCheck {
 		const env = environment.toLowerCase();
-		const hasCriticalChanges = changes.some(change => this.isCriticalChange(change));
-		
+		const hasCriticalChanges = changes.some((change) =>
+			this.isCriticalChange(change)
+		);
+
 		// Always require confirmation in production
 		if (env === "production") {
 			return {
 				allowed: true,
 				requiresConfirmation: true,
-				confirmationLevel: hasCriticalChanges ? "critical" : "elevated"
+				confirmationLevel: hasCriticalChanges ? "critical" : "elevated",
 			};
 		}
 
@@ -70,7 +74,7 @@ class SecurityService {
 			return {
 				allowed: true,
 				requiresConfirmation: true,
-				confirmationLevel: "elevated"
+				confirmationLevel: "elevated",
 			};
 		}
 
@@ -79,7 +83,7 @@ class SecurityService {
 			return {
 				allowed: true,
 				requiresConfirmation: true,
-				confirmationLevel: "standard"
+				confirmationLevel: "standard",
 			};
 		}
 
@@ -93,7 +97,7 @@ class SecurityService {
 		const criticalFields = [
 			"send_emails_to_self",
 			"forward_certificate_emails_to",
-			"tax_percentage"
+			"tax_percentage",
 		];
 
 		// Check if field is in critical list
@@ -104,16 +108,16 @@ class SecurityService {
 		// Check for significant pricing changes (>20% change)
 		const pricingFields = [
 			"cost_per_certificate",
-			"cost_per_bag", 
+			"cost_per_bag",
 			"call_out_fee",
 			"cost_per_forensic_hour",
-			"cost_per_kilometer_fuel"
+			"cost_per_kilometer_fuel",
 		];
 
 		if (pricingFields.includes(change.field)) {
 			const oldValue = parseFloat(change.oldValue);
 			const newValue = parseFloat(change.newValue);
-			
+
 			if (!isNaN(oldValue) && !isNaN(newValue) && oldValue > 0) {
 				const percentChange = Math.abs((newValue - oldValue) / oldValue);
 				return percentChange > 0.2; // 20% change threshold
@@ -136,17 +140,21 @@ class SecurityService {
 		confirmText: string;
 	} {
 		const env = environment.toLowerCase();
-		const hasCriticalChanges = changes.some(change => this.isCriticalChange(change));
-		const criticalChanges = changes.filter(change => this.isCriticalChange(change));
+		const hasCriticalChanges = changes.some((change) =>
+			this.isCriticalChange(change)
+		);
+		const criticalChanges = changes.filter((change) =>
+			this.isCriticalChange(change)
+		);
 
 		if (env === "production") {
 			return {
 				title: "Confirm Production Changes",
-				description: hasCriticalChanges 
+				description: hasCriticalChanges
 					? `You are about to make ${criticalChanges.length} critical change(s) to the production system. These changes will immediately affect live operations.`
 					: "You are about to modify production system settings. These changes will take effect immediately.",
 				variant: hasCriticalChanges ? "destructive" : "warning",
-				confirmText: "Apply to Production"
+				confirmText: "Apply to Production",
 			};
 		}
 
@@ -155,7 +163,7 @@ class SecurityService {
 				title: "Confirm Critical Changes",
 				description: `You are about to make ${criticalChanges.length} critical change(s) to system settings. Please review carefully.`,
 				variant: "warning",
-				confirmText: "Apply Changes"
+				confirmText: "Apply Changes",
 			};
 		}
 
@@ -163,7 +171,7 @@ class SecurityService {
 			title: "Confirm Settings Changes",
 			description: `You are about to modify ${changes.length} system setting(s). Please review the changes below.`,
 			variant: "default",
-			confirmText: "Apply Changes"
+			confirmText: "Apply Changes",
 		};
 	}
 
@@ -173,16 +181,19 @@ class SecurityService {
 	formatFieldName(fieldName: string): string {
 		const fieldDisplayNames: Record<string, string> = {
 			cost_per_certificate: "Certificate Cost",
-			cost_per_bag: "Bag Identification Cost", 
+			cost_per_bag: "Bag Identification Cost",
 			call_out_fee: "Call Out Fee",
 			cost_per_forensic_hour: "Forensic Hour Cost",
 			cost_per_kilometer_fuel: "Fuel Cost per Kilometer",
 			tax_percentage: "Tax Percentage",
 			forward_certificate_emails_to: "Admin Email Address",
-			send_emails_to_self: "Email Routing Mode"
+			send_emails_to_self: "Email Routing Mode",
 		};
 
-		return fieldDisplayNames[fieldName] || fieldName.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+		return (
+			fieldDisplayNames[fieldName] ||
+			fieldName.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+		);
 	}
 
 	/**
@@ -214,7 +225,7 @@ class SecurityService {
 	 */
 	logSecurityEvent(
 		event: "access_denied" | "settings_modified" | "confirmation_required",
-		details: Record<string, any>
+		details: Record<string, unknown>
 	): void {
 		logger.info(`[Security] ${event}`, details);
 	}

@@ -29,7 +29,10 @@ export function useKeyboardShortcuts({
 	target,
 }: UseKeyboardShortcutsOptions) {
 	const shortcutsRef = useRef(shortcuts);
-	shortcutsRef.current = shortcuts;
+
+	useEffect(() => {
+		shortcutsRef.current = shortcuts;
+	});
 
 	const handleKeyDown = useCallback(
 		(event: Event) => {
@@ -42,15 +45,11 @@ export function useKeyboardShortcuts({
 
 			for (const shortcut of activeShortcuts) {
 				const keyMatches =
-					keyboardEvent.key.toLowerCase() ===
-					shortcut.key.toLowerCase();
-				const ctrlMatches =
-					!!shortcut.ctrlKey === keyboardEvent.ctrlKey;
+					keyboardEvent.key.toLowerCase() === shortcut.key.toLowerCase();
+				const ctrlMatches = !!shortcut.ctrlKey === keyboardEvent.ctrlKey;
 				const altMatches = !!shortcut.altKey === keyboardEvent.altKey;
-				const shiftMatches =
-					!!shortcut.shiftKey === keyboardEvent.shiftKey;
-				const metaMatches =
-					!!shortcut.metaKey === keyboardEvent.metaKey;
+				const shiftMatches = !!shortcut.shiftKey === keyboardEvent.shiftKey;
+				const metaMatches = !!shortcut.metaKey === keyboardEvent.metaKey;
 
 				if (
 					keyMatches &&

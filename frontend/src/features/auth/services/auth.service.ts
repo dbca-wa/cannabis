@@ -1,12 +1,7 @@
-import { logger } from "@/shared/services/logger.service";
-import { normalizeError } from "@/shared/utils/error.utils";
 import { storage } from "@/shared/services/storage.service";
-import { generateRequestId } from "@/shared/utils/uuid";
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
-import { errorHandlingService } from "@/shared/services/errorHandling.service";
 import type {
 	AuthResponse,
-	ServiceResult,
 	User,
 	InviteActivationResponse,
 	PasswordValidationResponse,
@@ -16,490 +11,209 @@ import type {
 } from "@/shared/types/backend-api.types";
 import type { LoginCredentials, RegisterData } from "../types/auth.types";
 
-class AuthService {
-	private userCache: { user: User; timestamp: number } | null = null;
-	private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Module-level cache for user data (singleton state)
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+let userCache: { user: User; timestamp: number } | null = null;
 
-	async login(
-		credentials: LoginCredentials
-	): Promise<ServiceResult<AuthResponse>> {
-		const requestId = this.generateRequestId();
-		logger.info("Attempting JWT login", {
-			email: credentials.email,
-			requestId,
-		});
+const getCachedUser = (): User | null => {
+	if (!userCache) return null;
+	if (Date.now() - userCache.timestamp > CACHE_DURATION) {
+		userCache = null;
+		return null;
+	}
+	return userCache.user;
+};
 
-		try {
-			const response = await apiClient.post<AuthResponse>(
-				ENDPOINTS.AUTH.LOGIN,
-				credentials
-			);
+export const setCachedUser = (user: User): void => {
+	if (user && user.id) {
+		userCache = { user, timestamp: Date.now() };
+	}
+};
 
-			if (
-				!response ||
-				!response.user ||
-				!response.access ||
-				!response.refresh
-			) {
-				throw new Error(
-					"Invalid JWT response structure from login API"
-				);
-			}
+export const clearCache = (): void => {
+	userCache = null;
+};
 
-			// Store JWT tokens
-			storage.setTokens(response.access, response.refresh);
+/**
+ * Authenticate user with email/password credentials.
+ * Stores JWT tokens and caches user data on success.
+ */
+export const login = async (
+	credentials: LoginCredentials
+): Promise<AuthResponse> => {
+	const response = await apiClient.post<AuthResponse>(
+		ENDPOINTS.AUTH.LOGIN,
+		credentials
+	);
 
-			// Cache user data
-			this.setCachedUser(response.user);
+	if (!response || !response.user || !response.access || !response.refresh) {
+		throw new Error("Invalid JWT response structure from login API");
+	}
 
-			// Load user preferences after successful login
-			try {
-				const { PreferencesSyncService } = await import(
-					"@/shared/services/preferencesSync.service"
-				);
-				const preferences =
-					await PreferencesSyncService.loadPreferencesOnLogin();
+	// Store JWT tokens
+	storage.setTokens(response.access, response.refresh);
+	setCachedUser(response.user);
 
-				if (preferences) {
-					// Enable server sync and load preferences into UI store
-					const { rootStore } = await import(
-						"@/app/stores/root.store"
-					);
+	// Load user preferences after successful login
+	try {
+		const { PreferencesSyncService } =
+			await import("@/shared/services/preferencesSync.service");
+		const preferences = await PreferencesSyncService.loadPreferencesOnLogin();
 
-					rootStore.uiStore.loadFromServerPreferences(preferences);
-
-					// Add a small delay and force theme reapplication to ensure it sticks
-					setTimeout(() => {
-						rootStore.uiStore.applyTheme();
-					}, 200);
-
-					logger.info("User preferences loaded and synced", {
-						theme: preferences.theme,
-						loader: preferences.loader_style,
-					});
-				}
-			} catch (error) {
-				logger.error("Failed to load user preferences on login", {
-					error,
-				});
-				// Don't fail login if preferences fail to load
-			}
-
-			logger.info("JWT login successful", {
-				userId: response.user.id,
-				email: response.user.email,
-				tokenType: response.token_type,
-				expiresIn: response.expires_in,
-				requestId,
-			});
-
-			return {
-				data: response,
-				success: true,
-			};
-		} catch (error: unknown) {
-			// Clear any existing tokens on login failure
-			storage.clearTokens();
-			this.clearCache();
-
-			const enhancedError = errorHandlingService.handleError(error, {
-				action: "login",
-				email: credentials.email,
-				requestId
-			}, {
-				showToast: false // Don't show toast here, let the component handle it
-			});
-
-			return {
-				data: {} as AuthResponse,
-				success: false,
-				error: enhancedError.userFriendlyMessage,
-			};
+		if (preferences) {
+			const { rootStore } = await import("@/app/stores/root.store");
+			rootStore.uiStore.loadFromServerPreferences(preferences);
+			setTimeout(() => {
+				rootStore.uiStore.applyTheme();
+			}, 200);
 		}
+	} catch {
+		// Don't fail login if preferences fail to load
 	}
 
-	async logout(): Promise<ServiceResult<void>> {
-		const requestId = this.generateRequestId();
-		logger.info("Attempting JWT logout", { requestId });
+	return response;
+};
 
-		try {
-			const refreshToken = storage.getRefreshToken();
-
-			if (refreshToken) {
-				// Call backend to blacklist refresh token
-				await apiClient.post(ENDPOINTS.AUTH.LOGOUT, {
-					refresh_token: refreshToken,
-				});
-			}
-
-			// Clear tokens and cache regardless of API result
-			storage.clearTokens();
-			this.clearCache();
-
-			// Clear preferences on logout
-			try {
-				const { rootStore } = await import("@/app/stores/root.store");
-				rootStore.uiStore.reset(); // Clear all UI preferences
-
-				logger.info("Preferences cleared on logout");
-			} catch (error) {
-				logger.error("Failed to clear preferences on logout", {
-					error,
-				});
-			}
-
-			logger.info("JWT logout successful", { requestId });
-
-			return {
-				data: undefined,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
-			logger.warn(
-				"JWT logout request failed (but clearing tokens anyway)",
-				{
-					message: normalizedError.message,
-					requestId,
-				}
-			);
-
-			// Clear tokens even if logout request failed
-			storage.clearTokens();
-			this.clearCache();
-
-			// Clear preferences even if logout request failed
-			try {
-				const { rootStore } = await import("@/app/stores/root.store");
-				rootStore.uiStore.reset(); // Clear all UI preferences
-
-				logger.info("Preferences cleared on logout (after error)");
-			} catch (error) {
-				logger.error(
-					"Failed to clear preferences on logout (after error)",
-					{ error }
-				);
-			}
-
-			return {
-				data: undefined,
-				success: true,
-			};
-		}
-	}
-
-	async getCurrentUser(): Promise<ServiceResult<User>> {
-		const requestId = this.generateRequestId();
-		logger.debug("Fetching current user via JWT", { requestId });
-
-		try {
-			// Check if we have valid tokens first
-			if (!this.hasValidTokens()) {
-				logger.debug("No valid tokens found, user not authenticated", { requestId });
-				return {
-					data: {} as User,
-					success: false,
-					error: "No valid authentication tokens found",
-				};
-			}
-
-			// Check cache first
-			const cachedUser = this.getCachedUser();
-			if (cachedUser) {
-				logger.debug("Returning cached user", {
-					userId: cachedUser.id,
-					email: cachedUser.email,
-					requestId,
-				});
-
-				return {
-					data: cachedUser,
-					success: true,
-				};
-			}
-
-			// Fetch from API with JWT token
-			const user = await apiClient.get<User>(ENDPOINTS.AUTH.ME);
-
-			if (!user || !user.id) {
-				throw new Error("Invalid user data received from API");
-			}
-
-			// Cache the result
-			this.setCachedUser(user);
-
-			logger.debug("Current user fetched via JWT", {
-				userId: user.id,
-				email: user.email,
-				requestId,
-			});
-
-			return {
-				data: user,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
-			// Clear cache and tokens on auth errors
-			if (
-				Number(normalizedError.code) === 401 ||
-				Number(normalizedError.code) === 403
-			) {
-				this.clearCache();
-				storage.clearTokens();
-			}
-
-			logger.error("Failed to fetch current user", {
-				message: normalizedError.message,
-				code: normalizedError.code,
-				requestId,
-				error: normalizedError.originalError,
-			});
-
-			return {
-				data: {} as User,
-				success: false,
-				error: normalizedError.message,
-			};
-		}
-	}
-
-	async refreshToken(): Promise<ServiceResult<{ access: string }>> {
-		const requestId = this.generateRequestId();
-		logger.debug("Attempting JWT token refresh", { requestId });
-
-		try {
-			const refreshToken = storage.getRefreshToken();
-			if (!refreshToken) {
-				return {
-					data: {} as { access: string },
-					success: false,
-					error: "No refresh token available",
-				};
-			}
-
-			const response = await apiClient.post<{ access: string }>(
-				ENDPOINTS.AUTH.REFRESH,
-				{ refresh: refreshToken }
-			);
-
-			if (!response.access) {
-				throw new Error("Invalid refresh response structure");
-			}
-
-			// Update stored access token, keep existing refresh token
-			storage.setTokens(response.access, refreshToken);
-
-			logger.debug("JWT token refreshed successfully", { requestId });
-
-			return {
-				data: response,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
-			logger.error("JWT token refresh failed", {
-				message: normalizedError.message,
-				code: normalizedError.code,
-				requestId,
-			});
-
-			// If refresh fails, clear all tokens
-			storage.clearTokens();
-			this.clearCache();
-
-			return {
-				data: {} as { access: string },
-				success: false,
-				error: normalizedError.message,
-			};
-		}
-	}
-
-	async register(data: RegisterData): Promise<ServiceResult<void>> {
-		const requestId = this.generateRequestId();
-		logger.info("Attempting user registration", {
-			email: data.email,
-			requestId,
-		});
-
-		try {
-			await apiClient.post(ENDPOINTS.USERS.CREATE, data);
-
-			logger.info("User registration successful", {
-				email: data.email,
-				requestId,
-			});
-
-			return {
-				data: undefined,
-				success: true,
-			};
-		} catch (error: unknown) {
-			const normalizedError = normalizeError(error);
-
-			logger.error("User registration failed", {
-				email: data.email,
-				message: normalizedError.message,
-				code: normalizedError.code,
-				requestId,
-			});
-
-			return {
-				data: undefined,
-				success: false,
-				error: normalizedError.message,
-			};
-		}
-	}
-
-	async activateInvitation(token: string): Promise<ServiceResult<InviteActivationResponse>> {
-		const requestId = this.generateRequestId();
-		logger.info("Attempting invitation activation", {
-			token: token.substring(0, 8) + "...",
-			requestId,
-		});
-
-		try {
-			const response = await apiClient.get<InviteActivationResponse>(
-				ENDPOINTS.AUTH.ACTIVATE_INVITE(token)
-			);
-
-			if (!response || !response.user || !response.access || !response.refresh) {
-				throw new Error("Invalid activation response structure from API");
-			}
-
-			// Store JWT tokens
-			storage.setTokens(response.access, response.refresh);
-
-			// Cache user data
-			this.setCachedUser(response.user);
-
-			logger.info("Invitation activation successful", {
-				userId: response.user.id,
-				email: response.user.email,
-				requestId,
-			});
-
-			return {
-				data: response,
-				success: true,
-			};
-		} catch (error: unknown) {
-			// Clear any tokens on activation failure
-			storage.clearTokens();
-			this.clearCache();
-
-			const enhancedError = errorHandlingService.handleError(error, {
-				action: "invitation_activation",
-				token: token.substring(0, 8) + "...",
-				requestId
-			}, {
-				showToast: false // Let the component handle the toast
-			});
-
-			return {
-				data: {} as InviteActivationResponse,
-				success: false,
-				error: enhancedError.userFriendlyMessage,
-			};
-		}
-	}
-
-	/**
-	 * @deprecated Use passwordService.validatePassword() instead
-	 */
-	async validatePassword(password: string): Promise<ServiceResult<PasswordValidationResponse>> {
-		const { passwordService } = await import("./password.service");
-		return passwordService.validatePassword(password);
-	}
-
-	/**
-	 * @deprecated Use passwordService.updatePassword() instead
-	 */
-	async updatePassword(data: PasswordUpdateRequest): Promise<ServiceResult<PasswordUpdateResponse>> {
-		const { passwordService } = await import("./password.service");
-		return passwordService.updatePassword(data);
-	}
-
-	/**
-	 * @deprecated Use passwordService.forgotPassword() instead
-	 */
-	async forgotPassword(email: string): Promise<ServiceResult<ForgotPasswordResponse>> {
-		const { passwordService } = await import("./password.service");
-		return passwordService.forgotPassword(email);
-	}
-
-
-
-	// JWT-specific methods
-	hasValidTokens(): boolean {
-		return storage.hasValidTokens();
-	}
-
-	shouldRefreshToken(): boolean {
-		return storage.shouldRefreshToken();
-	}
-
-	getAccessToken(): string | null {
-		return storage.getAccessToken();
-	}
-
-	// Cache management (for performance, not auth state)
-	private getCachedUser(): User | null {
-		if (!this.userCache) return null;
-
-		const now = Date.now();
-		if (now - this.userCache.timestamp > this.CACHE_DURATION) {
-			this.userCache = null;
-			return null;
-		}
-
-		return this.userCache.user;
-	}
-
-	public setCachedUser(user: User): void {
-		if (user && user.id) {
-			this.userCache = {
-				user,
-				timestamp: Date.now(),
-			};
-			logger.debug("User cached in auth service", {
-				userId: user.id,
-				email: user.email
+/**
+ * Log out the current user. Blacklists the refresh token server-side.
+ */
+export const logout = async (): Promise<void> => {
+	try {
+		const refreshToken = storage.getRefreshToken();
+		if (refreshToken) {
+			await apiClient.post(ENDPOINTS.AUTH.LOGOUT, {
+				refresh_token: refreshToken,
 			});
 		}
+	} catch {
+		// Continue cleanup even if server logout fails
 	}
 
-	public clearCache(): void {
-		this.userCache = null;
-		logger.debug("Auth service cache cleared");
+	storage.clearTokens();
+	clearCache();
+
+	try {
+		const { rootStore } = await import("@/app/stores/root.store");
+		rootStore.uiStore.reset();
+	} catch {
+		// Don't fail logout if preference clearing fails
+	}
+};
+
+/**
+ * Get the currently authenticated user. Returns cached value if fresh.
+ */
+export const getCurrentUser = async (): Promise<User> => {
+	if (!hasValidTokens()) {
+		throw new Error("No valid authentication tokens found");
 	}
 
-	private generateRequestId(): string {
-		return generateRequestId("auth");
+	const cached = getCachedUser();
+	if (cached) return cached;
+
+	const user = await apiClient.get<User>(ENDPOINTS.AUTH.ME);
+
+	if (!user || !user.id) {
+		throw new Error("Invalid user data received from API");
 	}
 
-	public getDebugInfo() {
-		return {
-			hasValidTokens: this.hasValidTokens(),
-			shouldRefresh: this.shouldRefreshToken(),
-			hasCache: !!this.userCache,
-			cacheAge: this.userCache
-				? Date.now() - this.userCache.timestamp
-				: null,
-			cachedUserId: this.userCache?.user?.id || null,
-			cachedEmail: this.userCache?.user?.email || null,
-			accessToken: this.getAccessToken() ? "present" : "missing",
-			refreshToken: storage.getRefreshToken()
-				? "present"
-				: "missing",
-		};
-	}
-}
+	setCachedUser(user);
+	return user;
+};
 
-// Export singleton instance
-export const authService = new AuthService();
+/**
+ * Refresh the access token using the stored refresh token.
+ */
+export const refreshToken = async (): Promise<{ access: string }> => {
+	const refresh = storage.getRefreshToken();
+	if (!refresh) {
+		throw new Error("No refresh token available");
+	}
+
+	const response = await apiClient.post<{ access: string }>(
+		ENDPOINTS.AUTH.REFRESH,
+		{ refresh }
+	);
+
+	if (!response.access) {
+		throw new Error("Invalid refresh response structure");
+	}
+
+	storage.setTokens(response.access, refresh);
+	return response;
+};
+
+/**
+ * Register a new user account.
+ */
+export const register = async (data: RegisterData): Promise<void> => {
+	await apiClient.post(ENDPOINTS.USERS.CREATE, data);
+};
+
+/**
+ * Activate a user invitation by token. Stores tokens and caches user.
+ */
+export const activateInvitation = async (
+	token: string
+): Promise<InviteActivationResponse> => {
+	const response = await apiClient.get<InviteActivationResponse>(
+		ENDPOINTS.AUTH.ACTIVATE_INVITE(token)
+	);
+
+	if (!response || !response.user || !response.access || !response.refresh) {
+		throw new Error("Invalid activation response structure from API");
+	}
+
+	storage.setTokens(response.access, response.refresh);
+	setCachedUser(response.user);
+	return response;
+};
+
+/**
+ * @deprecated Use passwordService.validatePassword() instead
+ */
+export const validatePassword = async (
+	password: string
+): Promise<PasswordValidationResponse> => {
+	const { validatePassword: validate } = await import("./password.service");
+	return validate(password);
+};
+
+/**
+ * @deprecated Use passwordService.updatePassword() instead
+ */
+export const updatePassword = async (
+	data: PasswordUpdateRequest
+): Promise<PasswordUpdateResponse> => {
+	const { updatePassword: update } = await import("./password.service");
+	return update(data);
+};
+
+/**
+ * @deprecated Use passwordService.forgotPassword() instead
+ */
+export const forgotPassword = async (
+	email: string
+): Promise<ForgotPasswordResponse> => {
+	const { forgotPassword: forgot } = await import("./password.service");
+	return forgot(email);
+};
+
+// Token state helpers
+export const hasValidTokens = (): boolean => storage.hasValidTokens();
+export const shouldRefreshToken = (): boolean => storage.shouldRefreshToken();
+export const getAccessToken = (): string | null => storage.getAccessToken();
+
+/**
+ * Debug info for development troubleshooting.
+ */
+export const getDebugInfo = () => ({
+	hasValidTokens: hasValidTokens(),
+	shouldRefresh: shouldRefreshToken(),
+	hasCache: !!userCache,
+	cacheAge: userCache ? Date.now() - userCache.timestamp : null,
+	cachedUserId: userCache?.user?.id || null,
+	cachedEmail: userCache?.user?.email || null,
+	accessToken: getAccessToken() ? "present" : "missing",
+	refreshToken: storage.getRefreshToken() ? "present" : "missing",
+});

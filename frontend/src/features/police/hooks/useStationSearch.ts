@@ -54,11 +54,8 @@ export const useStationSearch = (
 
 	// Simple query keys - direct and easy to understand
 	const searchQueryKey = useMemo(
-		() => [
-			"police-stations",
-			"search",
-			{ query: debouncedQuery, limit },
-		] as const,
+		() =>
+			["police-stations", "search", { query: debouncedQuery, limit }] as const,
 		[debouncedQuery, limit]
 	);
 

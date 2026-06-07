@@ -15,6 +15,9 @@ import PasswordResetSuccess from "@/pages/auth/PasswordResetSuccess";
 import InviteActivation from "@/pages/auth/InviteActivation";
 import InviteActivationError from "@/pages/auth/InviteActivationError";
 
+// Standalone pages
+import NotFound from "@/pages/NotFound";
+
 export const router = createBrowserRouter([
 	{
 		path: "/",
@@ -36,6 +39,10 @@ export const router = createBrowserRouter([
 			{
 				element: <MainLayout />,
 				children: generateRouteChildren(),
+			},
+			{
+				path: "*",
+				element: <NotFound />,
 			},
 		],
 	},

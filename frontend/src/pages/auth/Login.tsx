@@ -38,14 +38,11 @@ const Login = () => {
 	const VITE_PRODUCTION_BACKEND_API_URL = import.meta.env
 		.VITE_PRODUCTION_BACKEND_API_URL;
 
-	let ENVIRON = "";
-	if (VITE_PRODUCTION_BACKEND_API_URL?.includes("test")) {
-		ENVIRON = "TEST";
-	} else if (VITE_PRODUCTION_BACKEND_API_URL?.includes("prod")) {
-		ENVIRON = "PROD";
-	} else {
-		ENVIRON = "LOCAL";
-	}
+	const ENVIRON = VITE_PRODUCTION_BACKEND_API_URL?.includes("test")
+		? "TEST"
+		: VITE_PRODUCTION_BACKEND_API_URL?.includes("prod")
+			? "PROD"
+			: "LOCAL";
 
 	const { login, isLoggingIn, loginError, user, isAuthenticated, isLoading } =
 		useAuth();
@@ -56,6 +53,7 @@ const Login = () => {
 	// Check if we should show forgot password modal from navigation state
 	useEffect(() => {
 		if (location.state?.showForgotPassword) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setShowForgotPassword(true);
 		}
 	}, [location.state]);
@@ -76,13 +74,10 @@ const Login = () => {
 	// Log when user is authenticated
 	useEffect(() => {
 		if (isAuthenticated && user && user.id) {
-			logger.info(
-				"User authenticated, navigation handled by auth store",
-				{
-					userId: user.id,
-					email: user.email,
-				}
-			);
+			logger.info("User authenticated, navigation handled by auth store", {
+				userId: user.id,
+				email: user.email,
+			});
 		}
 	}, [isAuthenticated, user]);
 
@@ -93,7 +88,7 @@ const Login = () => {
 			// login method handles navigation internally
 			login(values);
 		} catch (error) {
-			logger.error("Login submission failed", {
+			logger.error("Login case failed", {
 				error: getErrorMessage(error),
 			});
 		}
@@ -140,12 +135,12 @@ const Login = () => {
 				</div> */}
 
 				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="space-y-4"
-					>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 						{loginError ? (
-							<div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded border border-red-200">
+							<div
+								role="alert"
+								className="text-destructive text-sm text-center bg-destructive/10 p-2 rounded-lg border border-destructive/20"
+							>
 								{(() => getErrorMessage(loginError))()}
 							</div>
 						) : null}
@@ -154,7 +149,7 @@ const Login = () => {
 							<FormField
 								name="email"
 								control={form.control}
-								render={({ field }: { field: any }) => (
+								render={({ field }) => (
 									<FormItem>
 										<FormControl>
 											<Input
@@ -179,7 +174,7 @@ const Login = () => {
 							<FormField
 								name="password"
 								control={form.control}
-								render={({ field }: { field: any }) => (
+								render={({ field }) => (
 									<FormItem>
 										<FormControl>
 											<Input
@@ -211,7 +206,7 @@ const Login = () => {
 							<button
 								type="button"
 								onClick={() => setShowForgotPassword(true)}
-								className="text-sm text-cannabis-600 hover:text-cannabis-700 underline"
+								className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline cursor-pointer"
 								disabled={isLoggingIn}
 							>
 								Forgot your password?
@@ -235,15 +230,10 @@ const Login = () => {
 			</CardContent>
 
 			{/* Forgot Password Modal */}
-			<Dialog
-				open={showForgotPassword}
-				onOpenChange={setShowForgotPassword}
-			>
+			<Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle className="sr-only">
-							Reset Password
-						</DialogTitle>
+						<DialogTitle className="sr-only">Reset Password</DialogTitle>
 					</DialogHeader>
 					<ForgotPasswordForm
 						onSuccess={() => setShowForgotPassword(false)}

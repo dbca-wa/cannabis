@@ -27,16 +27,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import {
-	DollarSign,
-	HelpCircle,
-	Loader2,
-	Save,
-	X,
-} from "lucide-react";
-import {
-	errorHandlingService,
-} from "@/shared/services/errorHandling.service";
+import { DollarSign, HelpCircle, Loader2, Save, X } from "lucide-react";
+import { errorHandlingService } from "@/shared/services/errorHandling.service";
 import { logger } from "@/shared/services/logger.service";
 import type { SystemSettings } from "@/shared/types/backend-api.types";
 
@@ -54,7 +46,7 @@ type PricingFormData = z.infer<typeof pricingSchema>;
 
 interface PricingSettingsCardProps {
 	settings: SystemSettings;
-	onSettingsUpdate: (field: string, value: any) => void;
+	onSettingsUpdate: (field: string, value: string | boolean) => void;
 }
 
 // Currency formatting is now handled by validation utilities
@@ -206,11 +198,7 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 									{...field}
 									placeholder={config.placeholder}
 									className={
-										config.prefix
-											? "pl-8"
-											: config.suffix
-											? "pr-8"
-											: ""
+										config.prefix ? "pl-8" : config.suffix ? "pr-8" : ""
 									}
 								/>
 								{config.suffix && (
@@ -234,47 +222,36 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<DollarSign className="h-5 w-5" aria-hidden="true" />
-						<span id="pricing-settings-heading">
-							Pricing Configuration
-						</span>
+						<span id="pricing-settings-heading">Pricing Configuration</span>
 					</CardTitle>
 					<CardDescription>
-						Configure pricing for certificates, forensic work, and
-						other billable services
+						Configure pricing for certificates, forensic work, and other
+						billable services
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className="space-y-4">
 						{/* Display current values */}
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-4">
-							{Object.entries(fieldConfig).map(
-								([fieldName, config]) => {
-									const value =
-										settings[
-											fieldName as keyof SystemSettings
-										];
-									const displayValue =
-										config.suffix === "%"
-											? `${value}%`
-											: `$${parseFloat(
-													value as string
-											  ).toFixed(
-													fieldName ===
-														"cost_per_kilometer_fuel"
-														? 3
-														: 2
-											  )}`;
+							{Object.entries(fieldConfig).map(([fieldName, config]) => {
+								const value = settings[fieldName as keyof SystemSettings];
+								const displayValue =
+									config.suffix === "%"
+										? `${value}%`
+										: `$${parseFloat(value as string).toFixed(
+												fieldName === "cost_per_kilometer_fuel" ? 3 : 2
+											)}`;
 
-									return (
-										<div
-											key={fieldName}
-											className="space-y-1 p-3 rounded-lg bg-muted/30 transition-all duration-200 hover:bg-muted/50 hover:scale-105 animate-in fade-in-50 slide-in-from-bottom-2"
-										>
-											<div className="flex items-center gap-2">
-												<Label className="text-sm font-medium">
-													{config.label}
-												</Label>
-												{/* <TooltipProvider>
+								return (
+									<div
+										key={fieldName}
+										className="space-y-1 p-3 rounded-lg bg-muted/30 transition-all duration-200 hover:bg-muted/50 hover:scale-105 animate-in fade-in-50 slide-in-from-bottom-2"
+									>
+										<div className="flex items-center gap-2">
+											<Label className="text-sm font-medium">
+												{config.label}
+											</Label>
+											{/* <TooltipProvider>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help transition-colors hover:text-foreground" />
@@ -284,17 +261,16 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider> */}
-											</div>
-											<div className="text-lg font-semibold text-primary transition-colors">
-												{displayValue}
-											</div>
-											<p className="text-xs text-muted-foreground">
-												{config.description}
-											</p>
 										</div>
-									);
-								}
-							)}
+										<div className="text-lg font-semibold text-primary transition-colors">
+											{displayValue}
+										</div>
+										<p className="text-xs text-muted-foreground">
+											{config.description}
+										</p>
+									</div>
+								);
+							})}
 						</div>
 
 						<div className="pt-4 border-t">
@@ -316,21 +292,16 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<DollarSign className="h-5 w-5" aria-hidden="true" />
-					<span id="pricing-settings-heading">
-						Edit Pricing Configuration
-					</span>
+					<span id="pricing-settings-heading">Edit Pricing Configuration</span>
 				</CardTitle>
 				<CardDescription>
-					Update pricing for certificates, forensic work, and other
-					billable services
+					Update pricing for certificates, forensic work, and other billable
+					services
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="space-y-6"
-					>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 							{Object.keys(fieldConfig).map((fieldName) =>
 								renderField(fieldName as keyof PricingFormData)

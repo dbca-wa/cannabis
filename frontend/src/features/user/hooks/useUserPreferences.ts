@@ -42,10 +42,9 @@ export function useUpdatePreferences() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -71,9 +70,7 @@ export function useUpdatePreferences() {
 				error,
 				preferences: newPreferences,
 			});
-			toast.error(
-				"Failed to sync preferences. Changes saved locally only."
-			);
+			toast.error("Failed to sync preferences. Changes saved locally only.");
 		},
 		onSuccess: (_, variables) => {
 			logger.info("Preferences updated successfully", {
@@ -106,10 +103,9 @@ export function useUpdateTheme() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -162,10 +158,9 @@ export function useUpdateLoaderStyle() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -191,9 +186,7 @@ export function useUpdateLoaderStyle() {
 				error,
 				loader_style,
 			});
-			toast.error(
-				"Failed to sync loader style. Changes saved locally only."
-			);
+			toast.error("Failed to sync loader style. Changes saved locally only.");
 		},
 		onSuccess: (_, loader_style) => {
 			logger.info("Loader style updated successfully", { loader_style });
@@ -206,8 +199,6 @@ export function useUpdateLoaderStyle() {
 		},
 	});
 }
-
-
 
 /**
  * Hook to update UI preferences specifically
@@ -225,10 +216,9 @@ export function useUpdateUIPreferences() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -254,9 +244,7 @@ export function useUpdateUIPreferences() {
 				error,
 				preferences,
 			});
-			toast.error(
-				"Failed to sync UI preferences. Changes saved locally only."
-			);
+			toast.error("Failed to sync UI preferences. Changes saved locally only.");
 		},
 		onSuccess: (_, preferences) => {
 			logger.info("UI preferences updated successfully", { preferences });
@@ -290,10 +278,9 @@ export function useUpdateTableFilterPreferences() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -322,9 +309,7 @@ export function useUpdateTableFilterPreferences() {
 				error,
 				filters: newTableFilters,
 			});
-			toast.error(
-				"Failed to sync table filters. Changes saved locally only."
-			);
+			toast.error("Failed to sync table filters. Changes saved locally only.");
 		},
 		onSuccess: (_, filters) => {
 			logger.debug("Table filter preferences updated successfully", {
@@ -353,11 +338,7 @@ export function useUpdateSpecificTableFilters() {
 		}: {
 			tableName: string;
 			filters: Record<string, unknown>;
-		}) =>
-			UserPreferencesService.updateSpecificTableFilters(
-				tableName,
-				filters
-			),
+		}) => UserPreferencesService.updateSpecificTableFilters(tableName, filters),
 		onMutate: async ({ tableName, filters }) => {
 			// Cancel any outgoing refetches
 			await queryClient.cancelQueries({
@@ -365,10 +346,9 @@ export function useUpdateSpecificTableFilters() {
 			});
 
 			// Snapshot the previous value
-			const previousPreferences =
-				queryClient.getQueryData<UserPreferences>(
-					userPreferencesQueryKeys.preferences()
-				);
+			const previousPreferences = queryClient.getQueryData<UserPreferences>(
+				userPreferencesQueryKeys.preferences()
+			);
 
 			// Optimistically update to the new value
 			if (previousPreferences) {
@@ -408,9 +388,7 @@ export function useUpdateSpecificTableFilters() {
 				tableName,
 				filters,
 			});
-			toast.error(
-				"Failed to sync table filters. Changes saved locally only."
-			);
+			toast.error("Failed to sync table filters. Changes saved locally only.");
 		},
 		onSuccess: (_, { tableName, filters }) => {
 			logger.debug("Specific table filters updated successfully", {

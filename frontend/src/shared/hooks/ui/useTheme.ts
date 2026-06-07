@@ -31,10 +31,8 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 	} = options;
 
 	// Use localStorage hook for persistence
-	const { value: storedTheme, setValue: setStoredTheme } = useLocalStorage<Theme>(
-		storageKey,
-		defaultTheme
-	);
+	const { value: storedTheme, setValue: setStoredTheme } =
+		useLocalStorage<Theme>(storageKey, defaultTheme);
 
 	// Track system theme preference
 	const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => {
@@ -48,8 +46,7 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 	const [theme, setThemeState] = useState<Theme>(storedTheme);
 
 	// Resolved theme (what actually gets applied)
-	const resolvedTheme: ResolvedTheme =
-		theme === "system" ? systemTheme : theme;
+	const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
 	// Listen for system theme changes
 	useEffect(() => {
@@ -60,7 +57,7 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 		const handleChange = (e: MediaQueryListEvent) => {
 			const newSystemTheme = e.matches ? "dark" : "light";
 			setSystemTheme(newSystemTheme);
-			
+
 			logger.debug("System theme changed", {
 				newSystemTheme,
 				currentTheme: theme,
@@ -68,6 +65,7 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 		};
 
 		// Set initial value
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setSystemTheme(mediaQuery.matches ? "dark" : "light");
 
 		// Add listener
@@ -94,12 +92,15 @@ export function useTheme(options: UseThemeOptions = {}): UseThemeReturn {
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
-		logger.debug("useTheme hook - theme state (document application disabled)", {
-			theme,
-			resolvedTheme,
-			systemTheme,
-			note: "UI Store handles document theme application"
-		});
+		logger.debug(
+			"useTheme hook - theme state (document application disabled)",
+			{
+				theme,
+				resolvedTheme,
+				systemTheme,
+				note: "UI Store handles document theme application",
+			}
+		);
 	}, [resolvedTheme, theme, systemTheme]);
 
 	// Set theme function

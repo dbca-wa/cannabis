@@ -22,7 +22,7 @@ interface ErrorAlertProps {
 	children?: ReactNode;
 }
 
-export function ErrorAlert({
+export const ErrorAlert = ({
 	error,
 	title = "Error",
 	showRetry = false,
@@ -31,7 +31,7 @@ export function ErrorAlert({
 	showDetails = false,
 	className,
 	children,
-}: ErrorAlertProps) {
+}: ErrorAlertProps) => {
 	const primaryMessage = getErrorMessage(error);
 	const allMessages = getAllErrorMessages(error);
 	const hasMultipleMessages = allMessages.length > 1;
@@ -49,13 +49,11 @@ export function ErrorAlert({
 							{/* Show additional messages if available */}
 							{hasMultipleMessages && showDetails && (
 								<ul className="mt-2 list-disc list-inside space-y-1">
-									{allMessages
-										.slice(1)
-										.map((message, index) => (
-											<li key={index} className="text-sm">
-												{message}
-											</li>
-										))}
+									{allMessages.slice(1).map((message, index) => (
+										<li key={index} className="text-sm">
+											{message}
+										</li>
+									))}
 								</ul>
 							)}
 						</AlertDescription>
@@ -96,4 +94,4 @@ export function ErrorAlert({
 			</div>
 		</Alert>
 	);
-}
+};

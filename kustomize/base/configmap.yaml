@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cannabis-config
+data:
+  TZ: "Australia/Perth"
+  DJANGO_SETTINGS_MODULE: "config.settings"

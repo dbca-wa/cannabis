@@ -75,8 +75,7 @@ export function BulkActions({
 		return null;
 	}
 
-	const hasSelectedExportActions =
-		onExportSelectedCSV || onExportSelectedJSON;
+	const hasSelectedExportActions = onExportSelectedCSV || onExportSelectedJSON;
 	const hasFullExportActions = onExportAllCSV || onExportAllJSON;
 	const hasExportActions = hasSelectedExportActions || hasFullExportActions;
 	const hasSelectAllInDatabase =
@@ -141,11 +140,7 @@ export function BulkActions({
 					{(hasExportActions || hasFullExportActions) && (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={isExporting}
-								>
+								<Button variant="outline" size="sm" disabled={isExporting}>
 									{isExporting ? (
 										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 									) : (
@@ -213,9 +208,7 @@ export function BulkActions({
 												)}
 												{onExportAllJSON && (
 													<DropdownMenuItem
-														onClick={
-															onExportAllJSON
-														}
+														onClick={onExportAllJSON}
 														disabled={isExporting}
 													>
 														<Database className="h-4 w-4 mr-2" />
@@ -245,11 +238,7 @@ export function BulkActions({
 									onClick={action.onClick}
 									disabled={action.disabled || isExporting}
 								>
-									{action.icon && (
-										<span className="mr-2">
-											{action.icon}
-										</span>
-									)}
+									{action.icon && <span className="mr-2">{action.icon}</span>}
 									{action.label}
 								</Button>
 							))}
@@ -289,6 +278,7 @@ export function BulkActions({
 /**
  * Common bulk actions for different entity types
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const commonBulkActions = {
 	delete: (onDelete: () => void, disabled?: boolean): BulkAction => ({
 		id: "delete",

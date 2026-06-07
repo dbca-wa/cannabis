@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application for Copy of Certificate</title>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 48px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Times, 'Times New Roman', serif;
+            margin: 0;
+            padding: 100px;
+            color: #000;
+            line-height: 1.6;
+            font-size: 12px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Main content wrapper - takes available space */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header styling */
+        .header-section {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .form-reference {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+        }
+
+        .header-center {
+            text-align: center;
+        }
+
+        /* All header text styled identically */
+        .header-text {
+            font-size: 11px;
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
+        .state-info {
+            margin-bottom: 5px;
+        }
+
+        /* Form content styling */
+        .form-content {
+            text-align: justify;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .application-paragraph {
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+
+        .application-date-line {
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        /* Signature section */
+        .signature-section {
+            margin-top: 30px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .signature-block {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #000;
+            width: 100%;
+            height: 50px;
+            margin-bottom: 8px;
+        }
+
+        .signature-label {
+            font-size: 11px;
+            text-align: center;
+        }
+
+        /* Bottom content that gets pushed to bottom */
+        .bottom-content {
+            margin-top: auto;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* PrinceXML specific page break rules */
+        @media print {
+            .bottom-content {
+                page-break-inside: avoid;
+            }
+
+            .bottom-content-new-page {
+                page-break-before: always;
+            }
+        }
+
+        @prince-pdf {
+            prince-shrink-to-fit: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <!-- Header Section -->
+        <div class="header-section">
+            <!-- Form Number and Reference - Top Right -->
+            <div class="form-reference">
+                <div>Form M.D. 15</div>
+            </div>
+
+            <!-- Centered Content -->
+            <div class="header-center">
+                <!-- State and Legislation -->
+                <div class="state-info">
+                    <div class="header-text">
+                        WESTERN AUSTRALIA
+                    </div>
+                    <div class="header-text italic">
+                        MISUSE OF DRUGS ACT 1981
+                    </div>
+                    <div class="header-text italic">
+                        MISUSE OF DRUGS REGULATIONS 1982
+                    </div>
+                    <div class="header-text">
+                        APPLICATION FOR COPY OF CERTIFICATE OF APPROVED ANALYST OR APPROVED BOTANIST
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Form Text -->
+        <div class="form-content">
+            <div class="application-paragraph">
+                I {{ applicant_name|default:"[insert name of applicant/accused]" }} apply for a copy of {{ certificate_details|default:"[insert details of relevant certificate given under section 38 of Act]" }} to be provided to me at {{ delivery_address|default:"[insert address at which copy of certificate can be provided to applicant/accused]" }}.
+            </div>
+
+            <div class="application-date-line">
+                Certificate applied for on {{ application_date|default:"[date]" }} at {{ application_location|default:"[location]" }}.
+            </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">
+                    Signature of applicant/accused
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import React, { useState } from "react";
 import {
 	type ColumnDef,
@@ -36,7 +37,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/shared/components/ui/select";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/shared/utils";
 
 // Enhanced filter interface
@@ -140,18 +140,16 @@ export function DataTable<TData>({
 	className,
 	tableClassName,
 	showResultsCount = true,
-	resultsCountLabel = (count, total) =>
-		`Showing ${count} of ${total} results`,
+	resultsCountLabel = (count, total) => `Showing ${count} of ${total} results`,
 }: DataTableProps<TData>) {
 	// Internal state for table functionality
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-		{}
-	);
+	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 	const [rowSelection, setRowSelection] = useState({});
 
 	// Create table instance
+
 	const table = useReactTable({
 		data,
 		columns,
@@ -168,9 +166,7 @@ export function DataTable<TData>({
 		state: {
 			sorting: enableSorting ? sorting : undefined,
 			columnFilters,
-			columnVisibility: enableColumnVisibility
-				? columnVisibility
-				: undefined,
+			columnVisibility: enableColumnVisibility ? columnVisibility : undefined,
 			rowSelection: enableRowSelection ? rowSelection : undefined,
 		},
 		initialState: {
@@ -178,7 +174,7 @@ export function DataTable<TData>({
 				? undefined
 				: {
 						pageSize: 10,
-				  },
+					},
 		},
 	});
 
@@ -202,16 +198,10 @@ export function DataTable<TData>({
 			<div className={cn("space-y-4", className)}>
 				<div className="flex items-center justify-center p-8 border rounded-lg">
 					<div className="text-center space-y-4">
-						<div className="text-red-600 font-medium">
-							Error loading data
-						</div>
+						<div className="text-red-600 font-medium">Error loading data</div>
 						<p className="text-sm text-muted-foreground">{error}</p>
 						{onRefresh && (
-							<Button
-								onClick={onRefresh}
-								variant="outline"
-								size="sm"
-							>
+							<Button onClick={onRefresh} variant="outline" size="sm">
 								<RefreshCw className="mr-2 h-4 w-4" />
 								Try Again
 							</Button>
@@ -235,9 +225,7 @@ export function DataTable<TData>({
 								<Input
 									placeholder={searchPlaceholder}
 									value={searchValue}
-									onChange={(e) =>
-										onSearchChange?.(e.target.value)
-									}
+									onChange={(e) => onSearchChange?.(e.target.value)}
 									className="pl-10"
 								/>
 							</div>
@@ -254,10 +242,7 @@ export function DataTable<TData>({
 								size="sm"
 							>
 								<RefreshCw
-									className={cn(
-										"h-4 w-4",
-										isRefreshing && "animate-spin"
-									)}
+									className={cn("h-4 w-4", isRefreshing && "animate-spin")}
 								/>
 							</Button>
 						)}
@@ -267,8 +252,7 @@ export function DataTable<TData>({
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" size="sm">
-										Columns{" "}
-										<ChevronDown className="ml-2 h-4 w-4" />
+										Columns <ChevronDown className="ml-2 h-4 w-4" />
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
@@ -281,9 +265,7 @@ export function DataTable<TData>({
 												className="capitalize"
 												checked={column.getIsVisible()}
 												onCheckedChange={(value) =>
-													column.toggleVisibility(
-														!!value
-													)
+													column.toggleVisibility(!!value)
 												}
 											>
 												{column.id.replace("_", " ")}
@@ -312,26 +294,15 @@ export function DataTable<TData>({
 				{filters.length > 0 && (
 					<div className="flex items-center gap-4">
 						{filters.map((filter) => (
-							<div
-								key={filter.id}
-								className="flex items-center gap-2"
-							>
-								<span className="text-sm font-medium">
-									{filter.label}:
-								</span>
-								<Select
-									value={filter.value}
-									onValueChange={filter.onChange}
-								>
+							<div key={filter.id} className="flex items-center gap-2">
+								<span className="text-sm font-medium">{filter.label}:</span>
+								<Select value={filter.value} onValueChange={filter.onChange}>
 									<SelectTrigger className="w-32">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
 										{filter.options.map((option) => (
-											<SelectItem
-												key={option.value}
-												value={option.value}
-											>
+											<SelectItem key={option.value} value={option.value}>
 												{option.label}
 											</SelectItem>
 										))}
@@ -342,11 +313,7 @@ export function DataTable<TData>({
 
 						{/* Clear filters button */}
 						{(hasActiveFilters || hasSearchQuery) && (
-							<Button
-								variant="outline"
-								onClick={clearAllFilters}
-								size="sm"
-							>
+							<Button variant="outline" onClick={clearAllFilters} size="sm">
 								<X className="mr-2 h-4 w-4" />
 								Clear Filters
 							</Button>
@@ -359,9 +326,7 @@ export function DataTable<TData>({
 					<div className="text-sm text-muted-foreground">
 						{pagination
 							? resultsCountLabel(data.length, pagination.total)
-							: `${data.length} result${
-									data.length === 1 ? "" : "s"
-							  }`}
+							: `${data.length} result${data.length === 1 ? "" : "s"}`}
 					</div>
 				)}
 			</div>
@@ -377,10 +342,9 @@ export function DataTable<TData>({
 										{header.isPlaceholder
 											? null
 											: flexRender(
-													header.column.columnDef
-														.header,
+													header.column.columnDef.header,
 													header.getContext()
-											  )}
+												)}
 									</TableHead>
 								))}
 							</TableRow>
@@ -388,23 +352,14 @@ export function DataTable<TData>({
 					</TableHeader>
 					<TableBody>
 						{isLoading ? (
-							// Loading skeleton
-							Array.from({ length: 5 }).map((_, index) => (
-								<TableRow key={index}>
-									{columns.map((_, colIndex) => (
-										<TableCell key={colIndex}>
-											<Skeleton className="h-4 w-full" />
-										</TableCell>
-									))}
-								</TableRow>
-							))
+							<TableRow>
+								<TableCell colSpan={columns.length} />
+							</TableRow>
 						) : table.getRowModel().rows?.length ? (
 							table.getRowModel().rows.map((row) => (
 								<TableRow
 									key={row.id}
-									data-state={
-										row.getIsSelected() && "selected"
-									}
+									data-state={row.getIsSelected() && "selected"}
 								>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell key={cell.id}>
@@ -433,13 +388,8 @@ export function DataTable<TData>({
 										</div>
 										{emptyStateAction && (
 											<Button
-												onClick={
-													emptyStateAction.onClick
-												}
-												variant={
-													emptyStateAction.variant ||
-													"outline"
-												}
+												onClick={emptyStateAction.onClick}
+												variant={emptyStateAction.variant || "outline"}
 												size="sm"
 											>
 												{emptyStateAction.icon}
@@ -459,8 +409,7 @@ export function DataTable<TData>({
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<span className="text-sm text-muted-foreground">
-							Page {pagination.pageIndex + 1} of{" "}
-							{pagination.pageCount}
+							Page {pagination.pageIndex + 1} of {pagination.pageCount}
 						</span>
 						<Select
 							value={pagination.pageSize.toString()}
@@ -478,9 +427,7 @@ export function DataTable<TData>({
 								<SelectItem value="50">50</SelectItem>
 							</SelectContent>
 						</Select>
-						<span className="text-sm text-muted-foreground">
-							per page
-						</span>
+						<span className="text-sm text-muted-foreground">per page</span>
 					</div>
 
 					<div className="flex items-center gap-2">
@@ -495,11 +442,7 @@ export function DataTable<TData>({
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={() =>
-								pagination.onPageChange(
-									pagination.pageIndex - 1
-								)
-							}
+							onClick={() => pagination.onPageChange(pagination.pageIndex - 1)}
 							disabled={pagination.pageIndex === 0}
 						>
 							Previous
@@ -507,28 +450,16 @@ export function DataTable<TData>({
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={() =>
-								pagination.onPageChange(
-									pagination.pageIndex + 1
-								)
-							}
-							disabled={
-								pagination.pageIndex >= pagination.pageCount - 1
-							}
+							onClick={() => pagination.onPageChange(pagination.pageIndex + 1)}
+							disabled={pagination.pageIndex >= pagination.pageCount - 1}
 						>
 							Next
 						</Button>
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={() =>
-								pagination.onPageChange(
-									pagination.pageCount - 1
-								)
-							}
-							disabled={
-								pagination.pageIndex >= pagination.pageCount - 1
-							}
+							onClick={() => pagination.onPageChange(pagination.pageCount - 1)}
+							disabled={pagination.pageIndex >= pagination.pageCount - 1}
 						>
 							Last
 						</Button>

@@ -33,9 +33,7 @@
 @keyframes pulse-glow {
 	0%,
 	100% {
-		filter: drop-shadow(
-			0 0 5px rgba(34, 197, 94, 0.3)
-		); /* Light green glow */
+		filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.3)); /* Light green glow */
 	}
 	50% {
 		filter: drop-shadow(

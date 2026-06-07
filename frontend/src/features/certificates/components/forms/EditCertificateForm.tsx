@@ -35,7 +35,7 @@ export const EditCertificateForm: React.FC<EditCertificateFormProps> = ({
 	const form = useForm<EditCertificateFormData>({
 		resolver: zodResolver(editCertificateSchema),
 		defaultValues: {
-			submission: certificate.submission,
+			case: certificate.case,
 		},
 	});
 
@@ -45,10 +45,7 @@ export const EditCertificateForm: React.FC<EditCertificateFormProps> = ({
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(handleSubmit)}
-				className="space-y-4"
-			>
+			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				<div className="p-4 bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-500 rounded mb-4">
 					<p className="text-sm text-blue-900 dark:text-blue-100">
 						<strong>Certificate Number:</strong>{" "}
@@ -58,30 +55,27 @@ export const EditCertificateForm: React.FC<EditCertificateFormProps> = ({
 
 				<FormField
 					control={form.control}
-					name="submission"
+					name="case"
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>
-								Submission ID{" "}
-								<span className="text-red-500">*</span>
+								Case ID <span className="text-red-500">*</span>
 							</FormLabel>
 							<FormControl>
 								<Input
 									{...field}
 									type="number"
-									placeholder="Enter submission ID"
+									placeholder="Enter case ID"
 									disabled={isSubmitting}
 									value={field.value || ""}
 									onChange={(e) => {
 										const value = e.target.value;
-										field.onChange(
-											value ? parseInt(value) : undefined
-										);
+										field.onChange(value ? parseInt(value) : undefined);
 									}}
 								/>
 							</FormControl>
 							<FormDescription>
-								Update the submission ID for this certificate.
+								Update the case ID for this certificate.
 							</FormDescription>
 							<FormMessage />
 						</FormItem>
@@ -98,9 +92,7 @@ export const EditCertificateForm: React.FC<EditCertificateFormProps> = ({
 						Cancel
 					</Button>
 					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting && (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						)}
+						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						Update Certificate
 					</Button>
 				</div>

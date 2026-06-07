@@ -12,6 +12,7 @@ export interface StationsQueryParams {
 	page?: number;
 	search?: string;
 	ordering?: string;
+	limit?: number;
 }
 
 export const policeStationsService = {
@@ -25,6 +26,7 @@ export const policeStationsService = {
 			page: params.page,
 			search: params.search,
 			ordering: params.ordering,
+			limit: params.limit,
 		});
 
 		return apiClient.get<PaginatedResponse<PoliceStation>>(
@@ -37,9 +39,7 @@ export const policeStationsService = {
 	 * Get a single police station by ID
 	 */
 	async getStation(id: number): Promise<PoliceStation> {
-		return apiClient.get<PoliceStation>(
-			ENDPOINTS.POLICE.STATIONS.DETAIL(id)
-		);
+		return apiClient.get<PoliceStation>(ENDPOINTS.POLICE.STATIONS.DETAIL(id));
 	},
 
 	/**
@@ -100,4 +100,29 @@ export const policeStationsService = {
 
 		return apiClient.getBlob(url);
 	},
+
+	/**
+	 * Merge secondary stations into a primary station,
+	 * transferring all officers and cases to the primary.
+	 */
+	async mergeStations(
+		data: StationMergeRequest
+	): Promise<StationMergeResponse> {
+		return apiClient.post<StationMergeResponse>(
+			ENDPOINTS.POLICE.STATIONS.MERGE,
+			data
+		);
+	},
 };
+
+export interface StationMergeRequest {
+	primary_id: number;
+	secondary_ids: number[];
+}
+
+export interface StationMergeResponse {
+	message: string;
+	primary_id: number;
+	officers_reassigned: number;
+	cases_reassigned: number;
+}

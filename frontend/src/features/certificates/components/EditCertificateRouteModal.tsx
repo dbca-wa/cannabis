@@ -12,7 +12,6 @@ import {
 	useUpdateCertificate,
 } from "../hooks/useCertificates";
 import type { EditCertificateFormData } from "../schemas/certificateSchemas";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 
@@ -35,7 +34,7 @@ export const EditCertificateRouteModal = () => {
 			await updateCertificate.mutateAsync({
 				id,
 				data: {
-					submission: data.submission,
+					case: data.case,
 				},
 			});
 			handleClose();
@@ -51,24 +50,16 @@ export const EditCertificateRouteModal = () => {
 				<DialogHeader>
 					<DialogTitle>Edit Certificate</DialogTitle>
 					<DialogDescription>
-						Update the certificate details. The certificate number
-						cannot be changed.
+						Update the certificate details. The certificate number cannot be
+						changed.
 					</DialogDescription>
 				</DialogHeader>
 
-				{isLoading ? (
-					<div className="space-y-4">
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-10 w-full" />
-					</div>
-				) : error || !certificate ? (
+				{isLoading ? null : error || !certificate ? (
 					<div className="flex flex-col items-center justify-center py-8">
 						<AlertCircle className="h-12 w-12 text-red-500 mb-4" />
 						<p className="text-center text-gray-600 dark:text-gray-400 mb-4">
-							{error
-								? "Failed to load certificate"
-								: "Certificate not found"}
+							{error ? "Failed to load certificate" : "Certificate not found"}
 						</p>
 						<Button onClick={handleClose}>Close</Button>
 					</div>

@@ -21,7 +21,7 @@ export type AdditionalInvoiceFeeFormData = z.infer<
 
 // Invoice creation schema
 export const createInvoiceSchema = z.object({
-	submission: z.number().int().positive("Submission ID is required"),
+	case: z.number().int().positive("Case ID is required"),
 	customer_number: z
 		.string()
 		.min(1, "Customer number is required")
@@ -43,7 +43,7 @@ export type EditInvoiceFormData = z.infer<typeof editInvoiceSchema>;
 // Invoice search schema
 export const invoiceSearchSchema = z.object({
 	search: z.string().optional(),
-	submission: z.number().int().positive().optional(),
+	case: z.number().int().positive().optional(),
 	ordering: z.string().optional(),
 	limit: z.number().int().positive().max(100).optional(),
 	offset: z.number().int().min(0).optional(),

@@ -15,11 +15,11 @@ interface CreateStationModalProps {
 	onCreate?: (station: PoliceStation) => void;
 }
 
-export function CreateStationModal({
+export const CreateStationModal = ({
 	isOpen,
 	onClose,
 	onCreate,
-}: CreateStationModalProps) {
+}: CreateStationModalProps) => {
 	const handleSuccess = (station?: PoliceStation) => {
 		// Call onCreate callback if provided and station data is available
 		if (onCreate && station) {
@@ -37,15 +37,12 @@ export function CreateStationModal({
 				<DialogHeader>
 					<DialogTitle>Create New Police Station</DialogTitle>
 					<DialogDescription>
-						Add a new police station to the system. All fields
-						marked with * are required.
+						Add a new police station to the system. All fields marked with * are
+						required.
 					</DialogDescription>
 				</DialogHeader>
-				<CreateStationForm
-					onSuccess={handleSuccess}
-					onCancel={onClose}
-				/>
+				<CreateStationForm onSuccess={handleSuccess} onCancel={onClose} />
 			</DialogContent>
 		</Dialog>
 	);
-}
+};

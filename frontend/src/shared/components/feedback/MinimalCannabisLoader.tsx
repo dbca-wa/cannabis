@@ -26,12 +26,14 @@ export const MinimalCannabisLoader = ({
 	// Handle completion
 	useEffect(() => {
 		if (isComplete) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setAnimatedProgress(100);
 			setTimeout(() => onComplete?.(), 800);
 		}
 	}, [isComplete, onComplete]);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		if (progress >= 100) setAnimatedProgress(100);
 	}, [progress]);
 
@@ -62,10 +64,7 @@ export const MinimalCannabisLoader = ({
 
 				{/* Progress ring around the leaf */}
 				<div className="absolute inset-0 flex items-center justify-center">
-					<svg
-						className="w-20 h-20 transform -rotate-90"
-						viewBox="0 0 32 32"
-					>
+					<svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 32 32">
 						{/* Background circle */}
 						<circle
 							cx="16"
@@ -85,9 +84,7 @@ export const MinimalCannabisLoader = ({
 							strokeWidth="2"
 							strokeLinecap="round"
 							strokeDasharray="87.96"
-							strokeDashoffset={
-								87.96 - (animatedProgress / 100) * 87.96
-							}
+							strokeDashoffset={87.96 - (animatedProgress / 100) * 87.96}
 							className="transition-all duration-300 ease-out"
 						/>
 					</svg>
@@ -99,9 +96,7 @@ export const MinimalCannabisLoader = ({
 				<p className="text-green-400 text-sm animate-pulse">
 					{isComplete ? "Ready!" : "Loading..."}
 				</p>
-				<p className="text-green-500 text-xs mt-1 opacity-75">
-					{message}
-				</p>
+				<p className="text-green-500 text-xs mt-1 opacity-75">{message}</p>
 				<p className="text-green-500 text-xs mt-1">
 					{animatedProgress.toFixed(0)}%
 				</p>

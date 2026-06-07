@@ -21,7 +21,7 @@ interface SearchErrorDisplayProps {
 
 /**
  * SearchErrorDisplay provides consistent error handling UI for search comboboxes
- * with retry functionality and fallback behavior
+ * with retry functionality and fallback behaviour
  */
 export const SearchErrorDisplay: React.FC<SearchErrorDisplayProps> = ({
 	error,

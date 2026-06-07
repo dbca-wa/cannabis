@@ -3,11 +3,24 @@
  * Supports CSV and JSON export formats
  */
 
-export interface ExportColumn<T> {
+export interface ExportColumn<T = object> {
 	key: keyof T | string;
 	label: string;
 	getValue?: (item: T) => string | number | boolean | null | undefined;
-	format?: (value: any) => string;
+	format?: (value: unknown) => string;
+}
+
+/**
+ * Simple column definition for pre-defined export columns that work
+ * with any object type via string key access.
+ */
+export interface ExportColumnDef {
+	key: string;
+	label: string;
+	getValue?: (
+		item: Record<string, unknown>
+	) => string | number | boolean | null | undefined;
+	format?: (value: unknown) => string;
 }
 
 export interface ExportOptions {
@@ -19,9 +32,9 @@ export interface ExportOptions {
 /**
  * Convert data to CSV format
  */
-export function convertToCSV<T>(
-	data: T[],
-	columns: ExportColumn<T>[],
+export function convertToCSV(
+	data: object[],
+	columns: ExportColumnDef[],
 	options: ExportOptions = {}
 ): string {
 	const { includeHeaders = true } = options;
@@ -36,12 +49,13 @@ export function convertToCSV<T>(
 	// Add data rows
 	data.forEach((item) => {
 		const values = columns.map((col) => {
-			let value: any;
+			let value: unknown;
+			const record = item as Record<string, unknown>;
 
 			if (col.getValue) {
-				value = col.getValue(item);
+				value = col.getValue(record);
 			} else {
-				value = (item as any)[col.key];
+				value = record[col.key];
 			}
 
 			// Format the value if formatter provided
@@ -68,21 +82,22 @@ export function convertToCSV<T>(
 /**
  * Convert data to JSON format
  */
-export function convertToJSON<T>(
-	data: T[],
-	columns: ExportColumn<T>[],
+export function convertToJSON(
+	data: object[],
+	columns: ExportColumnDef[],
 	_options: ExportOptions = {}
 ): string {
 	const exportData = data.map((item) => {
-		const exportItem: Record<string, any> = {};
+		const exportItem: Record<string, unknown> = {};
 
 		columns.forEach((col) => {
-			let value: any;
+			let value: unknown;
+			const record = item as Record<string, unknown>;
 
 			if (col.getValue) {
-				value = col.getValue(item);
+				value = col.getValue(record);
 			} else {
-				value = (item as any)[col.key];
+				value = record[col.key];
 			}
 
 			// Format the value if formatter provided
@@ -126,9 +141,9 @@ export function downloadFile(
 /**
  * Export data as CSV file
  */
-export function exportToCSV<T>(
-	data: T[],
-	columns: ExportColumn<T>[],
+export function exportToCSV(
+	data: object[],
+	columns: ExportColumnDef[],
 	options: ExportOptions = {}
 ): void {
 	const { filename = "export.csv" } = options;
@@ -139,9 +154,9 @@ export function exportToCSV<T>(
 /**
  * Export data as JSON file
  */
-export function exportToJSON<T>(
-	data: T[],
-	columns: ExportColumn<T>[],
+export function exportToJSON(
+	data: object[],
+	columns: ExportColumnDef[],
 	options: ExportOptions = {}
 ): void {
 	const { filename = "export.json" } = options;
@@ -222,9 +237,9 @@ export const commonExportColumns = {
 		{
 			key: "date_joined",
 			label: "Date Joined",
-			format: (date: string) => formatDateForExport(date),
+			format: (date: unknown) => formatDateForExport(date as string),
 		},
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
 	policeOfficer: [
 		{ key: "id", label: "ID" },
@@ -237,7 +252,7 @@ export const commonExportColumns = {
 			label: "Sworn",
 			format: formatBooleanForExport,
 		},
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
 	policeStation: [
 		{ key: "id", label: "ID" },
@@ -245,24 +260,24 @@ export const commonExportColumns = {
 		{ key: "address", label: "Address" },
 		{ key: "phone", label: "Phone" },
 		{ key: "officer_count", label: "Officer Count" },
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
 	defendant: [
 		{ key: "id", label: "ID" },
-		{ key: "first_name", label: "First Name" },
+		{ key: "given_names", label: "Given Names" },
 		{ key: "last_name", label: "Last Name" },
 		{ key: "full_name", label: "Full Name" },
 		{ key: "cases_count", label: "Cases Count" },
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
-	submission: [
+	caseObj: [
 		{ key: "id", label: "ID" },
 		{ key: "case_number", label: "Case Number" },
 		{ key: "phase_display", label: "Phase" },
 		{
 			key: "received",
 			label: "Received Date",
-			format: (date: string) => formatDateForExport(date),
+			format: (date: unknown) => formatDateForExport(date as string),
 		},
 		{ key: "requesting_officer_name", label: "Requesting Officer" },
 		{ key: "approved_botanist_name", label: "Botanist" },
@@ -274,7 +289,7 @@ export const commonExportColumns = {
 			label: "Cannabis Present",
 			format: formatBooleanForExport,
 		},
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
 	certificate: [
 		{ key: "id", label: "ID" },
@@ -288,9 +303,9 @@ export const commonExportColumns = {
 		{
 			key: "created_at",
 			label: "Created Date",
-			format: (date: string) => formatDateForExport(date),
+			format: (date: unknown) => formatDateForExport(date as string),
 		},
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 
 	invoice: [
 		{ key: "id", label: "ID" },
@@ -308,7 +323,7 @@ export const commonExportColumns = {
 		{
 			key: "created_at",
 			label: "Created Date",
-			format: (date: string) => formatDateForExport(date),
+			format: (date: unknown) => formatDateForExport(date as string),
 		},
-	] as ExportColumn<any>[],
+	] as ExportColumnDef[],
 };

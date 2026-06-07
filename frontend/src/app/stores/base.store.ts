@@ -93,11 +93,7 @@ export abstract class BaseStore<T extends BaseStoreState = BaseStoreState> {
 			silent?: boolean;
 		} = {}
 	): Promise<{ success: boolean; data?: TResult; error?: string }> {
-		const {
-			retryAttempts = 0,
-			retryDelay = 1000,
-			silent = false,
-		} = options;
+		const { retryAttempts = 0, retryDelay = 1000, silent = false } = options;
 
 		this.clearError();
 		if (!silent) this.setLoading(true);
@@ -115,8 +111,7 @@ export abstract class BaseStore<T extends BaseStoreState = BaseStoreState> {
 				});
 				return { success: true, data };
 			} catch (error) {
-				lastError =
-					error instanceof Error ? error : new Error("Unknown error");
+				lastError = error instanceof Error ? error : new Error("Unknown error");
 
 				if (attempt < retryAttempts) {
 					logger.warn(`Operation ${operationName} failed, retrying`, {
@@ -124,9 +119,7 @@ export abstract class BaseStore<T extends BaseStoreState = BaseStoreState> {
 						totalAttempts: retryAttempts + 1,
 						error: lastError.message,
 					});
-					await new Promise((resolve) =>
-						setTimeout(resolve, retryDelay)
-					);
+					await new Promise((resolve) => setTimeout(resolve, retryDelay));
 				}
 			}
 		}
@@ -136,9 +129,7 @@ export abstract class BaseStore<T extends BaseStoreState = BaseStoreState> {
 		if (!silent) this.setLoading(false);
 
 		logger.error(
-			`Operation ${operationName} failed after ${
-				retryAttempts + 1
-			} attempts`,
+			`Operation ${operationName} failed after ${retryAttempts + 1} attempts`,
 			{
 				error: errorMessage,
 			}

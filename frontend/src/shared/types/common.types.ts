@@ -37,7 +37,7 @@ export interface TableState<T> extends LoadingState {
 	data: T[];
 	pagination: PaginationInfo | null;
 	sorting: SortingInfo | null;
-	filters: Record<string, any>;
+	filters: Record<string, unknown>;
 }
 
 // Pagination information
@@ -59,7 +59,7 @@ export interface SortingInfo {
 // Filter information
 export interface FilterInfo {
 	field: string;
-	value: any;
+	value: unknown;
 	operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "in";
 }
 
@@ -78,7 +78,7 @@ export interface SearchParams {
 export interface ModalState {
 	isOpen: boolean;
 	mode: "create" | "edit" | "view" | "delete";
-	data?: any;
+	data?: unknown;
 }
 
 // Generic confirmation dialog state
@@ -144,8 +144,8 @@ export interface AuditTrail {
 	timestamp: Timestamp;
 	userId: ID;
 	userEmail: string;
-	changes?: Record<string, { from: any; to: any }>;
-	metadata?: Record<string, any>;
+	changes?: Record<string, { from: unknown; to: unknown }>;
+	metadata?: Record<string, unknown>;
 }
 
 // Generic validation error
@@ -162,15 +162,15 @@ export interface ApiError {
 	status: number;
 	timestamp: Timestamp;
 	path?: string;
-	details?: Record<string, any>;
+	details?: Record<string, unknown>;
 }
 
 // Generic success response
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
 	success: true;
 	data: T;
 	message?: string;
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 // Generic error response
@@ -208,7 +208,7 @@ export interface CacheEntry<T> {
 }
 
 // Generic event type
-export interface AppEvent<T = any> {
+export interface AppEvent<T = unknown> {
 	type: string;
 	payload: T;
 	timestamp: Timestamp;
@@ -272,15 +272,17 @@ export const isSuccessResponse = <T>(
 };
 
 export const isErrorResponse = (
-	response: ApiResponse<any>
+	response: ApiResponse<unknown>
 ): response is ErrorResponse => {
 	return response.success === false;
 };
 
-export const isValidId = (id: any): id is ID => {
+export const isValidId = (id: unknown): id is ID => {
 	return typeof id === "string" || typeof id === "number";
 };
 
-export const isValidTimestamp = (timestamp: any): timestamp is Timestamp => {
+export const isValidTimestamp = (
+	timestamp: unknown
+): timestamp is Timestamp => {
 	return typeof timestamp === "string" && !isNaN(Date.parse(timestamp));
 };

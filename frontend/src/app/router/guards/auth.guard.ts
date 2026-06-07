@@ -1,7 +1,10 @@
 import { rootStore } from "@/app/stores/root.store";
 import { type LoaderFunctionArgs, redirect } from "react-router";
 import { logger } from "@/shared/services/logger.service";
-import { authService } from "@/features/auth/services/auth.service";
+import {
+	hasValidTokens,
+	getCurrentUser,
+} from "@/features/auth/services/auth.service";
 
 /**
  * Helper function to check authentication status
@@ -12,19 +15,17 @@ const checkAuthStatus = async () => {
 	let user = null;
 
 	try {
-		if (authService.hasValidTokens()) {
-			const result = await authService.getCurrentUser();
-			if (result.success && result.data) {
+		if (hasValidTokens()) {
+			const fetchedUser = await getCurrentUser();
+			if (fetchedUser) {
 				isAuthenticated = true;
-				user = result.data;
-				logger.debug("[AuthGuard] User authenticated", { 
-					userId: user.id, 
-					email: user.email 
+				user = fetchedUser;
+				logger.debug("[AuthGuard] User authenticated", {
+					userId: fetchedUser.id,
+					email: fetchedUser.email,
 				});
 			} else {
-				logger.debug("[AuthGuard] Auth check failed - no user data", { 
-					error: result.error 
-				});
+				logger.debug("[AuthGuard] Auth check failed - no user data");
 			}
 		} else {
 			logger.debug("[AuthGuard] No valid tokens found");
@@ -47,10 +48,10 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 	logger.debug("[RootAuthGuard] Checking path:", { pathname });
 
 	try {
-		// Initialize stores (client state only)
+		// Initialise stores (client state only)
 		await rootStore.initialise();
 	} catch (error) {
-		// Don't let store initialization failures block the app
+		// Don't let store initialisation failures block the app
 		logger.error(
 			"[RootAuthGuard] Store initialisation failed, but continuing with auth check",
 			{ error }
@@ -59,7 +60,7 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 
 	// For auth routes, handle them first to avoid unnecessary auth checks
 	if (pathname.startsWith("/auth/")) {
-		// Special case: password-update requires authentication
+		// Special caseObj: password-update requires authentication
 		if (pathname === "/auth/password-update") {
 			const { isAuthenticated } = await checkAuthStatus();
 			if (!isAuthenticated) {
@@ -73,23 +74,26 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 			);
 			return null;
 		}
-		
-		// Special case: invitation activation doesn't require authentication (public route)
-		if (pathname.startsWith("/auth/activate-invite/") || pathname === "/auth/invite-error") {
+
+		// Special caseObj: invitation activation doesn't require authentication (public route)
+		if (
+			pathname.startsWith("/auth/activate-invite/") ||
+			pathname === "/auth/invite-error"
+		) {
 			logger.debug(
 				"[RootAuthGuard] Invitation activation/error is public, allowing access"
 			);
 			return null;
 		}
-		
-		// Special case: password reset code entry and success pages are public
+
+		// Special caseObj: password reset code entry and success pages are public
 		if (pathname === "/auth/reset-code" || pathname === "/auth/reset-success") {
 			logger.debug(
 				"[RootAuthGuard] Password reset pages are public, allowing access"
 			);
 			return null;
 		}
-		
+
 		// For other auth routes (login), check if already authenticated
 		const { isAuthenticated } = await checkAuthStatus();
 		if (isAuthenticated) {
@@ -132,7 +136,12 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		if (!isAdmin) {
 			logger.warn(
 				"[RootAuthGuard] Non-admin user attempted to access admin route",
-				{ userId: user?.id, isStaff: user?.is_staff, isSuperuser: user?.is_superuser, pathname }
+				{
+					userId: user?.id,
+					isStaff: user?.is_staff,
+					isSuperuser: user?.is_superuser,
+					pathname,
+				}
 			);
 			return redirect("/"); // Redirect to home page
 		}

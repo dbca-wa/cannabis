@@ -3,8 +3,9 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search, Loader2 } from "lucide-react";
 import { cn } from "@/shared/utils";
 
-interface CommandInputWithLoadingProps
-	extends React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> {
+interface CommandInputWithLoadingProps extends React.ComponentPropsWithoutRef<
+	typeof CommandPrimitive.Input
+> {
 	// Whether to show loading spinner instead of search icon
 	isLoading?: boolean;
 	// Loading text to show as aria-label when loading
@@ -20,12 +21,7 @@ const CommandInputWithLoading = React.forwardRef<
 	CommandInputWithLoadingProps
 >(
 	(
-		{
-			className,
-			isLoading = false,
-			loadingText = "Searching...",
-			...props
-		},
+		{ className, isLoading = false, loadingText = "Searching...", ...props },
 		ref
 	) => (
 		<div className="flex items-center border-b px-3" cmdk-input-wrapper="">
@@ -39,10 +35,7 @@ const CommandInputWithLoading = React.forwardRef<
 				{...props}
 			/>
 			{isLoading && (
-				<div
-					className="ml-2 flex items-center"
-					aria-label={loadingText}
-				>
+				<div className="ml-2 flex items-center" aria-label={loadingText}>
 					<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
 				</div>
 			)}

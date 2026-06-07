@@ -9,22 +9,34 @@ import {
 } from "@/shared/components/ui/select";
 
 import { Label } from "@/shared/components/ui/label";
-import { Controller, type Control, type FieldErrors } from "react-hook-form";
+import {
+	Controller,
+	type Control,
+	type FieldErrors,
+	type Path,
+	type FieldValues,
+} from "react-hook-form";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
-interface RolePermissionsSectionProps {
-	control: Control<any>;
-	errors: FieldErrors<any>;
+interface RoleFormFields extends FieldValues {
+	role: string;
+}
+
+interface RolePermissionsSectionProps<
+	T extends RoleFormFields = RoleFormFields,
+> {
+	control: Control<T>;
+	errors: FieldErrors<T>;
 	selectedRole: string;
 	lockedRole?: "botanist" | "finance" | null;
 }
 
-export const RolePermissionsSection = ({
+export const RolePermissionsSection = <T extends RoleFormFields>({
 	control,
 	errors,
 	selectedRole,
 	lockedRole = null,
-}: RolePermissionsSectionProps) => {
+}: RolePermissionsSectionProps<T>) => {
 	const { user } = useAuth();
 
 	return (
@@ -34,7 +46,7 @@ export const RolePermissionsSection = ({
 					User Role
 				</Label>
 				<Controller
-					name="role"
+					name={"role" as Path<T>}
 					control={control}
 					render={({ field }) => (
 						<Select
@@ -48,27 +60,18 @@ export const RolePermissionsSection = ({
 							<SelectContent className="z-[1000]">
 								<SelectGroup>
 									<SelectLabel>Available Roles</SelectLabel>
-									{!lockedRole && (
-										<SelectItem value="none">
-											No Role
-										</SelectItem>
-									)}
+									{!lockedRole && <SelectItem value="none">No Role</SelectItem>}
 
-									{(!lockedRole ||
-										lockedRole === "botanist") &&
-										(user?.is_superuser ||
-											user?.role === "botanist") && (
+									{(!lockedRole || lockedRole === "botanist") &&
+										(user?.is_superuser || user?.role === "botanist") && (
 											<SelectItem value="botanist">
 												Approved Botanist
 											</SelectItem>
 										)}
 
-									{(!lockedRole ||
-										lockedRole === "finance") &&
+									{(!lockedRole || lockedRole === "finance") &&
 										user?.is_superuser && (
-											<SelectItem value="finance">
-												Finance Officer
-											</SelectItem>
+											<SelectItem value="finance">Finance Officer</SelectItem>
 										)}
 								</SelectGroup>
 							</SelectContent>
@@ -86,25 +89,23 @@ export const RolePermissionsSection = ({
 			<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
 				{selectedRole === "none" && (
 					<p className="text-sm text-gray-600 dark:text-gray-400">
-						<strong>No Role:</strong> This user will have basic
-						access but cannot perform specialized actions like
-						botanical determinations or financial operations.
+						<strong>No Role:</strong> This user will have basic access but
+						cannot perform specialized actions like botanical determinations or
+						financial operations.
 					</p>
 				)}
 
 				{selectedRole === "botanist" && (
 					<p className="text-sm text-green-700 dark:text-green-400">
-						<strong>Approved Botanist:</strong> This user can
-						perform botanical determinations, review submissions,
-						and access botanical features.
+						<strong>Approved Botanist:</strong> This user can perform botanical
+						determinations, review cases, and access botanical features.
 					</p>
 				)}
 
 				{selectedRole === "finance" && (
 					<p className="text-sm text-purple-700 dark:text-purple-400">
-						<strong>Finance Officer:</strong> This user can manage
-						financial aspects, generate invoices, and access
-						financial reporting features.
+						<strong>Finance Officer:</strong> This user can manage financial
+						aspects, generate invoices, and access financial reporting features.
 					</p>
 				)}
 			</div>
@@ -112,7 +113,8 @@ export const RolePermissionsSection = ({
 			{/* Note: Invited users are automatically created as active, non-staff members */}
 			<div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
 				<p className="text-xs text-blue-700 dark:text-blue-300">
-					<strong>Note:</strong> Invited users will be created as active, non-administrative members with the selected role.
+					<strong>Note:</strong> Invited users will be created as active,
+					non-administrative members with the selected role.
 				</p>
 			</div>
 		</div>

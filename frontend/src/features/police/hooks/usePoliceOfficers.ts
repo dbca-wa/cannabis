@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { policeOfficersService } from "../services/policeOfficers.service";
 import { logger } from "@/shared/services/logger.service";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 
 import type {
 	PoliceOfficerCreateRequest,
@@ -89,11 +90,7 @@ export const useCreatePoliceOfficer = () => {
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to create officer:", error);
-			toast.error(
-				(error as any)?.response?.data?.message ||
-					(error as any)?.message ||
-					"Failed to create officer"
-			);
+			toast.error(getErrorMessage(error) || "Failed to create officer");
 		},
 	});
 };
@@ -128,11 +125,7 @@ export const useUpdatePoliceOfficer = () => {
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to update officer:", error);
-			toast.error(
-				(error as any)?.response?.data?.message ||
-					(error as any)?.message ||
-					"Failed to update officer"
-			);
+			toast.error(getErrorMessage(error) || "Failed to update officer");
 		},
 	});
 };
@@ -160,11 +153,7 @@ export const useDeletePoliceOfficer = () => {
 		},
 		onError: (error: unknown) => {
 			console.error("Failed to delete officer:", error);
-			toast.error(
-				(error as any)?.response?.data?.message ||
-					(error as any)?.message ||
-					"Failed to delete officer"
-			);
+			toast.error(getErrorMessage(error) || "Failed to delete officer");
 		},
 	});
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -10,7 +10,7 @@ import {
 	CardTitle,
 } from "@/shared/components/ui/card";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import { authService } from "@/features/auth/services/auth.service";
+import { activateInvitation as activateInvitationService } from "@/features/auth/services/auth.service";
 import { logger } from "@/shared/services/logger.service";
 import { Head } from "@/shared/components/layout/Head";
 
@@ -37,15 +37,83 @@ type ActivationState =
 	| { status: "success"; data: ActivationResponse }
 	| { status: "error"; error: string };
 
-export default function InviteActivation() {
+const InviteActivation = () => {
 	const { token } = useParams<{ token: string }>();
 	const navigate = useNavigate();
 	const [activationState, setActivationState] = useState<ActivationState>({
 		status: "loading",
 	});
 
+	const activateInvitation = useCallback(
+		async (inviteToken: string) => {
+			try {
+				logger.info("Activating invitation", {
+					token: inviteToken.substring(0, 8) + "...",
+				});
+
+				const result = await activateInvitationService(inviteToken);
+
+				const data: ActivationResponse = {
+					message: "Invitation activated successfully",
+					user: result.user,
+					tokens: {
+						access: result.access,
+						refresh: result.refresh,
+						token_type: result.token_type || "Bearer",
+						expires_in: result.expires_in || 3600,
+					},
+					temporary_password: result.temporary_password,
+					requires_password_change: result.requires_password_change,
+				};
+
+				logger.info("Invitation activated successfully", {
+					userId: data.user.id,
+					email: data.user.email,
+				});
+
+				setActivationState({ status: "success", data });
+
+				// Auto-redirect to password update after a short delay
+				setTimeout(() => {
+					navigate("/auth/password-update", {
+						replace: true,
+						state: {
+							isFirstTime: true,
+							temporaryPassword: data.temporary_password,
+							fromInvitation: true,
+						},
+					});
+				}, 2000);
+			} catch (error) {
+				logger.error("Failed to activate invitation", { error });
+
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: "An unexpected error occurred while activating your invitation";
+
+				// For certain errors, redirect to error page with more context
+				if (
+					errorMessage.toLowerCase().includes("expired") ||
+					errorMessage.toLowerCase().includes("used") ||
+					errorMessage.toLowerCase().includes("invalid")
+				) {
+					navigate("/auth/invite-error", {
+						replace: true,
+						state: { error: errorMessage, token: inviteToken },
+					});
+					return;
+				}
+
+				setActivationState({ status: "error", error: errorMessage });
+			}
+		},
+		[navigate]
+	);
+
 	useEffect(() => {
 		if (!token) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setActivationState({
 				status: "error",
 				error: "Invalid invitation link - no token provided",
@@ -54,78 +122,8 @@ export default function InviteActivation() {
 		}
 
 		activateInvitation(token);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [token]);
-
-	const activateInvitation = async (inviteToken: string) => {
-		try {
-			logger.info("Activating invitation", {
-				token: inviteToken.substring(0, 8) + "...",
-			});
-
-			// Use auth service for invitation activation
-			const result = await authService.activateInvitation(inviteToken);
-
-			if (!result.success) {
-				throw new Error(
-					result.error || "Failed to activate invitation"
-				);
-			}
-
-			const data: ActivationResponse = {
-				message: "Invitation activated successfully",
-				user: result.data.user,
-				tokens: {
-					access: result.data.access,
-					refresh: result.data.refresh,
-					token_type: result.data.token_type || "Bearer",
-					expires_in: result.data.expires_in || 3600,
-				},
-				temporary_password: result.data.temporary_password,
-				requires_password_change: result.data.requires_password_change,
-			};
-
-			logger.info("Invitation activated successfully", {
-				userId: data.user.id,
-				email: data.user.email,
-			});
-
-			setActivationState({ status: "success", data });
-
-			// Auto-redirect to password update after a short delay
-			setTimeout(() => {
-				navigate("/auth/password-update", {
-					replace: true,
-					state: {
-						isFirstTime: true,
-						temporaryPassword: data.temporary_password,
-						fromInvitation: true,
-					},
-				});
-			}, 2000);
-		} catch (error) {
-			logger.error("Failed to activate invitation", { error });
-
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An unexpected error occurred while activating your invitation";
-
-			// For certain errors, redirect to error page with more context
-			if (
-				errorMessage.toLowerCase().includes("expired") ||
-				errorMessage.toLowerCase().includes("used") ||
-				errorMessage.toLowerCase().includes("invalid")
-			) {
-				navigate("/auth/invite-error", {
-					replace: true,
-					state: { error: errorMessage, token: inviteToken },
-				});
-				return;
-			}
-
-			setActivationState({ status: "error", error: errorMessage });
-		}
-	};
 
 	const handleRetryActivation = () => {
 		if (token) {
@@ -145,7 +143,7 @@ export default function InviteActivation() {
 					<Card className="w-full max-w-md mx-auto">
 						<CardHeader className="text-center">
 							<div className="flex justify-center mb-4">
-								<Loader2 className="h-12 w-12 animate-spin text-primary" />
+								<Loader2 className="h-12 w-12 animate-spin text-emerald-600" />
 							</div>
 							<CardTitle>Activating Your Invitation</CardTitle>
 							<CardDescription>
@@ -160,9 +158,9 @@ export default function InviteActivation() {
 					<Card className="w-full max-w-md mx-auto">
 						<CardHeader className="text-center">
 							<div className="flex justify-center mb-4">
-								<CheckCircle className="h-12 w-12 text-green-500" />
+								<CheckCircle className="h-12 w-12 text-emerald-500" />
 							</div>
-							<CardTitle className="text-green-700">
+							<CardTitle className="text-emerald-700 dark:text-emerald-400">
 								Welcome to Cannabis Management System!
 							</CardTitle>
 							<CardDescription>
@@ -173,23 +171,17 @@ export default function InviteActivation() {
 							<Alert>
 								<AlertTriangle className="h-4 w-4" />
 								<AlertDescription>
-									You'll be redirected to set up your password
-									in a moment. Please keep your temporary
-									password safe until then.
+									You'll be redirected to set up your password in a moment.
+									Please keep your temporary password safe until then.
 								</AlertDescription>
 							</Alert>
 
 							<div className="text-center">
 								<p className="text-sm text-muted-foreground mb-4">
 									Welcome,{" "}
-									<strong>
-										{activationState.data.user.full_name}
-									</strong>
+									<strong>{activationState.data.user.full_name}</strong>
 									!<br />
-									Role:{" "}
-									<strong>
-										{activationState.data.user.role}
-									</strong>
+									Role: <strong>{activationState.data.user.role}</strong>
 								</p>
 
 								<Button
@@ -199,8 +191,7 @@ export default function InviteActivation() {
 											state: {
 												isFirstTime: true,
 												temporaryPassword:
-													activationState.data
-														.temporary_password,
+													activationState.data.temporary_password,
 												fromInvitation: true,
 											},
 										})
@@ -219,9 +210,9 @@ export default function InviteActivation() {
 					<Card className="w-full max-w-md mx-auto">
 						<CardHeader className="text-center">
 							<div className="flex justify-center mb-4">
-								<XCircle className="h-12 w-12 text-red-500" />
+								<XCircle className="h-12 w-12 text-destructive" />
 							</div>
-							<CardTitle className="text-red-700">
+							<CardTitle className="text-destructive">
 								Invitation Activation Failed
 							</CardTitle>
 							<CardDescription>
@@ -231,19 +222,13 @@ export default function InviteActivation() {
 						<CardContent className="space-y-4">
 							<Alert variant="destructive">
 								<XCircle className="h-4 w-4" />
-								<AlertDescription>
-									{activationState.error}
-								</AlertDescription>
+								<AlertDescription>{activationState.error}</AlertDescription>
 							</Alert>
 
 							<div className="space-y-2">
 								{/* Show retry button for certain types of errors */}
-								{!activationState.error
-									.toLowerCase()
-									.includes("expired") &&
-									!activationState.error
-										.toLowerCase()
-										.includes("used") && (
+								{!activationState.error.toLowerCase().includes("expired") &&
+									!activationState.error.toLowerCase().includes("used") && (
 										<Button
 											onClick={handleRetryActivation}
 											variant="outline"
@@ -264,30 +249,22 @@ export default function InviteActivation() {
 
 							{/* Helpful guidance based on error type */}
 							<div className="text-sm text-muted-foreground text-center">
-								{activationState.error
-									.toLowerCase()
-									.includes("expired") && (
+								{activationState.error.toLowerCase().includes("expired") && (
 									<p>
-										This invitation has expired. Please
-										contact your administrator for a new
-										invitation.
+										This invitation has expired. Please contact your
+										administrator for a new invitation.
 									</p>
 								)}
-								{activationState.error
-									.toLowerCase()
-									.includes("used") && (
+								{activationState.error.toLowerCase().includes("used") && (
 									<p>
-										This invitation has already been used.
-										If you have an account, try logging in.
+										This invitation has already been used. If you have an
+										account, try logging in.
 									</p>
 								)}
-								{activationState.error
-									.toLowerCase()
-									.includes("invalid") && (
+								{activationState.error.toLowerCase().includes("invalid") && (
 									<p>
-										This invitation link appears to be
-										invalid. Please check the link or
-										contact your administrator.
+										This invitation link appears to be invalid. Please check the
+										link or contact your administrator.
 									</p>
 								)}
 							</div>
@@ -306,4 +283,6 @@ export default function InviteActivation() {
 			{renderContent()}
 		</div>
 	);
-}
+};
+
+export default InviteActivation;

@@ -20,10 +20,10 @@ export interface UseTimeSinceReturn {
  * Enhanced hook for calculating and formatting time since a given date
  * Provides better error handling, TypeScript support, and formatting options
  */
-export function useTimeSince(
+export const useTimeSince = (
 	date: DateInput,
 	options: UseTimeSinceOptions = {}
-): UseTimeSinceReturn {
+): UseTimeSinceReturn => {
 	const {
 		updateInterval = 60000, // 1 minute
 		format = "relative",
@@ -92,6 +92,7 @@ export function useTimeSince(
 
 	useEffect(() => {
 		// Set initial value
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		refresh();
 
 		// Clear existing interval
@@ -116,7 +117,7 @@ export function useTimeSince(
 		isValid,
 		refresh,
 	};
-}
+};
 
 /**
  * Format time difference based on format option
@@ -168,13 +169,9 @@ function formatTimeDifference(
 			case "short":
 				return `${diffInHours}h`;
 			case "long":
-				return `${diffInHours} ${
-					diffInHours === 1 ? "hour" : "hours"
-				} ago`;
+				return `${diffInHours} ${diffInHours === 1 ? "hour" : "hours"} ago`;
 			default:
-				return `${diffInHours} ${
-					diffInHours === 1 ? "hour" : "hours"
-				} ago`;
+				return `${diffInHours} ${diffInHours === 1 ? "hour" : "hours"} ago`;
 		}
 	}
 
@@ -185,13 +182,9 @@ function formatTimeDifference(
 			case "short":
 				return `${diffInDays}d`;
 			case "long":
-				return `${diffInDays} ${
-					diffInDays === 1 ? "day" : "days"
-				} ago`;
+				return `${diffInDays} ${diffInDays === 1 ? "day" : "days"} ago`;
 			default:
-				return `${diffInDays} ${
-					diffInDays === 1 ? "day" : "days"
-				} ago`;
+				return `${diffInDays} ${diffInDays === 1 ? "day" : "days"} ago`;
 		}
 	}
 
@@ -202,13 +195,9 @@ function formatTimeDifference(
 			case "short":
 				return `${diffInWeeks}w`;
 			case "long":
-				return `${diffInWeeks} ${
-					diffInWeeks === 1 ? "week" : "weeks"
-				} ago`;
+				return `${diffInWeeks} ${diffInWeeks === 1 ? "week" : "weeks"} ago`;
 			default:
-				return `${diffInWeeks} ${
-					diffInWeeks === 1 ? "week" : "weeks"
-				} ago`;
+				return `${diffInWeeks} ${diffInWeeks === 1 ? "week" : "weeks"} ago`;
 		}
 	}
 
@@ -219,13 +208,9 @@ function formatTimeDifference(
 			case "short":
 				return `${diffInMonths}mo`;
 			case "long":
-				return `${diffInMonths} ${
-					diffInMonths === 1 ? "month" : "months"
-				} ago`;
+				return `${diffInMonths} ${diffInMonths === 1 ? "month" : "months"} ago`;
 			default:
-				return `${diffInMonths} ${
-					diffInMonths === 1 ? "month" : "months"
-				} ago`;
+				return `${diffInMonths} ${diffInMonths === 1 ? "month" : "months"} ago`;
 		}
 	}
 
@@ -235,18 +220,16 @@ function formatTimeDifference(
 		case "short":
 			return `${diffInYears}y`;
 		case "long":
-			return `${diffInYears} ${
-				diffInYears === 1 ? "year" : "years"
-			} ago`;
+			return `${diffInYears} ${diffInYears === 1 ? "year" : "years"} ago`;
 		default:
-			return `${diffInYears} ${
-				diffInYears === 1 ? "year" : "years"
-			} ago`;
+			return `${diffInYears} ${diffInYears === 1 ? "year" : "years"} ago`;
 	}
 }
 
 // Backward compatibility export
-export default function useCalculateTimeSince(date?: DateInput): string {
+const useCalculateTimeSince = (date?: DateInput): string => {
 	const { timeString } = useTimeSince(date);
 	return timeString;
-}
+};
+
+export default useCalculateTimeSince;

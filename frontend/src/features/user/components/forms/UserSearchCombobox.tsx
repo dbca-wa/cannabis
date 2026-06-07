@@ -11,7 +11,11 @@ import { cn } from "@/shared/utils";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Check, ChevronsUpDown, User, X, UserPlus, Plus } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
-import { UsersService } from "../../services/users.service";
+import {
+	formatUserDisplayName,
+	getUserRoleBadge,
+	getUserRoleColorClass,
+} from "../../utils/userDisplay.utils";
 import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loading-overlay";
 import {
 	Command,
@@ -67,7 +71,8 @@ export const UserSearchCombobox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showInviteModal, setShowInviteModal] = useState(false);
-		const [showExternalInviteModal, setShowExternalInviteModal] = useState(false);
+		const [showExternalInviteModal, setShowExternalInviteModal] =
+			useState(false);
 		const { theme } = useTheme();
 		const isDark = theme === "dark";
 
@@ -134,7 +139,7 @@ export const UserSearchCombobox = React.forwardRef<
 		};
 
 		const displayValue = selectedUser
-			? UsersService.formatUserDisplayName(selectedUser) // Now selectedUser is IUserDetail | null
+			? formatUserDisplayName(selectedUser)
 			: null;
 
 		const comboboxElement = (
@@ -162,25 +167,7 @@ export const UserSearchCombobox = React.forwardRef<
 							) : displayValue ? (
 								<>
 									<User className="h-4 w-4 text-muted-foreground" />
-									<span className="truncate">
-										{displayValue}
-									</span>
-									{selectedUser && (
-										<Badge
-											variant="secondary"
-											className={cn(
-												"text-xs",
-												UsersService.getUserRoleColorClass(
-													selectedUser,
-													isDark
-												)
-											)}
-										>
-											{UsersService.getUserRoleBadge(
-												selectedUser
-											)}
-										</Badge>
-									)}
+									<span className="truncate">{displayValue}</span>
 								</>
 							) : (
 								<span>{placeholder}</span>
@@ -212,34 +199,23 @@ export const UserSearchCombobox = React.forwardRef<
 							<SmoothLoadingOverlay
 								isInitialLoading={isInitialLoading}
 								isSearching={isSearching}
-								hasResults={
-									!!searchResults?.results?.length
-								}
+								hasResults={!!searchResults?.results?.length}
 								skeletonCount={4}
 								skeletonType="user"
 								error={searchError}
 								onRetry={retry}
 								isRetrying={isRetrying}
-								hasFallbackData={
-									hasInitialData && !!searchError
-								}
+								hasFallbackData={hasInitialData && !!searchError}
 								fallbackMessage={
-									hasInitialData
-										? "Showing cached results"
-										: undefined
+									hasInitialData ? "Showing cached results" : undefined
 								}
 							>
 								{/* Show search error with fallback to initial data */}
-								{searchError &&
-									hasInitialData &&
-									searchQuery ? (
+								{searchError && hasInitialData && searchQuery ? (
 									<>
 										<div className="p-2 border-l-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20">
 											<div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-400">
-												<span>
-													Search failed. Showing
-													cached results.
-												</span>
+												<span>Search failed. Showing cached results.</span>
 												<Button
 													variant="ghost"
 													size="sm"
@@ -252,63 +228,45 @@ export const UserSearchCombobox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{initialData
-												?.slice(0, 6)
-												.map((user: IUser) => (
-													<CommandItem
-														key={user.id}
-														value={user.id.toString()}
-														onSelect={() =>
-															handleSelect(
-																user.id
-															)
-														}
-														className="flex items-center gap-2"
-													>
-														<Check
-															className={cn(
-																"h-4 w-4",
-																value ===
-																	user.id
-																	? "opacity-100"
-																	: "opacity-0"
-															)}
-														/>
-														<User className="h-4 w-4 text-muted-foreground" />
-														<div className="flex-1 min-w-0">
-															<div className="truncate">
-																{UsersService.formatUserDisplayName(
-																	user
-																)}
-															</div>
-															<div className="text-xs text-muted-foreground truncate">
-																{user.email}
-															</div>
+											{initialData?.slice(0, 6).map((user: IUser) => (
+												<CommandItem
+													key={user.id}
+													value={user.id.toString()}
+													onSelect={() => handleSelect(user.id)}
+													className="flex items-center gap-2"
+												>
+													<Check
+														className={cn(
+															"h-4 w-4",
+															value === user.id ? "opacity-100" : "opacity-0"
+														)}
+													/>
+													<User className="h-4 w-4 text-muted-foreground" />
+													<div className="flex-1 min-w-0">
+														<div className="truncate">
+															{formatUserDisplayName(user)}
 														</div>
-														<Badge
-															variant="secondary"
-															className={cn(
-																"text-xs",
-																UsersService.getUserRoleColorClass(
-																	user,
-																	isDark
-																)
-															)}
-														>
-															{UsersService.getUserRoleBadge(
-																user
-															)}
-														</Badge>
-													</CommandItem>
-												))}
+														<div className="text-xs text-muted-foreground truncate">
+															{user.email}
+														</div>
+													</div>
+													<Badge
+														variant="secondary"
+														className={cn(
+															"text-xs",
+															getUserRoleColorClass(user, isDark)
+														)}
+													>
+														{getUserRoleBadge(user)}
+													</Badge>
+												</CommandItem>
+											))}
 										</CommandGroup>
 									</>
 								) : !searchResults?.results?.length ? (
 									<div className="p-4 text-center">
 										<div className="text-sm text-muted-foreground mb-3">
-											{searchQuery
-												? emptyText
-												: "No users available"}
+											{searchQuery ? emptyText : "No users available"}
 										</div>
 										{allowCreate && (
 											<Button
@@ -323,55 +281,39 @@ export const UserSearchCombobox = React.forwardRef<
 									</div>
 								) : (
 									<CommandGroup>
-										{searchResults.results
-											.slice(0, 6)
-											.map((user: IUser) => (
-												<CommandItem
-													key={user.id}
-													value={user.id.toString()}
-													onSelect={() =>
-														handleSelect(
-															user.id
-														)
-													}
-													className="flex items-center gap-2"
-												>
-													<Check
-														className={cn(
-															"h-4 w-4",
-															value ===
-																user.id
-																? "opacity-100"
-																: "opacity-0"
-														)}
-													/>
-													<User className="h-4 w-4 text-muted-foreground" />
-													<div className="flex-1 min-w-0">
-														<div className="truncate">
-															{UsersService.formatUserDisplayName(
-																user
-															)}
-														</div>
-														<div className="text-xs text-muted-foreground truncate">
-															{user.email}
-														</div>
+										{searchResults.results.slice(0, 6).map((user: IUser) => (
+											<CommandItem
+												key={user.id}
+												value={user.id.toString()}
+												onSelect={() => handleSelect(user.id)}
+												className="flex items-center gap-2"
+											>
+												<Check
+													className={cn(
+														"h-4 w-4",
+														value === user.id ? "opacity-100" : "opacity-0"
+													)}
+												/>
+												<User className="h-4 w-4 text-muted-foreground" />
+												<div className="flex-1 min-w-0">
+													<div className="truncate">
+														{formatUserDisplayName(user)}
 													</div>
-													<Badge
-														variant="secondary"
-														className={cn(
-															"text-xs",
-															UsersService.getUserRoleColorClass(
-																user,
-																isDark
-															)
-														)}
-													>
-														{UsersService.getUserRoleBadge(
-															user
-														)}
-													</Badge>
-												</CommandItem>
-											))}
+													<div className="text-xs text-muted-foreground truncate">
+														{user.email}
+													</div>
+												</div>
+												<Badge
+													variant="secondary"
+													className={cn(
+														"text-xs",
+														getUserRoleColorClass(user, isDark)
+													)}
+												>
+													{getUserRoleBadge(user)}
+												</Badge>
+											</CommandItem>
+										))}
 									</CommandGroup>
 								)}
 							</SmoothLoadingOverlay>
@@ -385,9 +327,7 @@ export const UserSearchCombobox = React.forwardRef<
 			<>
 				{showExternalInviteButton ? (
 					<div className="flex items-center gap-2">
-						<div className="flex-1">
-							{comboboxElement}
-						</div>
+						<div className="flex-1">{comboboxElement}</div>
 						<Button
 							onClick={handleExternalInviteUser}
 							disabled={disabled}

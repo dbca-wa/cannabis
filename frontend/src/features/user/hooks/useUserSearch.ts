@@ -1,4 +1,4 @@
-import { usersService } from "../services/users.service";
+import { searchUsers } from "../services/users.service";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce } from "@/shared/hooks/core";
@@ -60,16 +60,18 @@ export const useUserSearch = (
 
 	// Simple query keys - direct and easy to understand
 	const searchQueryKey = useMemo(
-		() => [
-			"users",
-			"search",
-			{ query: debouncedQuery, role, exclude, limit },
-		] as const,
+		() =>
+			[
+				"users",
+				"search",
+				{ query: debouncedQuery, role, exclude, limit },
+			] as const,
 		[debouncedQuery, role, exclude, limit]
 	);
 
 	const initialDataQueryKey = useMemo(
-		() => ["users", "initial", { role, exclude, limit: initialDataLimit }] as const,
+		() =>
+			["users", "initial", { role, exclude, limit: initialDataLimit }] as const,
 		[role, exclude, initialDataLimit]
 	);
 
@@ -77,39 +79,33 @@ export const useUserSearch = (
 	const searchQuery = useQuery({
 		queryKey: searchQueryKey,
 		queryFn: async (): Promise<PaginatedUsersResponse> => {
-			const result = await usersService.searchUsers({
+			const data = await searchUsers({
 				query: debouncedQuery,
 				role: role !== "all" ? role : undefined,
 				exclude,
 				limit,
 			});
 
-			if (!result.success) {
-				throw new Error(result.error || "Failed to search users");
-			}
-
 			// Apply client-side role filtering with admin always visible
 			if (role && role !== "all") {
-				const filteredResults = result.data.results.filter((user: IUser) => {
-					// Admin users are always visible regardless of roleFilter
+				const filteredResults = data.results.filter((user: IUser) => {
 					if (user.is_superuser || user.is_staff) {
 						return true;
 					}
-					// Filter by specific role
 					return user.role === role;
 				});
 
 				return {
-					...result.data,
+					...data,
 					results: filteredResults,
 					count: filteredResults.length,
 				};
 			}
 
-			return result.data;
+			return data;
 		},
 		enabled: enabled && isSearchQuery,
-		...cacheConfig.search, // Use optimized cache settings
+		...cacheConfig.search,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
@@ -118,39 +114,33 @@ export const useUserSearch = (
 	const initialDataQuery = useQuery({
 		queryKey: initialDataQueryKey,
 		queryFn: async (): Promise<PaginatedUsersResponse> => {
-			const result = await usersService.searchUsers({
+			const data = await searchUsers({
 				query: "",
 				role: role !== "all" ? role : undefined,
 				exclude,
 				limit: initialDataLimit,
 			});
 
-			if (!result.success) {
-				throw new Error(result.error || "Failed to load initial users");
-			}
-
 			// Apply client-side role filtering with admin always visible
 			if (role && role !== "all") {
-				const filteredResults = result.data.results.filter((user: IUser) => {
-					// Admin users are always visible regardless of roleFilter
+				const filteredResults = data.results.filter((user: IUser) => {
 					if (user.is_superuser || user.is_staff) {
 						return true;
 					}
-					// Filter by specific role
 					return user.role === role;
 				});
 
 				return {
-					...result.data,
+					...data,
 					results: filteredResults,
 					count: filteredResults.length,
 				};
 			}
 
-			return result.data;
+			return data;
 		},
 		enabled: enabled && isInitialDataRequest,
-		...cacheConfig.initial, // Use optimized cache settings for initial data
+		...cacheConfig.initial,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});

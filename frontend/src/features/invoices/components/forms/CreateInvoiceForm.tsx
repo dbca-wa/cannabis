@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Loader2 } from "lucide-react";
 import {
 	createInvoiceSchema,
 	type CreateInvoiceFormData,
@@ -31,24 +32,22 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
 	return (
 		<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 			<div className="space-y-2">
-				<Label htmlFor="submission" className="required">
-					Submission ID
+				<Label htmlFor="case" className="required">
+					Case ID
 				</Label>
 				<Input
-					id="submission"
+					id="case"
 					type="number"
-					{...register("submission", { valueAsNumber: true })}
-					placeholder="Enter submission ID"
-					className={errors.submission ? "border-red-500" : ""}
+					{...register("case", { valueAsNumber: true })}
+					placeholder="Enter case ID"
+					className={errors.case ? "border-red-500" : ""}
 					disabled={isSubmitting}
 				/>
-				{errors.submission && (
-					<p className="text-sm text-red-500">
-						{errors.submission.message}
-					</p>
+				{errors.case && (
+					<p className="text-sm text-red-500">{errors.case.message}</p>
 				)}
 				<p className="text-sm text-gray-500">
-					The invoice will be generated for this submission
+					The invoice will be generated for this case
 				</p>
 			</div>
 
@@ -85,6 +84,7 @@ export const CreateInvoiceForm: React.FC<CreateInvoiceFormProps> = ({
 					Cancel
 				</Button>
 				<Button type="submit" disabled={isSubmitting}>
+					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					{isSubmitting ? "Creating..." : "Create Invoice"}
 				</Button>
 			</div>

@@ -52,7 +52,7 @@ export interface InvitationSearchParams {
 }
 
 // Paginated invitations response
-export interface PaginatedInvitationsResponse extends PaginatedResponse<InviteRecord> {}
+export type PaginatedInvitationsResponse = PaginatedResponse<InviteRecord>;
 
 // IT Assets integration types
 export interface ITAssetsComboboxProps {

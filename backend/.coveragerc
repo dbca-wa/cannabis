@@ -1,0 +1,49 @@
+[run]
+source = .
+parallel = true
+concurrency = multiprocessing
+data_file = .coverage
+omit =
+    */migrations/*
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */venv/*
+    */virtualenv/*
+    manage.py
+    config/wsgi.py
+    config/asgi.py
+    */.venv/*
+    */node_modules/*
+    */staticfiles/*
+    */files/*
+    etl/*
+    */management/commands/*
+    users/logging_config.py
+    users/throttles.py
+    signatures/tests.py
+    config/helpers.py
+    submissions/ocr/*
+    common/tests.py
+    common/templatetags/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+precision = 2
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov

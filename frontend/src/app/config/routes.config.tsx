@@ -1,15 +1,18 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
 	Home,
 	Settings,
 	Users,
 	Shield,
 	User,
-	FileText,
 	TestTube,
+	PenLine,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { FaTriangleExclamation } from "react-icons/fa6";
-import { Navigate } from "react-router";
+import { Navigate, type RouteObject } from "react-router";
+
+const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import("@/pages/dashboard/Home"));
@@ -19,28 +22,35 @@ const TestCertificatePage = lazy(
 	() => import("@/pages/tests/TestCertificatePage")
 );
 const TestInvoicePage = lazy(() => import("@/pages/tests/TestInvoicePage"));
-const SubmissionsPage = lazy(() => import("@/pages/submissions/Submissions"));
-const SubmissionFormDemoPage = lazy(
-	() => import("@/pages/submissions/SubmissionFormDemo")
-);
-const PhaseWorkflowDemoPage = lazy(() =>
-	import("@/pages/submissions/PhaseWorkflowDemo").then((m) => ({
-		default: m.PhaseWorkflowDemo,
+const CasesPage = lazy(() => import("@/pages/cases/Cases"));
+const CaseDetailPage = lazy(() =>
+	import("@/pages/cases/CaseDetailPage").then((m) => ({
+		default: m.CaseDetailPage,
 	}))
 );
-const PhaseProgressDemoPage = lazy(
-	() => import("@/pages/submissions/PhaseProgressDemo")
-);
-const SubmissionDetailPage = lazy(() =>
-	import("@/pages/submissions/SubmissionDetailPage").then((m) => ({
-		default: m.SubmissionDetailPage,
-	}))
-);
-const UsersPage = lazy(() => import("@/pages/users/Users"));
-const PolicePage = lazy(() => import("@/pages/police/Police"));
+const StaffPage = lazy(() => import("@/pages/users/Staff"));
+const OfficersPage = lazy(() => import("@/pages/police/Officers"));
+const StationsPage = lazy(() => import("@/pages/police/Stations"));
 const DefendantsPage = lazy(() => import("@/pages/defendants/Defendants"));
-const DocumentsPage = lazy(() => import("@/pages/documents/Documents"));
 const AdminPage = lazy(() => import("@/pages/admin/Admin"));
+const FinancialsPage = lazy(() => import("@/pages/financials/Financials"));
+const SignaturePage = lazy(() => import("@/pages/signature/SignaturePage"));
+const ChangePasswordPage = lazy(() => import("@/pages/auth/ChangePassword"));
+const DefendantMergePage = lazy(() =>
+	import("@/features/defendants/components/merge/DefendantMergePage").then(
+		(m) => ({ default: m.DefendantMergePage })
+	)
+);
+const StationMergePage = lazy(() =>
+	import("@/features/police/components/stations/merge/StationMergePage").then(
+		(m) => ({ default: m.StationMergePage })
+	)
+);
+const OfficerMergePage = lazy(() =>
+	import("@/features/police/components/officers/merge/OfficerMergePage").then(
+		(m) => ({ default: m.OfficerMergePage })
+	)
+);
 
 // User modals
 const AddUserModal = lazy(() =>
@@ -59,11 +69,11 @@ const DeleteUserModal = lazy(
 
 // Police modals
 const CreateOfficerRouteModal = lazy(() =>
-	import(
-		"@/features/police/components/officers/CreateOfficerRouteModal"
-	).then((m) => ({
-		default: m.CreateOfficerRouteModal,
-	}))
+	import("@/features/police/components/officers/CreateOfficerRouteModal").then(
+		(m) => ({
+			default: m.CreateOfficerRouteModal,
+		})
+	)
 );
 const EditOfficerRouteModal = lazy(() =>
 	import("@/features/police/components/officers/EditOfficerRouteModal").then(
@@ -73,18 +83,18 @@ const EditOfficerRouteModal = lazy(() =>
 	)
 );
 const DeleteOfficerRouteModal = lazy(() =>
-	import(
-		"@/features/police/components/officers/DeleteOfficerRouteModal"
-	).then((m) => ({
-		default: m.DeleteOfficerRouteModal,
-	}))
+	import("@/features/police/components/officers/DeleteOfficerRouteModal").then(
+		(m) => ({
+			default: m.DeleteOfficerRouteModal,
+		})
+	)
 );
 const CreateStationRouteModal = lazy(() =>
-	import(
-		"@/features/police/components/stations/CreateStationRouteModal"
-	).then((m) => ({
-		default: m.CreateStationRouteModal,
-	}))
+	import("@/features/police/components/stations/CreateStationRouteModal").then(
+		(m) => ({
+			default: m.CreateStationRouteModal,
+		})
+	)
 );
 const EditStationRouteModal = lazy(() =>
 	import("@/features/police/components/stations/EditStationRouteModal").then(
@@ -94,11 +104,11 @@ const EditStationRouteModal = lazy(() =>
 	)
 );
 const DeleteStationRouteModal = lazy(() =>
-	import(
-		"@/features/police/components/stations/DeleteStationRouteModal"
-	).then((m) => ({
-		default: m.DeleteStationRouteModal,
-	}))
+	import("@/features/police/components/stations/DeleteStationRouteModal").then(
+		(m) => ({
+			default: m.DeleteStationRouteModal,
+		})
+	)
 );
 
 // Defendants modals
@@ -124,67 +134,21 @@ const DeleteDefendantRouteModal = lazy(() =>
 	)
 );
 
-// Submission pages
-const CreateSubmission = lazy(() =>
-	import("@/pages/submissions/CreateSubmission").then((m) => ({
-		default: m.CreateSubmission,
+// Case pages
+const CreateCase = lazy(() =>
+	import("@/pages/cases/CreateCase").then((m) => ({
+		default: m.CreateCase,
 	}))
 );
-const EditSubmission = lazy(() =>
-	import("@/pages/submissions/EditSubmission").then((m) => ({
-		default: m.EditSubmission,
+const EditCase = lazy(() =>
+	import("@/pages/cases/EditCase").then((m) => ({
+		default: m.EditCase,
 	}))
 );
-const DeleteSubmissionRouteModal = lazy(() =>
-	import(
-		"@/features/submissions/components/modals/DeleteSubmissionRouteModal"
-	).then((m) => ({
-		default: m.DeleteSubmissionRouteModal,
-	}))
-);
-
-// Certificate modals
-const CreateCertificateRouteModal = lazy(() =>
-	import(
-		"@/features/certificates/components/CreateCertificateRouteModal"
-	).then((m) => ({
-		default: m.CreateCertificateRouteModal,
-	}))
-);
-const EditCertificateRouteModal = lazy(() =>
-	import("@/features/certificates/components/EditCertificateRouteModal").then(
+const DeleteCaseRouteModal = lazy(() =>
+	import("@/features/cases/components/modals/DeleteCaseRouteModal").then(
 		(m) => ({
-			default: m.EditCertificateRouteModal,
-		})
-	)
-);
-const DeleteCertificateRouteModal = lazy(() =>
-	import(
-		"@/features/certificates/components/DeleteCertificateRouteModal"
-	).then((m) => ({
-		default: m.DeleteCertificateRouteModal,
-	}))
-);
-
-// Invoice modals
-const CreateInvoiceRouteModal = lazy(() =>
-	import("@/features/invoices/components/CreateInvoiceRouteModal").then(
-		(m) => ({
-			default: m.CreateInvoiceRouteModal,
-		})
-	)
-);
-const EditInvoiceRouteModal = lazy(() =>
-	import("@/features/invoices/components/EditInvoiceRouteModal").then(
-		(m) => ({
-			default: m.EditInvoiceRouteModal,
-		})
-	)
-);
-const DeleteInvoiceRouteModal = lazy(() =>
-	import("@/features/invoices/components/DeleteInvoiceRouteModal").then(
-		(m) => ({
-			default: m.DeleteInvoiceRouteModal,
+			default: m.DeleteCaseRouteModal,
 		})
 	)
 );
@@ -208,6 +172,9 @@ export interface RouteConfig {
 
 	// Optional: for routes that need default redirects (Police, Docs)
 	defaultRedirect?: string;
+
+	// Optional: use element as layout (always rendered, children render in Outlet)
+	useAsLayout?: boolean;
 
 	// Optional: simple CRUD pattern helper
 	crudRoutes?: {
@@ -235,59 +202,59 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		showInSidebar: true,
 		element: HomePage,
 	},
+	...(SHOW_DEV_PAGES
+		? [
+				{
+					name: "Test",
+					path: "/tests",
+					icon: <FaTriangleExclamation size={20} />,
+					activeIcon: <FaTriangleExclamation size={20} />,
+					tooltipContent: <p>Tests</p>,
+					adminOnly: false,
+					showInSidebar: true,
+					element: TestsHomePage,
+					children: [
+						{ path: "emails", element: TestEmailPage },
+						{ path: "certificates", element: TestCertificatePage },
+						{ path: "invoices", element: TestInvoicePage },
+					],
+				} satisfies RouteConfig,
+			]
+		: []),
 	{
-		name: "Test",
-		path: "/tests",
-		icon: <FaTriangleExclamation size={20} />,
-		activeIcon: <FaTriangleExclamation size={20} />,
-		tooltipContent: <p>Tests</p>,
-		adminOnly: false,
-		showInSidebar: true,
-		element: TestsHomePage,
-		children: [
-			{ path: "emails", element: TestEmailPage },
-			{ path: "certificates", element: TestCertificatePage },
-			{ path: "invoices", element: TestInvoicePage },
-		],
-	},
-	{
-		name: "Submissions",
-		path: "/submissions",
+		name: "Cases",
+		path: "/cases",
 		icon: <TestTube size={20} />,
 		activeIcon: <TestTube size={20} />,
-		tooltipContent: (
-			<p>Manage cannabis sample submissions and assessments</p>
-		),
+		tooltipContent: <p>Manage cannabis sample cases and assessments</p>,
 		adminOnly: false,
 		showInSidebar: true,
-		element: SubmissionsPage,
+		element: CasesPage,
+		useAsLayout: true,
 		children: [
-			// CRUD routes
-			{ path: "add", element: CreateSubmission },
-			{ path: ":submissionId", element: EditSubmission },
+			// Modal routes (render in Outlet as overlays on top of CasesPage)
+			{ path: "add", element: CreateCase },
+			{ path: ":submissionId", element: EditCase },
 			{
 				path: ":submissionId/delete",
-				element: DeleteSubmissionRouteModal,
+				element: DeleteCaseRouteModal,
 			},
-			// Custom routes
-			{ path: "demo", element: SubmissionFormDemoPage },
-			{ path: "workflow-demo", element: PhaseWorkflowDemoPage },
-			{ path: "phase-progress-demo", element: PhaseProgressDemoPage },
+			// Full-page child routes (these replace the layout content)
 			{
 				path: ":submissionId/detail",
-				element: SubmissionDetailPage,
+				element: CaseDetailPage,
 			},
 		],
 	},
 	{
-		name: "Users",
-		path: "/users",
+		name: "Staff",
+		path: "/staff",
 		icon: <Users size={20} />,
 		activeIcon: <Users size={20} />,
 		tooltipContent: <p>View, edit, or create users</p>,
 		adminOnly: false,
 		showInSidebar: true,
-		element: UsersPage,
+		element: StaffPage,
 		crudRoutes: {
 			entityParam: "userId",
 			components: {
@@ -298,15 +265,16 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		},
 	},
 	{
-		name: "Police",
-		path: "/police",
+		name: "Officers",
+		path: "/officers",
 		icon: <Shield size={20} />,
 		activeIcon: <Shield size={20} />,
-		tooltipContent: <p>Manage police officers and stations</p>,
+		tooltipContent: <p>Manage police officers</p>,
 		adminOnly: false,
 		showInSidebar: true,
-		element: PolicePage,
-		defaultRedirect: "/police/officers",
+		element: OfficersPage,
+		useAsLayout: true,
+		children: [{ path: "merge", element: OfficerMergePage }],
 		crudRoutes: {
 			entityParam: "officerId",
 			components: {
@@ -315,18 +283,26 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 				delete: DeleteOfficerRouteModal,
 			},
 		},
-		children: [
-			// Tab routes
-			{ path: "officers", element: PolicePage },
-			{ path: "stations", element: PolicePage },
-			// Station routes (different entity, so manual)
-			{ path: "stations/add", element: CreateStationRouteModal },
-			{ path: "stations/:stationId", element: EditStationRouteModal },
-			{
-				path: "stations/:stationId/delete",
-				element: DeleteStationRouteModal,
+	},
+	{
+		name: "Stations",
+		path: "/stations",
+		icon: <Shield size={20} />,
+		activeIcon: <Shield size={20} />,
+		tooltipContent: <p>Manage police stations</p>,
+		adminOnly: false,
+		showInSidebar: true,
+		element: StationsPage,
+		useAsLayout: true,
+		children: [{ path: "merge", element: StationMergePage }],
+		crudRoutes: {
+			entityParam: "stationId",
+			components: {
+				add: CreateStationRouteModal,
+				edit: EditStationRouteModal,
+				delete: DeleteStationRouteModal,
 			},
-		],
+		},
 	},
 	{
 		name: "Defendants",
@@ -337,6 +313,8 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		adminOnly: false,
 		showInSidebar: true,
 		element: DefendantsPage,
+		useAsLayout: true,
+		children: [{ path: "merge", element: DefendantMergePage }],
 		crudRoutes: {
 			entityParam: "defendantId",
 			components: {
@@ -347,45 +325,42 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		},
 	},
 	{
-		name: "Docs",
-		path: "/docs",
-		icon: <FileText size={20} />,
-		activeIcon: <FileText size={20} />,
-		tooltipContent: <p>Manage certificates and invoices</p>,
+		name: "Financials",
+		path: "/financials",
+		icon: <Home size={20} />,
+		activeIcon: <Home size={20} />,
+		tooltipContent: <p>Manage cost settings and pricing</p>,
 		adminOnly: false,
 		showInSidebar: true,
-		element: DocumentsPage,
-		defaultRedirect: "/docs/certificates",
-		children: [
-			// Tab routes
-			{ path: "certificates", element: DocumentsPage },
-			{ path: "invoices", element: DocumentsPage },
-			// Certificate routes (different entities, so manual)
-			{ path: "certificates/add", element: CreateCertificateRouteModal },
-			{
-				path: "certificates/:certificateId",
-				element: EditCertificateRouteModal,
-			},
-			{
-				path: "certificates/:certificateId/delete",
-				element: DeleteCertificateRouteModal,
-			},
-			// Invoice routes (different entities, so manual)
-			{ path: "invoices/add", element: CreateInvoiceRouteModal },
-			{ path: "invoices/:invoiceId", element: EditInvoiceRouteModal },
-			{
-				path: "invoices/:invoiceId/delete",
-				element: DeleteInvoiceRouteModal,
-			},
-		],
+		element: FinancialsPage,
 	},
 	{
-		name: "Admin",
+		name: "My Signature",
+		path: "/signature",
+		icon: <PenLine size={20} />,
+		activeIcon: <PenLine size={20} />,
+		tooltipContent: <p>Manage your digital signature</p>,
+		adminOnly: false,
+		showInSidebar: false,
+		element: SignaturePage,
+	},
+	{
+		name: "Change Password",
+		path: "/change-password",
+		icon: <Settings size={20} />,
+		activeIcon: <Settings size={20} />,
+		tooltipContent: <p>Update your account password</p>,
+		adminOnly: false,
+		showInSidebar: false,
+		element: ChangePasswordPage,
+	},
+	{
+		name: "Testing",
 		path: "/admin",
 		icon: <Settings size={20} />,
 		activeIcon: <Settings size={20} />,
-		tooltipContent: <p>System administration and management tools</p>,
-		adminOnly: true, // Only visible to admin users
+		tooltipContent: <p>Generate test documents and emails</p>,
+		adminOnly: true,
 		showInSidebar: true,
 		element: AdminPage,
 	},
@@ -426,7 +401,7 @@ export const generateRouteChildren = () => {
 			};
 		}
 
-		const children: any[] = [];
+		const children: RouteObject[] = [];
 
 		// Handle default redirects (Police, Docs)
 		if (route.defaultRedirect) {
@@ -434,7 +409,7 @@ export const generateRouteChildren = () => {
 				index: true,
 				element: <Navigate to={route.defaultRedirect} replace />,
 			});
-		} else {
+		} else if (!route.useAsLayout) {
 			children.push({
 				index: true,
 				element: (
@@ -481,6 +456,15 @@ export const generateRouteChildren = () => {
 
 		return {
 			path: route.path.slice(1),
+			...(route.useAsLayout
+				? {
+						element: (
+							<Suspense fallback={<PageLoader />}>
+								<Element />
+							</Suspense>
+						),
+					}
+				: {}),
 			children,
 		};
 	});
@@ -492,17 +476,6 @@ export const getSidebarItems = () =>
 
 export const getRouteFromSidebarItem = (sidebarItem: string): string => {
 	const route = ROUTES_CONFIG.find((r) => r.name === sidebarItem);
-
-	// Special handling for Police - navigate to officers tab by default
-	if (route?.name === "Police") {
-		return "/police/officers";
-	}
-
-	// Special handling for Docs - navigate to certificates tab by default
-	if (route?.name === "Docs") {
-		return "/docs/certificates";
-	}
-
 	return route?.path || "/";
 };
 
@@ -511,19 +484,16 @@ export const getSidebarItemFromRoute = (pathname: string): string => {
 	const exactMatch = ROUTES_CONFIG.find((r) => r.path === pathname);
 	if (exactMatch) return exactMatch.name;
 
-	// Special handling for police routes - both /police/officers and /police/stations should highlight "Police"
-	if (pathname.startsWith("/police")) {
-		return "Police";
-	}
+	// Handle nested routes by prefix matching
+	if (pathname.startsWith("/officers")) return "Officers";
+	if (pathname.startsWith("/stations")) return "Stations";
+	if (pathname.startsWith("/financials")) return "Financials";
+	if (pathname.startsWith("/cases")) return "Cases";
+	if (pathname.startsWith("/staff")) return "Staff";
+	if (pathname.startsWith("/admin")) return "Testing";
+	if (pathname.startsWith("/defendants")) return "Defendants";
+	if (pathname.startsWith("/signature")) return "My Signature";
+	if (pathname.startsWith("/change-password")) return "Change Password";
 
-	// Special handling for docs routes - both /docs/certificates and /docs/invoices should highlight "Docs"
-	if (pathname.startsWith("/docs")) {
-		return "Docs";
-	}
-
-	// Handle nested routes by finding the closest parent route
-	const matchingRoute = ROUTES_CONFIG.filter((r) => r.path !== "/") // Skip root route for nested route checking
-		.find((r) => pathname.startsWith(r.path));
-
-	return matchingRoute?.name || "Home";
+	return "Home";
 };

@@ -4,21 +4,11 @@ import {
 	useUpdateSpecificTableFilters,
 } from "@/features/user/hooks/useUserPreferences";
 import { logger } from "@/shared/services/logger.service";
-import type {
-	OfficersTableFilterPreferences,
-	StationsTableFilterPreferences,
-	UsersTableFilterPreferences,
-	DefendantsTableFilterPreferences,
-	SubmissionsTableFilterPreferences,
-} from "@/shared/types/backend-api.types";
+import type { UsersTableFilterPreferences } from "@/shared/types/backend-api.types";
 
 // Type mapping for different table types
 type TableFilterMap = {
-	officers: OfficersTableFilterPreferences;
-	stations: StationsTableFilterPreferences;
 	users: UsersTableFilterPreferences;
-	defendants: DefendantsTableFilterPreferences;
-	submissions: SubmissionsTableFilterPreferences;
 };
 
 /**
@@ -57,6 +47,7 @@ export function useTableFilterPersistence<T extends keyof TableFilterMap>(
 				logger.debug(`Loading saved ${tableName} table filters`, {
 					savedFilters,
 				});
+				// eslint-disable-next-line react-hooks/set-state-in-effect
 				setFilters({ ...defaultFilters, ...savedFilters });
 			} else {
 				logger.debug(
@@ -138,9 +129,7 @@ export function useTableFilterPersistence<T extends keyof TableFilterMap>(
 						filters: defaultFilters as Record<string, unknown>,
 					});
 
-					logger.debug(
-						`Reset ${tableName} table filters to defaults`
-					);
+					logger.debug(`Reset ${tableName} table filters to defaults`);
 				}, 0);
 			}
 		},
@@ -176,32 +165,8 @@ export function useTableFilterPersistence<T extends keyof TableFilterMap>(
  * Convenience hooks for specific table types
  */
 
-export function useOfficersTableFilters(
-	defaultFilters: OfficersTableFilterPreferences
-) {
-	return useTableFilterPersistence("officers", defaultFilters);
-}
-
-export function useStationsTableFilters(
-	defaultFilters: StationsTableFilterPreferences
-) {
-	return useTableFilterPersistence("stations", defaultFilters);
-}
-
 export function useUsersTableFilters(
 	defaultFilters: UsersTableFilterPreferences
 ) {
 	return useTableFilterPersistence("users", defaultFilters);
-}
-
-export function useDefendantsTableFilters(
-	defaultFilters: DefendantsTableFilterPreferences
-) {
-	return useTableFilterPersistence("defendants", defaultFilters);
-}
-
-export function useSubmissionsTableFilters(
-	defaultFilters: SubmissionsTableFilterPreferences
-) {
-	return useTableFilterPersistence("submissions", defaultFilters);
 }

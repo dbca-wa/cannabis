@@ -19,10 +19,10 @@ export const EditStationRouteModal = () => {
 	} = useStation(stationId ? parseInt(stationId) : 0);
 
 	const handleClose = () => {
-		navigate("/police/stations");
+		navigate("/stations");
 	};
 
-	// The form handles the submission internally
+	// The form handles the case internally
 
 	if (isLoading) {
 		return (
@@ -30,11 +30,7 @@ export const EditStationRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Loading..."
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Loading..." description="">
 					<PageLoading text="Loading station details..." />
 				</ResponsiveModalContent>
 			</ResponsiveModal>
@@ -47,11 +43,7 @@ export const EditStationRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Error"
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Error" description="">
 					<ErrorAlert
 						error={error || "Station not found"}
 						title="Failed to load station"

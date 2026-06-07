@@ -27,12 +27,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { IndeterminateCheckbox } from "@/shared/components/ui/custom/indeterminate-checkbox";
 import { BulkActions } from "@/shared/components/ui/custom/bulk-actions";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import { TablePagination } from "@/shared/components/ui/custom/table-pagination";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import { useBulkSelection } from "@/shared/hooks/data/useBulkSelection";
 import { useBreakpoint } from "@/shared/hooks/ui/useResponsive";
@@ -42,6 +42,10 @@ import {
 } from "@/shared/hooks/ui/useKeyboardShortcuts";
 import { useServerPagination } from "@/shared/hooks/data/useServerPagination";
 import { useCertificates } from "../hooks/useCertificates";
+import { useSignCertificate } from "@/features/signatures/hooks";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { Badge } from "@/shared/components/ui/badge";
+import { PenLine } from "lucide-react";
 import {
 	exportToCSV,
 	exportToJSON,
@@ -56,6 +60,8 @@ export const CertificatesTable = () => {
 	const navigate = useNavigate();
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const { isMobile } = useBreakpoint();
+	const { user: currentUser } = useAuth();
+	const signCertificateMutation = useSignCertificate();
 
 	// State management
 	const [searchQuery, setSearchQuery] = useState("");
@@ -72,6 +78,7 @@ export const CertificatesTable = () => {
 		data: certificatesResponse,
 		isLoading,
 		error,
+		refetch: refetchCertificates,
 	} = useCertificates({
 		page: pagination.currentPage,
 		limit: pagination.pageSize,
@@ -117,6 +124,7 @@ export const CertificatesTable = () => {
 		[sortField]
 	);
 
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const handleResetFilters = useCallback(() => {
 		setSearchQuery("");
 		setSortField("created_at");
@@ -165,6 +173,7 @@ export const CertificatesTable = () => {
 	const shortcuts = useMemo(
 		() => [
 			commonShortcuts.table.selectAll(() => bulkSelection.toggleAll()),
+			// eslint-disable-next-line react-hooks/refs
 			commonShortcuts.table.search(() => searchInputRef.current?.focus()),
 			commonShortcuts.table.export(() => handleExportCSV()),
 			{
@@ -202,10 +211,10 @@ export const CertificatesTable = () => {
 		return (
 			<div className="space-y-4">
 				<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-					<Skeleton className="h-10 w-full sm:w-[300px]" />
+					<Skeleton className="h-9 w-64 rounded-md" />
 					<div className="flex gap-2">
-						<Skeleton className="h-10 w-[120px]" />
-						<Skeleton className="h-10 w-[150px]" />
+						<Skeleton className="h-9 w-28 rounded-md" />
+						<Skeleton className="h-9 w-36 rounded-md" />
 					</div>
 				</div>
 				<div className="rounded-md border">
@@ -216,42 +225,54 @@ export const CertificatesTable = () => {
 									<Skeleton className="h-4 w-4" />
 								</TableHead>
 								<TableHead>
+									<Skeleton className="h-4 w-6" />
+								</TableHead>
+								<TableHead>
+									<Skeleton className="h-4 w-28" />
+								</TableHead>
+								<TableHead>
+									<Skeleton className="h-4 w-12" />
+								</TableHead>
+								<TableHead>
+									<Skeleton className="h-4 w-20" />
+								</TableHead>
+								<TableHead>
 									<Skeleton className="h-4 w-16" />
 								</TableHead>
 								<TableHead>
-									<Skeleton className="h-4 w-32" />
+									<Skeleton className="h-4 w-14" />
 								</TableHead>
 								<TableHead>
-									<Skeleton className="h-4 w-24" />
-								</TableHead>
-								<TableHead>
-									<Skeleton className="h-4 w-24" />
-								</TableHead>
-								<TableHead className="text-right">
-									<Skeleton className="h-4 w-16 ml-auto" />
+									<Skeleton className="h-4 w-14" />
 								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{[...Array(5)].map((_, i) => (
+							{Array.from({ length: 5 }).map((_, i) => (
 								<TableRow key={i}>
 									<TableCell>
 										<Skeleton className="h-4 w-4" />
 									</TableCell>
 									<TableCell>
-										<Skeleton className="h-4 w-12" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-32" />
+										<Skeleton className="h-4 w-8" />
 									</TableCell>
 									<TableCell>
 										<Skeleton className="h-4 w-24" />
 									</TableCell>
 									<TableCell>
-										<Skeleton className="h-4 w-24" />
+										<Skeleton className="h-4 w-20" />
 									</TableCell>
-									<TableCell className="text-right">
-										<Skeleton className="h-8 w-8 ml-auto" />
+									<TableCell>
+										<Skeleton className="h-4 w-28" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-4 w-20" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-5 w-16 rounded-full" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-8 w-8 rounded-md ml-auto" />
 									</TableCell>
 								</TableRow>
 							))}
@@ -266,16 +287,18 @@ export const CertificatesTable = () => {
 	if (error) {
 		return (
 			<div className="p-8 text-center">
-				<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+				<FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+				<h3 className="text-lg font-semibold mb-2">
 					Error Loading Certificates
 				</h3>
-				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+				<p className="text-sm text-muted-foreground mb-4">
 					{error instanceof Error
 						? error.message
 						: "Failed to load certificates. Please try again."}
 				</p>
-				<Button onClick={() => window.location.reload()}>Retry</Button>
+				<Button onClick={() => refetchCertificates()} variant="outline">
+					Try Again
+				</Button>
 			</div>
 		);
 	}
@@ -298,17 +321,13 @@ export const CertificatesTable = () => {
 					</Button>
 				</div>
 				<div className="rounded-md border p-12 text-center">
-					<FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-						No Certificates Yet
+					<FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+					<h3 className="text-lg font-semibold mb-2">
+						No certificates generated yet
 					</h3>
-					<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-						Get started by creating your first certificate.
+					<p className="text-sm text-muted-foreground mb-4">
+						Certificates are generated when a case reaches the documents phase.
 					</p>
-					<Button onClick={handleCreate}>
-						<Plus className="mr-2 h-4 w-4" />
-						Create Certificate
-					</Button>
 				</div>
 			</div>
 		);
@@ -340,10 +359,7 @@ export const CertificatesTable = () => {
 						<RotateCcw className="mr-2 h-4 w-4" />
 						Reset Filters
 					</Button>
-					<Button
-						onClick={handleCreate}
-						className="flex-1 sm:flex-none"
-					>
+					<Button onClick={handleCreate} className="flex-1 sm:flex-none">
 						<Plus className="mr-2 h-4 w-4" />
 						New Certificate
 					</Button>
@@ -403,16 +419,14 @@ export const CertificatesTable = () => {
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={() =>
-										handleSort("certificate_number")
-									}
+									onClick={() => handleSort("certificate_number")}
 									className="-ml-3 h-8"
 								>
 									Certificate Number
 									{getSortIcon("certificate_number")}
 								</Button>
 							</TableHead>
-							<TableHead>Submission</TableHead>
+							<TableHead>Case</TableHead>
 							<TableHead>Defendant(s)</TableHead>
 							<TableHead>
 								<Button
@@ -425,25 +439,21 @@ export const CertificatesTable = () => {
 									{getSortIcon("created_at")}
 								</Button>
 							</TableHead>
-							<TableHead className="text-right">
-								Actions
-							</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="text-right">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{certificates.length === 0 ? (
 							<TableRow>
-								<TableCell
-									colSpan={7}
-									className="h-24 text-center"
-								>
-									<div className="flex flex-col items-center justify-center text-gray-500">
-										<FileText className="h-8 w-8 mb-2" />
-										<p>No certificates found</p>
+								<TableCell colSpan={8} className="h-48 text-center">
+									<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+										<FileText className="h-12 w-12 opacity-40 mb-4" />
+										<p className="text-lg font-medium mb-2">
+											No certificates found
+										</p>
 										{debouncedSearchQuery && (
-											<p className="text-sm mt-1">
-												Try adjusting your search
-											</p>
+											<p className="text-sm">Try adjusting your search.</p>
 										)}
 									</div>
 								</TableCell>
@@ -453,40 +463,42 @@ export const CertificatesTable = () => {
 								<TableRow key={cert.id}>
 									<TableCell>
 										<IndeterminateCheckbox
-											checked={bulkSelection.isSelected(
-												cert.id
-											)}
-											onCheckedChange={() =>
-												bulkSelection.toggleItem(
-													cert.id
-												)
-											}
+											checked={bulkSelection.isSelected(cert.id)}
+											onCheckedChange={() => bulkSelection.toggleItem(cert.id)}
 										/>
 									</TableCell>
-									<TableCell className="font-medium">
-										{cert.id}
-									</TableCell>
+									<TableCell className="font-medium">{cert.id}</TableCell>
 									<TableCell className="font-mono text-sm">
 										{cert.certificate_number}
 									</TableCell>
 									<TableCell>
 										{cert.submission_case_number || (
-											<span className="text-gray-400">
-												N/A
-											</span>
+											<span className="text-gray-400">N/A</span>
 										)}
 									</TableCell>
 									<TableCell>
 										{cert.defendant_names || (
-											<span className="text-gray-400">
-												N/A
-											</span>
+											<span className="text-gray-400">N/A</span>
 										)}
 									</TableCell>
 									<TableCell>
-										{new Date(
-											cert.created_at
-										).toLocaleDateString()}
+										{new Date(cert.created_at).toLocaleDateString()}
+									</TableCell>
+									<TableCell>
+										{cert.signed_pdf_file ? (
+											<Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">
+												Signed
+											</Badge>
+										) : (
+											<Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
+												Unsigned
+											</Badge>
+										)}
+										{cert.is_locked && (
+											<Badge variant="outline" className="ml-1 text-xs">
+												🔒
+											</Badge>
+										)}
 									</TableCell>
 									<TableCell className="text-right">
 										<DropdownMenu>
@@ -497,36 +509,51 @@ export const CertificatesTable = () => {
 													className="h-8 w-8 p-0"
 												>
 													<MoreHorizontal className="h-4 w-4" />
-													<span className="sr-only">
-														Open menu
-													</span>
+													<span className="sr-only">Open menu</span>
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end">
-												{cert.pdf_url && (
+												{cert.signed_pdf_url && (
 													<DropdownMenuItem
 														onClick={() =>
-															window.open(
-																cert.pdf_url!,
-																"_blank"
-															)
+															window.open(cert.signed_pdf_url!, "_blank")
 														}
 													>
 														<Download className="mr-2 h-4 w-4" />
-														Download PDF
+														Download Signed PDF
 													</DropdownMenuItem>
 												)}
-												<DropdownMenuItem
-													onClick={() =>
-														handleEdit(cert)
-													}
-												>
+												{cert.pdf_url && (
+													<DropdownMenuItem
+														onClick={() => window.open(cert.pdf_url!, "_blank")}
+													>
+														<Download className="mr-2 h-4 w-4" />
+														Download Unsigned PDF
+													</DropdownMenuItem>
+												)}
+												{!cert.signed_pdf_file &&
+													cert.case &&
+													currentUser?.role === "botanist" && (
+														<DropdownMenuItem
+															onClick={() =>
+																signCertificateMutation.mutate({
+																	submissionId: cert.case!,
+																	certificateId: cert.id,
+																})
+															}
+															disabled={signCertificateMutation.isPending}
+														>
+															<PenLine className="mr-2 h-4 w-4" />
+															{signCertificateMutation.isPending
+																? "Signing…"
+																: "Sign Certificate"}
+														</DropdownMenuItem>
+													)}
+												<DropdownMenuItem onClick={() => handleEdit(cert)}>
 													Edit
 												</DropdownMenuItem>
 												<DropdownMenuItem
-													onClick={() =>
-														handleDelete(cert)
-													}
+													onClick={() => handleDelete(cert)}
 													className="text-red-600"
 												>
 													Delete
@@ -545,8 +572,8 @@ export const CertificatesTable = () => {
 			{certificatesResponse && certificatesResponse.count > 0 && (
 				<div className="flex items-center justify-between px-2">
 					<div className="text-sm text-muted-foreground">
-						Showing {certificates.length} of{" "}
-						{certificatesResponse.count} certificates
+						Showing {certificates.length} of {certificatesResponse.count}{" "}
+						certificates
 					</div>
 					<div className="flex items-center gap-4">
 						{!isMobile && (

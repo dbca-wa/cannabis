@@ -1,10 +1,11 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.utils import timezone
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import timedelta
+from django.utils import timezone
 
 
 # For putting the email and username together/requiring email
@@ -94,22 +95,18 @@ class User(AbstractUser):
 
     # Invitation tracking fields
     invited_by = models.ForeignKey(
-        'self',
+        "self",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='invited_users',
-        help_text="User who sent the invitation"
+        related_name="invited_users",
+        help_text="User who sent the invitation",
     )
     invitation_accepted_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the user accepted their invitation"
+        null=True, blank=True, help_text="When the user accepted their invitation"
     )
     password_last_changed = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the user last changed their password"
+        null=True, blank=True, help_text="When the user last changed their password"
     )
 
     # Use custom manager
@@ -379,59 +376,51 @@ class InviteRecord(models.Model):
     """
     Track user invitations with secure tokens and expiration
     """
-    email = models.EmailField(
-        help_text="Email address of the invited user"
-    )
+
+    email = models.EmailField(help_text="Email address of the invited user")
     invited_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='sent_invitations',
-        help_text="User who sent the invitation"
+        related_name="sent_invitations",
+        help_text="User who sent the invitation",
     )
     role = models.CharField(
         max_length=20,
         choices=User.RoleChoices.choices,
-        help_text="Role to assign to the invited user"
+        help_text="Role to assign to the invited user",
     )
     token = models.CharField(
-        max_length=255,
-        unique=True,
-        help_text="Secure token for invitation activation"
+        max_length=255, unique=True, help_text="Secure token for invitation activation"
     )
     created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When the invitation was created"
+        auto_now_add=True, help_text="When the invitation was created"
     )
     expires_at = models.DateTimeField(
         help_text="When the invitation expires (24 hours from creation)"
     )
     is_valid = models.BooleanField(
-        default=True,
-        help_text="Whether the invitation is still valid"
+        default=True, help_text="Whether the invitation is still valid"
     )
     is_used = models.BooleanField(
-        default=False,
-        help_text="Whether the invitation has been used"
+        default=False, help_text="Whether the invitation has been used"
     )
     used_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the invitation was used"
+        null=True, blank=True, help_text="When the invitation was used"
     )
     external_user_data = models.JSONField(
         help_text="External user data from IT Assets API"
     )
 
     class Meta:
-        db_table = 'user_invite_records'
+        db_table = "user_invite_records"
         verbose_name = "Invitation Record"
         verbose_name_plural = "Invitation Records"
         indexes = [
-            models.Index(fields=['token'], name='invite_token_idx'),
-            models.Index(fields=['email'], name='invite_email_idx'),
-            models.Index(fields=['expires_at'], name='invite_expires_idx'),
+            models.Index(fields=["token"], name="invite_token_idx"),
+            models.Index(fields=["email"], name="invite_email_idx"),
+            models.Index(fields=["expires_at"], name="invite_expires_idx"),
         ]
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"Invitation for {self.email} by {self.invited_by.full_name}"
@@ -451,56 +440,48 @@ class PasswordResetCode(models.Model):
     """
     Track password reset codes with secure hashing and expiration
     """
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='password_reset_codes',
-        help_text="User requesting password reset"
+        related_name="password_reset_codes",
+        help_text="User requesting password reset",
     )
-    code_hash = models.CharField(
-        max_length=255,
-        help_text="Hashed 4-digit reset code"
-    )
+    code_hash = models.CharField(max_length=255, help_text="Hashed 4-digit reset code")
     created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When the reset code was created"
+        auto_now_add=True, help_text="When the reset code was created"
     )
     expires_at = models.DateTimeField(
         help_text="When the reset code expires (24 hours from creation)"
     )
     is_used = models.BooleanField(
-        default=False,
-        help_text="Whether the reset code has been used"
+        default=False, help_text="Whether the reset code has been used"
     )
     used_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the reset code was used"
+        null=True, blank=True, help_text="When the reset code was used"
     )
     attempts = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of verification attempts made"
+        default=0, help_text="Number of verification attempts made"
     )
     max_attempts = models.PositiveIntegerField(
-        default=3,
-        help_text="Maximum allowed verification attempts"
+        default=3, help_text="Maximum allowed verification attempts"
     )
 
     class Meta:
-        db_table = 'password_reset_codes'
+        db_table = "password_reset_codes"
         verbose_name = "Password Reset Code"
         verbose_name_plural = "Password Reset Codes"
         indexes = [
-            models.Index(fields=['user'], name='reset_code_user_idx'),
-            models.Index(fields=['expires_at'], name='reset_code_expires_idx'),
-            models.Index(fields=['is_used'], name='reset_code_used_idx'),
+            models.Index(fields=["user"], name="reset_code_user_idx"),
+            models.Index(fields=["expires_at"], name="reset_code_expires_idx"),
+            models.Index(fields=["is_used"], name="reset_code_used_idx"),
         ]
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=['user'],
+                fields=["user"],
                 condition=models.Q(is_used=False),
-                name='unique_active_reset_code_per_user'
+                name="unique_active_reset_code_per_user",
             )
         ]
 
@@ -516,9 +497,9 @@ class PasswordResetCode(models.Model):
     def is_valid(self):
         """Check if the reset code is valid (not used, not expired, attempts not exceeded)"""
         return (
-            not self.is_used and 
-            not self.is_expired and 
-            self.attempts < self.max_attempts
+            not self.is_used
+            and not self.is_expired
+            and self.attempts < self.max_attempts
         )
 
     def save(self, *args, **kwargs):

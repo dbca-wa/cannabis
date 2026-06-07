@@ -18,7 +18,11 @@ import {
 import { CommandInputWithLoading } from "@/shared/components/ui/custom/command-input-with-loading";
 import { useDefendantSearch } from "../hooks/useDefendantSearch";
 import { useDefendantById } from "../hooks/useDefendants";
-import { DefendantsService } from "../services/defendants.service";
+import {
+	formatDefendantDisplayName,
+	getDefendantCasesBadgeColourClass,
+	getDefendantCasesBadge,
+} from "@/shared/utils/defendant-display.utils";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loading-overlay";
 import { CreateDefendantModal } from "./CreateDefendantModal";
@@ -73,10 +77,8 @@ export const DefendantSearchCombobox = React.forwardRef<
 			loadInitialData: true,
 		});
 
-		const {
-			data: selectedDefendant,
-			isLoading: isLoadingSelectedDefendant,
-		} = useDefendantById(value ?? null);
+		const { data: selectedDefendant, isLoading: isLoadingSelectedDefendant } =
+			useDefendantById(value ?? null);
 
 		// Reset search when closing
 		useEffect(() => {
@@ -106,7 +108,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 		};
 
 		const displayValue = selectedDefendant
-			? DefendantsService.formatDefendantDisplayName(selectedDefendant)
+			? formatDefendantDisplayName(selectedDefendant)
 			: null;
 
 		return (
@@ -135,22 +137,16 @@ export const DefendantSearchCombobox = React.forwardRef<
 								) : displayValue ? (
 									<>
 										<User className="h-4 w-4 text-muted-foreground" />
-										<span className="truncate">
-											{displayValue}
-										</span>
+										<span className="truncate">{displayValue}</span>
 										{selectedDefendant && (
 											<Badge
 												variant="secondary"
 												className={cn(
 													"text-xs",
-													DefendantsService.getDefendantCasesBadgeColorClass(
-														selectedDefendant
-													)
+													getDefendantCasesBadgeColourClass(selectedDefendant)
 												)}
 											>
-												{DefendantsService.getDefendantCasesBadge(
-													selectedDefendant
-												)}
+												{getDefendantCasesBadge(selectedDefendant)}
 											</Badge>
 										)}
 									</>
@@ -184,34 +180,23 @@ export const DefendantSearchCombobox = React.forwardRef<
 								<SmoothLoadingOverlay
 									isInitialLoading={isInitialLoading}
 									isSearching={isSearching}
-									hasResults={
-										!!searchResults?.results?.length
-									}
+									hasResults={!!searchResults?.results?.length}
 									skeletonCount={4}
 									skeletonType="simple"
 									error={searchError}
 									onRetry={retry}
 									isRetrying={isRetrying}
-									hasFallbackData={
-										hasInitialData && !!searchError
-									}
+									hasFallbackData={hasInitialData && !!searchError}
 									fallbackMessage={
-										hasInitialData
-											? "Showing cached results"
-											: undefined
+										hasInitialData ? "Showing cached results" : undefined
 									}
 								>
 									{/* Show search error with fallback to initial data */}
-									{searchError &&
-									hasInitialData &&
-									searchQuery ? (
+									{searchError && hasInitialData && searchQuery ? (
 										<>
 											<div className="p-2 border-l-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20">
 												<div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-400">
-													<span>
-														Search failed. Showing
-														cached results.
-													</span>
+													<span>Search failed. Showing cached results.</span>
 													<Button
 														variant="ghost"
 														size="sm"
@@ -226,63 +211,44 @@ export const DefendantSearchCombobox = React.forwardRef<
 											<CommandGroup>
 												{initialData
 													?.slice(0, 6)
-													.map(
-														(
-															defendant: DefendantTiny
-														) => (
-															<CommandItem
-																key={
-																	defendant.id
-																}
-																value={defendant.id.toString()}
-																onSelect={() =>
-																	handleSelect(
-																		defendant.id
-																	)
-																}
-																className="flex items-center gap-2"
-															>
-																<Check
-																	className={cn(
-																		"h-4 w-4",
-																		value ===
-																			defendant.id
-																			? "opacity-100"
-																			: "opacity-0"
-																	)}
-																/>
-																<User className="h-4 w-4 text-muted-foreground" />
-																<div className="flex-1 min-w-0">
-																	<div className="truncate">
-																		{DefendantsService.formatDefendantDisplayName(
-																			defendant
-																		)}
-																	</div>
+													.map((defendant: DefendantTiny) => (
+														<CommandItem
+															key={defendant.id}
+															value={defendant.id.toString()}
+															onSelect={() => handleSelect(defendant.id)}
+															className="flex items-center gap-2"
+														>
+															<Check
+																className={cn(
+																	"h-4 w-4",
+																	value === defendant.id
+																		? "opacity-100"
+																		: "opacity-0"
+																)}
+															/>
+															<User className="h-4 w-4 text-muted-foreground" />
+															<div className="flex-1 min-w-0">
+																<div className="truncate">
+																	{formatDefendantDisplayName(defendant)}
 																</div>
-																<Badge
-																	variant="secondary"
-																	className={cn(
-																		"text-xs",
-																		DefendantsService.getDefendantCasesBadgeColorClass(
-																			defendant
-																		)
-																	)}
-																>
-																	{DefendantsService.getDefendantCasesBadge(
-																		defendant
-																	)}
-																</Badge>
-															</CommandItem>
-														)
-													)}
+															</div>
+															<Badge
+																variant="secondary"
+																className={cn(
+																	"text-xs",
+																	getDefendantCasesBadgeColourClass(defendant)
+																)}
+															>
+																{getDefendantCasesBadge(defendant)}
+															</Badge>
+														</CommandItem>
+													))}
 											</CommandGroup>
 										</>
 									) : !searchResults?.results?.length ? (
 										<div className="p-4 text-center">
 											<div className="text-sm text-muted-foreground mb-3">
-												{searchQuery
-													? emptyText
-													: "No defendants available"}
+												{searchQuery ? emptyText : "No defendants available"}
 											</div>
 											<Button
 												size="sm"
@@ -297,53 +263,38 @@ export const DefendantSearchCombobox = React.forwardRef<
 										<CommandGroup>
 											{searchResults.results
 												.slice(0, 6)
-												.map(
-													(
-														defendant: DefendantTiny
-													) => (
-														<CommandItem
-															key={defendant.id}
-															value={defendant.id.toString()}
-															onSelect={() =>
-																handleSelect(
-																	defendant.id
-																)
-															}
-															className="flex items-center gap-2"
-														>
-															<Check
-																className={cn(
-																	"h-4 w-4",
-																	value ===
-																		defendant.id
-																		? "opacity-100"
-																		: "opacity-0"
-																)}
-															/>
-															<User className="h-4 w-4 text-muted-foreground" />
-															<div className="flex-1 min-w-0">
-																<div className="truncate">
-																	{DefendantsService.formatDefendantDisplayName(
-																		defendant
-																	)}
-																</div>
+												.map((defendant: DefendantTiny) => (
+													<CommandItem
+														key={defendant.id}
+														value={defendant.id.toString()}
+														onSelect={() => handleSelect(defendant.id)}
+														className="flex items-center gap-2"
+													>
+														<Check
+															className={cn(
+																"h-4 w-4",
+																value === defendant.id
+																	? "opacity-100"
+																	: "opacity-0"
+															)}
+														/>
+														<User className="h-4 w-4 text-muted-foreground" />
+														<div className="flex-1 min-w-0">
+															<div className="truncate">
+																{formatDefendantDisplayName(defendant)}
 															</div>
-															<Badge
-																variant="secondary"
-																className={cn(
-																	"text-xs",
-																	DefendantsService.getDefendantCasesBadgeColorClass(
-																		defendant
-																	)
-																)}
-															>
-																{DefendantsService.getDefendantCasesBadge(
-																	defendant
-																)}
-															</Badge>
-														</CommandItem>
-													)
-												)}
+														</div>
+														<Badge
+															variant="secondary"
+															className={cn(
+																"text-xs",
+																getDefendantCasesBadgeColourClass(defendant)
+															)}
+														>
+															{getDefendantCasesBadge(defendant)}
+														</Badge>
+													</CommandItem>
+												))}
 										</CommandGroup>
 									)}
 								</SmoothLoadingOverlay>

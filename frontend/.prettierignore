@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Generated files
+*.min.js
+*.min.css
+bun.lock
+
+# Config files that shouldn't be formatted
+.env
+.env.*
+
+# Documentation
+CHANGELOG.md
+
+# Binary files
+*.docx
+
+# Shell scripts (no Prettier parser)
+*.sh
+
+# Docker files (no Prettier parser)
+Dockerfile
+Dockerfile.*

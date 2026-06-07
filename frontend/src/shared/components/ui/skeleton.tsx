@@ -1,18 +1,11 @@
-import { cn } from "@/shared/utils/index";
+/**
+ * Skeleton placeholder — disabled.
+ * Returns null so loading states render nothing until content is ready.
+ * Kept as a named export so existing imports don't break.
+ */
 
-function Skeleton({
-	className,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-	return (
-		<div
-			className={cn(
-				"animate-pulse rounded-md bg-primary/10 skeleton-light-mode",
-				className
-			)}
-			{...props}
-		/>
-	);
+function Skeleton(_props: React.HTMLAttributes<HTMLDivElement>) {
+	return null;
 }
 
 export { Skeleton };

@@ -14,7 +14,7 @@ export const EditUserModal = () => {
 	const { updateUser, isUpdating } = useUsers();
 
 	const handleClose = () => {
-		navigate("/users");
+		navigate("/staff");
 	};
 
 	const handleSubmit = async (transformedData: EditUserFormData) => {

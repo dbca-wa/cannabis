@@ -1,13 +1,13 @@
 /**
- * Shared Hooks - Organized exports for all shared hooks
+ * Shared Hooks - Organised exports for all shared hooks
  *
- * Hooks are organized into logical categories:
+ * Hooks are organised into logical categories:
  * - Core: Essential utilities (async, debounce, storage, time, caching)
  * - UI: User interface related (responsive, theme, keyboard, navigation)
  * - Data: Data management (pagination, selection, filters, export, API)
  */
 
-// ===== ORGANIZED CATEGORY EXPORTS =====
+// ===== ORGANISED CATEGORY EXPORTS =====
 
 // Core hooks - Essential utilities
 export * from "./core";

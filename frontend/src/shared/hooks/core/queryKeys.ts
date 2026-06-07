@@ -94,28 +94,26 @@ export const queryKeyFactory = {
 	users: () => ["users"] as const,
 	police: () => ["police"] as const,
 	defendants: () => ["defendants"] as const,
-	submissions: () => ["submissions"] as const,
+	cases: () => ["cases"] as const,
 	system: () => ["system"] as const,
 
 	// User queries
-	usersList: (params?: Record<string, unknown>) => 
+	usersList: (params?: Record<string, unknown>) =>
 		[...queryKeyFactory.users(), "list", params] as const,
-	userDetail: (id: string | number) => 
+	userDetail: (id: string | number) =>
 		[...queryKeyFactory.users(), "detail", id] as const,
-	userSearch: (query: string, params?: Record<string, unknown>) => 
+	userSearch: (query: string, params?: Record<string, unknown>) =>
 		[...queryKeyFactory.users(), "search", query, params] as const,
 
 	// Police queries
-	policeStations: (params?: Record<string, unknown>) => 
+	policeStations: (params?: Record<string, unknown>) =>
 		[...queryKeyFactory.police(), "stations", params] as const,
-	policeOfficers: (params?: Record<string, unknown>) => 
+	policeOfficers: (params?: Record<string, unknown>) =>
 		[...queryKeyFactory.police(), "officers", params] as const,
 
 	// System queries
-	systemSettings: () => 
-		[...queryKeyFactory.system(), "settings"] as const,
-	systemHealth: () => 
-		[...queryKeyFactory.system(), "health"] as const,
+	systemSettings: () => [...queryKeyFactory.system(), "settings"] as const,
+	systemHealth: () => [...queryKeyFactory.system(), "health"] as const,
 } as const;
 
 /**
@@ -126,8 +124,8 @@ export const cacheUtils = {
 	 * Invalidate all queries for a specific base entity type
 	 */
 	invalidateEntity: (
-		queryClient: QueryClient, 
-		entityType: 'users' | 'police' | 'defendants' | 'submissions' | 'system'
+		queryClient: QueryClient,
+		entityType: "users" | "police" | "defendants" | "cases" | "system"
 	) => {
 		return queryClient.invalidateQueries({
 			queryKey: queryKeyFactory[entityType](),
@@ -137,7 +135,10 @@ export const cacheUtils = {
 	/**
 	 * Invalidate specific query patterns
 	 */
-	invalidatePattern: (queryClient: QueryClient, pattern: readonly unknown[]) => {
+	invalidatePattern: (
+		queryClient: QueryClient,
+		pattern: readonly unknown[]
+	) => {
 		return queryClient.invalidateQueries({
 			queryKey: pattern,
 		});
@@ -196,16 +197,12 @@ export const queryUtils = {
 	/**
 	 * Create a list query key with consistent structure
 	 */
-	createListKey: (
-		entity: string,
-		params?: Record<string, unknown>
-	) => [entity, "list", params] as const,
+	createListKey: (entity: string, params?: Record<string, unknown>) =>
+		[entity, "list", params] as const,
 
 	/**
 	 * Create a detail query key with consistent structure
 	 */
-	createDetailKey: (
-		entity: string,
-		id: string | number
-	) => [entity, "detail", id] as const,
+	createDetailKey: (entity: string, id: string | number) =>
+		[entity, "detail", id] as const,
 } as const;

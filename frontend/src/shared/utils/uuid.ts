@@ -37,19 +37,17 @@ class BrowserUUIDService implements UUIDGenerator {
 			// Method 2: crypto.getRandomValues with UUID v4 format (good fallback)
 			if (this.isCryptoRandomValuesAvailable()) {
 				const uuid = this.generateUUIDv4WithCrypto();
-				logger.debug(
-					"Generated UUID using crypto.getRandomValues fallback",
-					{ uuid }
-				);
+				logger.debug("Generated UUID using crypto.getRandomValues fallback", {
+					uuid,
+				});
 				return uuid;
 			}
 
 			// Method 3: Math.random fallback (least secure but functional)
 			const uuid = this.generateUUIDv4WithMath();
-			logger.warn(
-				"Generated UUID using Math.random fallback (less secure)",
-				{ uuid }
-			);
+			logger.warn("Generated UUID using Math.random fallback (less secure)", {
+				uuid,
+			});
 			return uuid;
 		} catch (error) {
 			logger.error(
@@ -77,8 +75,7 @@ class BrowserUUIDService implements UUIDGenerator {
 	 */
 	private isNativeCryptoUUIDAvailable(): boolean {
 		return (
-			typeof crypto !== "undefined" &&
-			typeof crypto.randomUUID === "function"
+			typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
 		);
 	}
 

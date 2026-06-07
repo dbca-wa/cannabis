@@ -6,11 +6,11 @@ export const createStationSchema = z.object({
 		.string()
 		.min(1, "Station name is required")
 		.max(200, "Station name must be 200 characters or less"),
-	address: z.string().min(1, "Address is required"),
-	phone: z.string().min(1, "Phone number is required"),
+	address: z.string(),
+	phone: z.string(),
 });
 
-// Edit station schema - same as create for now
+// Edit station schema - same constraints as create
 export const editStationSchema = createStationSchema;
 
 // Type inference from schemas

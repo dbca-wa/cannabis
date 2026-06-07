@@ -1,20 +1,21 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from django.urls import reverse
+from django.utils.html import format_html
+
 from .models import Defendant
 
 
 @admin.register(Defendant)
 class DefendantAdmin(admin.ModelAdmin):
     list_display = ("id", "full_name", "pdf_name", "submission_count", "created_at")
-    search_fields = ("first_name", "last_name")
-    ordering = ("last_name", "first_name")
+    search_fields = ("given_names", "last_name")
+    ordering = ("last_name", "given_names")
 
     fieldsets = (
         (
             "Personal Information",
             {
-                "fields": ("first_name", "last_name"),
+                "fields": ("given_names", "last_name"),
                 "classes": ("wide",),
             },
         ),

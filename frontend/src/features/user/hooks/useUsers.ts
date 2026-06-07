@@ -2,7 +2,13 @@ import { logger } from "@/shared/services/logger.service";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { usersService } from "../services/users.service";
+import {
+	getUsers,
+	createUser as createUserService,
+	updateUser as updateUserService,
+	deleteUser as deleteUserService,
+	inviteUser as inviteUserService,
+} from "../services/users.service";
 import {
 	type IUser,
 	type EditUserFormData,
@@ -11,7 +17,7 @@ import {
 import type { AddUserFormData } from "../components/forms/schemas/addUserSchema";
 import type { InviteUserRequest } from "@/shared/types/backend-api.types";
 
-// Standardized query keys following police/defendants pattern
+// Standardised query keys following police/defendants pattern
 export const usersQueryKeys = {
 	all: ["users"] as const,
 	lists: () => [...usersQueryKeys.all, "list"] as const,
@@ -24,16 +30,10 @@ export const usersQueryKeys = {
 export const useUsers = (params: UserSearchParams = {}) => {
 	const queryClient = useQueryClient();
 
-	// Query for fetching users with pagination and filtering - using standardized query keys
+	// Query for fetching users with pagination and filtering - using standardised query keys
 	const usersQuery = useQuery({
 		queryKey: usersQueryKeys.list(params),
-		queryFn: async () => {
-			const result = await usersService.getUsers(params);
-			if (!result.success) {
-				throw new Error(result.error || "Failed to fetch users");
-			}
-			return result.data;
-		},
+		queryFn: () => getUsers(params),
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		retry: 3,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -43,18 +43,11 @@ export const useUsers = (params: UserSearchParams = {}) => {
 	const createUserMutation = useMutation({
 		mutationFn: async (userData: AddUserFormData) => {
 			logger.info("Creating user", { email: userData.email });
-			const result = await usersService.createUser(userData);
-			if (!result.success) {
-				throw new Error(result.error || "Failed to create user");
-			}
-			return result.data;
+			return createUserService(userData);
 		},
 		onSuccess: async (newUser) => {
 			// Update specific user cache
-			queryClient.setQueryData(
-				usersQueryKeys.detail(newUser.id),
-				newUser
-			);
+			queryClient.setQueryData(usersQueryKeys.detail(newUser.id), newUser);
 
 			// Invalidate all users queries to refresh everywhere
 			queryClient.invalidateQueries({
@@ -86,11 +79,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 			data: EditUserFormData;
 		}) => {
 			logger.info("Updating user", { userId: id });
-			const result = await usersService.updateUser(id, data);
-			if (!result.success) {
-				throw new Error(result.error || "Failed to update user");
-			}
-			return result.data;
+			return updateUserService(id, data);
 		},
 		onSuccess: async (updatedUser, variables) => {
 			// Update user in cache
@@ -108,9 +97,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				queryKey: usersQueryKeys.all,
 			});
 
-			toast.success(
-				`User "${updatedUser.full_name}" updated successfully!`
-			);
+			toast.success(`User "${updatedUser.full_name}" updated successfully!`);
 			logger.info("User updated via hook", { userId: variables.id });
 		},
 		onError: (error: unknown, variables) => {
@@ -127,11 +114,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 	const deleteUserMutation = useMutation({
 		mutationFn: async (userId: string | number) => {
 			logger.info("Deleting user", { userId });
-			const result = await usersService.deleteUser(userId);
-			if (!result.success) {
-				throw new Error(result.error || "Failed to delete user");
-			}
-			return result.data;
+			await deleteUserService(userId);
 		},
 		onSuccess: async (_, deletedUserId) => {
 			// Remove user from cache
@@ -167,11 +150,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				email: inviteData.external_user_data?.email,
 				role: inviteData.role,
 			});
-			const result = await usersService.inviteUser(inviteData);
-			if (!result.success) {
-				throw new Error(result.error || "Failed to send invitation");
-			}
-			return result.data;
+			return inviteUserService(inviteData);
 		},
 		onSuccess: async (newUser) => {
 			// Invalidate all users queries to refresh everywhere

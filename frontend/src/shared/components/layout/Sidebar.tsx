@@ -1,76 +1,45 @@
-import { observer } from "mobx-react-lite";
-import CannabisLogo from "./CannabisLogo";
-import SidebarButton from "./SidebarButton";
-import { getSidebarItems } from "@/app/config/routes.config";
-import { cn } from "@/shared/utils/index";
-import { useAuth } from "@/features/auth";
-import { logger } from "@/shared/services/logger.service";
-import { Fragment } from "react";
+import { NavLink } from "react-router";
+import { motion } from "motion/react";
+import { Logo } from "@/shared/components/Logo";
+import UserMenu from "./UserMenu";
+import { SidebarNav } from "./SidebarNav";
+import { SIDEBAR_BG_VARIANTS } from "@/shared/styles/sidebar-variants";
 
-const Sidebar = observer(() => {
-	const { user } = useAuth();
+// Change this to "default" to revert to the clean white/dark sidebar
+const SIDEBAR_VARIANT: keyof typeof SIDEBAR_BG_VARIANTS = "cannabis";
 
+const Sidebar = () => {
 	return (
 		<aside
-			className={cn(
-				"z-[999] w-20 flex-col py-3 hidden lg:flex",
-				"border-r shadow-md transition-colors duration-200",
-				// Dark theme styles
-				"dark:bg-gray-900 dark:border-gray-700",
-				// Light theme styles
-				"bg-white border-gray-200"
-			)}
+			className={`w-[260px] shrink-0 h-screen sticky top-0 border-r border-border ${SIDEBAR_BG_VARIANTS[SIDEBAR_VARIANT]} flex flex-col`}
 		>
-			<div className="flex flex-col items-center space-y-4">
-				{/* Cannabis Logo as Home Button */}
-				<div className="mb-2">
-					<CannabisLogo
-						shouldAnimate={true}
-						size="sm"
-						variant="none"
-					/>
+			<NavLink
+				to="/"
+				className="flex items-center gap-3 px-6 py-5 border-b border-border/60 group cursor-pointer"
+			>
+				<motion.div
+					whileHover={{ rotate: -8, scale: 1.08 }}
+					transition={{ type: "spring", stiffness: 260, damping: 18 }}
+				>
+					<Logo size={34} />
+				</motion.div>
+				<div className="flex flex-col leading-tight">
+					<span className="text-[15px] font-medium tracking-tight">
+						Cannabis
+					</span>
+					<span className="text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
+						DBCA Herbarium
+					</span>
 				</div>
+			</NavLink>
 
-				{/* Navigation Items */}
-				<div className="flex flex-col space-y-3 w-full items-center">
-					{getSidebarItems()
-						.filter((item) => item.name !== "Home")
-						.map((item) => {
-							// Debug logging for admin filtering
-							if (item.name === "Admin") {
-								logger.info("Admin item check", {
-									itemName: item.name,
-									adminOnly: item.adminOnly,
-									userIsStaff: user?.is_staff,
-									userIsSuperuser: user?.is_superuser,
-									shouldShow:
-										!item.adminOnly ||
-										user?.is_superuser,
-								});
-							}
+			<SidebarNav pillId="sidebar-pill" />
 
-
-							return (
-								// Skip rendering admin-only items for non-admins
-								(!item.adminOnly ||
-									user?.is_superuser) && (
-									<Fragment key={item.name}>
-										<SidebarButton
-											name={item.name}
-											hideName={false}
-											adminOnly={item.adminOnly}
-											icon={item.icon}
-											activeIcon={item.activeIcon}
-											tooltipContent={item.tooltipContent}
-										/>
-									</Fragment>
-								)
-							);
-						})}
-				</div>
+			<div className="p-3 border-t border-border/60">
+				<UserMenu />
 			</div>
 		</aside>
 	);
-});
+};
 
 export default Sidebar;

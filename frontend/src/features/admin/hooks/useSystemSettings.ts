@@ -1,6 +1,6 @@
 /**
  * React hook for system settings management
- * 
+ *
  * Provides reactive state management for system settings with:
  * - Automatic loading and caching
  * - Optimistic updates
@@ -13,315 +13,352 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { systemSettingsService } from "../services/systemSettings.service";
 import { errorHandlingService } from "@/shared/services/errorHandling.service";
 import { logger } from "@/shared/services/logger.service";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 import type {
-  SystemSettings,
-  SystemSettingsUpdateRequest,
-  SettingsChangeNotification
+	SystemSettings,
+	SystemSettingsUpdateRequest,
+	SettingsChangeNotification,
 } from "../types/settings.types";
 
+/** The value type for any single field in a settings update */
+type SettingsFieldValue = string | boolean;
+
 interface UseSystemSettingsOptions {
-  autoLoad?: boolean;
-  enableChangeNotifications?: boolean;
-  onSettingsChange?: (notification: SettingsChangeNotification) => void;
-  onError?: (error: string) => void;
+	autoLoad?: boolean;
+	enableChangeNotifications?: boolean;
+	onSettingsChange?: (notification: SettingsChangeNotification) => void;
+	onError?: (error: string) => void;
 }
 
 interface UseSystemSettingsReturn {
-  // Data
-  settings: SystemSettings | null;
-  
-  // Loading states
-  isLoading: boolean;
-  isUpdating: boolean;
-  isValidating: boolean;
-  
-  // Error states
-  error: string | null;
-  validationErrors: Record<string, string>;
-  
-  // Actions
-  loadSettings: (forceRefresh?: boolean) => Promise<boolean>;
-  updateSettings: (updates: SystemSettingsUpdateRequest) => Promise<boolean>;
-  updateSetting: (field: keyof SystemSettingsUpdateRequest, value: any) => Promise<boolean>;
-  validateSettings: (settings: Partial<SystemSettings>) => {
-    isValid: boolean;
-    errors: string[];
-    fieldErrors: Record<string, string>;
-  };
-  clearError: () => void;
-  invalidateCache: () => void;
-  
-  // Cache info
-  cacheStatus: {
-    isCached: boolean;
-    isValid: boolean;
-    lastFetched: number | null;
-    version: number;
-    optimisticUpdates: number;
-    isRateLimited: boolean;
-    rateLimitedUntil: number;
-    consecutiveRateLimits: number;
-  };
-  
-  // Circuit breaker control
-  resetCircuitBreaker: () => void;
+	// Data
+	settings: SystemSettings | null;
+
+	// Loading states
+	isLoading: boolean;
+	isUpdating: boolean;
+	isValidating: boolean;
+
+	// Error states
+	error: string | null;
+	validationErrors: Record<string, string>;
+
+	// Actions
+	loadSettings: (forceRefresh?: boolean) => Promise<boolean>;
+	updateSettings: (updates: SystemSettingsUpdateRequest) => Promise<boolean>;
+	updateSetting: (
+		field: keyof SystemSettingsUpdateRequest,
+		value: SettingsFieldValue
+	) => Promise<boolean>;
+	validateSettings: (settings: Partial<SystemSettings>) => {
+		isValid: boolean;
+		errors: string[];
+		fieldErrors: Record<string, string>;
+	};
+	clearError: () => void;
+	invalidateCache: () => void;
+
+	// Cache info
+	cacheStatus: {
+		isCached: boolean;
+		isValid: boolean;
+		lastFetched: number | null;
+		version: number;
+		optimisticUpdates: number;
+		isRateLimited: boolean;
+		rateLimitedUntil: number;
+		consecutiveRateLimits: number;
+	};
+
+	// Circuit breaker control
+	resetCircuitBreaker: () => void;
 }
 
-export function useSystemSettings(options: UseSystemSettingsOptions = {}): UseSystemSettingsReturn {
-  const {
-    autoLoad = true,
-    enableChangeNotifications = true,
-    onSettingsChange,
-    onError
-  } = options;
+export function useSystemSettings(
+	options: UseSystemSettingsOptions = {}
+): UseSystemSettingsReturn {
+	const {
+		autoLoad = true,
+		enableChangeNotifications = true,
+		onSettingsChange,
+		onError,
+	} = options;
 
-  // State
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+	// State
+	const [settings, setSettings] = useState<SystemSettings | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [isValidating, setIsValidating] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [validationErrors, setValidationErrors] = useState<
+		Record<string, string>
+	>({});
 
-  // Refs for cleanup
-  const changeListenerRef = useRef<(() => void) | null>(null);
-  const mountedRef = useRef(true);
+	// Refs for cleanup
+	const changeListenerRef = useRef<(() => void) | null>(null);
+	const mountedRef = useRef(true);
 
-  // Load settings from service
-  const loadSettings = useCallback(async (forceRefresh = false): Promise<boolean> => {
-    if (!mountedRef.current) return false;
+	// Load settings from service
+	const loadSettings = useCallback(
+		async (forceRefresh = false): Promise<boolean> => {
+			if (!mountedRef.current) return false;
 
-    try {
-      setIsLoading(true);
-      setError(null);
+			try {
+				setIsLoading(true);
+				setError(null);
 
-      logger.debug("Starting to load settings", { forceRefresh });
+				logger.debug("Starting to load settings", { forceRefresh });
 
-      const result = await systemSettingsService.getSettings({ forceRefresh });
+				const result = await systemSettingsService.getSettings({
+					forceRefresh,
+				});
 
-      if (!mountedRef.current) return false;
+				if (!mountedRef.current) return false;
 
-      logger.debug("Settings service result", { success: result.success, error: result.error });
+				logger.debug("Settings service result", {
+					success: result.success,
+					error: result.error,
+				});
 
-      if (result.success) {
+				if (result.success) {
+					setSettings(result.data);
+					logger.debug("Settings loaded successfully", {
+						cached: result.metadata?.cached,
+						duration: result.metadata?.duration,
+						settingsData: result.data,
+						hasSettings: !!result.data,
+					});
+					return true;
+				} else {
+					const errorMessage = result.error || "Failed to load settings";
+					setError(errorMessage);
+					onError?.(errorMessage);
+					logger.error("Settings loading failed", { error: errorMessage });
+					return false;
+				}
+			} catch (error: unknown) {
+				if (!mountedRef.current) return false;
 
-        setSettings(result.data);
-        logger.debug("Settings loaded successfully", {
-          cached: result.metadata?.cached,
-          duration: result.metadata?.duration,
-          settingsData: result.data,
-          hasSettings: !!result.data
-        });
-        return true;
-      } else {
-        const errorMessage = result.error || "Failed to load settings";
-        setError(errorMessage);
-        onError?.(errorMessage);
-        logger.error("Settings loading failed", { error: errorMessage });
-        return false;
-      }
-    } catch (error: any) {
-      if (!mountedRef.current) return false;
+				const errorMessage =
+					getErrorMessage(error) || "Failed to load settings";
+				setError(errorMessage);
+				onError?.(errorMessage);
 
-      const errorMessage = error.message || "Failed to load settings";
-      setError(errorMessage);
-      onError?.(errorMessage);
-      
-      logger.error("Settings loading exception", { error: errorMessage, stack: error.stack });
-      
-      errorHandlingService.handleError(error, {
-        action: "load_settings",
-        component: "useSystemSettings"
-      });
-      
-      return false;
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [onError]);
+				logger.error("Settings loading exception", { error: errorMessage });
 
-  // Update settings
-  const updateSettings = useCallback(async (updates: SystemSettingsUpdateRequest): Promise<boolean> => {
-    if (!mountedRef.current) return false;
+				errorHandlingService.handleError(error, {
+					action: "load_settings",
+					component: "useSystemSettings",
+				});
 
-    try {
-      setIsUpdating(true);
-      setError(null);
-      setValidationErrors({});
+				return false;
+			} finally {
+				if (mountedRef.current) {
+					setIsLoading(false);
+				}
+			}
+		},
+		[onError]
+	);
 
-      // First validate on client side
-      const validation = systemSettingsService.validateSettings(updates);
-      if (!validation.isValid) {
-        setValidationErrors(validation.fieldErrors);
-        setError("Please fix validation errors");
-        return false;
-      }
+	// Update settings
+	const updateSettings = useCallback(
+		async (updates: SystemSettingsUpdateRequest): Promise<boolean> => {
+			if (!mountedRef.current) return false;
 
-      const result = await systemSettingsService.updateSettings(updates, {
-        skipValidation: true // Already validated above
-      });
+			try {
+				setIsUpdating(true);
+				setError(null);
+				setValidationErrors({});
 
-      if (!mountedRef.current) return false;
+				// First validate on client side
+				const validation = systemSettingsService.validateSettings(updates);
+				if (!validation.isValid) {
+					setValidationErrors(validation.fieldErrors);
+					setError("Please fix validation errors");
+					return false;
+				}
 
-      if (result.success) {
-        setSettings(result.data);
-        logger.debug("Settings updated successfully", {
-          updatedFields: Object.keys(updates),
-          duration: result.metadata?.duration
-        });
-        return true;
-      } else {
-        const errorMessage = result.error || "Failed to update settings";
-        setError(errorMessage);
-        onError?.(errorMessage);
-        return false;
-      }
-    } catch (error: any) {
-      if (!mountedRef.current) return false;
+				const result = await systemSettingsService.updateSettings(updates, {
+					skipValidation: true, // Already validated above
+				});
 
-      const errorMessage = error.message || "Failed to update settings";
-      setError(errorMessage);
-      onError?.(errorMessage);
-      
-      errorHandlingService.handleError(error, {
-        action: "update_settings",
-        component: "useSystemSettings",
-        data: updates
-      });
-      
-      return false;
-    } finally {
-      if (mountedRef.current) {
-        setIsUpdating(false);
-      }
-    }
-  }, [onError]);
+				if (!mountedRef.current) return false;
 
-  // Update single setting
-  const updateSetting = useCallback(async (
-    field: keyof SystemSettingsUpdateRequest,
-    value: any
-  ): Promise<boolean> => {
-    return updateSettings({ [field]: value });
-  }, [updateSettings]);
+				if (result.success) {
+					setSettings(result.data);
+					logger.debug("Settings updated successfully", {
+						updatedFields: Object.keys(updates),
+						duration: result.metadata?.duration,
+					});
+					return true;
+				} else {
+					const errorMessage = result.error || "Failed to update settings";
+					setError(errorMessage);
+					onError?.(errorMessage);
+					return false;
+				}
+			} catch (error: unknown) {
+				if (!mountedRef.current) return false;
 
-  // Validate settings
-  const validateSettings = useCallback((settingsToValidate: Partial<SystemSettings>) => {
-    setIsValidating(true);
-    
-    try {
-      const result = systemSettingsService.validateSettings(settingsToValidate);
-      setValidationErrors(result.fieldErrors);
-      return result;
-    } finally {
-      setIsValidating(false);
-    }
-  }, []);
+				const errorMessage =
+					getErrorMessage(error) || "Failed to update settings";
+				setError(errorMessage);
+				onError?.(errorMessage);
 
-  // Clear error state
-  const clearError = useCallback(() => {
-    setError(null);
-    setValidationErrors({});
-  }, []);
+				errorHandlingService.handleError(error, {
+					action: "update_settings",
+					component: "useSystemSettings",
+					data: updates,
+				});
 
-  // Invalidate cache
-  const invalidateCache = useCallback(() => {
-    systemSettingsService.invalidateCache();
-  }, []);
+				return false;
+			} finally {
+				if (mountedRef.current) {
+					setIsUpdating(false);
+				}
+			}
+		},
+		[onError]
+	);
 
-  // Get cache status
-  const cacheStatus = systemSettingsService.getCacheStatus();
+	// Update single setting
+	const updateSetting = useCallback(
+		async (
+			field: keyof SystemSettingsUpdateRequest,
+			value: SettingsFieldValue
+		): Promise<boolean> => {
+			return updateSettings({ [field]: value } as SystemSettingsUpdateRequest);
+		},
+		[updateSettings]
+	);
 
-  // Reset circuit breaker
-  const resetCircuitBreaker = useCallback(() => {
-    systemSettingsService.resetCircuitBreaker();
-  }, []);
+	// Validate settings
+	const validateSettings = useCallback(
+		(settingsToValidate: Partial<SystemSettings>) => {
+			setIsValidating(true);
 
-  // Setup change notifications
-  useEffect(() => {
-    if (!enableChangeNotifications) return;
+			try {
+				const result =
+					systemSettingsService.validateSettings(settingsToValidate);
+				setValidationErrors(result.fieldErrors);
+				return result;
+			} finally {
+				setIsValidating(false);
+			}
+		},
+		[]
+	);
 
-    const unsubscribe = systemSettingsService.onSettingsChange((notification) => {
-      if (!mountedRef.current) return;
+	// Clear error state
+	const clearError = useCallback(() => {
+		setError(null);
+		setValidationErrors({});
+	}, []);
 
-      logger.debug("Settings change notification received", {
-        field: notification.field,
-        oldValue: notification.oldValue,
-        newValue: notification.newValue
-      });
+	// Invalidate cache
+	const invalidateCache = useCallback(() => {
+		systemSettingsService.invalidateCache();
+	}, []);
 
-      onSettingsChange?.(notification);
-    });
+	// Get cache status
+	const cacheStatus = systemSettingsService.getCacheStatus();
 
-    changeListenerRef.current = unsubscribe;
+	// Reset circuit breaker
+	const resetCircuitBreaker = useCallback(() => {
+		systemSettingsService.resetCircuitBreaker();
+	}, []);
 
-    return () => {
-      unsubscribe();
-      changeListenerRef.current = null;
-    };
-  }, [enableChangeNotifications, onSettingsChange]);
+	// Setup change notifications
+	useEffect(() => {
+		if (!enableChangeNotifications) return;
 
-  // Auto-load settings on mount with safeguards
-  useEffect(() => {
-    // Only auto-load once, with multiple safety checks
-    if (autoLoad && !settings && !isLoading && !error && cacheStatus.consecutiveRateLimits === 0) {
-      logger.debug("Auto-loading settings with safeguards");
-      loadSettings();
-    }
-  }, [autoLoad]); // Only depend on autoLoad to prevent re-runs
+		const unsubscribe = systemSettingsService.onSettingsChange(
+			(notification) => {
+				if (!mountedRef.current) return;
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      changeListenerRef.current?.();
-    };
-  }, []);
+				logger.debug("Settings change notification received", {
+					field: notification.field,
+					oldValue: notification.oldValue,
+					newValue: notification.newValue,
+				});
 
+				onSettingsChange?.(notification);
+			}
+		);
 
+		changeListenerRef.current = unsubscribe;
 
-  return {
-    // Data
-    settings,
-    
-    // Loading states
-    isLoading,
-    isUpdating,
-    isValidating,
-    
-    // Error states
-    error,
-    validationErrors,
-    
-    // Actions
-    loadSettings,
-    updateSettings,
-    updateSetting,
-    validateSettings,
-    clearError,
-    invalidateCache,
-    
-    // Cache info
-    cacheStatus,
-    
-    // Circuit breaker control
-    resetCircuitBreaker
-  };
+		return () => {
+			unsubscribe();
+			changeListenerRef.current = null;
+		};
+	}, [enableChangeNotifications, onSettingsChange]);
+
+	// Auto-load settings on mount with safeguards
+	useEffect(() => {
+		// Only auto-load once, with multiple safety checks
+		if (
+			autoLoad &&
+			!settings &&
+			!isLoading &&
+			!error &&
+			cacheStatus.consecutiveRateLimits === 0
+		) {
+			logger.debug("Auto-loading settings with safeguards");
+			// eslint-disable-next-line react-hooks/set-state-in-effect
+			loadSettings();
+		}
+	}, [autoLoad]); // Only depend on autoLoad to prevent re-runs
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+			changeListenerRef.current?.();
+		};
+	}, []);
+
+	return {
+		// Data
+		settings,
+
+		// Loading states
+		isLoading,
+		isUpdating,
+		isValidating,
+
+		// Error states
+		error,
+		validationErrors,
+
+		// Actions
+		loadSettings,
+		updateSettings,
+		updateSetting,
+		validateSettings,
+		clearError,
+		invalidateCache,
+
+		// Cache info
+		cacheStatus,
+
+		// Circuit breaker control
+		resetCircuitBreaker,
+	};
 }
 
 // Convenience hook for read-only access
 export function useSystemSettingsReadOnly() {
-  const { settings, isLoading, error, loadSettings } = useSystemSettings({
-    autoLoad: true,
-    enableChangeNotifications: false
-  });
+	const { settings, isLoading, error, loadSettings } = useSystemSettings({
+		autoLoad: true,
+		enableChangeNotifications: false,
+	});
 
-  return {
-    settings,
-    isLoading,
-    error,
-    refresh: loadSettings
-  };
+	return {
+		settings,
+		isLoading,
+		error,
+		refresh: loadSettings,
+	};
 }

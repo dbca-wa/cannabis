@@ -1,6 +1,5 @@
 import { cn } from "@/shared/utils";
 import * as React from "react";
-import "@/features/dash/components/Stats.css";
 
 export type SectionWrapperVariant =
 	| "default"
@@ -27,7 +26,8 @@ const sectionVariants = {
 	},
 	minimal: {
 		container: "stat-panel stats-container rounded-lg p-6 shadow-md",
-		title: "text-xl font-semibold text-gray-800 dark:text-gray-200 flex items-center",
+		title:
+			"text-xl font-semibold text-gray-800 dark:text-gray-200 flex items-center",
 	},
 	dark: {
 		container:
@@ -35,8 +35,7 @@ const sectionVariants = {
 		title: "text-xl font-bold text-green-400 flex items-center",
 	},
 	card: {
-		container:
-			"bg-white rounded-2xl p-6 shadow-xl border-l-4 border-green-500",
+		container: "bg-white rounded-2xl p-6 shadow-xl border-l-4 border-green-500",
 		title: "text-xl font-bold text-gray-800 flex items-center",
 	},
 	sunset: {
@@ -77,9 +76,7 @@ const SectionWrapper = ({
 							"truncate min-w-0 flex-1" // Prevents title from overflowing
 						)}
 					>
-						{icon && (
-							<span className="mr-2 flex-shrink-0">{icon}</span>
-						)}
+						{icon && <span className="mr-2 flex-shrink-0">{icon}</span>}
 						<span className="truncate">{title}</span>
 					</h3>
 				</div>

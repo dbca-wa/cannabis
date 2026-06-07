@@ -31,7 +31,7 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 	const form = useForm<CreateDefendantFormData>({
 		resolver: zodResolver(createDefendantSchema),
 		defaultValues: {
-			first_name: "",
+			given_names: "",
 			last_name: "",
 		},
 	});
@@ -42,20 +42,17 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(handleSubmit)}
-				className="space-y-4"
-			>
+			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
-					name="first_name"
+					name="given_names"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>First Name</FormLabel>
+							<FormLabel>Given Names</FormLabel>
 							<FormControl>
 								<Input
 									{...field}
-									placeholder="Enter first name (optional)"
+									placeholder="Enter given names (optional)"
 									disabled={isSubmitting}
 								/>
 							</FormControl>
@@ -70,8 +67,7 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>
-								Last Name{" "}
-								<span className="text-red-500">*</span>
+								Last Name <span className="text-red-500">*</span>
 							</FormLabel>
 							<FormControl>
 								<Input
@@ -95,9 +91,7 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 						Cancel
 					</Button>
 					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting && (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						)}
+						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						Create Defendant
 					</Button>
 				</div>

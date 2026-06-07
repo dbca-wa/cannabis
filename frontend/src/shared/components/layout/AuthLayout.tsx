@@ -8,7 +8,9 @@ import { cn } from "@/shared/utils";
 
 const AuthLayout = observer(() => {
 	const [isStoreInitialised, setIsStoreInitialised] = useState(false);
-	const [initializationError, setInitializationError] = useState<string | null>(null);
+	const [initializationError, setInitializationError] = useState<string | null>(
+		null
+	);
 
 	useEffect(() => {
 		const initialiseStore = async () => {
@@ -16,9 +18,9 @@ const AuthLayout = observer(() => {
 				await rootStore.initialise();
 				setIsStoreInitialised(true);
 			} catch (error) {
-				console.error("Store initialization failed:", error);
-				setInitializationError("Failed to initialize application");
-				// Still set as initialized to prevent infinite loading
+				console.error("Store initialisation failed:", error);
+				setInitializationError("Failed to initialise application");
+				// Still set as initialised to prevent infinite loading
 				setIsStoreInitialised(true);
 			}
 		};
@@ -33,36 +35,34 @@ const AuthLayout = observer(() => {
 				<div
 					className={cn(
 						"flex h-screen w-screen items-center justify-center",
-						""
+						"bg-[#fafbfb] dark:bg-background"
 					)}
 				>
 					<div className="flex flex-col items-center space-y-4">
 						<LoadingSpinner />
-						<p className="text-sm text-gray-600">
-							Initializing...
-						</p>
+						<p className="text-sm text-muted-foreground">Initialising...</p>
 					</div>
 				</div>
 			</NavigationProvider>
 		);
 	}
 
-	// Show error if initialization failed
+	// Show error if initialisation failed
 	if (initializationError) {
 		return (
 			<NavigationProvider>
 				<div
 					className={cn(
 						"flex h-screen w-screen items-center justify-center",
-						"bg-white dark:bg-slate-900"
+						"bg-[#fafbfb] dark:bg-background"
 					)}
 				>
-					<div className="w-full max-w-md p-8 space-y-8 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-white">
+					<div className="w-full max-w-md p-8 space-y-8 rounded-xl bg-card dark:bg-card border border-border shadow-lg">
 						<div className="text-center">
-							<p className="text-red-600 mb-4">{initializationError}</p>
+							<p className="text-destructive mb-4">{initializationError}</p>
 							<button
 								onClick={() => window.location.reload()}
-								className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+								className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
 							>
 								Reload Page
 							</button>
@@ -78,10 +78,10 @@ const AuthLayout = observer(() => {
 			<div
 				className={cn(
 					"flex h-screen w-screen items-center justify-center",
-					"bg-white dark:bg-slate-900"
+					"bg-[#fafbfb] dark:bg-background"
 				)}
 			>
-				<div className="w-full max-w-md p-8 space-y-8 rounded-lg bg-slate-50 dark:bg-slate-900 dark:text-white">
+				<div className="w-full max-w-md p-8 space-y-8 rounded-xl bg-card dark:bg-card border border-border shadow-lg">
 					<Outlet />
 				</div>
 			</div>

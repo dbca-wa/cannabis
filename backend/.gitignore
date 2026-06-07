@@ -1,0 +1,90 @@
+# Environment files (but keep .env.example)
+.env
+.env.local
+.env.*.local
+.local.env
+.development.env
+.staging.env
+.production.env
+.build.env
+!.env.example
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+test_results/
+.test_durations
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Media directories (user uploads)
+media/
+uploads/
+dumped_media/
+files/
+
+# Data files
+*.dump
+*.sql
+*.pgdump
+*.tif
+
+# Large binary files
+*.pdf
+
+# License files
+license.dat
+
+# Generated email preview files
+test_email_preview.html
+test_email_preview.eml
+email_previews/
+
+# Coverage files (generated)
+coverage.json
+
+# ETL raw data (large CSV files kept locally)
+etl/data/raw/*.csv
+
+# Pre-commit cache
+.pre-commit-cache/

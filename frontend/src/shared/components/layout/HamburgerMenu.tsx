@@ -24,11 +24,7 @@ const HamburgerMenu = observer(
 				)}
 				aria-label={isOpen ? "Close menu" : "Open menu"}
 			>
-				{isOpen ? (
-					<X className="h-4 w-4" />
-				) : (
-					<Menu className="h-4 w-4" />
-				)}
+				{isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
 			</Button>
 		);
 	}

@@ -28,7 +28,7 @@ export const EditDefendantRouteModal = () => {
 		try {
 			// Transform form data for API
 			const apiData = {
-				first_name: data.first_name || null,
+				given_names: data.given_names || null,
 				last_name: data.last_name,
 			};
 
@@ -49,9 +49,7 @@ export const EditDefendantRouteModal = () => {
 				<DialogContent className="sm:max-w-[500px]">
 					<DialogHeader>
 						<DialogTitle>Edit Defendant</DialogTitle>
-						<DialogDescription>
-							Loading defendant...
-						</DialogDescription>
+						<DialogDescription>Loading defendant...</DialogDescription>
 					</DialogHeader>
 					<div className="p-6">
 						<div className="animate-pulse space-y-4">
@@ -78,8 +76,8 @@ export const EditDefendantRouteModal = () => {
 					</DialogHeader>
 					<div className="p-6">
 						<p className="text-muted-foreground">
-							The defendant you're trying to edit doesn't exist or
-							has been deleted.
+							The defendant you're trying to edit doesn't exist or has been
+							deleted.
 						</p>
 					</div>
 				</DialogContent>
@@ -93,8 +91,8 @@ export const EditDefendantRouteModal = () => {
 				<DialogHeader>
 					<DialogTitle>Edit Defendant</DialogTitle>
 					<DialogDescription>
-						Update defendant information. Last name is required,
-						first name is optional.
+						Update defendant information. Last name is required, first name is
+						optional.
 					</DialogDescription>
 				</DialogHeader>
 				<EditDefendantForm

@@ -7,14 +7,14 @@ import { z } from "zod";
 
 // Certificate creation schema
 export const createCertificateSchema = z.object({
-	submission: z.number().int().positive("Submission ID is required"),
+	case: z.number().int().positive("Case ID is required"),
 });
 
 export type CreateCertificateFormData = z.infer<typeof createCertificateSchema>;
 
-// Certificate edit schema (currently no editable fields besides submission)
+// Certificate edit schema (currently no editable fields besides case)
 export const editCertificateSchema = z.object({
-	submission: z.number().int().positive("Submission ID is required"),
+	case: z.number().int().positive("Case ID is required"),
 });
 
 export type EditCertificateFormData = z.infer<typeof editCertificateSchema>;
@@ -22,7 +22,7 @@ export type EditCertificateFormData = z.infer<typeof editCertificateSchema>;
 // Certificate search schema
 export const certificateSearchSchema = z.object({
 	search: z.string().optional(),
-	submission: z.number().int().positive().optional(),
+	case: z.number().int().positive().optional(),
 	ordering: z.string().optional(),
 	limit: z.number().int().positive().max(100).optional(),
 	offset: z.number().int().min(0).optional(),

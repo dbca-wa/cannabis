@@ -1,138 +1,100 @@
-# Docker build
+# ETL data pipeline (not needed in production image)
+etl/
+
+# Git and version control
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Docker files
+.dockerignore
 Dockerfile
 Dockerfile.dev
-.build.env
-# license.dat
+docker-compose.yaml
+docker-compose.yml
 
-# Development environment files
+# Environment files
 .env
+.env.local
+.env.*.local
+.env.example
 .local.env
 .development.env
 .staging.env
 .production.env
 .build.env
-.env.test
-.env.example
 *.env
-*.log
-
-# Sensitive data directories
-files/
-etl/
-uploads/
-media/
-
-# Python cache and compiled files
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.editorconfig
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Git
-.git/
-.gitignore
-.gitattributes
-
-# Testing and coverage
-.coverage
-.pytest_cache/
-.tox/
-htmlcov/
-.nyc_output/
-coverage/
-test-results/
 
 # Documentation
 docs/
 *.md
-README*
-CHANGELOG*
-LICENSE*
+README.md
 
-# Development database
-db.sqlite3
-*.sqlite3
-*.db
-
-# Development and testing scripts
-scripts/
-test_*.py
-*_test.py
-tests/
-
-# Docker development files
-Dockerfile.dev
-docker-compose*.yml
-.dockerignore
-
-# Static files (will be collected in production)
-staticfiles/
-media/
-
-# Temporary files
-tmp/
-temp/
-.tmp/
-
-# Backup files
-*.bak
-*.backup
-*.orig
-
-# Security and secrets (extra safety)
-*.key
-*.pem
-*.p12
-*.pfx
-secrets/
-.secrets/
-license.dat
-*license.dat
-*.dat
-
-# Development tools
+# Development files
+.vscode/
+.idea/
 .pre-commit-config.yaml
-.flake8
-.pylintrc
-mypy.ini
-setup.cfg
-tox.ini
+.pre-commit-*-wrapper.sh
+.pre-commit-cache/
+
+# Python development
+*.pyc
+__pycache__/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+test_results/
+coverage.json
+conftest.py
+conftest.pyc
+**/tests/
+**/test_*.py
+**/*_test.py
+
+# Development scripts
+setup-dev.sh
+run_tests.sh
+build.sh
+
+# Generated email preview files (from email testing)
+test_email_preview.html
+test_email_preview.eml
+email_previews/
+
+# Data files
+files/
+*.tif
+*.sql
+*.pgdump
+*.csv
+*.dump
+
+# Media directories (user uploads)
+media/
+uploads/
+dumped_media/
+
+# Large binary files
+*.pdf
+
+# Coverage files
+coverage.json
+
+# License files
+license.dat
+
+# Deployment configs
+publish-ghcr.yaml
+render.yaml
+deployment.yaml
+
+# Virtual environments
+venv/
+.venv/
+
+# Other
+.unlighthouse/
+*.txt
+!requirements.txt

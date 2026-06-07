@@ -43,7 +43,7 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 		try {
 			// Transform form data for API
 			const apiData = {
-				first_name: data.first_name || null,
+				given_names: data.given_names || null,
 				last_name: data.last_name,
 			};
 
@@ -72,8 +72,8 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 				<DialogHeader>
 					<DialogTitle>Create New Defendant</DialogTitle>
 					<DialogDescription>
-						Add a new defendant to the system. Last name is
-						required, first name is optional.
+						Add a new defendant to the system. Last name is required, first name
+						is optional.
 					</DialogDescription>
 				</DialogHeader>
 				<CreateDefendantForm

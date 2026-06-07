@@ -9,8 +9,12 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 import { useDefendantById, useDeleteDefendant } from "../hooks/useDefendants";
-import { DefendantsService } from "../services/defendants.service";
+import {
+	canDeleteDefendant,
+	getDeletionWarningMessage,
+} from "../utils/defendant-helpers.utils";
 
 export const DeleteDefendantRouteModal = () => {
 	const navigate = useNavigate();
@@ -47,9 +51,7 @@ export const DeleteDefendantRouteModal = () => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={handleClose}>
-							Cancel
-						</AlertDialogCancel>
+						<AlertDialogCancel onClick={handleClose}>Cancel</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -67,18 +69,15 @@ export const DeleteDefendantRouteModal = () => {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={handleClose}>
-							Close
-						</AlertDialogCancel>
+						<AlertDialogCancel onClick={handleClose}>Close</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
 		);
 	}
 
-	const canDelete = DefendantsService.canDeleteDefendant(defendant);
-	const warningMessage =
-		DefendantsService.getDeletionWarningMessage(defendant);
+	const canDelete = canDeleteDefendant(defendant);
+	const warningMessage = getDeletionWarningMessage(defendant);
 
 	return (
 		<AlertDialog open={true} onOpenChange={handleClose}>
@@ -89,8 +88,8 @@ export const DeleteDefendantRouteModal = () => {
 						{canDelete ? (
 							<>
 								Are you sure you want to delete{" "}
-								<strong>{defendant.full_name}</strong>? This
-								action cannot be undone.
+								<strong>{defendant.full_name}</strong>? This action cannot be
+								undone.
 							</>
 						) : (
 							<>
@@ -104,18 +103,17 @@ export const DeleteDefendantRouteModal = () => {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel onClick={handleClose}>
-						Cancel
-					</AlertDialogCancel>
+					<AlertDialogCancel onClick={handleClose}>Cancel</AlertDialogCancel>
 					{canDelete && (
 						<AlertDialogAction
 							onClick={handleDelete}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 							disabled={deleteDefendant.isPending}
 						>
-							{deleteDefendant.isPending
-								? "Deleting..."
-								: "Delete"}
+							{deleteDefendant.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							{deleteDefendant.isPending ? "Deleting..." : "Delete"}
 						</AlertDialogAction>
 					)}
 				</AlertDialogFooter>

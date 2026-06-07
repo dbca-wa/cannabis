@@ -1,5 +1,5 @@
-import type { 
-	User, 
+import type {
+	User,
 	LoginCredentials,
 	PasswordValidationResponse,
 	PasswordUpdateRequest,
@@ -47,8 +47,8 @@ export interface PasswordValidationHookResult {
 }
 
 // Re-export types for convenience
-export type { 
-	User, 
+export type {
+	User,
 	LoginCredentials,
 	PasswordValidationResponse,
 	PasswordUpdateRequest,

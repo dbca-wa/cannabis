@@ -3,9 +3,10 @@ Custom pagination classes for the cannabis management system.
 Based on patterns from spms.
 """
 
+from collections import OrderedDict
+
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from collections import OrderedDict
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -58,7 +59,7 @@ class StandardResultsSetPagination(PageNumberPagination):
                 user_preferences = request.user.get_preferences()
                 if user_preferences and user_preferences.items_per_page:
                     return min(user_preferences.items_per_page, self.max_page_size)
-            except Exception:
+            except Exception:  # nosec B110
                 # If there's any error getting user preferences, fall back to default
                 pass
 

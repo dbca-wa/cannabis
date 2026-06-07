@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Loader2 } from "lucide-react";
 
 import {
 	Select,
@@ -52,29 +53,26 @@ export const CreateOfficerForm = ({
 		try {
 			// Transform data to match backend expectations
 			const transformedData = {
-				badge_number: data.badge_number || undefined,
-				first_name: data.first_name || undefined,
+				badge_number: data.badge_number || null,
+				first_name: data.first_name || null,
 				last_name: data.last_name,
 				rank: data.rank,
 				station:
 					data.station && data.station !== "none"
 						? parseInt(data.station)
-						: undefined,
+						: null,
 			};
 			await onSubmit(transformedData);
 			form.reset();
 		} catch (error) {
 			// Error handling is done in the parent component
-			console.error("Form submission error:", error);
+			console.error("Form case error:", error);
 		}
 	};
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(handleSubmit)}
-				className="space-y-4"
-			>
+			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				{/* Badge Number */}
 				<FormField
 					control={form.control}
@@ -153,10 +151,7 @@ export const CreateOfficerForm = ({
 								</FormControl>
 								<SelectContent>
 									{officerRankOptions.map((rank) => (
-										<SelectItem
-											key={rank.value}
-											value={rank.value}
-										>
+										<SelectItem key={rank.value} value={rank.value}>
 											{rank.label}
 										</SelectItem>
 									))}
@@ -182,11 +177,7 @@ export const CreateOfficerForm = ({
 											: null
 									}
 									onValueChange={(stationId) => {
-										field.onChange(
-											stationId
-												? stationId.toString()
-												: "none"
-										);
+										field.onChange(stationId ? stationId.toString() : "none");
 									}}
 									placeholder="Search for a station (optional)"
 									disabled={isLoading}
@@ -209,6 +200,7 @@ export const CreateOfficerForm = ({
 						Cancel
 					</Button>
 					<Button type="submit" disabled={isLoading}>
+						{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						{isLoading ? "Creating..." : "Create Officer"}
 					</Button>
 				</div>

@@ -7,7 +7,7 @@ import { useDeleteStation, useStation } from "../../hooks/usePoliceStations";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { Button } from "@/shared/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const DeleteStationRouteModal = () => {
 	const navigate = useNavigate();
@@ -22,7 +22,7 @@ export const DeleteStationRouteModal = () => {
 	} = useStation(stationId ? parseInt(stationId) : 0);
 
 	const handleClose = () => {
-		navigate("/police/stations");
+		navigate("/stations");
 	};
 
 	const handleDelete = async () => {
@@ -43,11 +43,7 @@ export const DeleteStationRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Loading..."
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Loading..." description="">
 					<PageLoading text="Loading station details..." />
 				</ResponsiveModalContent>
 			</ResponsiveModal>
@@ -60,11 +56,7 @@ export const DeleteStationRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Error"
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Error" description="">
 					<ErrorAlert
 						error={error || "Station not found"}
 						title="Failed to load station"
@@ -98,8 +90,7 @@ export const DeleteStationRouteModal = () => {
 								Station: {station.name}
 								{station.officer_count > 0 && (
 									<span className="block text-red-800 font-medium">
-										Warning: This station has{" "}
-										{station.officer_count} assigned
+										Warning: This station has {station.officer_count} assigned
 										officer(s)
 									</span>
 								)}
@@ -120,6 +111,9 @@ export const DeleteStationRouteModal = () => {
 							onClick={handleDelete}
 							disabled={deleteStationMutation.isPending}
 						>
+							{deleteStationMutation.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
 							{deleteStationMutation.isPending
 								? "Deleting..."
 								: "Delete Station"}

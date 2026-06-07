@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cannabis-deployment
+  labels:
+    app: cannabis-prod
+spec:
+  selector:
+    matchLabels:
+      app: cannabis-prod
+  template:
+    metadata:
+      labels:
+        app: cannabis-prod
+    spec:
+      containers:
+        - name: cannabis-backend
+          envFrom:
+            - secretRef:
+                name: cannabis-env-prod
+          volumeMounts:
+            - name: cannabis-media-blob-prod
+              mountPath: /usr/src/app/backend/files
+            - name: prince2-license-prod
+              mountPath: /usr/lib/prince/license
+              readOnly: true
+      volumes:
+        - name: cannabis-media-blob-prod
+          persistentVolumeClaim:
+            claimName: pvc-cannabis-media-data-blob-prod
+        - name: prince2-license-prod
+          configMap:
+            defaultMode: 420
+            name: prince2-license-prod

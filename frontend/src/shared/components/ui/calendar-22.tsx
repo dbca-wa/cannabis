@@ -59,10 +59,7 @@ export default function Calendar22({
 					<ChevronDownIcon className="opacity-50" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent
-				className="w-auto overflow-hidden p-0"
-				align="start"
-			>
+			<PopoverContent className="w-auto overflow-hidden p-0" align="start">
 				<Calendar
 					mode="single"
 					selected={selectedDate}

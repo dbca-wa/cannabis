@@ -1,6 +1,4 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { SearchComboboxSkeleton } from "./search-combobox-skeleton";
 import { SearchErrorDisplay } from "./search-error-display";
 import { cn } from "@/shared/utils";
 
@@ -36,10 +34,10 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	isSearching,
 	hasResults,
 	children,
-	skeletonCount = 4,
+	skeletonCount: _skeletonCount = 4,
 	className,
-	customSkeleton,
-	skeletonType,
+	customSkeleton: _customSkeleton,
+	skeletonType: _skeletonType,
 	error,
 	onRetry,
 	isRetrying = false,
@@ -57,6 +55,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	// Store previous children when we have results to maintain content during loading
 	useEffect(() => {
 		if (hasResults && !isSearching) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setPreviousChildren(children);
 		}
 	}, [hasResults, isSearching, children]);
@@ -65,6 +64,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	useEffect(() => {
 		if (containerRef.current && hasResults && !isSearching) {
 			const rect = containerRef.current.getBoundingClientRect();
+
 			setDimensions({
 				width: rect.width,
 				height: rect.height,
@@ -75,8 +75,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	// Show error for initial data loading failures
 	if (error && !hasResults && !hasFallbackData && onRetry) {
 		const errorType =
-			error.message?.includes("network") ||
-			error.message?.includes("fetch")
+			error.message?.includes("network") || error.message?.includes("fetch")
 				? "network"
 				: "initial";
 
@@ -89,7 +88,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 						? {
 								width: dimensions.width,
 								minHeight: Math.max(dimensions.height, 120),
-						  }
+							}
 						: { minHeight: 120 }
 				}
 			>
@@ -107,137 +106,12 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 
 	// Show skeleton when initially loading and no results yet
 	if (isInitialLoading && !hasResults) {
-		// Use custom skeleton if provided
-		if (customSkeleton) {
-			return (
-				<div
-					ref={containerRef}
-					className={cn("transition-opacity duration-200", className)}
-					style={
-						dimensions
-							? {
-									width: dimensions.width,
-									minHeight: Math.max(dimensions.height, 120),
-							  }
-							: { minHeight: 120 }
-					}
-				>
-					{customSkeleton}
-				</div>
-			);
-		}
-
-		// Use search combobox skeleton if type is specified
-		if (skeletonType) {
-			return (
-				<div
-					ref={containerRef}
-					className={cn("transition-opacity duration-200", className)}
-					style={
-						dimensions
-							? {
-									width: dimensions.width,
-									minHeight: Math.max(dimensions.height, 120),
-							  }
-							: { minHeight: 120 }
-					}
-				>
-					<SearchComboboxSkeleton
-						count={skeletonCount}
-						showBadge={
-							skeletonType === "user" ||
-							skeletonType === "officer"
-						}
-						showSubtitle={skeletonType !== "simple"}
-					/>
-				</div>
-			);
-		}
-
-		// Fallback to original skeleton for backward compatibility
-		return (
-			<div
-				ref={containerRef}
-				className={cn(
-					"p-2 space-y-2 transition-opacity duration-200",
-					className
-				)}
-				style={
-					dimensions
-						? {
-								width: dimensions.width,
-								minHeight: Math.max(dimensions.height, 120),
-						  }
-						: { minHeight: 120 }
-				}
-			>
-				{[...Array(skeletonCount)].map((_, i) => (
-					<div key={i} className="flex items-center gap-2">
-						<Skeleton className="h-4 w-4 rounded-full" />
-						<Skeleton className="h-4 flex-1" />
-						<Skeleton className="h-4 w-16" />
-					</div>
-				))}
-			</div>
-		);
+		return null;
 	}
 
-	// When searching, just show the content normally (loading spinner is in search input)
-	// Only show skeletons if we're searching and have no results to show
+	// When searching with no results and no previous content to show
 	if (isSearching && !hasResults && !previousChildren) {
-		// Use search combobox skeleton if type is specified
-		if (skeletonType) {
-			return (
-				<div
-					ref={containerRef}
-					className={cn("transition-opacity duration-200", className)}
-					style={
-						dimensions
-							? {
-									width: dimensions.width,
-									minHeight: Math.max(dimensions.height, 120),
-							  }
-							: { minHeight: 120 }
-					}
-				>
-					<SearchComboboxSkeleton
-						count={skeletonCount}
-						showBadge={
-							skeletonType === "user" ||
-							skeletonType === "officer"
-						}
-						showSubtitle={skeletonType !== "simple"}
-					/>
-				</div>
-			);
-		}
-
-		// Fallback skeleton
-		return (
-			<div
-				ref={containerRef}
-				className={cn(
-					"p-2 space-y-2 transition-opacity duration-200",
-					className
-				)}
-				style={
-					dimensions
-						? {
-								width: dimensions.width,
-								minHeight: Math.max(dimensions.height, 120),
-						  }
-						: { minHeight: 120 }
-				}
-			>
-				{[...Array(skeletonCount)].map((_, i) => (
-					<div key={i} className="flex items-center gap-2">
-						<Skeleton className="h-4 w-4 rounded-full" />
-						<Skeleton className="h-4 flex-1" />
-						<Skeleton className="h-4 w-16" />
-					</div>
-				))}
-			</div>
-		);
+		return null;
 	}
 
 	// Normal state - show content and measure dimensions

@@ -56,21 +56,12 @@ export const useOfficerSearch = (
 	// Simple query keys - direct and easy to understand
 	const searchQueryKey = useMemo(
 		() =>
-			[
-				"police-officers",
-				"search",
-				{ query: debouncedQuery, limit },
-			] as const,
+			["police-officers", "search", { query: debouncedQuery, limit }] as const,
 		[debouncedQuery, limit]
 	);
 
 	const initialDataQueryKey = useMemo(
-		() =>
-			[
-				"police-officers",
-				"initial",
-				{ limit: initialDataLimit },
-			] as const,
+		() => ["police-officers", "initial", { limit: initialDataLimit }] as const,
 		[initialDataLimit]
 	);
 

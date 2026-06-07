@@ -27,6 +27,7 @@ const CannabisLogo = ({
 
 	useEffect(() => {
 		if (shouldAnimate) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setElementVisible(false);
 			const elementTimer = setTimeout(() => {
 				setElementVisible(true);
@@ -81,7 +82,7 @@ const CannabisLogo = ({
 						0% { transform: translateY(-3px); }
 						100% { transform: translateY(0px); }
 					}
-					
+
 					@keyframes flowing-energy {
 						0% { opacity: 0.5; transform: scale(1) rotate(0deg); }
 						33% { opacity: 0.7; transform: scale(1.08) rotate(1deg); }
@@ -327,7 +328,7 @@ const CannabisLogo = ({
 							</linearGradient>
 						</defs>
 						<g transform="translate(50,50)">
-							{/* Main center leaf */}
+							{/* Main centre leaf */}
 							<path
 								d="M0,-35 Q-3,-25 -2,-10 Q-1,0 0,5 Q1,0 2,-10 Q3,-25 0,-35 Z"
 								fill="url(#leafGradient)"

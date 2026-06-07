@@ -19,6 +19,7 @@ export function useMediaQuery(query: string): boolean {
 		const media = window.matchMedia(query);
 
 		// Set initial value
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setMatches(media.matches);
 
 		// Create listener
@@ -153,11 +154,7 @@ export function useResponsiveColumns<T>(
 					allColumns.length
 				);
 			case "xl":
-				return (
-					responsiveConfig.xl ||
-					responsiveConfig.lg ||
-					allColumns.length
-				);
+				return responsiveConfig.xl || responsiveConfig.lg || allColumns.length;
 			case "lg":
 				return responsiveConfig.lg || allColumns.length;
 			case "md":

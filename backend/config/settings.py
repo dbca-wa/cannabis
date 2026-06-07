@@ -1,8 +1,12 @@
 # region Imports ===============================================================================
-import logging, os, sentry_sdk, dj_database_url, environ
+import logging
+import os
+from datetime import timedelta
 from logging import LogRecord
 from pathlib import Path
-from datetime import timedelta
+
+import environ
+import sentry_sdk
 
 # endregion ========================================================================================
 
@@ -33,14 +37,18 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 2500
 PAGE_SIZE = 10
 USER_LIST_PAGE_SIZE = 250
 FILE_UPLOAD_PERMISSIONS = None  # Use default operating system file permissions
-# APPEND_SLASH=False
+# URL Configuration — no trailing slashes (REST API best practice)
+APPEND_SLASH = False
 
 
 # API configurations
 EXTERNAL_PASS = env("EXTERNAL_PASS")
-IT_ASSETS_ACCESS_TOKEN = env("IT_ASSETS_ACCESS_TOKEN")
-IT_ASSETS_USER = env("IT_ASSETS_USER")
-IT_ASSETS_URLS = env("IT_ASSETS_URL")
+IT_ASSETS_ACCESS_TOKEN = env("IT_ASSETS_ACCESS_TOKEN", default="")
+IT_ASSETS_USER = env("IT_ASSETS_USER", default="")
+IT_ASSETS_URLS = env("IT_ASSETS_URL", default="")
+
+# Maintainer email
+MAINTAINER_EMAIL = env("MAINTAINER_EMAIL", default="maintainer@dbca.wa.gov.au")
 
 # Domain configuration
 DOMAINS = {
@@ -57,6 +65,14 @@ else:
     INSTANCE_URL = SITE_URL
 SITE_URL_HTTP = SITE_URL if DEBUG else f"https://{DOMAINS['main']}"
 
+
+# Tesseract OCR binary path (auto-detected via shutil.which, or override via env)
+import shutil as _shutil  # noqa: E402
+
+TESSERACT_CMD = env(
+    "TESSERACT_CMD",
+    default=_shutil.which("tesseract") or "/usr/bin/tesseract",
+)
 
 # Prince server configuration
 PRINCE_SERVER_URL = env("PRINCE_SERVER_URL", default="")
@@ -108,7 +124,15 @@ if ENVIRONMENT in ["staging", "production"]:
 else:
     EMAIL_USE_SSL = False
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Email backend — can be overridden via EMAIL_BACKEND env var.
+# For development: set EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+if env("EMAIL_BACKEND", default=""):
+    EMAIL_BACKEND = env("EMAIL_BACKEND")
+elif ENVIRONMENT in ("development", "local"):
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.mandrillapp.com")
 EMAIL_PORT = int(env("EMAIL_PORT", default=587))
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
@@ -116,7 +140,7 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="")
 
-ENVELOPE_EMAIL_RECIPIENTS = [env("MAINTAINER_EMAIL")]
+ENVELOPE_EMAIL_RECIPIENTS = [MAINTAINER_EMAIL]
 ENVELOPE_USE_HTML_EMAIL = True
 
 # endregion ========================================================================================
@@ -168,7 +192,7 @@ if DEBUG:
     ALLOWED_HOSTS = [
         "127.0.0.1",
         "localhost",
-        "0.0.0.0",
+        "0.0.0.0",  # nosec B104
         "127.0.0.1:3000",
         "127.0.0.1:8000",
         "0.0.0.0:8000",
@@ -185,6 +209,9 @@ if DEBUG:
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8000",
         "http://127.0.0.1",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost",
         "http://0.0.0.0:3000",
         "http://0.0.0.0:8000",
         "http://0.0.0.0",
@@ -213,6 +240,7 @@ CORS_ALLOW_HEADERS = [
 if DEBUG:
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^http://127\.0\.0\.1:3000$",
+        r"^http://localhost:3000$",
     ]
 # else: # handled by nginx
 #     if not hasattr(globals(), "_CORS_CONFIGURED"):
@@ -267,8 +295,9 @@ CUSTOM_APPS = [
     "users.apps.UsersConfig",
     "police.apps.PoliceConfig",
     "defendants.apps.DefendantsConfig",
-    "submissions.apps.SubmissionsConfig",
+    "cases.apps.CasesConfig",
     "communications.apps.CommunicationsConfig",
+    "signatures.apps.SignaturesConfig",
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
@@ -281,8 +310,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # "config.dbca_middleware.DBCAMiddleware", # wont be creating accounts via Auth2/SSO
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "common.middleware.CSRFSecurityMiddleware",  # Enhanced CSRF security
+    "common.middleware.AdminOnlyCsrfMiddleware",  # CSRF only for /admin/ routes
     "common.middleware.SecurityAuditMiddleware",  # Security audit logging
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -311,10 +339,22 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # endregion ========================================================================================
 
+# region Cache Configuration ======================================================
+# Import cache keys, TTL values, and Redis availability flag
+from config.cache_settings import (  # noqa: E402, F401
+    CACHE_KEYS,
+    CACHE_TTL,
+    CACHES,
+    REDIS_AVAILABLE,
+)
+
+# endregion ========================================================================================
+
 
 # region JWT =======================================================================
 
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "config.exception_handler.custom_exception_handler",
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
@@ -352,10 +392,11 @@ SIMPLE_JWT = {
 
 
 # region Logs and Tracking =======================================================================
-if ENVIRONMENT != "development" and ENVIRONMENT != "local":
+SENTRY_URL = env("SENTRY_URL", default="")
+if SENTRY_URL:
     sentry_sdk.init(
         environment=ENVIRONMENT,
-        dsn=env("SENTRY_URL"),
+        dsn=SENTRY_URL,
         traces_sample_rate=1.0,
         profiles_sample_rate=1.0,
     )
@@ -377,22 +418,21 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record: LogRecord) -> str:
         log_message = super().format(record)
         level = ""
-        message = ""
         time = self.formatTime(record, "%d-%m-%Y @ %H:%M:%S")
         traceback = ""
         # time = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
 
         if record.levelname == "DEBUG" or record.levelname == "INFO":
             level = self.color_string(f"[{record.levelname}] {record.message}", "white")
-            message = self.color_string(log_message, "white")
+            self.color_string(log_message, "white")
         elif record.levelname == "WARNING":
             level = self.color_string(
                 f"[{record.levelname}] {record.message}", "yellow"
             )
-            message = self.color_string(log_message, "white")
+            self.color_string(log_message, "white")
         elif record.levelname == "ERROR":
             level = self.color_string(f"[{record.levelname}] {record.message}", "red")
-            message = self.color_string(log_message, "white")
+            self.color_string(log_message, "white")
 
         if record.levelname == "ERROR":
             traceback += f"{record.exc_text}"

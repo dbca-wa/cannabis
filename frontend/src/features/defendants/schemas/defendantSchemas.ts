@@ -2,9 +2,9 @@ import { z } from "zod";
 
 // Create defendant schema - matches Django model constraints
 export const createDefendantSchema = z.object({
-	first_name: z
+	given_names: z
 		.string()
-		.max(100, "First name cannot exceed 100 characters")
+		.max(100, "Given names cannot exceed 100 characters")
 		.trim()
 		.optional()
 		.or(z.literal("")), // Allow empty string which will be converted to null

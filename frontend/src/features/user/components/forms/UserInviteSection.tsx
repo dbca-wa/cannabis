@@ -18,9 +18,7 @@ export const UserInviteSection = ({
 	return (
 		<div className="space-y-4">
 			<div>
-				<Label className="text-sm font-medium">
-					Search External Users
-				</Label>
+				<Label className="text-sm font-medium">Search External Users</Label>
 				<InviteUserComboBox
 					value={selectedUserEmail}
 					onValueChange={onUserChange}
@@ -60,9 +58,7 @@ export const UserInviteSection = ({
 						)}
 						{selectedUserData.employee_id && (
 							<div>
-								<span className="font-medium">
-									Employee ID:
-								</span>{" "}
+								<span className="font-medium">Employee ID:</span>{" "}
 								{selectedUserData.employee_id}
 							</div>
 						)}

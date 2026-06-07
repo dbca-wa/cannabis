@@ -28,7 +28,7 @@ export const generatePageNumbers = (
 
 	const half = Math.floor(maxVisible / 2);
 	let start = Math.max(1, currentPage - half);
-	let end = Math.min(totalPages, start + maxVisible - 1);
+	const end = Math.min(totalPages, start + maxVisible - 1);
 
 	// Adjust start if we're near the end
 	if (end - start + 1 < maxVisible) {
@@ -124,23 +124,18 @@ export const TablePagination = observer<TablePaginationProps>(
 								onValueChange={handlePageSizeChange}
 								disabled={isLoading}
 							>
-								<SelectTrigger className="w-16 h-8">
+								<SelectTrigger className="w-[70px] h-8">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
 									{pageSizeOptions.map((size) => (
-										<SelectItem
-											key={size}
-											value={size.toString()}
-										>
+										<SelectItem key={size} value={size.toString()}>
 											{size}
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
-							<span className="text-muted-foreground">
-								per page
-							</span>
+							<span className="text-muted-foreground">per page</span>
 						</div>
 					)}
 				</div>
@@ -176,11 +171,7 @@ export const TablePagination = observer<TablePaginationProps>(
 						{pageNumbers.map((pageNum) => (
 							<Button
 								key={pageNum}
-								variant={
-									pageNum === currentPage
-										? "default"
-										: "outline"
-								}
+								variant={pageNum === currentPage ? "default" : "outline"}
 								size="sm"
 								onClick={() => onPageChange(pageNum)}
 								disabled={isLoading}

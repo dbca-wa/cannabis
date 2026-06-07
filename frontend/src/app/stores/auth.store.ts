@@ -9,10 +9,7 @@ interface AuthStoreState extends BaseStoreState {
 }
 
 export class AuthStore extends BaseStore<AuthStoreState> {
-	private navigate?: (
-		path: string,
-		options?: Record<string, unknown>
-	) => void;
+	private navigate?: (path: string, options?: Record<string, unknown>) => void;
 
 	constructor() {
 		super({

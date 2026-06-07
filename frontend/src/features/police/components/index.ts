@@ -23,3 +23,7 @@ export { OfficerSearchComboBox } from "./officers/OfficerSearchComboBox";
 
 // Search Components
 export { StationSearchComboBox } from "./stations/StationSearchComboBox";
+
+// Combobox Components (BaseCombobox wrappers)
+export { PoliceStationCombobox } from "./combobox";
+export type { PoliceStationComboboxProps } from "./combobox";

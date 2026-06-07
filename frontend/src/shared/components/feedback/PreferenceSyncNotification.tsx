@@ -24,9 +24,7 @@ export const PreferenceSyncNotification: React.FC = () => {
 							label: "Got it",
 							onClick: () => {
 								// User acknowledged the notification
-								logger.info(
-									"User acknowledged preference sync notification"
-								);
+								logger.info("User acknowledged preference sync notification");
 							},
 						},
 					}
@@ -53,6 +51,7 @@ export const PreferenceSyncNotification: React.FC = () => {
 /**
  * Hook to show sync status indicators
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSyncStatus = () => {
 	const [isSyncing, setIsSyncing] = useState(false);
 	const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);

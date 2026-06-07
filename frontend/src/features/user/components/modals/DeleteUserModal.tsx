@@ -15,13 +15,11 @@ const DeleteUserModal = () => {
 	const navigate = useNavigate();
 	const { userId } = useParams();
 
-	const { data: user, isLoading } = useUserById(
-		userId ? parseInt(userId) : 0
-	);
+	const { data: user, isLoading } = useUserById(userId ? parseInt(userId) : 0);
 	const { deleteUser, isDeleting } = useUsers();
 
 	const handleClose = () => {
-		navigate("/users");
+		navigate("/staff");
 	};
 
 	const handleDelete = async () => {
@@ -91,9 +89,8 @@ const DeleteUserModal = () => {
 								Are you sure you want to delete this user?
 							</h4>
 							<p className="text-sm text-red-600 mt-1">
-								This action is permanent and cannot be undone.
-								All user data and associated records will be
-								removed.
+								This action is permanent and cannot be undone. All user data and
+								associated records will be removed.
 							</p>
 						</div>
 					</div>
@@ -170,9 +167,7 @@ const DeleteUserModal = () => {
 								</span>
 								<div className="text-gray-900 dark:text-gray-100">
 									{user.date_joined
-										? new Date(
-												user.date_joined
-										  ).toLocaleDateString()
+										? new Date(user.date_joined).toLocaleDateString()
 										: "N/A"}
 								</div>
 							</div>
@@ -183,9 +178,8 @@ const DeleteUserModal = () => {
 					{user.is_superuser && (
 						<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
 							<p className="text-sm text-red-800 dark:text-red-200">
-								<strong>⚠️ Super Administrator:</strong> This
-								user has full system access. Deleting this
-								account may severely impact system
+								<strong>⚠️ Super Administrator:</strong> This user has full
+								system access. Deleting this account may severely impact system
 								administration.
 							</p>
 						</div>
@@ -194,9 +188,8 @@ const DeleteUserModal = () => {
 					{user.is_staff && !user.is_superuser && (
 						<div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
 							<p className="text-sm text-amber-800 dark:text-amber-200">
-								<strong>⚠️ Staff Member:</strong> This user has
-								administrative privileges. Deleting this account
-								may affect system operations.
+								<strong>⚠️ Staff Member:</strong> This user has administrative
+								privileges. Deleting this account may affect system operations.
 							</p>
 						</div>
 					)}
@@ -204,9 +197,8 @@ const DeleteUserModal = () => {
 					{user.role === "botanist" && (
 						<div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
 							<p className="text-sm text-green-800 dark:text-green-200">
-								<strong>ℹ️ Botanist:</strong> This user can
-								perform botanical determinations. Consider
-								reassigning their work before deletion.
+								<strong>ℹ️ Botanist:</strong> This user can perform botanical
+								determinations. Consider reassigning their work before deletion.
 							</p>
 						</div>
 					)}
@@ -214,9 +206,9 @@ const DeleteUserModal = () => {
 					{user.role === "finance" && (
 						<div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
 							<p className="text-sm text-purple-800 dark:text-purple-200">
-								<strong>ℹ️ Finance Officer:</strong> This user
-								has access to financial features. Ensure
-								financial records are properly handled.
+								<strong>ℹ️ Finance Officer:</strong> This user has access to
+								financial features. Ensure financial records are properly
+								handled.
 							</p>
 						</div>
 					)}

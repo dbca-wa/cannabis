@@ -1,0 +1,38 @@
+name: Sync Staging with Main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync-staging:
+    name: Sync Staging Branch
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync staging with main
+        run: |
+          git fetch origin main
+          git fetch origin staging
+          git checkout staging
+          git reset --hard origin/main
+          git push origin staging --force
+
+      - name: Notify sync complete
+        run: |
+          echo "✅ Staging branch synced with main (force-pushed to match exactly)"
+          echo "Staging is now at commit: $(git rev-parse HEAD)"

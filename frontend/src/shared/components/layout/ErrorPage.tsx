@@ -1,7 +1,7 @@
 import { useRouteError, isRouteErrorResponse, Link } from "react-router";
 import { Button } from "@/shared/components/ui/button";
 
-export default function ErrorPage() {
+const ErrorPage = () => {
 	const error = useRouteError();
 
 	let errorMessage = "An unexpected error has occurred";
@@ -44,4 +44,6 @@ export default function ErrorPage() {
 			</div>
 		</div>
 	);
-}
+};
+
+export default ErrorPage;

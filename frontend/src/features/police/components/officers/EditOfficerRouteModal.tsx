@@ -10,6 +10,7 @@ import {
 } from "../../hooks/usePoliceOfficers";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
+import type { PoliceOfficerUpdateRequest } from "@/shared/types/backend-api.types";
 
 export const EditOfficerRouteModal = () => {
 	const navigate = useNavigate();
@@ -24,30 +25,17 @@ export const EditOfficerRouteModal = () => {
 	} = usePoliceOfficer(officerId ? parseInt(officerId) : 0);
 
 	const handleClose = () => {
-		navigate("/police/officers");
+		navigate("/officers");
 	};
 
-	const handleSubmit = async (data: any) => {
+	const handleSubmit = async (data: unknown) => {
 		if (!officerId) return;
 
-		try {
-			// Transform form data to API format
-			const transformedData = {
-				badge_number: data.badge_number || undefined,
-				first_name: data.first_name || undefined,
-				last_name: data.last_name,
-				rank: data.rank,
-				station: data.station ? parseInt(data.station) : undefined,
-			};
-			await updateOfficerMutation.mutateAsync({
-				id: parseInt(officerId),
-				data: transformedData,
-			});
-			handleClose();
-		} catch (error) {
-			// Error is handled by the mutation
-			console.error("Update officer error:", error);
-		}
+		await updateOfficerMutation.mutateAsync({
+			id: parseInt(officerId),
+			data: data as PoliceOfficerUpdateRequest,
+		});
+		handleClose();
 	};
 
 	if (isLoading) {
@@ -56,11 +44,7 @@ export const EditOfficerRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Loading..."
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Loading..." description="">
 					<PageLoading text="Loading officer details..." />
 				</ResponsiveModalContent>
 			</ResponsiveModal>
@@ -73,11 +57,7 @@ export const EditOfficerRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Error"
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Error" description="">
 					<ErrorAlert
 						error={error || "Officer not found"}
 						title="Failed to load officer"

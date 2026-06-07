@@ -66,15 +66,11 @@ const ContentLayout = observer(
 		const globalShortcuts = useMemo(
 			() => [
 				commonShortcuts.navigation.home(() => navigate("/")),
-				commonShortcuts.navigation.users(() => navigate("/users")),
+				commonShortcuts.navigation.users(() => navigate("/staff")),
 				commonShortcuts.navigation.police(() => navigate("/police")),
 				commonShortcuts.navigation.admin(() => navigate("/admin")),
-				commonShortcuts.general.toggleTheme(() =>
-					uiStore.toggleTheme()
-				),
-				commonShortcuts.general.help(() =>
-					setShowGlobalShortcutsHelp(true)
-				),
+				commonShortcuts.general.toggleTheme(() => uiStore.toggleTheme()),
+				commonShortcuts.general.help(() => setShowGlobalShortcutsHelp(true)),
 			],
 			[navigate, uiStore]
 		);
@@ -100,16 +96,11 @@ const ContentLayout = observer(
 							{!isDesktop && (
 								<HamburgerMenu
 									isOpen={uiStore.isMobileSidebarOpen}
-									onToggle={() =>
-										uiStore.toggleMobileSidebar()
-									}
+									onToggle={() => uiStore.toggleMobileSidebar()}
 								/>
 							)}
 							{breadcrumbs && breadcrumbs.length > 0 ? (
-								<Breadcrumb
-									items={breadcrumbs}
-									showHome={showHomeBreadcrumb}
-								/>
+								<Breadcrumb items={breadcrumbs} showHome={showHomeBreadcrumb} />
 							) : showHomeBreadcrumb ? (
 								<Breadcrumb items={[]} showHome={true} />
 							) : (
@@ -123,25 +114,13 @@ const ContentLayout = observer(
 				{/* Full-width header section */}
 				{header && (
 					<div className="w-full px-4 sm:px-8 py-5 border-b border-gray-200 dark:border-gray-700">
-						<div className={cn("mx-auto", maxWidthClass)}>
-							{header}
-						</div>
+						<div className={cn("mx-auto", maxWidthClass)}>{header}</div>
 					</div>
 				)}
 
 				{/* Centered content section */}
-				<div
-					className={cn(
-						"flex-1 overflow-y-auto text-black",
-						className
-					)}
-				>
-					<div
-						className={cn(
-							"mx-auto px-4 sm:px-8 py-6",
-							maxWidthClass
-						)}
-					>
+				<div className={cn("flex-1 overflow-y-auto text-black", className)}>
+					<div className={cn("mx-auto px-4 sm:px-8 py-6", maxWidthClass)}>
 						{children}
 					</div>
 				</div>

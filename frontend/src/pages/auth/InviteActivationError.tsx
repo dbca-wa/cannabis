@@ -11,7 +11,7 @@ import {
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Head } from "@/shared/components/layout/Head";
 
-export default function InviteActivationError() {
+const InviteActivationError = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
@@ -40,9 +40,9 @@ export default function InviteActivationError() {
 			<Card className="w-full max-w-md mx-auto">
 				<CardHeader className="text-center">
 					<div className="flex justify-center mb-4">
-						<XCircle className="h-12 w-12 text-red-500" />
+						<XCircle className="h-12 w-12 text-destructive" />
 					</div>
-					<CardTitle className="text-red-700">
+					<CardTitle className="text-destructive">
 						Invitation Activation Failed
 					</CardTitle>
 					<CardDescription>
@@ -81,21 +81,20 @@ export default function InviteActivationError() {
 					<div className="text-sm text-muted-foreground text-center">
 						{error.toLowerCase().includes("expired") && (
 							<p>
-								This invitation has expired. Please contact your
-								administrator for a new invitation.
+								This invitation has expired. Please contact your administrator
+								for a new invitation.
 							</p>
 						)}
 						{error.toLowerCase().includes("used") && (
 							<p>
-								This invitation has already been used. If you
-								have an account, try logging in.
+								This invitation has already been used. If you have an account,
+								try logging in.
 							</p>
 						)}
 						{error.toLowerCase().includes("invalid") && (
 							<p>
-								This invitation link appears to be invalid.
-								Please check the link or contact your
-								administrator.
+								This invitation link appears to be invalid. Please check the
+								link or contact your administrator.
 							</p>
 						)}
 					</div>
@@ -103,4 +102,6 @@ export default function InviteActivationError() {
 			</Card>
 		</div>
 	);
-}
+};
+
+export default InviteActivationError;

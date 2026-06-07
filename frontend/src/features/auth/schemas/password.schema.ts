@@ -6,7 +6,10 @@ export const passwordSchema = z
 	.min(10, "Password must be at least 10 characters long")
 	.regex(/[A-Za-z]/, "Password must contain at least one letter")
 	.regex(/\d/, "Password must contain at least one number")
-	.regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character");
+	.regex(
+		/[!@#$%^&*(),.?":{}|<>]/,
+		"Password must contain at least one special character"
+	);
 
 export const passwordUpdateSchema = z
 	.object({
@@ -24,7 +27,8 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetCodeSchema = z.object({
-	code: z.string()
+	code: z
+		.string()
 		.length(4, "Code must be exactly 4 digits")
 		.regex(/^\d{4}$/, "Code must contain only numbers"),
 });

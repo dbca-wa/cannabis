@@ -1,18 +1,16 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
+import { observer } from "mobx-react-lite";
 import {
-	MoreHorizontal,
 	Plus,
 	Search,
-	ArrowUpDown,
-	ArrowUp,
-	ArrowDown,
-	RotateCcw,
-	Keyboard,
+	ChevronsUpDown,
+	ChevronUp,
 	ChevronDown,
+	Shield,
+	AlertCircle,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
 import {
 	Table,
 	TableBody,
@@ -21,737 +19,345 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/shared/components/ui/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/shared/components/ui/select";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { Checkbox } from "@/shared/components/ui/checkbox";
-import { IndeterminateCheckbox } from "@/shared/components/ui/custom/indeterminate-checkbox";
-import {
-	BulkActions,
-	commonBulkActions,
-} from "@/shared/components/ui/custom/bulk-actions";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import { TablePagination } from "@/shared/components/ui/custom/table-pagination";
-import { useDebounce } from "@/shared/hooks/core";
-import { useBulkSelection } from "@/shared/hooks/data";
-import {
-	useBreakpoint,
-	useKeyboardShortcuts,
-	commonShortcuts,
-} from "@/shared/hooks/ui";
-import { useOfficersTableFilters } from "@/shared/hooks/data/useTableFilterPersistence";
+import { useKeyboardShortcuts, commonShortcuts } from "@/shared/hooks/ui";
 import { useServerPagination } from "@/shared/hooks/data/useServerPagination";
 import { useExport } from "@/shared/hooks/data/useExport";
 import { usePoliceOfficers } from "../../hooks/usePoliceOfficers";
-import { useStations } from "../../hooks/usePoliceStations";
+import { officersSearchStore } from "@/app/stores/derived/officers-search.store";
 import { ENDPOINTS } from "@/shared/services/api";
-import { officerRankOptions } from "../../schemas/policeOfficerSchemas";
-import {
-	exportToCSV,
-	exportToJSON,
-	commonExportColumns,
-	generateFilename,
-} from "@/shared/utils/export.utils";
-import { toast } from "sonner";
+import { OfficersFilters } from "./OfficersFilters";
+import type { OfficerRank } from "@/shared/types/backend-api.types";
 
-import type {
-	PoliceOfficerTiny,
-	OfficerRank,
-} from "@/shared/types/backend-api.types";
+export const PoliceOfficersTable = observer(
+	({ onCountChange }: { onCountChange?: (count: number) => void }) => {
+		const navigate = useNavigate();
+		const searchInputRef = useRef<HTMLInputElement>(null);
 
-// Stable default filters object to prevent re-renders
-const DEFAULT_OFFICERS_FILTERS = {
-	stationFilter: "all" as const,
-	rankFilter: "all" as const,
-	swornFilter: "all" as const,
-	includeUnknown: true,
-	unknownOnly: false,
-	sortField: "last_name" as const,
-	sortDirection: "asc" as const,
-};
+		const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
-export const PoliceOfficersTable = () => {
-	const navigate = useNavigate();
-	const searchInputRef = useRef<HTMLInputElement>(null);
-	const { isMobile } = useBreakpoint();
+		// Sort state
+		const [sortField, setSortField] = useState("last_name");
+		const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-	// Search state (not persisted)
-	const [searchQuery, setSearchQuery] = useState("");
-	const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-
-	// Persistent filter state
-	const { filters, updateFilter, resetFilters } = useOfficersTableFilters(
-		DEFAULT_OFFICERS_FILTERS
-	);
-
-	// Server-side pagination
-	const pagination = useServerPagination({
-		initialPage: 1,
-		enableGlobalPageSize: true,
-	});
-
-	// Debounce search query for better performance
-	const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-	// Build ordering string from persistent sort state
-	const ordering =
-		filters.sortDirection === "desc"
-			? `-${filters.sortField}`
-			: filters.sortField;
-
-	// Build search parameters for server-side pagination
-	const searchParams = useMemo(
-		() => ({
-			page: pagination.currentPage,
-			limit: pagination.pageSize,
-			search: debouncedSearchQuery || undefined,
-			station:
-				filters.stationFilter && filters.stationFilter !== "all"
-					? parseInt(filters.stationFilter)
-					: undefined,
-			rank:
-				filters.rankFilter && filters.rankFilter !== "all"
-					? (filters.rankFilter as OfficerRank)
-					: undefined,
-			is_sworn:
-				filters.swornFilter && filters.swornFilter !== "all"
-					? filters.swornFilter === "true"
-					: undefined,
-			include_unknown: filters.includeUnknown,
-			unknown_only: filters.unknownOnly,
-			ordering: ordering,
-		}),
-		[
-			pagination.currentPage,
-			pagination.pageSize,
-			debouncedSearchQuery,
-			filters,
-			ordering,
-		]
-	);
-
-	// Debug: Log search parameters (commented out to reduce noise)
-	// console.log("🔍 Officers Search Params:", searchParams);
-
-	// Fetch data
-	const {
-		data: officersResponse,
-		isLoading,
-		error,
-	} = usePoliceOfficers(searchParams);
-	const { data: stationsResponse } = useStations();
-
-	const officers = useMemo(
-		() => officersResponse?.results || [],
-		[officersResponse?.results]
-	);
-
-	useEffect(() => {
-		if (officersResponse) {
-			// Update pagination total when data changes
-			(pagination as any).updateTotalItems(officersResponse.count || 0);
-		}
-	}, [officersResponse, pagination]);
-	const stations = stationsResponse?.results || [];
-
-	// Bulk selection with database-wide support
-	const bulkSelection = useBulkSelection({
-		items: officers,
-		getItemId: (officer) => officer.id,
-		totalDatabaseCount: officersResponse?.count || 0,
-	});
-
-	// Centralized export functionality
-	const exportHook = useExport({
-		entityName: "police-officers",
-		exportEndpoint: ENDPOINTS.POLICE.OFFICERS.EXPORT,
-		getCurrentFilters: () => ({
-			searchQuery: debouncedSearchQuery || undefined,
-			ordering: ordering,
-			additionalParams: {
-				...(filters.stationFilter && filters.stationFilter !== "all"
-					? { station: parseInt(filters.stationFilter) }
-					: {}),
-				...(filters.rankFilter && filters.rankFilter !== "all"
-					? { rank: filters.rankFilter }
-					: {}),
-				...(filters.swornFilter && filters.swornFilter !== "all"
-					? { is_sworn: filters.swornFilter === "true" }
-					: {}),
-				...(filters.includeUnknown !== undefined
-					? { include_unknown: filters.includeUnknown }
-					: {}),
-				...(filters.unknownOnly !== undefined
-					? { unknown_only: filters.unknownOnly }
-					: {}),
-			},
-		}),
-	});
-
-	// Export functions for selected items (local data)
-	const handleExportSelectedCSV = useCallback(() => {
-		const dataToExport = bulkSelection.getSelectedItems();
-		const filename = generateFilename("police_officers_selected", "csv");
-
-		exportToCSV(dataToExport, commonExportColumns.policeOfficer, {
-			filename,
+		// Server-side pagination
+		const pagination = useServerPagination({
+			initialPage: officersSearchStore.state.currentPage,
+			enableGlobalPageSize: true,
+			syncToUrl: false,
 		});
-		toast.success(`Exported ${dataToExport.length} officers to CSV`);
-	}, [bulkSelection]);
 
-	const handleExportSelectedJSON = useCallback(() => {
-		const dataToExport = bulkSelection.getSelectedItems();
-		const filename = generateFilename("police_officers_selected", "json");
+		// Build ordering string from local sort state
+		const ordering = sortDirection === "desc" ? `-${sortField}` : sortField;
 
-		exportToJSON(dataToExport, commonExportColumns.policeOfficer, {
-			filename,
-		});
-		toast.success(`Exported ${dataToExport.length} officers to JSON`);
-	}, [bulkSelection]);
-
-	// Handle actions
-	const handleEdit = (officer: PoliceOfficerTiny) => {
-		navigate(`/police/officers/${officer.id}`);
-	};
-
-	const handleDelete = (officer: PoliceOfficerTiny) => {
-		navigate(`/police/officers/${officer.id}/delete`);
-	};
-
-	const handleResetFilters = () => {
-		setSearchQuery("");
-		resetFilters(); // This will reset all filters to defaults and persist to server
-		pagination.firstPage(); // Reset to first page
-		bulkSelection.clearSelection();
-	};
-
-	// Export functions
-
-	// Bulk delete function
-	const handleBulkDelete = () => {
-		const selectedOfficers = bulkSelection.getSelectedItems();
-		toast.info(
-			`Would delete ${selectedOfficers.length} officers (confirmation dialog would appear)`
+		// Build search parameters from store state
+		const searchParams = useMemo(
+			() => ({
+				page: officersSearchStore.state.currentPage,
+				limit: pagination.pageSize,
+				search: officersSearchStore.state.searchTerm || undefined,
+				station: officersSearchStore.state.filters.station ?? undefined,
+				rank:
+					officersSearchStore.state.filters.rank !== "all"
+						? (officersSearchStore.state.filters.rank as OfficerRank)
+						: undefined,
+				ordering,
+			}),
+			[
+				officersSearchStore.state.currentPage,
+				pagination.pageSize,
+				officersSearchStore.state.searchTerm,
+				officersSearchStore.state.filters.station,
+				officersSearchStore.state.filters.rank,
+				ordering,
+			]
 		);
-	};
 
-	// Sorting functionality
-	const handleSort = (field: string) => {
-		if (filters.sortField === field) {
-			// If already sorting by this field, toggle direction
-			const newDirection =
-				filters.sortDirection === "asc" ? "desc" : "asc";
-			updateFilter("sortDirection", newDirection);
-		} else {
-			// If sorting by different field, start with ascending
-			updateFilter("sortField", field);
-			updateFilter("sortDirection", "asc");
-		}
-		// Reset to first page when sorting changes
-		pagination.firstPage();
-	};
+		// Fetch data
+		const {
+			data: officersResponse,
+			isLoading,
+			error,
+			refetch: refetchOfficers,
+		} = usePoliceOfficers(searchParams);
+		const officers = useMemo(
+			() => officersResponse?.results || [],
+			[officersResponse?.results]
+		);
 
-	// Get sort icon for a field
-	const getSortIcon = (field: string) => {
-		if (filters.sortField === field) {
-			return filters.sortDirection === "asc" ? (
-				<ArrowUp className="h-4 w-4" />
-			) : (
-				<ArrowDown className="h-4 w-4" />
+		useEffect(() => {
+			if (officersResponse) {
+				pagination.updateTotalItems(officersResponse.count || 0);
+				officersSearchStore.setPagination({
+					totalPages: Math.max(
+						1,
+						Math.ceil((officersResponse.count || 0) / pagination.pageSize)
+					),
+					totalResults: officersResponse.count || 0,
+				});
+				onCountChange?.(officersResponse.count || 0);
+			}
+		}, [officersResponse, pagination, onCountChange]);
+
+		// Centralised export
+		const exportHook = useExport({
+			entityName: "police-officers",
+			exportEndpoint: ENDPOINTS.POLICE.OFFICERS.EXPORT,
+			getCurrentFilters: () => ({
+				searchQuery: officersSearchStore.state.searchTerm || undefined,
+				ordering,
+				additionalParams: {
+					...(officersSearchStore.state.filters.station != null
+						? { station: officersSearchStore.state.filters.station }
+						: {}),
+					...(officersSearchStore.state.filters.rank !== "all"
+						? { rank: officersSearchStore.state.filters.rank }
+						: {}),
+				},
+			}),
+		});
+
+		const handleResetFilters = useCallback(() => {
+			officersSearchStore.clearSearchAndFilters();
+		}, []);
+
+		// Sorting
+		const handleSort = (field: string) => {
+			if (sortField === field) {
+				setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+			} else {
+				setSortField(field);
+				setSortDirection("asc");
+			}
+			officersSearchStore.setCurrentPage(1);
+		};
+
+		const getSortIcon = (field: string) => {
+			if (sortField === field) {
+				return sortDirection === "asc" ? (
+					<ChevronUp className="w-3.5 h-3.5 text-emerald-600" />
+				) : (
+					<ChevronDown className="w-3.5 h-3.5 text-emerald-600" />
+				);
+			}
+			return (
+				<ChevronsUpDown className="w-3.5 h-3.5 opacity-30 group-hover:opacity-60 transition-opacity" />
 			);
-		} else {
-			return <ArrowUpDown className="h-4 w-4 opacity-50" />;
-		}
-	};
+		};
 
-	// Handle unknown ranks checkbox interactions
-	const handleIncludeUnknownChange = (checked: boolean) => {
-		updateFilter("includeUnknown", checked);
-		// If we're showing unknown only and user unchecks include unknown, turn off unknown only
-		if (!checked && filters.unknownOnly) {
-			updateFilter("unknownOnly", false);
-		}
-	};
+		// Keyboard shortcuts
+		const shortcuts = useMemo(
+			() => [
+				commonShortcuts.table.search(() => searchInputRef.current?.focus()),
+				commonShortcuts.table.export(() => exportHook.exportCSV()),
+				commonShortcuts.general.help(() => setShowShortcutsHelp(true)),
+				{
+					key: "n",
+					ctrlKey: true,
+					action: () => navigate("/officers/add"),
+					description: "Create new officer",
+				},
+				{
+					key: "r",
+					ctrlKey: true,
+					action: handleResetFilters,
+					description: "Reset filters",
+				},
+			],
+			[exportHook, navigate, handleResetFilters]
+		);
 
-	const handleUnknownOnlyChange = (checked: boolean) => {
-		updateFilter("unknownOnly", checked);
-		// If user wants to show unknown only, automatically enable include unknown
-		if (checked && !filters.includeUnknown) {
-			updateFilter("includeUnknown", true);
-		}
-	};
+		useKeyboardShortcuts({ shortcuts });
 
-	// Keyboard shortcuts
-	const shortcuts = useMemo(
-		() => [
-			commonShortcuts.table.selectAll(() => bulkSelection.toggleAll()),
-			commonShortcuts.table.clearSelection(() =>
-				bulkSelection.clearSelection()
-			),
-			commonShortcuts.table.search(() => searchInputRef.current?.focus()),
-			commonShortcuts.table.export(() => exportHook.exportCSV()),
-			commonShortcuts.general.help(() => setShowShortcutsHelp(true)),
-			{
-				key: "n",
-				ctrlKey: true,
-				action: () => navigate("/police/officers/add"),
-				description: "Create new officer",
-			},
-		],
-		[bulkSelection, exportHook.exportCSV, navigate]
-	);
+		const handlePageChange = useCallback((page: number) => {
+			officersSearchStore.setCurrentPage(page);
+		}, []);
 
-	useKeyboardShortcuts({ shortcuts });
-
-	const hasActiveFilters =
-		searchQuery ||
-		(filters.stationFilter && filters.stationFilter !== "all") ||
-		(filters.rankFilter && filters.rankFilter !== "all") ||
-		(filters.swornFilter && filters.swornFilter !== "all");
-
-	return (
-		<div className="space-y-4">
-			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 className="text-2xl font-bold tracking-tight">
-						Police Officers
-					</h2>
-					<p className="text-muted-foreground">
-						Manage police officers and their information
-					</p>
-				</div>
-				<Button
-					onClick={() => navigate("/police/officers/add")}
-					title="Add new officer (Ctrl+N)"
-					className="flex-shrink-0"
-				>
-					<Plus className="mr-2 h-4 w-4" />
-					{isMobile ? "Add" : "Add Officer"}
-				</Button>
-			</div>
-
-			{/* Bulk Actions */}
-			{(bulkSelection.selectedCount > 0 ||
-				bulkSelection.isSelectAllInDatabase) && (
-				<BulkActions
-					selectedCount={bulkSelection.selectedCount}
-					totalCount={officers.length}
-					onClearSelection={bulkSelection.clearSelection}
-					// Centralized export functions
-					onExportSelectedCSV={handleExportSelectedCSV}
-					onExportSelectedJSON={handleExportSelectedJSON}
-					onExportAllCSV={exportHook.exportCSV}
-					onExportAllJSON={exportHook.exportJSON}
-					isExporting={exportHook.isExporting}
-					actions={[
-						commonBulkActions.delete(handleBulkDelete, false),
-					]}
-					// Enhanced props for "Select All in Database"
-					totalDatabaseCount={officersResponse?.count}
-					isSelectAllInDatabase={bulkSelection.isSelectAllInDatabase}
-					onToggleSelectAllInDatabase={
-						bulkSelection.toggleSelectAllInDatabase
-					}
-				/>
-			)}
-
-			{/* Search and Filters */}
-			<div className="flex flex-col gap-4">
-				{/* Search */}
-				<div className="relative flex-1">
-					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-					<Input
-						ref={searchInputRef}
-						placeholder={
-							isMobile
-								? "Search officers..."
-								: "Search officers by name, badge number..."
-						}
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						className="pl-10"
-					/>
-				</div>
-
+		return (
+			<div className="space-y-4">
 				{/* Filters */}
-				<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-					{/* Export button (when no selection) - hide on mobile */}
-					{bulkSelection.selectedCount === 0 &&
-						!bulkSelection.isSelectAllInDatabase &&
-						!isMobile && (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={exportHook.isExporting}
-									>
-										Export{" "}
-										<ChevronDown className="ml-2 h-4 w-4" />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuItem
-										onClick={exportHook.exportCSV}
-										disabled={exportHook.isExporting}
-									>
-										Export All as CSV
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={exportHook.exportJSON}
-										disabled={exportHook.isExporting}
-									>
-										Export All as JSON
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
+				<OfficersFilters />
 
-					{/* Station Filter */}
-					<Select
-						value={filters.stationFilter}
-						onValueChange={(value) =>
-							updateFilter("stationFilter", value)
-						}
-					>
-						<SelectTrigger className="w-full sm:w-[180px]">
-							<SelectValue placeholder="All Stations" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Stations</SelectItem>
-							{stations.map((station) => (
-								<SelectItem
-									key={station.id}
-									value={station.id.toString()}
-								>
-									{station.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					{/* Rank Filter */}
-					<Select
-						value={filters.rankFilter}
-						onValueChange={(value) =>
-							updateFilter("rankFilter", value)
-						}
-					>
-						<SelectTrigger className="w-full sm:w-[180px]">
-							<SelectValue placeholder="All Ranks" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Ranks</SelectItem>
-							{officerRankOptions.map((rank) => (
-								<SelectItem key={rank.value} value={rank.value}>
-									{rank.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					{/* Sworn Status Filter */}
-					<Select
-						value={filters.swornFilter}
-						onValueChange={(value) =>
-							updateFilter("swornFilter", value)
-						}
-					>
-						<SelectTrigger className="w-full sm:w-[140px]">
-							<SelectValue placeholder="All Officers" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Officers</SelectItem>
-							<SelectItem value="true">Sworn Only</SelectItem>
-							<SelectItem value="false">Unsworn Only</SelectItem>
-						</SelectContent>
-					</Select>
-
-					{/* Reset Filters */}
-					<Button
-						variant="outline"
-						onClick={handleResetFilters}
-						title="Reset all filters (Ctrl+R)"
-						className="flex-shrink-0"
-					>
-						<RotateCcw className="mr-2 h-4 w-4" />
-						{isMobile ? "Reset" : "Reset Filters"}
-					</Button>
-				</div>
-			</div>
-
-			{/* Results Count and Include Unknown Checkbox */}
-			{officersResponse && (
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div className="text-sm text-muted-foreground">
-						{officersResponse.count === 0
-							? "No officers found"
-							: `${officersResponse.count} officer${
-									officersResponse.count === 1 ? "" : "s"
-							  } found`}
-						{bulkSelection.selectedCount > 0 && (
-							<span className="ml-2 text-blue-600">
-								({bulkSelection.selectedCount} selected)
-							</span>
-						)}
-					</div>
-					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6">
-						<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-6">
-							<div className="flex items-center space-x-2">
-								<Checkbox
-									id="include-unknown"
-									checked={filters.includeUnknown}
-									disabled={filters.unknownOnly}
-									onCheckedChange={(checked) =>
-										handleIncludeUnknownChange(
-											checked as boolean
-										)
-									}
-								/>
-								<label
-									htmlFor="include-unknown"
-									className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
-										filters.unknownOnly
-											? "opacity-50 cursor-not-allowed"
-											: ""
-									}`}
-								>
-									Include unknown ranks
-								</label>
-							</div>
-							<div className="flex items-center space-x-2">
-								<Checkbox
-									id="unknown-only"
-									checked={filters.unknownOnly}
-									onCheckedChange={(checked) =>
-										handleUnknownOnlyChange(
-											checked as boolean
-										)
-									}
-								/>
-								<label
-									htmlFor="unknown-only"
-									className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-orange-600 dark:text-orange-400"
-								>
-									Show unknown/other ranks only
-								</label>
-							</div>
-						</div>
-						{!isMobile && (
-							<button
-								onClick={() => setShowShortcutsHelp(true)}
-								className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
-								title="Show keyboard shortcuts (Shift + ?)"
-							>
-								<Keyboard className="h-3 w-3" />
-								Shortcuts
-							</button>
-						)}
-					</div>
-				</div>
-			)}
-
-			{/* Table */}
-			<div className="rounded-md border overflow-hidden">
-				<div className="overflow-x-auto">
+				{/* Table */}
+				<div className="rounded-xl border border-border shadow-md overflow-hidden">
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead className="w-[50px]">
-									<IndeterminateCheckbox
-										checked={bulkSelection.isAllSelected}
-										indeterminate={
-											bulkSelection.isIndeterminate
-										}
-										onCheckedChange={
-											bulkSelection.toggleAll
-										}
-										aria-label="Select all officers"
-									/>
-								</TableHead>
-								<TableHead>Badge Number</TableHead>
 								<TableHead>
-									<Button
-										variant="ghost"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+									<button
+										type="button"
 										onClick={() => handleSort("last_name")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
 									>
-										Name
+										<span>Name</span>
 										{getSortIcon("last_name")}
-									</Button>
+									</button>
 								</TableHead>
 								<TableHead>
-									<Button
-										variant="ghost"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+									<button
+										type="button"
+										onClick={() => handleSort("badge_number")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
+									>
+										<span>Badge</span>
+										{getSortIcon("badge_number")}
+									</button>
+								</TableHead>
+								<TableHead>
+									<button
+										type="button"
 										onClick={() => handleSort("rank")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
 									>
-										Rank
+										<span>Rank</span>
 										{getSortIcon("rank")}
-									</Button>
+									</button>
 								</TableHead>
 								<TableHead>
-									<Button
-										variant="ghost"
-										className="h-auto p-0 font-semibold hover:bg-transparent"
+									<button
+										type="button"
 										onClick={() => handleSort("station")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
 									>
-										Station
+										<span>Station</span>
 										{getSortIcon("station")}
-									</Button>
+									</button>
 								</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead className="w-[70px]">
-									Actions
+								<TableHead className="text-center">
+									<button
+										type="button"
+										onClick={() => handleSort("case_count")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
+									>
+										<span>Cases</span>
+										{getSortIcon("case_count")}
+									</button>
 								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{isLoading ? (
-								// Loading skeleton
-								Array.from({ length: 5 }).map((_, index) => (
-									<TableRow key={index}>
-										<TableCell>
-											<Skeleton className="h-4 w-4" />
-										</TableCell>
-										<TableCell>
-											<Skeleton className="h-4 w-20" />
-										</TableCell>
+								Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
 										<TableCell>
 											<Skeleton className="h-4 w-32" />
-										</TableCell>
-										<TableCell>
-											<Skeleton className="h-4 w-24" />
-										</TableCell>
-										<TableCell>
-											<Skeleton className="h-4 w-28" />
 										</TableCell>
 										<TableCell>
 											<Skeleton className="h-4 w-16" />
 										</TableCell>
 										<TableCell>
-											<Skeleton className="h-8 w-8" />
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-24" />
+										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-8 mx-auto" />
 										</TableCell>
 									</TableRow>
 								))
 							) : error ? (
 								<TableRow>
-									<TableCell
-										colSpan={7}
-										className="text-center py-8"
-									>
-										<div className="text-muted-foreground">
-											Error loading officers. Please try
-											again.
+									<TableCell colSpan={5} className="h-48 text-center">
+										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+											<AlertCircle className="h-12 w-12 opacity-50 mb-4" />
+											<p className="text-lg font-medium mb-2">
+												Unable to load officers
+											</p>
+											<p className="text-sm mb-4">
+												{error instanceof Error
+													? error.message
+													: "There was an error loading officers. Please try again."}
+											</p>
+											<Button
+												onClick={() => refetchOfficers()}
+												variant="outline"
+												size="sm"
+											>
+												Try Again
+											</Button>
 										</div>
 									</TableCell>
 								</TableRow>
 							) : officers.length === 0 ? (
 								<TableRow>
-									<TableCell
-										colSpan={7}
-										className="text-center py-8"
-									>
-										<div className="text-muted-foreground">
-											{hasActiveFilters
-												? "No officers match your search criteria."
-												: "No officers found. Create your first officer to get started."}
+									<TableCell colSpan={5} className="h-48 text-center">
+										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+											{officersSearchStore.hasActiveFilters ? (
+												<>
+													<Search className="h-12 w-12 opacity-40 mb-4" />
+													<p className="text-lg font-medium mb-2">
+														No officers found
+													</p>
+													<p className="text-sm mb-4">
+														Try adjusting your search or filters.
+													</p>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={handleResetFilters}
+													>
+														Clear search
+													</Button>
+												</>
+											) : (
+												<>
+													<Shield className="h-12 w-12 opacity-40 mb-4" />
+													<p className="text-lg font-medium mb-2">
+														No officers yet
+													</p>
+													<p className="text-sm mb-4">
+														Get started by adding your first officer.
+													</p>
+													<Button
+														size="sm"
+														onClick={() => navigate("/officers/add")}
+													>
+														<Plus className="h-4 w-4 mr-2" />
+														Add Officer
+													</Button>
+												</>
+											)}
 										</div>
 									</TableCell>
 								</TableRow>
 							) : (
 								officers.map((officer) => (
-									<TableRow key={officer.id}>
+									<TableRow
+										key={officer.id}
+										className="cursor-pointer"
+										onClick={(e) => {
+											if (e.ctrlKey || e.metaKey) {
+												window.open(`/officers/${officer.id}`, "_blank");
+											} else {
+												navigate(`/officers/${officer.id}`);
+											}
+										}}
+									>
 										<TableCell>
-											<Checkbox
-												checked={bulkSelection.isSelected(
-													officer.id
-												)}
-												onCheckedChange={() =>
-													bulkSelection.toggleItem(
-														officer.id
-													)
-												}
-												aria-label={`Select officer ${officer.full_name}`}
-											/>
+											<Link
+												to={`/officers/${officer.id}`}
+												onClick={(e) => e.stopPropagation()}
+												className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:underline underline-offset-2 transition-colors text-[14px] cursor-pointer font-medium"
+											>
+												{officer.full_name}
+											</Link>
 										</TableCell>
-										<TableCell className="font-medium">
+										<TableCell className="text-[14px]">
 											{officer.badge_number || "—"}
 										</TableCell>
-										<TableCell>
-											{officer.full_name}
+										<TableCell className="text-[14px]">
+											{officer.rank_display}
 										</TableCell>
-										<TableCell>
-											<div className="flex items-center gap-2">
-												{officer.is_sworn && (
-													<span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-														Sworn
-													</span>
-												)}
-												{officer.rank_display}
-											</div>
-										</TableCell>
-										<TableCell>
+										<TableCell className="text-[14px]">
 											{officer.station_name || "—"}
 										</TableCell>
-										<TableCell>
-											<span
-												className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-													officer.is_sworn
-														? "bg-green-50 text-green-700 ring-green-600/20"
-														: "bg-gray-50 text-gray-700 ring-gray-600/20"
-												}`}
-											>
-												{officer.is_sworn
-													? "Active"
-													: "Unsworn"}
+										<TableCell className="text-center">
+											<span className="inline-flex items-center justify-center w-8 h-6 text-xs bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 rounded-full tabular-nums">
+												{officer.case_count ?? 0}
 											</span>
-										</TableCell>
-										<TableCell>
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button
-														variant="ghost"
-														className="h-8 w-8 p-0"
-													>
-														<span className="sr-only">
-															Open menu
-														</span>
-														<MoreHorizontal className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end">
-													<DropdownMenuItem
-														onClick={() =>
-															handleEdit(officer)
-														}
-													>
-														Edit Officer
-													</DropdownMenuItem>
-													<DropdownMenuItem
-														onClick={() =>
-															handleDelete(
-																officer
-															)
-														}
-														className="text-destructive"
-													>
-														Delete Officer
-													</DropdownMenuItem>
-												</DropdownMenuContent>
-											</DropdownMenu>
 										</TableCell>
 									</TableRow>
 								))
@@ -759,29 +365,29 @@ export const PoliceOfficersTable = () => {
 						</TableBody>
 					</Table>
 				</div>
-			</div>
 
-			{/* Unified Pagination */}
-			{officersResponse && (
-				<TablePagination
-					currentPage={pagination.currentPage}
-					totalPages={pagination.totalPages}
-					totalItems={officersResponse.count}
-					itemsShown={officers.length}
-					onPageChange={pagination.setPage}
-					onPageSizeChange={pagination.setPageSize}
-					isLoading={isLoading}
+				{/* Pagination */}
+				{officersResponse && officersResponse.count > 0 && (
+					<TablePagination
+						currentPage={officersSearchStore.state.currentPage}
+						totalPages={officersSearchStore.state.totalPages}
+						totalItems={officersResponse.count}
+						itemsShown={officers.length}
+						onPageChange={handlePageChange}
+						onPageSizeChange={pagination.setPageSize}
+						isLoading={isLoading}
+					/>
+				)}
+
+				{/* Keyboard Shortcuts Help */}
+				<KeyboardShortcutsHelp
+					open={showShortcutsHelp}
+					onOpenChange={setShowShortcutsHelp}
+					shortcuts={shortcuts}
+					title="Officers Table Shortcuts"
+					description="Use these keyboard shortcuts to work with the officers table more efficiently."
 				/>
-			)}
-
-			{/* Keyboard Shortcuts Help */}
-			<KeyboardShortcutsHelp
-				open={showShortcutsHelp}
-				onOpenChange={setShowShortcutsHelp}
-				shortcuts={shortcuts}
-				title="Officers Table Shortcuts"
-				description="Use these keyboard shortcuts to work with the officers table more efficiently."
-			/>
-		</div>
-	);
-};
+			</div>
+		);
+	}
+);

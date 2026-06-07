@@ -10,15 +10,11 @@ export class UserPreferencesService {
 	 * Get current user's preferences from server
 	 */
 	static async getPreferences(): Promise<UserPreferences> {
-		try {
-			const response = await apiClient.get<UserPreferences>(
-				ENDPOINTS.USERS.PREFERENCES
-			);
+		const response = await apiClient.get<UserPreferences>(
+			ENDPOINTS.USERS.PREFERENCES
+		);
 
-			return response;
-		} catch (error) {
-			throw error;
-		}
+		return response;
 	}
 
 	/**
@@ -51,8 +47,6 @@ export class UserPreferencesService {
 	): Promise<UserPreferences> {
 		return this.updatePreferences({ loader_style });
 	}
-
-
 
 	/**
 	 * Update UI preferences only

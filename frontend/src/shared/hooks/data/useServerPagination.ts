@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import { useUIStore } from "@/app/providers/store.provider";
 import { logger } from "@/shared/services/logger.service";
 
@@ -21,6 +22,8 @@ export interface UseServerPaginationOptions {
 	initialPage?: number;
 	defaultPageSize?: number;
 	enableGlobalPageSize?: boolean;
+	/** Sync pagination state to URL search params (default: true) */
+	syncToUrl?: boolean;
 }
 
 export interface UseServerPaginationReturn {
@@ -54,7 +57,7 @@ export interface UseServerPaginationReturn {
 
 /**
  * Unified server-side pagination hook that integrates with global user preferences
- * Provides consistent pagination behavior across all tables
+ * Provides consistent pagination behaviour across all tables
  */
 export function useServerPagination(
 	options: UseServerPaginationOptions = {}
@@ -63,25 +66,76 @@ export function useServerPagination(
 		initialPage = 1,
 		defaultPageSize,
 		enableGlobalPageSize = true,
+		syncToUrl = true,
 	} = options;
 
 	const uiStore = useUIStore();
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	// Read initial state from URL params (if syncing)
+	const urlPage = syncToUrl
+		? parseInt(searchParams.get("page") || "", 10)
+		: NaN;
+	const urlLimit = syncToUrl
+		? parseInt(searchParams.get("limit") || "", 10)
+		: NaN;
 
 	// Use global page size preference or fallback to default
 	const globalPageSize = enableGlobalPageSize
 		? uiStore.itemsPerPage
 		: defaultPageSize || 25;
 
-	// Local pagination state
-	const [currentPage, setCurrentPage] = useState(initialPage);
-	const [pageSize, setPageSizeState] = useState(globalPageSize);
+	// Local pagination state — initialise from URL if available
+	const [currentPage, setCurrentPage] = useState(
+		!isNaN(urlPage) && urlPage > 0 ? urlPage : initialPage
+	);
+	const [pageSize, setPageSizeState] = useState(
+		!isNaN(urlLimit) && urlLimit > 0 ? urlLimit : globalPageSize
+	);
 	const [totalItems, setTotalItems] = useState(0);
+
+	// Sync state TO URL when page/pageSize changes
+	useEffect(() => {
+		if (!syncToUrl) return;
+		const params = new URLSearchParams(searchParams);
+		let changed = false;
+
+		if (currentPage > 1) {
+			if (params.get("page") !== String(currentPage)) {
+				params.set("page", String(currentPage));
+				changed = true;
+			}
+		} else {
+			if (params.has("page")) {
+				params.delete("page");
+				changed = true;
+			}
+		}
+
+		if (pageSize !== globalPageSize) {
+			if (params.get("limit") !== String(pageSize)) {
+				params.set("limit", String(pageSize));
+				changed = true;
+			}
+		} else {
+			if (params.has("limit")) {
+				params.delete("limit");
+				changed = true;
+			}
+		}
+
+		if (changed) {
+			setSearchParams(params, { replace: true });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentPage, pageSize, syncToUrl]);
 
 	// Sync with global page size changes
 	useEffect(() => {
 		if (enableGlobalPageSize) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setPageSizeState(uiStore.itemsPerPage);
-			// Reset to first page when page size changes
+
 			setCurrentPage(1);
 		}
 	}, [uiStore.itemsPerPage, enableGlobalPageSize]);
@@ -194,7 +248,7 @@ export function useServerPagination(
 		canGoNext,
 		itemsShown,
 
-		// Internal helper (not exported in interface but available)
-		updateTotalItems: updateTotalItems as any,
+		// Update total items from API response
+		updateTotalItems,
 	};
 }

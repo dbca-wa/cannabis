@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-
 /**
  * Hook that debounces a value
  * **Memory efficient, proper cleanup**

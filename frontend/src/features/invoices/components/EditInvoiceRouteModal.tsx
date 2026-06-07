@@ -7,7 +7,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { EditInvoiceForm } from "./forms";
 import { useInvoiceById, useUpdateInvoice } from "../hooks/useInvoices";
@@ -44,15 +43,8 @@ export const EditInvoiceRouteModal: React.FC = () => {
 				<DialogContent className="sm:max-w-[500px]">
 					<DialogHeader>
 						<DialogTitle>Edit Invoice</DialogTitle>
-						<DialogDescription>
-							Loading invoice details...
-						</DialogDescription>
+						<DialogDescription>Loading invoice details...</DialogDescription>
 					</DialogHeader>
-					<div className="space-y-4">
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="h-10 w-full" />
-					</div>
 				</DialogContent>
 			</Dialog>
 		);
@@ -65,8 +57,8 @@ export const EditInvoiceRouteModal: React.FC = () => {
 					<DialogHeader>
 						<DialogTitle>Invoice Not Found</DialogTitle>
 						<DialogDescription>
-							The invoice you're trying to edit doesn't exist or
-							has been deleted.
+							The invoice you're trying to edit doesn't exist or has been
+							deleted.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="flex items-center gap-2 text-red-600">
@@ -84,8 +76,7 @@ export const EditInvoiceRouteModal: React.FC = () => {
 				<DialogHeader>
 					<DialogTitle>Edit Invoice</DialogTitle>
 					<DialogDescription>
-						Update the invoice details. The invoice number cannot be
-						changed.
+						Update the invoice details. The invoice number cannot be changed.
 					</DialogDescription>
 				</DialogHeader>
 				<EditInvoiceForm

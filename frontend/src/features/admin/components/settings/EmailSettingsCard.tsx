@@ -62,7 +62,7 @@ type EmailSettingsFormData = z.infer<typeof emailSettingsSchema>;
 
 interface EmailSettingsCardProps {
 	settings: SystemSettings;
-	onSettingsUpdate: (field: string, value: any) => void;
+	onSettingsUpdate: (field: string, value: string | boolean) => void;
 }
 
 export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
@@ -76,8 +76,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 	const form = useForm<EmailSettingsFormData>({
 		resolver: zodResolver(emailSettingsSchema),
 		defaultValues: {
-			forward_certificate_emails_to:
-				settings.forward_certificate_emails_to,
+			forward_certificate_emails_to: settings.forward_certificate_emails_to,
 			send_emails_to_self: settings.send_emails_to_self,
 		},
 	});
@@ -114,8 +113,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 	};
 
 	const getEmailRoutingStatus = () => {
-		const isProduction =
-			settings.environment.toLowerCase() === "production";
+		const isProduction = settings.environment.toLowerCase() === "production";
 		const sendToSelf = settings.send_emails_to_self;
 
 		if (sendToSelf) {
@@ -140,10 +138,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 				description: "Emails are being sent to actual recipients",
 				variant: "success" as const,
 				badge: (
-					<Badge
-						variant="outline"
-						className="text-green-600 border-green-600"
-					>
+					<Badge variant="outline" className="text-green-600 border-green-600">
 						Live
 					</Badge>
 				),
@@ -154,8 +149,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 	const handleEdit = () => {
 		setIsEditing(true);
 		form.reset({
-			forward_certificate_emails_to:
-				settings.forward_certificate_emails_to,
+			forward_certificate_emails_to: settings.forward_certificate_emails_to,
 			send_emails_to_self: settings.send_emails_to_self,
 		});
 	};
@@ -230,9 +224,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 						<CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 dark:text-white">
 							<div className="flex items-center gap-2">
 								<Mail className="h-5 w-5" aria-hidden="true" />
-								<span id="email-settings-heading">
-									Email Configuration
-								</span>
+								<span id="email-settings-heading">Email Configuration</span>
 							</div>
 							{getEnvironmentBadge(settings.environment)}
 						</CardTitle>
@@ -247,9 +239,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center gap-2">
 										{routingStatus.icon}
-										<span className="font-medium">
-											{routingStatus.text}
-										</span>
+										<span className="font-medium">{routingStatus.text}</span>
 										{routingStatus.badge}
 									</div>
 								</div>
@@ -264,9 +254,8 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 											Send emails to admin (testing mode)
 										</Label>
 										<p className="text-xs text-muted-foreground">
-											When enabled, all system emails will
-											be sent to the admin email instead
-											of actual recipients
+											When enabled, all system emails will be sent to the admin
+											email instead of actual recipients
 										</p>
 									</div>
 									<Switch
@@ -274,8 +263,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 										checked={settings.send_emails_to_self}
 										onCheckedChange={handleToggleChange}
 										disabled={
-											!settings.send_emails_to_self_editable ||
-											isSubmitting
+											!settings.send_emails_to_self_editable || isSubmitting
 										}
 									/>
 								</div>
@@ -288,10 +276,8 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 									<AlertDescription>
 										Email routing cannot be changed in the{" "}
 										{settings.environment} environment.
-										{settings.environment.toLowerCase() ===
-											"local" ||
-										settings.environment.toLowerCase() ===
-											"development"
+										{settings.environment.toLowerCase() === "local" ||
+										settings.environment.toLowerCase() === "development"
 											? " Emails are always sent to admin in development environments."
 											: ""}
 									</AlertDescription>
@@ -311,8 +297,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 											</TooltipTrigger>
 											<TooltipContent className="max-w-xs">
 												<p>
-													This email address receives
-													all system notifications
+													This email address receives all system notifications
 													when testing mode is enabled
 												</p>
 											</TooltipContent>
@@ -322,9 +307,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 								<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 									<div className="flex-1 p-3 bg-muted rounded-md transition-colors hover:bg-muted/80 w-full">
 										<span className="text-sm font-mono break-all">
-											{
-												settings.forward_certificate_emails_to
-											}
+											{settings.forward_certificate_emails_to}
 										</span>
 									</div>
 									<Button
@@ -365,9 +348,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 				<CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 dark:text-white">
 					<div className="flex items-center gap-2">
 						<Mail className="h-5 w-5" aria-hidden="true" />
-						<span id="email-settings-heading">
-							Edit Email Configuration
-						</span>
+						<span id="email-settings-heading">Edit Email Configuration</span>
 					</div>
 					{getEnvironmentBadge(settings.environment)}
 				</CardTitle>
@@ -377,10 +358,7 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="space-y-6"
-					>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						{/* Admin Email Field */}
 						<FormField
 							control={form.control}
@@ -396,10 +374,8 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 												</TooltipTrigger>
 												<TooltipContent className="max-w-xs">
 													<p>
-														This email address
-														receives all system
-														notifications when
-														testing mode is enabled
+														This email address receives all system notifications
+														when testing mode is enabled
 													</p>
 												</TooltipContent>
 											</Tooltip>
@@ -413,8 +389,8 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 										/>
 									</FormControl>
 									<FormDescription>
-										Email address that receives system
-										notifications in testing mode
+										Email address that receives system notifications in testing
+										mode
 									</FormDescription>
 									<FormMessage />
 								</FormItem>
@@ -432,18 +408,15 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 											Send emails to admin (testing mode)
 										</FormLabel>
 										<FormDescription>
-											When enabled, all system emails will
-											be sent to the admin email instead
-											of actual recipients
+											When enabled, all system emails will be sent to the admin
+											email instead of actual recipients
 										</FormDescription>
 									</div>
 									<FormControl>
 										<Switch
 											checked={field.value}
 											onCheckedChange={field.onChange}
-											disabled={
-												!settings.send_emails_to_self_editable
-											}
+											disabled={!settings.send_emails_to_self_editable}
 										/>
 									</FormControl>
 								</FormItem>
@@ -455,8 +428,8 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 							<Alert>
 								<Info className="h-4 w-4" />
 								<AlertDescription>
-									Email routing cannot be changed in the{" "}
-									{settings.environment} environment.
+									Email routing cannot be changed in the {settings.environment}{" "}
+									environment.
 								</AlertDescription>
 							</Alert>
 						)}

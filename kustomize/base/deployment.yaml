@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cannabis-deployment
+spec:
+  strategy:
+    type: RollingUpdate
+  template:
+    spec:
+      containers:
+        - name: cannabis-backend
+          image: ghcr.io/dbca-wa/cannabis-backend
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: 'Australia/Perth'
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '100m'
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+          securityContext:
+            runAsNonRoot: true
+            privileged: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmpfs-ram-backend
+        - name: cannabis-frontend
+          image: ghcr.io/dbca-wa/cannabis-frontend
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: 'Australia/Perth'
+          resources:
+            requests:
+              memory: '128Mi'
+              cpu: '25m'
+            limits:
+              memory: '1Gi'
+              cpu: '1000m'
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            privileged: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmpfs-ram-frontend
+      volumes:
+        - name: tmpfs-ram-backend
+          emptyDir:
+            medium: 'Memory'
+        - name: tmpfs-ram-frontend
+          emptyDir:
+            medium: 'Memory'
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 180
+      automountServiceAccountToken: false

@@ -6,7 +6,9 @@ import type { PoliceStation } from "@/shared/types/backend-api.types";
 
 export const useStationById = (stationId: number | null) => {
 	return useQuery({
-		queryKey: stationId ? stationsQueryKeys.detail(stationId) : ["police-stations", "detail", null],
+		queryKey: stationId
+			? stationsQueryKeys.detail(stationId)
+			: ["police-stations", "detail", null],
 		queryFn: async (): Promise<PoliceStation> => {
 			if (!stationId) throw new Error("Station ID is required");
 			return policeStationsService.getStation(stationId);

@@ -1,5 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { InvoicesService } from "../services";
+import {
+	getInvoices,
+	getInvoiceById,
+	searchInvoices,
+	createInvoice,
+	updateInvoice,
+	deleteInvoice,
+	downloadInvoice,
+} from "../services";
 import type {
 	Invoice,
 	InvoiceCreateRequest,
@@ -23,90 +31,69 @@ export const invoiceQueryKeys = {
 		[...invoiceQueryKeys.searches(), params] as const,
 };
 
-/**
- * Hook to fetch paginated invoices
- */
+/** Hook to fetch paginated invoices */
 export const useInvoices = (
 	params: {
 		page?: number;
 		search?: string;
-		submission?: number;
+		case?: number;
 		ordering?: string;
 		limit?: number;
 	} = {}
 ) => {
 	return useQuery({
 		queryKey: invoiceQueryKeys.list(params),
-		queryFn: async (): Promise<PaginatedInvoicesResponse> => {
-			return await InvoicesService.getInvoices(params);
-		},
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		queryFn: (): Promise<PaginatedInvoicesResponse> => getInvoices(params),
+		staleTime: 5 * 60 * 1000,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
 
-/**
- * Hook to fetch a single invoice by ID
- */
+/** Hook to fetch a single invoice by ID */
 export const useInvoiceById = (id: number | null) => {
 	return useQuery({
 		queryKey: invoiceQueryKeys.detail(id!),
-		queryFn: async (): Promise<Invoice> => {
+		queryFn: (): Promise<Invoice> => {
 			if (!id) throw new Error("Invoice ID is required");
-			return await InvoicesService.getInvoiceById(id);
+			return getInvoiceById(id);
 		},
 		enabled: !!id,
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		staleTime: 5 * 60 * 1000,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
 
-/**
- * Hook to search invoices
- */
+/** Hook to search invoices */
 export const useInvoiceSearch = (params: InvoiceSearchParams) => {
 	return useQuery({
 		queryKey: invoiceQueryKeys.search(params),
-		queryFn: async (): Promise<PaginatedInvoicesResponse> => {
-			return await InvoicesService.searchInvoices(params);
-		},
-		enabled: !!params.search || !!params.submission,
-		staleTime: 2 * 60 * 1000, // 2 minutes
+		queryFn: (): Promise<PaginatedInvoicesResponse> => searchInvoices(params),
+		enabled: !!params.search || !!params.case,
+		staleTime: 2 * 60 * 1000,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
 
-/**
- * Hook to create a new invoice
- */
+/** Hook to create a new invoice */
 export const useCreateInvoice = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: InvoiceCreateRequest) =>
-			InvoicesService.createInvoice(data),
+		mutationFn: (data: InvoiceCreateRequest) => createInvoice(data),
 		onSuccess: async (newInvoice) => {
-			// Update specific invoice cache
 			queryClient.setQueryData(
 				invoiceQueryKeys.detail(newInvoice.id),
 				newInvoice
 			);
-
-			// Invalidate list queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.lists(),
 			});
-
-			// Invalidate search queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.searches(),
 			});
-
-
-
 			toast.success("Invoice created successfully");
 		},
 		onError: (error: Error) => {
@@ -116,9 +103,7 @@ export const useCreateInvoice = () => {
 	});
 };
 
-/**
- * Hook to update an existing invoice
- */
+/** Hook to update an existing invoice */
 export const useUpdateInvoice = () => {
 	const queryClient = useQueryClient();
 
@@ -129,26 +114,18 @@ export const useUpdateInvoice = () => {
 		}: {
 			id: number;
 			data: Partial<InvoiceCreateRequest>;
-		}) => InvoicesService.updateInvoice(id, data),
+		}) => updateInvoice(id, data),
 		onSuccess: async (updatedInvoice) => {
-			// Update specific invoice cache
 			queryClient.setQueryData(
 				invoiceQueryKeys.detail(updatedInvoice.id),
 				updatedInvoice
 			);
-
-			// Invalidate list queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.lists(),
 			});
-
-			// Invalidate search queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.searches(),
 			});
-
-
-
 			toast.success("Invoice updated successfully");
 		},
 		onError: (error: Error) => {
@@ -158,32 +135,22 @@ export const useUpdateInvoice = () => {
 	});
 };
 
-/**
- * Hook to delete an invoice
- */
+/** Hook to delete an invoice */
 export const useDeleteInvoice = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => InvoicesService.deleteInvoice(id),
+		mutationFn: (id: number) => deleteInvoice(id),
 		onSuccess: async (_, deletedId) => {
-			// Remove from cache
 			queryClient.removeQueries({
 				queryKey: invoiceQueryKeys.detail(deletedId),
 			});
-
-			// Invalidate list queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.lists(),
 			});
-
-			// Invalidate search queries
 			queryClient.invalidateQueries({
 				queryKey: invoiceQueryKeys.searches(),
 			});
-
-
-
 			toast.success("Invoice deleted successfully");
 		},
 		onError: (error: Error) => {
@@ -193,23 +160,14 @@ export const useDeleteInvoice = () => {
 	});
 };
 
-/**
- * Hook to download an invoice PDF
- */
+/** Hook to download an invoice PDF */
 export const useDownloadInvoice = () => {
 	return useMutation({
-		mutationFn: async ({
-			id,
-			filename,
-		}: {
-			id: number;
-			filename: string;
-		}) => {
-			const blob = await InvoicesService.downloadInvoice(id);
+		mutationFn: async ({ id, filename }: { id: number; filename: string }) => {
+			const blob = await downloadInvoice(id);
 			return { blob, filename };
 		},
 		onSuccess: ({ blob, filename }) => {
-			// Create download link
 			const url = window.URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = url;
@@ -218,7 +176,6 @@ export const useDownloadInvoice = () => {
 			link.click();
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
-
 			toast.success("Invoice downloaded successfully");
 		},
 		onError: (error: Error) => {

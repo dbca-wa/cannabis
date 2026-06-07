@@ -1,4 +1,5 @@
 from django.db import models
+
 from common.models import AuditModel
 
 
@@ -7,12 +8,12 @@ class Defendant(AuditModel):
     Defendants involved in cannabis-related cases
     """
 
-    first_name = models.CharField(
+    given_names = models.CharField(
         max_length=100,
         null=True,
         blank=True,
-        verbose_name=("First Name"),
-        help_text=("First name or given names."),
+        verbose_name=("Given Names"),
+        help_text=("Given names (may be multiple, e.g. 'Van Ngoc')."),
     )
     last_name = models.CharField(
         max_length=100,
@@ -22,15 +23,15 @@ class Defendant(AuditModel):
 
     @property
     def pdf_name(self):
-        if self.last_name and self.first_name:
-            return f"{self.last_name.capitalize()}, {self.first_name.capitalize()}"
+        if self.last_name and self.given_names:
+            return f"{self.last_name.capitalize()}, {self.given_names.capitalize()}"
         return self.last_name.capitalize() if self.last_name else "Unknown"
 
     @property
     def full_name(self):
         """Return defendant's full name"""
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
+        if self.given_names and self.last_name:
+            return f"{self.given_names} {self.last_name}"
         return self.last_name or "Unknown"
 
     def __str__(self):
@@ -39,9 +40,9 @@ class Defendant(AuditModel):
     class Meta:
         verbose_name = "Defendant"
         verbose_name_plural = "Defendants"
-        ordering = ["last_name", "first_name"]
+        ordering = ["last_name", "given_names"]
         indexes = [
             models.Index(fields=["last_name"]),
-            models.Index(fields=["first_name"]),
-            models.Index(fields=["last_name", "first_name"]),
+            models.Index(fields=["given_names"]),
+            models.Index(fields=["last_name", "given_names"]),
         ]

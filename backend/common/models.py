@@ -1,8 +1,9 @@
-from datetime import timezone, datetime
-from django.db import models
-from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator
+from datetime import datetime, timezone
 from decimal import Decimal
+
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class AuditModel(models.Model):
@@ -119,11 +120,23 @@ class SystemSettings(models.Model):
         ),
         help_text="Email address to forward certificate notifications to",
     )
-    
+
     # Development/Testing email settings
     send_emails_to_self = models.BooleanField(
         default=True,  # Will be overridden by get_default_send_emails_to_self
         help_text="Send invitation emails to the admin instead of actual recipients (for testing)",
+    )
+    email_testing_mode = models.BooleanField(
+        default=False,
+        help_text="When enabled, all emails are redirected to the test user",
+    )
+    email_test_user = models.ForeignKey(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="email_test_settings",
+        help_text="User who receives all emails when testing mode is enabled",
     )
 
     # Auto-incrementing counters
@@ -156,25 +169,24 @@ class SystemSettings(models.Model):
 
     def delete(self, *args, **kwargs):
         """Prevent deletion of SystemSettings"""
-        pass
 
     @classmethod
     def get_default_send_emails_to_self(cls):
         """Get default value for send_emails_to_self based on environment"""
-        environment = getattr(settings, 'ENVIRONMENT', 'local').lower()
-        
-        if environment == 'production':
+        environment = getattr(settings, "ENVIRONMENT", "local").lower()
+
+        if environment == "production":
             return False  # Always send to actual recipients in production
-        elif environment == 'staging':
-            return True   # Default to self in staging, but allow toggle
+        elif environment == "staging":
+            return True  # Default to self in staging, but allow toggle
         else:  # local, development
-            return True   # Always send to self in development
-    
+            return True  # Always send to self in development
+
     @classmethod
     def is_send_emails_to_self_editable(cls):
         """Check if send_emails_to_self field should be editable"""
-        environment = getattr(settings, 'ENVIRONMENT', 'local').lower()
-        
+        getattr(settings, "ENVIRONMENT", "local").lower()
+
         # Editable in all environments for testing purposes
         # In local/development, it's useful to toggle for testing
         # In staging/production, it's needed for proper email routing control
@@ -184,12 +196,12 @@ class SystemSettings(models.Model):
     def load(cls):
         """Get or create the singleton SystemSettings instance"""
         obj, created = cls.objects.get_or_create(pk=1)
-        
+
         # Set default value based on environment if newly created
         if created:
             obj.send_emails_to_self = cls.get_default_send_emails_to_self()
             obj.save()
-        
+
         return obj
 
     def get_next_certificate_number(self):

@@ -8,7 +8,10 @@ import {
 import { useUpdatePoliceOfficer } from "../../hooks/usePoliceOfficers";
 import { EditOfficerForm } from "./EditOfficerForm";
 
-import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
+import type {
+	PoliceOfficerTiny,
+	PoliceOfficerUpdateRequest,
+} from "@/shared/types/backend-api.types";
 
 interface EditOfficerModalProps {
 	open: boolean;
@@ -23,17 +26,12 @@ export const EditOfficerModal = ({
 }: EditOfficerModalProps) => {
 	const updateOfficerMutation = useUpdatePoliceOfficer();
 
-	const handleSubmit = async (data: any) => {
-		try {
-			await updateOfficerMutation.mutateAsync({
-				id: officer.id,
-				data,
-			});
-			onOpenChange(false);
-		} catch (error) {
-			// Error handling is done in the mutation
-			throw error;
-		}
+	const handleSubmit = async (data: unknown) => {
+		await updateOfficerMutation.mutateAsync({
+			id: officer.id,
+			data: data as PoliceOfficerUpdateRequest,
+		});
+		onOpenChange(false);
 	};
 
 	const handleCancel = () => {
@@ -46,8 +44,8 @@ export const EditOfficerModal = ({
 				<DialogHeader>
 					<DialogTitle>Edit Officer</DialogTitle>
 					<DialogDescription>
-						Update the officer's information. Last name is required,
-						first name is optional.
+						Update the officer's information. Last name is required, first name
+						is optional.
 					</DialogDescription>
 				</DialogHeader>
 

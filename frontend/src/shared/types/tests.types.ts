@@ -1,14 +1,3 @@
-export interface IMandrillTestEmailData {
-	email_address: string;
-	first_name: string;
-	last_name: string;
-	inviter_email: string;
-	inviter_first_name: string;
-	inviter_last_name: string;
-	invitation_link: string;
-	proposed_role: string;
-}
-
 export interface ICertificateTestData {
 	certificate_number: string;
 	police_number: string;

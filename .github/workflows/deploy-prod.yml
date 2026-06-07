@@ -1,0 +1,571 @@
+name: Deploy Production
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: dbca-wa/cannabis
+
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+
+jobs:
+  # ====================== DETECT CHANGES ======================
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.override.outputs.frontend }}
+      backend: ${{ steps.override.outputs.backend }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # For tagged releases, always build both frontend and backend
+      - name: Set build flags for release
+        id: override
+        run: |
+          echo "frontend=true" >> $GITHUB_OUTPUT
+          echo "backend=true" >> $GITHUB_OUTPUT
+          echo "✅ Tagged release detected - building both frontend and backend"
+
+  # ====================== RUN TESTS ======================
+  run-tests:
+    name: Run Tests
+    needs: detect-changes
+    uses: ./.github/workflows/test.yml
+
+  # ====================== BUILD FRONTEND PRODUCTION ======================
+  build-frontend-prod:
+    name: Build Frontend (Production)
+    runs-on: ubuntu-latest
+    needs: [run-tests, detect-changes]
+    if: |
+      success() &&
+      needs.detect-changes.outputs.frontend == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
+      - name: Build and push Frontend Production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
+          build-args: |
+            VITE_VERSION=${{ steps.version.outputs.VERSION }}
+          cache-from: type=gha,scope=frontend-prod
+          cache-to: type=gha,mode=min,scope=frontend-prod
+          labels: |
+            org.opencontainers.image.title=Cannabis Frontend
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  # ====================== BUILD BACKEND PRODUCTION ======================
+  build-backend-prod:
+    name: Build Backend (Production)
+    runs-on: ubuntu-latest
+    needs: [run-tests, detect-changes]
+    if: |
+      success() &&
+      needs.detect-changes.outputs.backend == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
+      - name: Build and push Backend Production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ steps.version.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
+          cache-from: type=gha,scope=backend-prod
+          cache-to: type=gha,mode=max,scope=backend-prod
+          labels: |
+            org.opencontainers.image.title=Cannabis Backend (Production)
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  # ====================== UPDATE COVERAGE BADGES ======================
+  update-coverage-badges:
+    name: Update Coverage Badges
+    needs: run-tests
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git with bot credentials
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Download coverage percentages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-coverage-percentage'
+          path: coverage-percentages
+
+      - name: Update frontend badge in README
+        run: |
+          if [ -f "coverage-percentages/frontend-coverage-percentage/coverage-percentage.txt" ]; then
+            # Read and validate coverage value
+            COVERAGE_RAW=$(cat coverage-percentages/frontend-coverage-percentage/coverage-percentage.txt)
+            
+            # Validate it's a number
+            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+              echo "⚠️  Warning: Invalid frontend coverage format: $COVERAGE_RAW"
+              echo "Skipping frontend badge update"
+            else
+              # Extract integer part
+              COVERAGE=$(echo "$COVERAGE_RAW" | cut -d'.' -f1)
+              
+              # Determine color
+              COLOR="red"
+              if [ "$COVERAGE" -ge 80 ]; then COLOR="brightgreen"
+              elif [ "$COVERAGE" -ge 70 ]; then COLOR="green"
+              elif [ "$COVERAGE" -ge 60 ]; then COLOR="yellow"
+              elif [ "$COVERAGE" -ge 50 ]; then COLOR="orange"
+              fi
+              
+              # Update badge
+              sed -i "s|frontend--coverage-[0-9]*%25-[a-z]*|frontend--coverage-${COVERAGE}%25-${COLOR}|g" README.md
+              echo "✅ Updated frontend badge: ${COVERAGE}% (${COLOR})"
+            fi
+          else
+            echo "⚠️  Warning: Frontend coverage file not found"
+          fi
+
+      - name: Update backend badge in README
+        run: |
+          if [ -f "coverage-percentages/backend-coverage-percentage/coverage-percentage.txt" ]; then
+            # Read and validate coverage value
+            COVERAGE_RAW=$(cat coverage-percentages/backend-coverage-percentage/coverage-percentage.txt)
+            
+            # Validate it's a number
+            if ! [[ "$COVERAGE_RAW" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+              echo "⚠️  Warning: Invalid backend coverage format: $COVERAGE_RAW"
+              echo "Skipping backend badge update"
+            else
+              # Extract integer part
+              COVERAGE=$(echo "$COVERAGE_RAW" | cut -d'.' -f1)
+              
+              # Determine color
+              COLOR="red"
+              if [ "$COVERAGE" -ge 80 ]; then COLOR="brightgreen"
+              elif [ "$COVERAGE" -ge 70 ]; then COLOR="green"
+              elif [ "$COVERAGE" -ge 60 ]; then COLOR="yellow"
+              elif [ "$COVERAGE" -ge 50 ]; then COLOR="orange"
+              fi
+              
+              # Update badge
+              sed -i "s|backend--coverage-[0-9]*%25-[a-z]*|backend--coverage-${COVERAGE}%25-${COLOR}|g" README.md
+              echo "✅ Updated backend badge: ${COVERAGE}% (${COLOR})"
+            fi
+          else
+            echo "⚠️  Warning: Backend coverage file not found"
+          fi
+
+      - name: Commit and push badge updates
+        run: |
+          git add README.md
+          git commit -m "chore: update coverage badges [skip ci]" || exit 0
+          git push
+
+  # ====================== UPDATE KUSTOMIZE ======================
+  update-kustomize:
+    name: Update Kustomize Configurations
+    needs: [detect-changes, build-frontend-prod, build-backend-prod]
+    runs-on: ubuntu-latest
+    if: |
+      always() && 
+      (needs.build-frontend-prod.result == 'success' || needs.build-backend-prod.result == 'success')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
+      - name: Update kustomize image tags
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          echo "=== Updating Kustomize image tags to ${VERSION} ==="
+
+          # Update production kustomization.yaml (both frontend and backend)
+          if [ -f "kustomize/overlays/prod/kustomization.yaml" ]; then
+            sed -i "s|newTag: .*|newTag: ${VERSION}|g" kustomize/overlays/prod/kustomization.yaml
+            echo "✅ Updated production kustomization.yaml"
+            echo ""
+            echo "=== Changes to production ==="
+            git diff kustomize/overlays/prod/kustomization.yaml
+          else
+            echo "❌ Warning: kustomize/overlays/prod/kustomization.yaml not found"
+            exit 1
+          fi
+
+          # Update test kustomization.yaml (both frontend and backend)
+          if [ -f "kustomize/overlays/test/kustomization.yaml" ]; then
+            sed -i "s|newTag: .*|newTag: ${VERSION}|g" kustomize/overlays/test/kustomization.yaml
+            echo "✅ Updated test kustomization.yaml"
+            echo ""
+            echo "=== Changes to test ==="
+            git diff kustomize/overlays/test/kustomization.yaml
+          else
+            echo "❌ Warning: kustomize/overlays/test/kustomization.yaml not found"
+            exit 1
+          fi
+
+      - name: Commit and push kustomize updates
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          # Check if there are changes to commit
+          if git diff --quiet kustomize/; then
+            echo "✅ No changes to commit (versions already up to date)"
+          else
+            # Commit and push
+            git add kustomize/overlays/prod/kustomization.yaml
+            git add kustomize/overlays/test/kustomization.yaml
+            git commit -m "chore: update kustomize to ${VERSION} [skip ci]"
+            git push origin HEAD:main
+            echo "✅ Kustomize versions updated to ${VERSION}"
+          fi
+
+      - name: Deployment summary
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          echo "## Deployment Configuration Updated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Kustomize overlays updated to version ${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Updated Images" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ghcr.io/dbca-wa/cannabis-frontend:${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ghcr.io/dbca-wa/cannabis-backend:${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test environment will use new images" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify functionality in test environment" >> $GITHUB_STEP_SUMMARY
+          echo "3. Deploy to production when ready" >> $GITHUB_STEP_SUMMARY
+
+  # ====================== CLEANUP OLD PACKAGE VERSIONS ======================
+  cleanup-packages:
+    name: Cleanup Old Package Versions
+    runs-on: ubuntu-latest
+    needs: [build-frontend-prod, build-backend-prod]
+    if: |
+      always() &&
+      (needs.build-frontend-prod.result == 'success' || needs.build-backend-prod.result == 'success')
+
+    steps:
+      # Step 1: Remove orphaned untagged versions (platform manifests from old builds)
+      # Keep 10 most recent untagged versions to support the 10 most recent tagged releases
+      - name: Cleanup untagged frontend versions
+        uses: actions/delete-package-versions@v5
+        with:
+          owner: dbca-wa
+          package-name: cannabis-frontend
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup untagged backend versions
+        uses: actions/delete-package-versions@v5
+        with:
+          owner: dbca-wa
+          package-name: cannabis-backend
+          package-type: container
+          min-versions-to-keep: 10
+          delete-only-untagged-versions: 'true'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 2: Remove old tagged versions, keeping the 10 most recent releases
+      # The 'stable' tag is always preserved via ignore-versions regex
+      - name: Cleanup old frontend releases
+        uses: actions/delete-package-versions@v5
+        with:
+          owner: dbca-wa
+          package-name: cannabis-frontend
+          package-type: container
+          min-versions-to-keep: 10
+          ignore-versions: '^stable$'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup old backend releases
+        uses: actions/delete-package-versions@v5
+        with:
+          owner: dbca-wa
+          package-name: cannabis-backend
+          package-type: container
+          min-versions-to-keep: 10
+          ignore-versions: '^stable$'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ====================== VULNERABILITY SCAN ======================
+  scan-frontend:
+    name: Scan Frontend Image
+    runs-on: ubuntu-latest
+    needs: [build-frontend-prod]
+    if: needs.build-frontend-prod.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (Frontend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
+          format: "cyclonedx"
+          output: "sbom-frontend.json"
+
+      - name: Generate SBOM text format (Frontend)
+        run: |
+          jq -r '
+            "SBOM: " + (.metadata.component.name // "frontend") + " (" + (.metadata.component.version // "latest") + ")\n" +
+            "Generated: " + (.metadata.timestamp // "unknown") + "\n" +
+            "Format: CycloneDX " + (.specVersion // "1.5") + "\n\n" +
+            "PACKAGES (" + (.components | length | tostring) + " total):\n" +
+            "--------------------------------------------------------------------------------\n" +
+            (.components | sort_by(.name) | .[] | .type + "  " + .name + "@" + (.version // "unknown") + (if .purl then "  (" + .purl + ")" else "" end))
+          ' sbom-frontend.json > sbom-frontend.txt 2>/dev/null || cp sbom-frontend.json sbom-frontend.txt
+
+      - name: Generate vulnerability CSV (Frontend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
+          vuln-type: "library"
+          severity: "HIGH,CRITICAL"
+          format: "json"
+          output: "vuln-frontend.json"
+
+      - name: Convert vulnerabilities to CSV (Frontend)
+        run: |
+          echo "Package,Installed Version,Fixed Version,Severity,CVE ID,Title" > vuln-frontend.csv
+          jq -r '.Results[]? | .Vulnerabilities[]? | [.PkgName, .InstalledVersion, (.FixedVersion // "N/A"), .Severity, .VulnerabilityID, (.Title // "N/A")] | @csv' vuln-frontend.json >> vuln-frontend.csv 2>/dev/null || true
+
+      - name: Run Trivy SARIF scan (Frontend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
+          vuln-type: "library"
+          severity: "HIGH,CRITICAL"
+          format: "sarif"
+          output: "trivy-frontend.sarif"
+
+      - name: Upload Frontend scan to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: "trivy-frontend.sarif"
+          category: "trivy-frontend"
+
+      - name: Upload security artifacts (Frontend)
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-frontend-${{ steps.version.outputs.VERSION }}
+          path: |
+            sbom-frontend.txt
+            vuln-frontend.csv
+          retention-days: 90
+
+  scan-backend:
+    name: Scan Backend Image
+    runs-on: ubuntu-latest
+    needs: [build-backend-prod]
+    if: needs.build-backend-prod.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (Backend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
+          format: "cyclonedx"
+          output: "sbom-backend.json"
+
+      - name: Generate SBOM text format (Backend)
+        run: |
+          jq -r '
+            "SBOM: " + (.metadata.component.name // "backend") + " (" + (.metadata.component.version // "latest") + ")\n" +
+            "Generated: " + (.metadata.timestamp // "unknown") + "\n" +
+            "Format: CycloneDX " + (.specVersion // "1.5") + "\n\n" +
+            "PACKAGES (" + (.components | length | tostring) + " total):\n" +
+            "--------------------------------------------------------------------------------\n" +
+            (.components | sort_by(.name) | .[] | .type + "  " + .name + "@" + (.version // "unknown") + (if .purl then "  (" + .purl + ")" else "" end))
+          ' sbom-backend.json > sbom-backend.txt 2>/dev/null || cp sbom-backend.json sbom-backend.txt
+
+      - name: Generate vulnerability CSV (Backend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
+          vuln-type: "library"
+          severity: "HIGH,CRITICAL"
+          format: "json"
+          output: "vuln-backend.json"
+
+      - name: Convert vulnerabilities to CSV (Backend)
+        run: |
+          echo "Package,Installed Version,Fixed Version,Severity,CVE ID,Title" > vuln-backend.csv
+          jq -r '.Results[]? | .Vulnerabilities[]? | [.PkgName, .InstalledVersion, (.FixedVersion // "N/A"), .Severity, .VulnerabilityID, (.Title // "N/A")] | @csv' vuln-backend.json >> vuln-backend.csv 2>/dev/null || true
+
+      - name: Run Trivy SARIF scan (Backend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
+          vuln-type: "library"
+          severity: "HIGH,CRITICAL"
+          format: "sarif"
+          output: "trivy-backend.sarif"
+
+      - name: Upload Backend scan to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: "trivy-backend.sarif"
+          category: "trivy-backend"
+
+      - name: Upload security artifacts (Backend)
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-backend-${{ steps.version.outputs.VERSION }}
+          path: |
+            sbom-backend.txt
+            vuln-backend.csv
+          retention-days: 90

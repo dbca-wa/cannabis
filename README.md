@@ -3,6 +3,11 @@
   <div>👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️</div>
 </div>
 
+[![Deploy](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml)
+[![Staging](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml/badge.svg?branch=staging)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml)
+![Frontend Coverage](https://img.shields.io/badge/frontend--coverage-0%25-red)
+![Backend Coverage](https://img.shields.io/badge/backend--coverage-0%25-red)
+
 ## System Overview
 
 WIP: v1.0.0

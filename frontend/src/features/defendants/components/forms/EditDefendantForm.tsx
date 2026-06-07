@@ -33,8 +33,9 @@ export const EditDefendantForm: React.FC<EditDefendantFormProps> = ({
 }) => {
 	const form = useForm<EditDefendantFormData>({
 		resolver: zodResolver(editDefendantSchema),
+		mode: "onChange",
 		defaultValues: {
-			first_name: defendant.first_name || "",
+			given_names: defendant.given_names || "",
 			last_name: defendant.last_name || "",
 		},
 	});
@@ -45,20 +46,17 @@ export const EditDefendantForm: React.FC<EditDefendantFormProps> = ({
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(handleSubmit)}
-				className="space-y-4"
-			>
+			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
-					name="first_name"
+					name="given_names"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>First Name</FormLabel>
+							<FormLabel>Given Names</FormLabel>
 							<FormControl>
 								<Input
 									{...field}
-									placeholder="Enter first name (optional)"
+									placeholder="Enter given names (optional)"
 									disabled={isSubmitting}
 								/>
 							</FormControl>
@@ -73,8 +71,7 @@ export const EditDefendantForm: React.FC<EditDefendantFormProps> = ({
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>
-								Last Name{" "}
-								<span className="text-red-500">*</span>
+								Last Name <span className="text-red-500">*</span>
 							</FormLabel>
 							<FormControl>
 								<Input
@@ -97,10 +94,11 @@ export const EditDefendantForm: React.FC<EditDefendantFormProps> = ({
 					>
 						Cancel
 					</Button>
-					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting && (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						)}
+					<Button
+						type="submit"
+						disabled={isSubmitting || !form.formState.isValid}
+					>
+						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						Update Defendant
 					</Button>
 				</div>

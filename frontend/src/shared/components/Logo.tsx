@@ -1,0 +1,70 @@
+import { useId } from "react";
+import { motion } from "motion/react";
+
+interface LogoProps {
+	size?: number;
+}
+
+/** SVG cannabis leaf with green gradient fill and spring hover animation. */
+export const Logo = ({ size = 32 }: LogoProps) => {
+	const gradientId = useId();
+
+	return (
+		<motion.div
+			whileHover={{ rotate: -8, scale: 1.08 }}
+			transition={{ type: "spring", stiffness: 260, damping: 18 }}
+			style={{ display: "inline-flex" }}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 100 100"
+				width={size}
+				height={size}
+			>
+				<defs>
+					<linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stopColor="#22c55e" />
+						<stop offset="50%" stopColor="#16a34a" />
+						<stop offset="100%" stopColor="#15803d" />
+					</linearGradient>
+				</defs>
+				<g transform="translate(50,62.5) scale(1.75)">
+					<path
+						d="M0,-35 Q-3,-25 -2,-10 Q-1,0 0,5 Q1,0 2,-10 Q3,-25 0,-35 Z"
+						fill={`url(#${gradientId})`}
+					/>
+					<path
+						d="M-8,-30 Q-12,-22 -10,-8 Q-8,0 -6,3 Q-4,-2 -5,-12 Q-6,-22 -8,-30 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(-15)"
+					/>
+					<path
+						d="M-15,-25 Q-18,-18 -16,-6 Q-14,0 -12,2 Q-10,-3 -11,-10 Q-13,-18 -15,-25 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(-30)"
+					/>
+					<path
+						d="M-20,-18 Q-22,-12 -20,-4 Q-18,0 -16,1 Q-14,-2 -15,-6 Q-17,-12 -20,-18 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(-50)"
+					/>
+					<path
+						d="M 8,-30 Q12,-22 10,-8 Q8,0 6,3 Q4,-2 5,-12 Q6,-22 8,-30 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(15)"
+					/>
+					<path
+						d="M15,-25 Q18,-18 16,-6 Q14,0 12,2 Q10,-3 11,-10 Q13,-18 15,-25 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(30)"
+					/>
+					<path
+						d="M20,-18 Q22,-12 20,-4 Q18,0 16,1 Q14,-2 15,-6 Q17,-12 20,-18 Z"
+						fill={`url(#${gradientId})`}
+						transform="rotate(50)"
+					/>
+				</g>
+			</svg>
+		</motion.div>
+	);
+};

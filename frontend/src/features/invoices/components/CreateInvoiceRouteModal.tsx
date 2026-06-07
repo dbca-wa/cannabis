@@ -33,8 +33,8 @@ export const CreateInvoiceRouteModal: React.FC = () => {
 				<DialogHeader>
 					<DialogTitle>Create New Invoice</DialogTitle>
 					<DialogDescription>
-						Generate a new invoice for a submission. The invoice
-						number will be auto-generated.
+						Generate a new invoice for a caseObj. The invoice number will be
+						auto-generated.
 					</DialogDescription>
 				</DialogHeader>
 				<CreateInvoiceForm

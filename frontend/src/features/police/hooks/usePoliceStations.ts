@@ -143,9 +143,7 @@ export function useDeleteStation() {
 			const errorStatus = (error as { status?: number })?.status;
 
 			if (errorMessage.includes("officers") || errorStatus === 400) {
-				toast.error(
-					"Cannot delete station: Station has assigned officers"
-				);
+				toast.error("Cannot delete station: Station has assigned officers");
 			} else {
 				toast.error(errorMessage || "Failed to delete police station");
 			}

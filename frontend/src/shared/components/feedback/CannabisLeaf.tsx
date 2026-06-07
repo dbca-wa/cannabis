@@ -8,13 +8,7 @@ const CannabisLeaf = ({ size = 60, className = "", style = {} }) => (
 		style={style}
 	>
 		<defs>
-			<linearGradient
-				id="leafGradient"
-				x1="0%"
-				y1="0%"
-				x2="100%"
-				y2="100%"
-			>
+			<linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
 				<stop offset="0%" stopColor="#22c55e" /> {/* Light green */}
 				<stop offset="50%" stopColor="#16a34a" /> {/* Medium green */}
 				<stop offset="100%" stopColor="#15803d" /> {/* Dark green */}

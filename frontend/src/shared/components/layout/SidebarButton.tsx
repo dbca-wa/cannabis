@@ -31,10 +31,8 @@ const SidebarButton = ({
 
 	// Memoize the click handler to prevent unnecessary re-renders
 	const handleClick = useCallback(
-		(
-			e: React.MouseEvent<HTMLDivElement | HTMLButtonElement, MouseEvent>
-		) => {
-			// Prevent default to stop any button behavior that might cause jumping
+		(e: React.MouseEvent<HTMLDivElement | HTMLButtonElement, MouseEvent>) => {
+			// Prevent default to stop any button behaviour that might cause jumping
 			e.preventDefault();
 
 			// If already active and not a modifier click, do nothing

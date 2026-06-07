@@ -6,7 +6,9 @@ import type { PoliceOfficer } from "@/shared/types/backend-api.types";
 
 export const useOfficerById = (officerId: number | null) => {
 	return useQuery({
-		queryKey: officerId ? policeOfficersQueryKeys.detail(officerId) : ["police-officers", "detail", null],
+		queryKey: officerId
+			? policeOfficersQueryKeys.detail(officerId)
+			: ["police-officers", "detail", null],
 		queryFn: async (): Promise<PoliceOfficer> => {
 			if (!officerId) throw new Error("Officer ID is required");
 			return policeOfficersService.getOfficer(officerId);

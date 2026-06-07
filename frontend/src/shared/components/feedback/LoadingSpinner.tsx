@@ -20,7 +20,7 @@ const sizeClasses = {
 	lg: "h-8 w-8",
 };
 
-export function LoadingSpinner({
+export const LoadingSpinner = ({
 	size = "md",
 	className,
 	text,
@@ -28,7 +28,7 @@ export function LoadingSpinner({
 	progress,
 	isComplete,
 	onComplete,
-}: LoadingSpinnerProps) {
+}: LoadingSpinnerProps) => {
 	// For themed variants, use the specialized components
 	if (variant === "cannabis") {
 		return (
@@ -67,15 +67,13 @@ export function LoadingSpinner({
 	return (
 		<div className={cn("flex items-center gap-2", className)}>
 			<Loader2 className={cn("animate-spin", sizeClasses[size])} />
-			{text && (
-				<span className="text-sm text-muted-foreground">{text}</span>
-			)}
+			{text && <span className="text-sm text-muted-foreground">{text}</span>}
 		</div>
 	);
-}
+};
 
 // Full page loading component
-export function PageLoading({
+export const PageLoading = ({
 	text = "Loading...",
 	variant = "default",
 	progress,
@@ -87,7 +85,7 @@ export function PageLoading({
 	progress?: number;
 	isComplete?: boolean;
 	onComplete?: () => void;
-}) {
+}) => {
 	return (
 		<div className="flex items-center justify-center min-h-[400px]">
 			<LoadingSpinner
@@ -100,14 +98,14 @@ export function PageLoading({
 			/>
 		</div>
 	);
-}
+};
 
 // Inline loading component for buttons
-export function ButtonLoading({ text }: { text?: string }) {
+export const ButtonLoading = ({ text }: { text?: string }) => {
 	return (
 		<div className="flex items-center gap-2">
 			<Loader2 className="h-4 w-4 animate-spin" />
 			{text && <span>{text}</span>}
 		</div>
 	);
-}
+};

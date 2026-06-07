@@ -1,0 +1,106 @@
+# Pre-commit hooks for Science Projects Frontend
+# See https://pre-commit.com for more information
+
+repos:
+  # Layer 1: General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-json
+      - id: check-yaml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Layer 2: Code formatting with Prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, markdown]
+        additional_dependencies:
+          - prettier@3.2.5
+
+  # Layer 3: Linting with ESLint (warnings only, non-blocking)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (warnings only)
+        entry: bash -c 'bun run lint || true'
+        language: system
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: false
+        verbose: true
+
+  # Layer 4: TypeScript type checking (blocking)
+  - repo: local
+    hooks:
+      - id: typescript
+        name: TypeScript type checking
+        entry: bash -c 'bun run tsc --noEmit'
+        language: system
+        types: [ts, tsx]
+        pass_filenames: false
+        verbose: true
+
+  # Layer 5: Security checks (custom patterns only)
+  - repo: local
+    hooks:
+      - id: security-patterns
+        name: Security pattern checks
+        entry: bash -c 'cd "$PRE_COMMIT_SOURCE_DIR" && ./.pre-commit-security-wrapper.sh'
+        language: system
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: false
+        verbose: true
+
+  # Layer 6: Project-specific checks
+  - repo: local
+    hooks:
+      - id: check-imports
+        name: Import validation
+        entry: bash -c 'cd "$PRE_COMMIT_SOURCE_DIR" && node scripts/pre-commit/check-imports.js "$@"' --
+        language: system
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: true
+        verbose: true
+
+      - id: check-accessibility
+        name: Accessibility hints
+        entry: bash -c 'cd "$PRE_COMMIT_SOURCE_DIR" && node scripts/pre-commit/check-accessibility.js "$@"' --
+        language: system
+        types: [tsx, jsx]
+        pass_filenames: true
+        verbose: true
+
+  # Layer 7: Final summary (runs after all other checks)
+  - repo: local
+    hooks:
+      - id: commit-summary
+        name: Commit Summary
+        entry: bash -c 'cd "$PRE_COMMIT_SOURCE_DIR" && ./.pre-commit-summary.sh'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        verbose: true
+
+# Global settings
+default_language_version:
+  node: system # Use system Node.js (via bun)
+
+# Respect .gitignore files (automatically excludes gitignored files)
+exclude: "^$" # Empty pattern - rely on .gitignore instead
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: "3.0.0"

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { ReactNode } from "react";
 import { ChevronRight, Home } from "lucide-react";
 import { Link } from "react-router";
@@ -33,7 +34,7 @@ export function Breadcrumb({
 						icon: <Home className="h-4 w-4" />,
 					},
 					...items,
-			  ]
+				]
 			: items;
 
 	return (
@@ -67,13 +68,9 @@ export function Breadcrumb({
 								<span
 									className={cn(
 										"inline-flex items-center gap-1 text-sm font-medium",
-										isCurrent
-											? "text-foreground"
-											: "text-muted-foreground"
+										isCurrent ? "text-foreground" : "text-muted-foreground"
 									)}
-									aria-current={
-										isCurrent ? "page" : undefined
-									}
+									aria-current={isCurrent ? "page" : undefined}
 								>
 									{item.icon}
 									{item.label}
@@ -98,8 +95,7 @@ export function useBreadcrumbs() {
 
 			segments.forEach((segment, index) => {
 				const href = "/" + segments.slice(0, index + 1).join("/");
-				const label =
-					segment.charAt(0).toUpperCase() + segment.slice(1);
+				const label = segment.charAt(0).toUpperCase() + segment.slice(1);
 
 				breadcrumbs.push({
 					label,

@@ -1,21 +1,20 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.forms import ValidationError
 
-from users.models import User, UserPreferences, PasswordResetCode
+from users.models import PasswordResetCode, User, UserPreferences
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     # Override ordering to use email instead of username
-    ordering = ('email',)
-    
+    ordering = ("email",)
+
     # Override list_filter to remove username-related filters
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'role', 'groups')
-    
+    list_filter = ("is_staff", "is_superuser", "is_active", "role", "groups")
+
     # Override search_fields to use email instead of username
-    search_fields = ('email', 'first_name', 'last_name')
-    
+    search_fields = ("email", "first_name", "last_name")
+
     fieldsets = (
         (
             "Profile",
@@ -61,7 +60,7 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
-    
+
     # Add fieldsets for user creation
     add_fieldsets = (
         (
@@ -79,7 +78,7 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
-    
+
     list_display = (
         "email",
         "first_name",
@@ -90,44 +89,74 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "date_joined",
     )
-    
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'role', 'groups')
-    search_fields = ('email', 'first_name', 'last_name')
+
+    list_filter = ("is_staff", "is_superuser", "is_active", "role", "groups")
+    search_fields = ("email", "first_name", "last_name")
 
 
 @admin.register(UserPreferences)
 class UserPreferencesAdmin(admin.ModelAdmin):
-    list_display = ('user', 'theme', 'submissions_display_mode', 'certificates_display_mode', 'items_per_page', 'email_notifications', "reduce_motion",)
-    list_filter = ('theme', 'email_notifications', 'reduce_motion',)
-    search_fields = ('user__email', 'user__first_name', 'user__last_name',)
+    list_display = (
+        "user",
+        "theme",
+        "submissions_display_mode",
+        "certificates_display_mode",
+        "items_per_page",
+        "email_notifications",
+        "reduce_motion",
+    )
+    list_filter = (
+        "theme",
+        "email_notifications",
+        "reduce_motion",
+    )
+    search_fields = (
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
 
 
 @admin.register(PasswordResetCode)
 class PasswordResetCodeAdmin(admin.ModelAdmin):
-    list_display = ('user', 'created_at', 'expires_at', 'is_used', 'attempts', 'is_valid_display')
-    list_filter = ('is_used', 'created_at', 'expires_at')
-    search_fields = ('user__email', 'user__first_name', 'user__last_name')
-    readonly_fields = ('code_hash', 'created_at', 'expires_at', 'used_at', 'is_expired', 'is_valid')
-    ordering = ('-created_at',)
-    
+    list_display = (
+        "user",
+        "created_at",
+        "expires_at",
+        "is_used",
+        "attempts",
+        "is_valid_display",
+    )
+    list_filter = ("is_used", "created_at", "expires_at")
+    search_fields = ("user__email", "user__first_name", "user__last_name")
+    readonly_fields = (
+        "code_hash",
+        "created_at",
+        "expires_at",
+        "used_at",
+        "is_expired",
+        "is_valid",
+    )
+    ordering = ("-created_at",)
+
     def is_valid_display(self, obj):
         """Display whether the reset code is currently valid"""
         return obj.is_valid
+
     is_valid_display.boolean = True
-    is_valid_display.short_description = 'Valid'
-    
+    is_valid_display.short_description = "Valid"
+
     def has_add_permission(self, request):
         """Prevent manual creation of reset codes through admin"""
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         """Allow viewing but prevent editing of reset codes"""
         return True
-    
+
     def has_delete_permission(self, request, obj=None):
         """Allow deletion for cleanup purposes"""
         return True
-
 
 
 # Inline admin for UserPreferences - potentially add to users as inline []

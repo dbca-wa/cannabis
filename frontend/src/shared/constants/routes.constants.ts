@@ -21,7 +21,7 @@ export const ERROR_ROUTES = {
 // Route helper functions
 export const ROUTE_HELPERS = {
 	isAuthRoute: (path: string) =>
-		Object.values(AUTH_ROUTES).includes(path as any),
+		(Object.values(AUTH_ROUTES) as readonly string[]).includes(path),
 	isErrorRoute: (path: string) =>
-		Object.values(ERROR_ROUTES).includes(path as any),
+		(Object.values(ERROR_ROUTES) as readonly string[]).includes(path),
 } as const;

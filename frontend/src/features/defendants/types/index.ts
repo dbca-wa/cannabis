@@ -1,4 +1,4 @@
-// Re-export defendant types from shared types
+// Defendant feature types — canonical definitions
 export type {
 	Defendant,
 	DefendantTiny,
@@ -6,7 +6,7 @@ export type {
 	DefendantUpdateRequest,
 	PaginatedDefendantsResponse,
 	DefendantSearchParams,
-} from "@/shared/types/backend-api.types";
+} from "./defendants.types";
 
 // Re-export form data types from schemas
 export type {

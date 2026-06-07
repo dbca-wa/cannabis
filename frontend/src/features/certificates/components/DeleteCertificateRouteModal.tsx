@@ -13,7 +13,6 @@ import {
 	useCertificateById,
 	useDeleteCertificate,
 } from "../hooks/useCertificates";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 
@@ -48,10 +47,7 @@ export const DeleteCertificateRouteModal = () => {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Certificate</AlertDialogTitle>
 						<AlertDialogDescription>
-							<div className="space-y-2">
-								<Skeleton className="h-4 w-full" />
-								<Skeleton className="h-4 w-3/4" />
-							</div>
+							Loading certificate details...
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -98,8 +94,8 @@ export const DeleteCertificateRouteModal = () => {
 						<strong>{certificate.certificate_number}</strong>?
 						<br />
 						<br />
-						This action cannot be undone. The certificate PDF and
-						all associated data will be permanently removed.
+						This action cannot be undone. The certificate PDF and all associated
+						data will be permanently removed.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

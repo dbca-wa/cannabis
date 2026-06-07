@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cannabis
+nameSuffix: -test
+secretGenerator:
+  - name: cannabis-env
+    type: Opaque
+    envs:
+      - .env
+  - name: cannabis-azure-storage-secret
+    type: Opaque
+    envs:
+      - .env.azurestorageaccount
+configMapGenerator:
+  - name: prince2-license
+    files:
+      - license.dat
+generatorOptions:
+  disableNameSuffixHash: true
+resources:
+  - ../../base
+  - ingress.yaml
+  - media_pvc.yaml
+  - pdb.yaml
+labels:
+  - includeSelectors: true
+    pairs:
+      variant: test
+patches:
+  - path: deployment_patch.yaml
+  - path: deployment_hpa_patch.yaml
+  - path: service_patch.yaml
+images:
+  - name: ghcr.io/dbca-wa/cannabis-backend
+    newTag: latest
+  - name: ghcr.io/dbca-wa/cannabis-frontend
+    newTag: latest

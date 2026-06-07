@@ -3,3 +3,4 @@ export { cn } from "./style.utils";
 export * from "./error.utils";
 export { generateUUID, generateRequestId } from "./uuid";
 export { buildQueryParams } from "./queryParams.utils";
+export * from "./defendant-display.utils";

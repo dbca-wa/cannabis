@@ -8,6 +8,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 import { useDeletePoliceOfficer } from "../../hooks/usePoliceOfficers";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
 
@@ -41,9 +42,7 @@ export const DeleteOfficerModal = ({
 					<AlertDialogTitle>Delete Officer</AlertDialogTitle>
 					<AlertDialogDescription>
 						Are you sure you want to delete{" "}
-						<span className="font-semibold">
-							{officer.full_name}
-						</span>
+						<span className="font-semibold">{officer.full_name}</span>
 						{officer.badge_number && (
 							<span> (Badge: {officer.badge_number})</span>
 						)}
@@ -51,9 +50,7 @@ export const DeleteOfficerModal = ({
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel
-						disabled={deleteOfficerMutation.isPending}
-					>
+					<AlertDialogCancel disabled={deleteOfficerMutation.isPending}>
 						Cancel
 					</AlertDialogCancel>
 					<AlertDialogAction
@@ -61,9 +58,10 @@ export const DeleteOfficerModal = ({
 						disabled={deleteOfficerMutation.isPending}
 						className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 					>
-						{deleteOfficerMutation.isPending
-							? "Deleting..."
-							: "Delete Officer"}
+						{deleteOfficerMutation.isPending && (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						)}
+						{deleteOfficerMutation.isPending ? "Deleting..." : "Delete Officer"}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

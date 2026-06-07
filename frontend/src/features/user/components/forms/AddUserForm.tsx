@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { Button } from "@/shared/components/ui/button";
 import { ResponsiveModalFooter } from "@/shared/components/layout/ResponsiveModal";
 import { Input } from "@/shared/components/ui/input";
@@ -17,11 +18,14 @@ import { useForm, Controller } from "react-hook-form";
 import { type AddUserFormData, addUserSchema } from "./schemas/addUserSchema";
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { usePasswordValidation, usePasswordConfirmation } from "@/features/auth/hooks/usePasswordValidation";
+import {
+	usePasswordValidation,
+	usePasswordConfirmation,
+} from "@/features/auth/hooks/usePasswordValidation";
 import { PasswordStrengthIndicator } from "@/features/auth/components/PasswordStrengthIndicator";
 import { PasswordConfirmationIndicator } from "@/features/auth/components/PasswordConfirmationIndicator";
 import { logger } from "@/shared/services/logger.service";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface AddUserFormProps {
@@ -40,6 +44,7 @@ const AddUserForm = ({
 	const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
 	// React Hook Form setup
+
 	const {
 		register,
 		handleSubmit,
@@ -69,10 +74,14 @@ const AddUserForm = ({
 	const watchedPasswordConfirm = watch("password_confirm");
 
 	// Use validation hooks
-	const { validation: passwordValidation } = usePasswordValidation(watchedPassword);
-	const confirmationValidation = usePasswordConfirmation(watchedPassword, watchedPasswordConfirm);
+	const { validation: passwordValidation } =
+		usePasswordValidation(watchedPassword);
+	const confirmationValidation = usePasswordConfirmation(
+		watchedPassword,
+		watchedPasswordConfirm
+	);
 
-	const handleFormSubmit = (data: any) => {
+	const handleFormSubmit = (data: AddUserFormData) => {
 		logger.debug("Form submitted with data:", {
 			email: data.email,
 			role: data.role,
@@ -82,10 +91,7 @@ const AddUserForm = ({
 	};
 
 	return (
-		<form
-			onSubmit={handleSubmit(handleFormSubmit)}
-			className="flex flex-col"
-		>
+		<form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col">
 			{/* Base Details Group */}
 			<ModalSection title="User Details" isFirst>
 				<div className="grid grid-cols-2 gap-3">
@@ -95,9 +101,7 @@ const AddUserForm = ({
 							{...register("first_name")}
 							type="text"
 							placeholder="First Name"
-							className={
-								errors.first_name ? "border-red-500" : ""
-							}
+							className={errors.first_name ? "border-red-500" : ""}
 						/>
 						{errors.first_name && (
 							<p className="text-red-500 text-xs mt-1">
@@ -144,9 +148,7 @@ const AddUserForm = ({
 							})}
 							type="number"
 							placeholder="IT Asset ID"
-							className={
-								errors.it_asset_id ? "border-red-500" : ""
-							}
+							className={errors.it_asset_id ? "border-red-500" : ""}
 						/>
 						{errors.it_asset_id && (
 							<p className="text-red-500 text-xs mt-1">
@@ -161,9 +163,7 @@ const AddUserForm = ({
 							{...register("employee_id")}
 							type="text"
 							placeholder="Employee ID"
-							className={
-								errors.employee_id ? "border-red-500" : ""
-							}
+							className={errors.employee_id ? "border-red-500" : ""}
 						/>
 						{errors.employee_id && (
 							<p className="text-red-500 text-xs mt-1">
@@ -179,11 +179,7 @@ const AddUserForm = ({
 								{...register("password")}
 								type={showPassword ? "text" : "password"}
 								placeholder="Password (min. 10 characters)"
-								className={
-									errors.password
-										? "border-red-500 pr-10"
-										: "pr-10"
-								}
+								className={errors.password ? "border-red-500 pr-10" : "pr-10"}
 							/>
 							<Button
 								type="button"
@@ -219,9 +215,7 @@ const AddUserForm = ({
 								type={showPasswordConfirm ? "text" : "password"}
 								placeholder="Confirm Password"
 								className={
-									errors.password_confirm
-										? "border-red-500 pr-10"
-										: "pr-10"
+									errors.password_confirm ? "border-red-500 pr-10" : "pr-10"
 								}
 							/>
 							<Button
@@ -229,9 +223,7 @@ const AddUserForm = ({
 								variant="ghost"
 								size="sm"
 								className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-								onClick={() =>
-									setShowPasswordConfirm(!showPasswordConfirm)
-								}
+								onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
 							>
 								{showPasswordConfirm ? (
 									<EyeOff className="h-4 w-4" />
@@ -266,33 +258,23 @@ const AddUserForm = ({
 							name="role"
 							control={control}
 							render={({ field }) => (
-								<Select
-									onValueChange={field.onChange}
-									value={field.value}
-								>
+								<Select onValueChange={field.onChange} value={field.value}>
 									<SelectTrigger className="w-full mt-1">
 										<SelectValue placeholder="Select a role" />
 									</SelectTrigger>
 									<SelectContent className="z-[1000]">
 										<SelectGroup>
-											<SelectLabel>
-												Available Roles
-											</SelectLabel>
-											<SelectItem value="none">
-												No Role
-											</SelectItem>
+											<SelectLabel>Available Roles</SelectLabel>
+											<SelectItem value="none">No Role</SelectItem>
 
-											{(user?.is_superuser ||
-												user?.role === "botanist") && (
-													<SelectItem value="botanist">
-														Approved Botanist
-													</SelectItem>
-												)}
+											{(user?.is_superuser || user?.role === "botanist") && (
+												<SelectItem value="botanist">
+													Approved Botanist
+												</SelectItem>
+											)}
 
 											{user?.is_superuser && (
-												<SelectItem value="finance">
-													Finance Officer
-												</SelectItem>
+												<SelectItem value="finance">Finance Officer</SelectItem>
 											)}
 										</SelectGroup>
 									</SelectContent>
@@ -300,9 +282,7 @@ const AddUserForm = ({
 							)}
 						/>
 						{errors.role && (
-							<p className="text-red-500 text-xs mt-1">
-								{errors.role.message}
-							</p>
+							<p className="text-red-500 text-xs mt-1">{errors.role.message}</p>
 						)}
 					</div>
 
@@ -310,26 +290,25 @@ const AddUserForm = ({
 					<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
 						{selectedRole === "none" && (
 							<p className="text-sm text-gray-600 dark:text-gray-400">
-								<strong>No Role:</strong> This user will have
-								basic access but cannot perform specialized
-								actions like botanical determinations or
-								financial operations.
+								<strong>No Role:</strong> This user will have basic access but
+								cannot perform specialized actions like botanical determinations
+								or financial operations.
 							</p>
 						)}
 
 						{selectedRole === "botanist" && (
 							<p className="text-sm text-green-700 dark:text-green-400">
-								<strong>Approved Botanist:</strong> This user
-								can perform botanical determinations, review
-								submissions, and access botanical features.
+								<strong>Approved Botanist:</strong> This user can perform
+								botanical determinations, review cases, and access botanical
+								features.
 							</p>
 						)}
 
 						{selectedRole === "finance" && (
 							<p className="text-sm text-purple-700 dark:text-purple-400">
-								<strong>Finance Officer:</strong> This user can
-								manage financial aspects, generate invoices, and
-								access financial reporting features.
+								<strong>Finance Officer:</strong> This user can manage financial
+								aspects, generate invoices, and access financial reporting
+								features.
 							</p>
 						)}
 					</div>
@@ -353,8 +332,8 @@ const AddUserForm = ({
 							</Label>
 						</div>
 						<p className="text-xs text-gray-500 ml-6">
-							Staff members have access to administrative features
-							and can manage other users.
+							Staff members have access to administrative features and can
+							manage other users.
 						</p>
 
 						<div className="flex items-center space-x-2">
@@ -401,6 +380,7 @@ const AddUserForm = ({
 						!confirmationValidation.isMatching
 					}
 				>
+					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					{isSubmitting ? "Creating..." : "Create User"}
 				</Button>
 			</ResponsiveModalFooter>

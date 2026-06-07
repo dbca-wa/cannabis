@@ -1,3 +1,7 @@
+// Sentry - Initialise FIRST before any other code
+import { initSentry } from "./app/sentry";
+initSentry();
+
 import { createRoot, type Root } from "react-dom/client";
 import "./main.css";
 import "./loader.css";

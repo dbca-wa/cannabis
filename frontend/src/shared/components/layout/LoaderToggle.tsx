@@ -41,9 +41,7 @@ export const LoaderToggle = observer(() => {
 	const uiStore = useUIStore();
 	const [isChanging, setIsChanging] = useState(false);
 
-	const handleLoaderChange = async (
-		loaderId: "cook" | "base" | "minimal"
-	) => {
+	const handleLoaderChange = async (loaderId: "cook" | "base" | "minimal") => {
 		if (loaderId === uiStore.currentLoader) return;
 
 		setIsChanging(true);
@@ -84,7 +82,7 @@ export const LoaderToggle = observer(() => {
 								isDisabled && "opacity-50 cursor-not-allowed"
 							)}
 						>
-							{/* Icon with color indicator */}
+							{/* Icon with colour indicator */}
 							{/* <div className="flex items-center gap-2">
 								<div
 									className={cn(
@@ -98,12 +96,8 @@ export const LoaderToggle = observer(() => {
 							{/* Text content */}
 							<div className="flex-1 text-left">
 								<div className="flex items-center gap-2">
-									<span className="font-medium text-sm">
-										{option.name}
-									</span>
-									{isSelected && (
-										<Check className="h-3 w-3 text-green-600" />
-									)}
+									<span className="font-medium text-sm">{option.name}</span>
+									{isSelected && <Check className="h-3 w-3 text-green-600" />}
 								</div>
 								{/* <span className="text-xs text-muted-foreground">
 									{option.description}
@@ -120,9 +114,8 @@ export const LoaderToggle = observer(() => {
 					Current:
 					<Badge variant="secondary" className="ml-2 text-xs">
 						{
-							loaderOptions.find(
-								(opt) => opt.id === uiStore.currentLoader
-							)?.name
+							loaderOptions.find((opt) => opt.id === uiStore.currentLoader)
+								?.name
 						}
 					</Badge>
 				</div>

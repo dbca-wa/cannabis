@@ -61,17 +61,14 @@ export class RootStore {
 		logger.info("Initialising application stores...", undefined);
 
 		try {
-			// Initialize stores in parallel for better performance
+			// Initialise stores in parallel for better performance
 			await Promise.all([
 				this.authStore.initialise(),
 				this.uiStore.initialise?.() || Promise.resolve(),
 			]);
 
 			this.isInitialised = true;
-			logger.info(
-				"Application stores initialised successfully",
-				undefined
-			);
+			logger.info("Application stores initialised successfully", undefined);
 		} catch (error: unknown) {
 			logger.error("Failed to initialise critical stores", {
 				error: getErrorMessage(error),
@@ -84,7 +81,8 @@ export class RootStore {
 		logger.warn("Handling unauthorized access", undefined);
 
 		try {
-			// Use AuthStore's client-side navigation method
+			// Use AuthStore's client-side navigation method (no toast here —
+			// multiple queued requests can trigger this, causing duplicate toasts)
 			this.authStore.handleUnauthorised();
 		} catch (error) {
 			logger.error("Error during unauthorized handling", {
@@ -112,17 +110,11 @@ export class RootStore {
 		try {
 			// Cleanup event listeners
 			if (typeof window !== "undefined") {
-				window.removeEventListener(
-					"beforeunload",
-					this.handleBeforeUnload
-				);
+				window.removeEventListener("beforeunload", this.handleBeforeUnload);
 			}
 
 			// Graceful shutdown of stores
-			await Promise.all([
-				this.authStore.dispose?.(),
-				this.uiStore.dispose?.(),
-			]);
+			await Promise.all([this.authStore.dispose?.(), this.uiStore.dispose?.()]);
 
 			this.isInitialised = false;
 			this.initialisationPromise = null;

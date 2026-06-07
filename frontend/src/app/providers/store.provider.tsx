@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, type ReactNode } from "react";
 import { type RootStore, rootStore } from "../stores/root.store";
 
@@ -12,9 +13,7 @@ interface StoreProviderProps {
 // Provider component
 export const StoreProvider = ({ children }: StoreProviderProps) => {
 	return (
-		<StoreContext.Provider value={rootStore}>
-			{children}
-		</StoreContext.Provider>
+		<StoreContext.Provider value={rootStore}>{children}</StoreContext.Provider>
 	);
 };
 

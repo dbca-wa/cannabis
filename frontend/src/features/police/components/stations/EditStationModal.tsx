@@ -14,19 +14,19 @@ interface EditStationModalProps {
 	station: PoliceStation;
 }
 
-export function EditStationModal({
+export const EditStationModal = ({
 	isOpen,
 	onClose,
 	station,
-}: EditStationModalProps) {
+}: EditStationModalProps) => {
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent className="sm:max-w-[500px]">
 				<DialogHeader>
 					<DialogTitle>Edit Police Station</DialogTitle>
 					<DialogDescription>
-						Update the information for {station.name}. All fields
-						marked with * are required.
+						Update the information for {station.name}. All fields marked with *
+						are required.
 					</DialogDescription>
 				</DialogHeader>
 				<EditStationForm
@@ -37,4 +37,4 @@ export function EditStationModal({
 			</DialogContent>
 		</Dialog>
 	);
-}
+};

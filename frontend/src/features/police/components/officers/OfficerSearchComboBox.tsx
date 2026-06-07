@@ -75,7 +75,8 @@ export const OfficerSearchComboBox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showCreateModal, setShowCreateModal] = useState(false);
-		const [showExternalCreateModal, setShowExternalCreateModal] = useState(false);
+		const [showExternalCreateModal, setShowExternalCreateModal] =
+			useState(false);
 
 		// Enhanced search with initial data loading and error handling
 		const {
@@ -95,8 +96,6 @@ export const OfficerSearchComboBox = React.forwardRef<
 
 		const { data: selectedOfficer, isLoading: isLoadingSelectedOfficer } =
 			useOfficerById(value ?? null);
-
-
 
 		// Reset search when closing
 		useEffect(() => {
@@ -162,16 +161,11 @@ export const OfficerSearchComboBox = React.forwardRef<
 							) : displayValue ? (
 								<>
 									<Shield className="h-4 w-4 text-muted-foreground" />
-									<span className="truncate">
-										{displayValue}
-									</span>
-									{selectedOfficer && (
-										<Badge
-											variant="secondary"
-											className="text-xs"
-										>
-											{selectedOfficer.rank_display}
-										</Badge>
+									<span className="truncate">{displayValue}</span>
+									{selectedOfficer && !selectedOfficer.is_sworn && (
+										<span className="text-xs text-muted-foreground">
+											(not sworn)
+										</span>
 									)}
 								</>
 							) : (
@@ -204,34 +198,23 @@ export const OfficerSearchComboBox = React.forwardRef<
 							<SmoothLoadingOverlay
 								isInitialLoading={isInitialLoading}
 								isSearching={isSearching}
-								hasResults={
-									!!searchResults?.results?.length
-								}
+								hasResults={!!searchResults?.results?.length}
 								skeletonCount={4}
 								skeletonType="officer"
 								error={searchError}
 								onRetry={retry}
 								isRetrying={isRetrying}
-								hasFallbackData={
-									hasInitialData && !!searchError
-								}
+								hasFallbackData={hasInitialData && !!searchError}
 								fallbackMessage={
-									hasInitialData
-										? "Showing cached results"
-										: undefined
+									hasInitialData ? "Showing cached results" : undefined
 								}
 							>
 								{/* Show search error with fallback to initial data */}
-								{searchError &&
-									hasInitialData &&
-									searchQuery ? (
+								{searchError && hasInitialData && searchQuery ? (
 									<>
 										<div className="p-2 border-l-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20">
 											<div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-400">
-												<span>
-													Search failed. Showing
-													cached results.
-												</span>
+												<span>Search failed. Showing cached results.</span>
 												<Button
 													variant="ghost"
 													size="sm"
@@ -246,68 +229,46 @@ export const OfficerSearchComboBox = React.forwardRef<
 										<CommandGroup>
 											{initialData
 												?.slice(0, 6)
-												.map(
-													(
-														officer: PoliceOfficerTiny
-													) => (
-														<CommandItem
-															key={officer.id}
-															value={officer.id.toString()}
-															onSelect={() =>
-																handleSelect(
-																	officer.id
-																)
-															}
-															className="flex items-center gap-2"
-														>
-															<Check
-																className={cn(
-																	"h-4 w-4",
-																	value ===
-																		officer.id
-																		? "opacity-100"
-																		: "opacity-0"
-																)}
-															/>
-															<Shield className="h-4 w-4 text-muted-foreground" />
-															<div className="flex-1 min-w-0">
-																<div className="truncate">
-																	{
-																		officer.full_name
-																	}
-																</div>
-																<div className="text-xs text-muted-foreground truncate">
-																	{formatOfficerDetails(
-																		officer
-																	)}
-																</div>
+												.map((officer: PoliceOfficerTiny) => (
+													<CommandItem
+														key={officer.id}
+														value={officer.id.toString()}
+														onSelect={() => handleSelect(officer.id)}
+														className="flex items-center gap-2"
+													>
+														<Check
+															className={cn(
+																"h-4 w-4",
+																value === officer.id
+																	? "opacity-100"
+																	: "opacity-0"
+															)}
+														/>
+														<Shield className="h-4 w-4 text-muted-foreground" />
+														<div className="flex-1 min-w-0">
+															<div className="truncate">
+																{officer.full_name}
 															</div>
-															<Badge
-																variant="secondary"
-																className="text-xs"
-															>
-																{
-																	officer.rank_display
-																}
-															</Badge>
-														</CommandItem>
-													)
-												)}
+															<div className="text-xs text-muted-foreground truncate">
+																{formatOfficerDetails(officer)}
+															</div>
+														</div>
+														<Badge variant="secondary" className="text-xs">
+															{officer.rank_display}
+														</Badge>
+													</CommandItem>
+												))}
 										</CommandGroup>
 									</>
 								) : !searchResults?.results?.length ? (
 									<div className="p-4 text-center">
 										<div className="text-sm text-muted-foreground mb-3">
-											{searchQuery
-												? emptyText
-												: "No officers available"}
+											{searchQuery ? emptyText : "No officers available"}
 										</div>
 										{allowCreate && (
 											<Button
 												size="sm"
-												onClick={
-													handleCreateOfficer
-												}
+												onClick={handleCreateOfficer}
 												className="w-full bg-green-600 hover:bg-green-700 text-white"
 											>
 												<Plus className="h-4 w-4 mr-2" />
@@ -319,53 +280,31 @@ export const OfficerSearchComboBox = React.forwardRef<
 									<CommandGroup>
 										{searchResults.results
 											.slice(0, 6)
-											.map(
-												(
-													officer: PoliceOfficerTiny
-												) => (
-													<CommandItem
-														key={officer.id}
-														value={officer.id.toString()}
-														onSelect={() =>
-															handleSelect(
-																officer.id
-															)
-														}
-														className="flex items-center gap-2"
-													>
-														<Check
-															className={cn(
-																"h-4 w-4",
-																value ===
-																	officer.id
-																	? "opacity-100"
-																	: "opacity-0"
-															)}
-														/>
-														<Shield className="h-4 w-4 text-muted-foreground" />
-														<div className="flex-1 min-w-0">
-															<div className="truncate">
-																{
-																	officer.full_name
-																}
-															</div>
-															<div className="text-xs text-muted-foreground truncate">
-																{formatOfficerDetails(
-																	officer
-																)}
-															</div>
+											.map((officer: PoliceOfficerTiny) => (
+												<CommandItem
+													key={officer.id}
+													value={officer.id.toString()}
+													onSelect={() => handleSelect(officer.id)}
+													className="flex items-center gap-2"
+												>
+													<Check
+														className={cn(
+															"h-4 w-4",
+															value === officer.id ? "opacity-100" : "opacity-0"
+														)}
+													/>
+													<Shield className="h-4 w-4 text-muted-foreground" />
+													<div className="flex-1 min-w-0">
+														<div className="truncate">{officer.full_name}</div>
+														<div className="text-xs text-muted-foreground truncate">
+															{formatOfficerDetails(officer)}
 														</div>
-														<Badge
-															variant="secondary"
-															className="text-xs"
-														>
-															{
-																officer.rank_display
-															}
-														</Badge>
-													</CommandItem>
-												)
-											)}
+													</div>
+													<Badge variant="secondary" className="text-xs">
+														{officer.rank_display}
+													</Badge>
+												</CommandItem>
+											))}
 									</CommandGroup>
 								)}
 							</SmoothLoadingOverlay>
@@ -379,9 +318,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 			<>
 				{showExternalAddButton ? (
 					<div className="flex items-center gap-2">
-						<div className="flex-1">
-							{comboboxElement}
-						</div>
+						<div className="flex-1">{comboboxElement}</div>
 						<Button
 							onClick={handleExternalCreateOfficer}
 							disabled={disabled}

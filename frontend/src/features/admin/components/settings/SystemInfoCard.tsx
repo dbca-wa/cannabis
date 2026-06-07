@@ -35,9 +35,7 @@ interface SystemInfoCardProps {
 	onSettingsUpdate: (updatedSettings: SystemSettings) => void;
 }
 
-export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
-	settings,
-}) => {
+export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ settings }) => {
 	const [expandedSections, setExpandedSections] = useState<
 		Record<string, boolean>
 	>({
@@ -110,7 +108,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 					behaviors: [
 						"Emails sent to admin by default (configurable)",
 						"Safe environment for testing changes",
-						"Production-like behavior and data",
+						"Production-like behaviour and data",
 						"Full feature testing available",
 					],
 				};
@@ -142,12 +140,20 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 				return {
 					description: "Unknown environment configuration.",
 					icon: <Info className="h-4 w-4 text-gray-500" />,
-					behaviors: ["Environment-specific behaviors not defined"],
+					behaviors: ["Environment-specific behaviours not defined"],
 				};
 		}
 	};
 
-	const formatLastModified = (dateString?: string | null, user?: any) => {
+	const formatLastModified = (
+		dateString?: string | null,
+		user?: {
+			email?: string;
+			first_name?: string | null;
+			last_name?: string | null;
+			username?: string;
+		} | null
+	) => {
 		if (!dateString) {
 			return {
 				timeAgo: "Never modified",
@@ -163,7 +169,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 		const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-		let timeAgo = "";
+		let timeAgo: string;
 		if (diffDays > 0) {
 			timeAgo = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 		} else if (diffHours > 0) {
@@ -179,9 +185,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 		if (user?.email) {
 			userDisplay = user.email;
 		} else if (user?.first_name || user?.last_name) {
-			userDisplay = `${user.first_name || ""} ${
-				user.last_name || ""
-			}`.trim();
+			userDisplay = `${user.first_name || ""} ${user.last_name || ""}`.trim();
 		} else if (user?.username) {
 			userDisplay = user.username;
 		}
@@ -247,25 +251,20 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 										<ChevronRight className="h-4 w-4" />
 									)}
 									<span className="text-sm text-muted-foreground">
-										Environment-specific behaviors
+										Environment-specific behaviours
 									</span>
 								</div>
 							</Button>
 							{expandedSections.environment && (
 								<div className="mt-2 pl-5 space-y-1 animate-in fade-in-50 slide-in-from-top-2 duration-300">
-									{environmentInfo.behaviors.map(
-										(behavior, index) => (
-											<div
-												key={index}
-												className="flex items-start gap-2"
-											>
-												<div className="w-1 h-1 rounded-full bg-muted-foreground mt-2 flex-shrink-0" />
-												<span className="text-sm text-muted-foreground">
-													{behavior}
-												</span>
-											</div>
-										)
-									)}
+									{environmentInfo.behaviors.map((behavior, index) => (
+										<div key={index} className="flex items-start gap-2">
+											<div className="w-1 h-1 rounded-full bg-muted-foreground mt-2 flex-shrink-0" />
+											<span className="text-sm text-muted-foreground">
+												{behavior}
+											</span>
+										</div>
+									))}
 								</div>
 							)}
 						</div>
@@ -283,9 +282,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 						{settings.last_modified_at ? (
 							<div className="space-y-2">
 								<div className="flex items-center justify-between">
-									<span className="text-sm text-muted-foreground">
-										Time:
-									</span>
+									<span className="text-sm text-muted-foreground">Time:</span>
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -294,9 +291,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 												</span>
 											</TooltipTrigger>
 											<TooltipContent>
-												<p>
-													{lastModifiedInfo.fullDate}
-												</p>
+												<p>{lastModifiedInfo.fullDate}</p>
 											</TooltipContent>
 										</Tooltip>
 									</TooltipProvider>
@@ -304,9 +299,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 
 								{settings.last_modified_by && (
 									<div className="flex items-center justify-between">
-										<span className="text-sm text-muted-foreground">
-											By:
-										</span>
+										<span className="text-sm text-muted-foreground">By:</span>
 										<div className="flex items-center gap-2">
 											<User className="h-3 w-3" />
 											<span className="text-sm font-medium">
@@ -351,25 +344,16 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 															User ID:
 														</span>
 														<span className="font-mono text-xs">
-															{
-																settings
-																	.last_modified_by
-																	.id
-															}
+															{settings.last_modified_by.id}
 														</span>
 													</div>
-													{settings.last_modified_by
-														.email && (
+													{settings.last_modified_by.email && (
 														<div className="flex justify-between">
 															<span className="text-muted-foreground">
 																Email:
 															</span>
 															<span className="font-mono text-xs">
-																{
-																	settings
-																		.last_modified_by
-																		.email
-																}
+																{settings.last_modified_by.email}
 															</span>
 														</div>
 													)}
@@ -383,8 +367,8 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({
 							<Alert>
 								<Info className="h-4 w-4" />
 								<AlertDescription>
-									No modification history available. Settings
-									may have been initialized automatically.
+									No modification history available. Settings may have been
+									initialised automatically.
 								</AlertDescription>
 							</Alert>
 						)}

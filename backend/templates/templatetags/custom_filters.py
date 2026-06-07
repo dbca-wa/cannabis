@@ -1,11 +1,5 @@
-from datetime import datetime
-
 # from pprint import pprint
 from django import template
-from operator import attrgetter
-from itertools import groupby
-import re
-from bs4 import BeautifulSoup
 
 register = template.Library()
 

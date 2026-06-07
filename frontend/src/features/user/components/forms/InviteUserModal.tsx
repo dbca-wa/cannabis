@@ -59,8 +59,7 @@ export const InviteUserModal = ({
 				<DialogHeader>
 					<DialogTitle>Invite User</DialogTitle>
 					<DialogDescription>
-						Search for and invite an external user to join the
-						system
+						Search for and invite an external user to join the system
 					</DialogDescription>
 				</DialogHeader>
 				<InviteUserForm

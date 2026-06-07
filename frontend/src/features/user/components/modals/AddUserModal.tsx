@@ -13,7 +13,7 @@ export const AddUserModal = () => {
 	const { isInviting, inviteUser } = useUsers();
 
 	const handleClose = () => {
-		navigate("/users");
+		navigate("/staff");
 	};
 
 	const handleSubmit = (

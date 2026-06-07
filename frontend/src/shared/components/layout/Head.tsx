@@ -104,12 +104,6 @@ export const Head = ({
 
 				<title>{finalTitle}</title>
 				<link rel="icon" type="image/jpg" href={imageString} />
-				<link
-					rel="alternate"
-					type="application/json"
-					href=""
-					title="Staff Directory"
-				/>
 				<meta name="description" content={finalDescription} />
 				<meta name="keywords" content={finalKeywords} />
 				<meta httpEquiv="Cache-Control" content="max-age=3600" />
@@ -126,10 +120,7 @@ export const Head = ({
 				<meta property="twitter:card" content="summary_large_image" />
 				<meta property="twitter:url" content={currentUrl} />
 				<meta property="twitter:title" content={finalTitle} />
-				<meta
-					property="twitter:description"
-					content={finalDescription}
-				/>
+				<meta property="twitter:description" content={finalDescription} />
 				<meta property="twitter:image" content={imageStringAbsolute} />
 				{/* Additional SEO tags */}
 				<link rel="canonical" href={currentUrl} />
@@ -153,22 +144,10 @@ export const Head = ({
 					name="bingbot"
 					content={getRobotsContent(window.location.pathname)}
 				/>
-				<meta
-					name="viewport"
-					content="width=device-width, initial-scale=1"
-				/>
-				<meta
-					httpEquiv="Content-Type"
-					content="text/html; charset=utf-8"
-				/>
-				<meta
-					name="viewport"
-					content="width=device-width, initial-scale=1"
-				/>
-				<meta
-					httpEquiv="Content-Type"
-					content="text/html; charset=utf-8"
-				/>
+				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				<meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				<meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
 				<html lang="en" />
 			</Helmet>
 		</HelmetProvider>

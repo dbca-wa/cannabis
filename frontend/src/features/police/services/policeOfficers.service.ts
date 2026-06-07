@@ -20,6 +20,7 @@ export const policeOfficersService = {
 		params: PoliceOfficerSearchParams = {}
 	): Promise<PaginatedPoliceOfficersResponse> {
 		const cleanParams = buildQueryParams({
+			page: params.page,
 			search: params.search,
 			station: params.station,
 			rank: params.rank,
@@ -28,7 +29,6 @@ export const policeOfficersService = {
 			unknown_only: params.unknown_only,
 			ordering: params.ordering,
 			limit: params.limit,
-			offset: params.offset,
 		});
 
 		return apiClient.get<PaginatedPoliceOfficersResponse>(
@@ -41,9 +41,7 @@ export const policeOfficersService = {
 	 * Get a single police officer by ID
 	 */
 	async getOfficer(id: number): Promise<PoliceOfficer> {
-		return apiClient.get<PoliceOfficer>(
-			ENDPOINTS.POLICE.OFFICERS.DETAIL(id)
-		);
+		return apiClient.get<PoliceOfficer>(ENDPOINTS.POLICE.OFFICERS.DETAIL(id));
 	},
 
 	/**

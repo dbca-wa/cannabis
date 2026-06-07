@@ -31,30 +31,31 @@ export function KeyboardShortcutsHelp({
 	// Group shortcuts by category (based on description prefix)
 	const groupedShortcuts = shortcuts
 		.filter((s) => s.description && !s.disabled)
-		.reduce((groups, shortcut) => {
-			// Extract category from description (e.g., "Navigation: Go to home" -> "Navigation")
-			const description = shortcut.description!;
-			const colonIndex = description.indexOf(":");
-			const category =
-				colonIndex > 0
-					? description.substring(0, colonIndex)
-					: "General";
-			const cleanDescription =
-				colonIndex > 0
-					? description.substring(colonIndex + 1).trim()
-					: description;
+		.reduce(
+			(groups, shortcut) => {
+				// Extract category from description (e.g., "Navigation: Go to home" -> "Navigation")
+				const description = shortcut.description!;
+				const colonIndex = description.indexOf(":");
+				const category =
+					colonIndex > 0 ? description.substring(0, colonIndex) : "General";
+				const cleanDescription =
+					colonIndex > 0
+						? description.substring(colonIndex + 1).trim()
+						: description;
 
-			if (!groups[category]) {
-				groups[category] = [];
-			}
+				if (!groups[category]) {
+					groups[category] = [];
+				}
 
-			groups[category].push({
-				keys: formatShortcut(shortcut),
-				description: cleanDescription,
-			});
+				groups[category].push({
+					keys: formatShortcut(shortcut),
+					description: cleanDescription,
+				});
 
-			return groups;
-		}, {} as Record<string, Array<{ keys: string; description: string }>>);
+				return groups;
+			},
+			{} as Record<string, Array<{ keys: string; description: string }>>
+		);
 
 	const categories = Object.keys(groupedShortcuts).sort();
 
@@ -76,24 +77,22 @@ export function KeyboardShortcutsHelp({
 								{category}
 							</h3>
 							<div className="space-y-2">
-								{groupedShortcuts[category].map(
-									(shortcut, index) => (
-										<div
-											key={index}
-											className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+								{groupedShortcuts[category].map((shortcut, index) => (
+									<div
+										key={index}
+										className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+									>
+										<span className="text-sm text-gray-700 dark:text-gray-300">
+											{shortcut.description}
+										</span>
+										<Badge
+											variant="secondary"
+											className="font-mono text-xs bg-white dark:bg-gray-700 border"
 										>
-											<span className="text-sm text-gray-700 dark:text-gray-300">
-												{shortcut.description}
-											</span>
-											<Badge
-												variant="secondary"
-												className="font-mono text-xs bg-white dark:bg-gray-700 border"
-											>
-												{shortcut.keys}
-											</Badge>
-										</div>
-									)
-								)}
+											{shortcut.keys}
+										</Badge>
+									</div>
+								))}
 							</div>
 						</div>
 					))}
@@ -101,9 +100,7 @@ export function KeyboardShortcutsHelp({
 					{categories.length === 0 && (
 						<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 							<Keyboard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-							<p>
-								No keyboard shortcuts available for this page.
-							</p>
+							<p>No keyboard shortcuts available for this page.</p>
 						</div>
 					)}
 				</div>

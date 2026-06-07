@@ -25,8 +25,7 @@ export class ExportService {
 		searchParams.append("export_format", format);
 
 		// Add filtering parameters (but not pagination)
-		if (config.searchQuery)
-			searchParams.append("search", config.searchQuery);
+		if (config.searchQuery) searchParams.append("search", config.searchQuery);
 		if (config.ordering) searchParams.append("ordering", config.ordering);
 
 		// Add any additional parameters
@@ -42,7 +41,10 @@ export class ExportService {
 			searchParams.toString() ? `?${searchParams.toString()}` : ""
 		}`;
 
-		logger.info(`Exporting ${config.entityName} as ${format.toUpperCase()}`, { url, config });
+		logger.info(`Exporting ${config.entityName} as ${format.toUpperCase()}`, {
+			url,
+			config,
+		});
 
 		try {
 			const blob = await apiClient.getBlob(url);
@@ -85,10 +87,7 @@ export class ExportService {
 
 		try {
 			const blob = await this.exportData(format, config);
-			const filename = generateFilename(
-				`${config.entityName}_all`,
-				format
-			);
+			const filename = generateFilename(`${config.entityName}_all`, format);
 
 			this.downloadBlob(blob, filename);
 			toast.success(

@@ -18,11 +18,11 @@ interface DeleteStationModalProps {
 	station: PoliceStation;
 }
 
-export function DeleteStationModal({
+export const DeleteStationModal = ({
 	isOpen,
 	onClose,
 	station,
-}: DeleteStationModalProps) {
+}: DeleteStationModalProps) => {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const deleteStationMutation = useDeleteStation();
 
@@ -51,17 +51,15 @@ export function DeleteStationModal({
 					</DialogTitle>
 					<DialogDescription className="space-y-2">
 						<p>
-							Are you sure you want to delete{" "}
-							<strong>{station.name}</strong>?
+							Are you sure you want to delete <strong>{station.name}</strong>?
 						</p>
 						{hasOfficers ? (
 							<div className="p-3 bg-red-50 border border-red-200 rounded-md">
 								<p className="text-sm text-red-800">
 									<strong>Warning:</strong> This station has{" "}
 									{station.officer_count} assigned officer
-									{station.officer_count !== 1 ? "s" : ""}.
-									You must reassign or remove all officers
-									before deleting this station.
+									{station.officer_count !== 1 ? "s" : ""}. You must reassign or
+									remove all officers before deleting this station.
 								</p>
 							</div>
 						) : (
@@ -72,11 +70,7 @@ export function DeleteStationModal({
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={onClose}
-						disabled={isDeleting}
-					>
+					<Button variant="outline" onClick={onClose} disabled={isDeleting}>
 						Cancel
 					</Button>
 					<Button
@@ -90,4 +84,4 @@ export function DeleteStationModal({
 			</DialogContent>
 		</Dialog>
 	);
-}
+};

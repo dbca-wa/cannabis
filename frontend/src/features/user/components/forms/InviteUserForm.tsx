@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { Button } from "@/shared/components/ui/button";
 import { ResponsiveModalFooter } from "@/shared/components/layout/ResponsiveModal";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,16 +37,18 @@ const InviteUserForm = ({
 	const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(
 		null
 	);
-	const [selectedUserData, setSelectedUserData] =
-		useState<ExternalUser | null>(null);
+	const [selectedUserData, setSelectedUserData] = useState<ExternalUser | null>(
+		null
+	);
 
 	// React Hook Form setup
+
 	const {
 		handleSubmit,
 		control,
 		watch,
 		setValue,
-		formState: { errors, isValid, /* isDirty */ },
+		formState: { errors, isValid /* isDirty */ },
 	} = useForm<InviteUserFormData>({
 		resolver: zodResolver(inviteUserSchema),
 		mode: "onChange",
@@ -89,10 +92,7 @@ const InviteUserForm = ({
 	const canSubmit = isValid && selectedUserData && selectedRole;
 
 	return (
-		<form
-			onSubmit={handleSubmit(handleFormSubmit)}
-			className="flex flex-col"
-		>
+		<form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col">
 			{/* User Selection */}
 			<ModalSection title="Select User to Invite" isFirst>
 				<UserInviteSection

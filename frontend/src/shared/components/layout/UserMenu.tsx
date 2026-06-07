@@ -1,231 +1,222 @@
-import { LogOut, Moon, Sun, User, Key } from "lucide-react";
+import { useState } from "react";
+import { motion } from "motion/react";
 import { observer } from "mobx-react-lite";
-import { Button } from "../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { cn } from "@/shared/utils/index";
-import { useAuth } from "@/features/auth";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/shared/components/ui/popover";
+import {
+	Sparkles,
+	Flame,
+	Leaf,
+	Sun,
+	Moon,
+	KeyRound,
+	LogOut,
+	PenLine,
+} from "lucide-react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUIStore } from "@/app/providers/store.provider";
-import { LoaderToggle } from "./LoaderToggle";
 import { useNavigate } from "react-router";
 
+const loaders = [
+	{ key: "minimal" as const, label: "Minimal", icon: Sparkles },
+	{ key: "base" as const, label: "Cannabis", icon: Leaf },
+	{ key: "cook" as const, label: "Cooking", icon: Flame },
+];
+
 interface UserMenuProps {
+	/** @deprecated Variant is no longer used — kept for backward compatibility with ContentLayout */
 	variant?: "sidebar" | "breadcrumb";
 	className?: string;
 }
 
-const UserMenu = observer(
-	({ variant = "breadcrumb", className }: UserMenuProps) => {
-		const { user, logout } = useAuth();
-		const uiStore = useUIStore();
-		const navigate = useNavigate();
+const UserMenu = observer((_props: UserMenuProps) => {
+	const { user, logout } = useAuth();
+	const uiStore = useUIStore();
+	const navigate = useNavigate();
+	const [open, setOpen] = useState(false);
 
-		const handleLogout = () => {
-			logout();
-		};
+	const isDark = uiStore.resolvedTheme === "dark";
+	const initials =
+		user?.initials || user?.email?.charAt(0).toUpperCase() || "U";
+	const displayName = user?.full_name || user?.email || "Unknown User";
 
-		const handleChangePassword = () => {
-			navigate("/auth/password-update");
-		};
+	/** Compute display role with superuser suffix. */
+	const getDisplayRole = () => {
+		const role =
+			!user?.role_display || user.role_display === "None"
+				? "No Role"
+				: user.role_display;
+		return user?.is_superuser ? `${role} · Superuser` : role;
+	};
 
-		const handleThemeToggle = () => {
-			// Toggle based on resolved theme (what's actually applied)
-			const resolvedTheme = uiStore.resolvedTheme;
-			const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+	const displayRole = getDisplayRole();
 
-			// console.log(`Theme changed to ${newTheme} mode`);
-			uiStore.setTheme(newTheme);
-		};
+	const handleThemeToggle = () => {
+		uiStore.setTheme(isDark ? "light" : "dark");
+	};
 
-		const isDarkMode = uiStore.resolvedTheme === "dark";
+	const handleLoaderChange = (key: "minimal" | "base" | "cook") => {
+		uiStore.setLoader(key);
+	};
 
-		// Different styles for different variants
-		const triggerStyles =
-			variant === "sidebar"
-				? "sidebar-utility-button"
-				: "h-8 w-8 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800";
+	const handleChangePassword = () => {
+		setOpen(false);
+		navigate("/change-password");
+	};
 
-		const themeButtonStyles =
-			"h-8 w-8 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800";
+	const handleMySignature = () => {
+		setOpen(false);
+		navigate("/signature");
+	};
 
-		return (
-			<div className={cn("flex items-center gap-2", className)}>
-				{/* Theme Toggle - only show in breadcrumb variant */}
-				{variant === "breadcrumb" && (
-					<Button
-						variant="ghost"
-						size="icon"
-						className={themeButtonStyles}
-						onClick={handleThemeToggle}
-					>
-						{isDarkMode ? (
-							<Sun className="h-4 w-4" />
-						) : (
-							<Moon className="h-4 w-4" />
-						)}
-					</Button>
-				)}
+	const handleLogout = () => {
+		setOpen(false);
+		logout();
+	};
 
-				{/* User Menu */}
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon"
-							className={triggerStyles}
-						>
-							{variant === "breadcrumb" ? (
-								// Show user avatar/initial in breadcrumb
-								<div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium text-xs">
-									{user?.email?.charAt(0).toUpperCase() ||
-										"U"}
-								</div>
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-accent transition-colors cursor-pointer">
+					<div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-[13px] font-medium shadow-sm">
+						{initials}
+					</div>
+					<div className="flex-1 min-w-0 text-left">
+						<div className="text-[13px] truncate">{displayName}</div>
+						<div className="text-[11px] text-muted-foreground truncate">
+							{displayRole}
+						</div>
+					</div>
+				</button>
+			</PopoverTrigger>
+
+			<PopoverContent
+				side="right"
+				align="end"
+				className="w-72 p-0 overflow-hidden"
+			>
+				{/* Profile section */}
+				<div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border-b border-border/60">
+					<div className="flex items-center gap-3">
+						<div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center font-medium shadow-sm">
+							{initials}
+						</div>
+						<div className="flex-1 min-w-0">
+							<div className="text-[14px]">{displayName}</div>
+							<div className="text-[12px] text-muted-foreground truncate">
+								{user?.email || ""}
+							</div>
+							<div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+								{displayRole}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Loader style selector */}
+				<div className="p-2">
+					<div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+						Loader style
+					</div>
+					<div className="grid grid-cols-3 gap-1">
+						{loaders.map((l) => {
+							const isSelected = uiStore.currentLoader === l.key;
+							return (
+								<button
+									key={l.key}
+									onClick={() => handleLoaderChange(l.key)}
+									className={`relative p-2 rounded-md border text-center transition-colors cursor-pointer ${
+										isSelected
+											? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
+											: "border-border/60 hover:bg-accent"
+									}`}
+								>
+									{isSelected && (
+										<motion.div
+											layoutId="loader-dot"
+											className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-500"
+										/>
+									)}
+									<l.icon className="w-4 h-4 mx-auto mb-1 text-emerald-600" />
+									<div className="text-[11px]">{l.label}</div>
+								</button>
+							);
+						})}
+					</div>
+				</div>
+
+				{/* Theme toggle */}
+				<div className="border-t border-border/60 p-2">
+					<div className="flex items-center justify-between px-2 py-1.5">
+						<div className="flex items-center gap-2">
+							{isDark ? (
+								<Moon className="w-4 h-4 text-muted-foreground" />
 							) : (
-								// Show user icon in sidebar
-								<User className="size-5" />
+								<Sun className="w-4 h-4 text-muted-foreground" />
 							)}
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent
-						side={variant === "sidebar" ? "right" : "bottom"}
-						sideOffset={variant === "sidebar" ? 30 : 10}
-						align={variant === "sidebar" ? "start" : "end"}
-						className={cn(
-							"z-[9999] rounded-xl w-[300px] p-0 overflow-hidden",
-							"border shadow-xl transition-colors duration-200",
-							// Dark theme
-							"dark:bg-gray-900 dark:border-gray-700 dark:shadow-green-400/20",
-							// Light theme
-							"light:bg-white light:border-gray-200 light:shadow-gray-900/20"
-						)}
+							<span className="text-[13px]">Theme</span>
+						</div>
+						<button
+							onClick={handleThemeToggle}
+							className={`relative h-7 w-14 rounded-full transition-colors cursor-pointer ${
+								isDark ? "bg-emerald-600" : "bg-gray-200 dark:bg-muted"
+							}`}
+						>
+							<motion.div
+								animate={{ x: isDark ? 28 : 2 }}
+								transition={{
+									type: "spring",
+									stiffness: 500,
+									damping: 30,
+								}}
+								className="absolute top-[2px] w-6 h-6 rounded-full bg-white shadow flex items-center justify-center text-[11px]"
+							>
+								{isDark ? (
+									<Moon className="w-3 h-3 text-emerald-600" />
+								) : (
+									<Sun className="w-3 h-3 text-amber-500" />
+								)}
+							</motion.div>
+						</button>
+					</div>
+					<div className="px-2 text-[11px] text-muted-foreground">
+						Currently using{" "}
+						<span className="capitalize">{uiStore.resolvedTheme}</span> mode
+					</div>
+				</div>
+
+				{/* Actions */}
+				<div className="border-t border-border/60 p-2">
+					{(user?.role === "botanist" || user?.is_superuser) && (
+						<button
+							onClick={handleMySignature}
+							className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-[13px] transition-colors cursor-pointer"
+						>
+							<PenLine className="w-4 h-4 text-muted-foreground" />
+							My Signature
+						</button>
+					)}
+					<button
+						onClick={handleChangePassword}
+						className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-[13px] transition-colors cursor-pointer"
 					>
-						{/* Header Section - User Info */}
-						<div
-							className={cn(
-								"p-4 pb-0 transition-colors duration-200",
-								"dark:border-gray-700",
-								"light:border-gray-200"
-							)}
-						>
-							<div className="flex items-center gap-3">
-								{/* Avatar Placeholder */}
-								<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-									{user?.email?.charAt(0).toUpperCase() ||
-										"U"}
-								</div>
-
-								{/* User Details */}
-								<div className="flex-1 min-w-0">
-									<p
-										className={cn(
-											"font-medium truncate text-sm transition-colors duration-200",
-											"dark:text-gray-100",
-											"light:text-gray-900"
-										)}
-									>
-										{user?.email || "Unknown User"}
-									</p>
-									<div
-										className={cn(
-											"flex items-center gap-2 mt-1 text-xs transition-colors duration-200",
-											"dark:text-gray-400",
-											"light:text-gray-500"
-										)}
-									>
-										{user?.role || "User"} •{" "}
-										{user?.is_superuser
-											? "Super Admin"
-											: user?.is_staff
-												? "Staff"
-												: "User"}
-									</div>
-								</div>
-							</div>
-						</div>
-
-						{/* Loader Toggle Section - always show */}
-						<div
-							className={cn(
-								"p-4 border-b transition-colors duration-200",
-								"dark:border-gray-700",
-								"light:border-gray-200"
-							)}
-						>
-							<LoaderToggle />
-						</div>
-
-						{/* Theme Toggle Section - only show in breadcrumb variant */}
-						{variant === "breadcrumb" && (
-							<div
-								className={cn(
-									"p-4 border-b transition-colors duration-200",
-									"dark:border-gray-700",
-									"light:border-gray-200"
-								)}
-							>
-								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium">
-										Current Theme
-									</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={handleThemeToggle}
-										className="h-8 px-3"
-									>
-										{isDarkMode ? (
-											<>
-												<Moon className="h-4 w-4 mr-2" />
-												Dark
-											</>
-										) : (
-											<>
-												<Sun className="h-4 w-4 mr-2" />
-												Light
-											</>
-										)}
-									</Button>
-								</div>
-							</div>
-						)}
-
-						{/* Actions Section */}
-						<div
-							className={cn(
-								"p-4 space-y-2 transition-colors duration-200",
-								"dark:bg-gray-800/50",
-								"light:bg-gray-50"
-							)}
-						>
-							<Button
-								variant="outline"
-								onClick={handleChangePassword}
-								className={cn(
-									"w-full justify-center gap-2 border transition-colors duration-200",
-									"text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-300",
-									"dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/50 dark:border-blue-800"
-								)}
-							>
-								<Key size={16} />
-								<span>Change Password</span>
-							</Button>
-							<Button
-								variant="outline"
-								onClick={handleLogout}
-								className={cn(
-									"w-full justify-center gap-2 border transition-colors duration-200",
-									"text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300",
-									"dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/50 dark:border-red-800"
-								)}
-							>
-								<LogOut size={16} />
-								<span>Logout</span>
-							</Button>
-						</div>
-					</PopoverContent>
-				</Popover>
-			</div>
-		);
-	}
-);
+						<KeyRound className="w-4 h-4 text-muted-foreground" />
+						Change password
+					</button>
+					<button
+						onClick={handleLogout}
+						className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-destructive/10 text-destructive text-[13px] transition-colors cursor-pointer"
+					>
+						<LogOut className="w-4 h-4" />
+						Log out
+					</button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	);
+});
 
 export default UserMenu;

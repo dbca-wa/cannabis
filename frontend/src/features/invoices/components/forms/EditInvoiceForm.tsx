@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Loader2 } from "lucide-react";
 import {
 	editInvoiceSchema,
 	type EditInvoiceFormData,
@@ -83,6 +84,7 @@ export const EditInvoiceForm: React.FC<EditInvoiceFormProps> = ({
 					Cancel
 				</Button>
 				<Button type="submit" disabled={isSubmitting}>
+					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					{isSubmitting ? "Updating..." : "Update Invoice"}
 				</Button>
 			</div>

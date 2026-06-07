@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { Button } from "@/shared/components/ui/button";
 import { ResponsiveModalFooter } from "@/shared/components/layout/ResponsiveModal";
 import { Input } from "@/shared/components/ui/input";
@@ -18,13 +19,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useParams } from "react-router";
-import { editUserSchema } from "./schemas/editUserSchema";
+import {
+	editUserSchema,
+	type EditUserFormData as EditUserSchemaData,
+} from "./schemas/editUserSchema";
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import type { EditUserFormData, Role } from "@/features/user/types/users.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Spinner } from "@/shared/components/feedback/Spinner";
 import { logger } from "@/shared/services/logger.service";
-import { AlertCircle, User, Calendar } from "lucide-react";
+import { AlertCircle, User, Calendar, Loader2 } from "lucide-react";
 
 interface EditUserFormProps {
 	onCancel: () => void;
@@ -48,6 +52,7 @@ const EditUserForm = ({
 	const [formInitialised, setFormInitialised] = useState(false);
 
 	// React Hook Form setup
+
 	const {
 		register,
 		handleSubmit,
@@ -113,6 +118,7 @@ const EditUserForm = ({
 			reset(formData);
 			setFormInitialised(true);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [user, isLoading, reset, formInitialised]);
 
 	if (!user || isLoading || !formInitialised) {
@@ -127,26 +133,22 @@ const EditUserForm = ({
 		return (
 			<div className="text-center py-8">
 				<p className="text-red-600">Error loading user data</p>
-				<Button
-					onClick={() => refetch()}
-					variant="outline"
-					className="mt-4"
-				>
+				<Button onClick={() => refetch()} variant="outline" className="mt-4">
 					Retry
 				</Button>
 			</div>
 		);
 	}
 
-	const handleFormSubmit = (data: any) => {
+	const handleFormSubmit = (data: EditUserSchemaData) => {
 		logger.debug("Form submitted", { formData: data });
 
 		// Transform the data to match backend expectations
 		const transformedData: EditUserFormData = {
-			email: data.email,
-			first_name: data.first_name,
-			last_name: data.last_name,
-			role: data.role,
+			email: data.email ?? "",
+			first_name: data.first_name ?? "",
+			last_name: data.last_name ?? "",
+			role: data.role ?? "none",
 			is_staff: data.is_staff,
 			is_active: data.is_active,
 			it_asset_id: data.it_asset_id,
@@ -158,10 +160,7 @@ const EditUserForm = ({
 	};
 
 	return (
-		<form
-			onSubmit={handleSubmit(handleFormSubmit)}
-			className="flex flex-col"
-		>
+		<form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col">
 			{/* User Information Overview */}
 			<ModalSection title="User Information" isFirst>
 				{/* Current user status */}
@@ -175,26 +174,17 @@ const EditUserForm = ({
 								</h4>
 								<div className="flex gap-1">
 									{user?.is_superuser && (
-										<Badge
-											variant="destructive"
-											className="text-xs"
-										>
+										<Badge variant="destructive" className="text-xs">
 											Super Admin
 										</Badge>
 									)}
 									{user?.is_staff && (
-										<Badge
-											variant="secondary"
-											className="text-xs"
-										>
+										<Badge variant="secondary" className="text-xs">
 											Staff
 										</Badge>
 									)}
 									{!user?.is_active && (
-										<Badge
-											variant="outline"
-											className="text-xs"
-										>
+										<Badge variant="outline" className="text-xs">
 											Inactive
 										</Badge>
 									)}
@@ -202,52 +192,35 @@ const EditUserForm = ({
 							</div>
 							<div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400">
 								<div>
-									<span className="font-medium">
-										User ID:
-									</span>{" "}
-									{user?.id}
+									<span className="font-medium">User ID:</span> {user?.id}
 								</div>
 								<div>
-									<span className="font-medium">
-										Current Email:
-									</span>{" "}
+									<span className="font-medium">Current Email:</span>{" "}
 									{user?.email}
 								</div>
 								{user?.employee_id && (
 									<div>
-										<span className="font-medium">
-											Employee ID:
-										</span>{" "}
+										<span className="font-medium">Employee ID:</span>{" "}
 										{user.employee_id}
 									</div>
 								)}
 								{user?.it_asset_id && (
 									<div>
-										<span className="font-medium">
-											IT Asset ID:
-										</span>{" "}
+										<span className="font-medium">IT Asset ID:</span>{" "}
 										{user.it_asset_id}
 									</div>
 								)}
 								<div className="flex items-center gap-1">
 									<Calendar className="h-3 w-3" />
-									<span className="font-medium">
-										Joined:
-									</span>{" "}
+									<span className="font-medium">Joined:</span>{" "}
 									{user?.date_joined
-										? new Date(
-												user.date_joined
-										  ).toLocaleDateString()
+										? new Date(user.date_joined).toLocaleDateString()
 										: "N/A"}
 								</div>
 								{user?.last_login && (
 									<div className="flex items-center gap-1">
-										<span className="font-medium">
-											Last Login:
-										</span>{" "}
-										{new Date(
-											user.last_login
-										).toLocaleDateString()}
+										<span className="font-medium">Last Login:</span>{" "}
+										{new Date(user.last_login).toLocaleDateString()}
 									</div>
 								)}
 							</div>
@@ -260,21 +233,14 @@ const EditUserForm = ({
 					<div className="grid grid-cols-2 gap-3">
 						{/* First Name */}
 						<div>
-							<Label
-								htmlFor="first_name"
-								className="text-sm font-medium"
-							>
+							<Label htmlFor="first_name" className="text-sm font-medium">
 								First Name
 							</Label>
 							<Input
 								{...register("first_name")}
 								type="text"
 								placeholder="First Name"
-								className={
-									errors.first_name
-										? "border-red-500 mt-1"
-										: "mt-1"
-								}
+								className={errors.first_name ? "border-red-500 mt-1" : "mt-1"}
 							/>
 							{errors.first_name && (
 								<p className="text-red-500 text-xs mt-1">
@@ -285,21 +251,14 @@ const EditUserForm = ({
 
 						{/* Last Name */}
 						<div>
-							<Label
-								htmlFor="last_name"
-								className="text-sm font-medium"
-							>
+							<Label htmlFor="last_name" className="text-sm font-medium">
 								Last Name
 							</Label>
 							<Input
 								{...register("last_name")}
 								type="text"
 								placeholder="Last Name"
-								className={
-									errors.last_name
-										? "border-red-500 mt-1"
-										: "mt-1"
-								}
+								className={errors.last_name ? "border-red-500 mt-1" : "mt-1"}
 							/>
 							{errors.last_name && (
 								<p className="text-red-500 text-xs mt-1">
@@ -318,9 +277,7 @@ const EditUserForm = ({
 							{...register("email")}
 							type="email"
 							placeholder="Email"
-							className={
-								errors.email ? "border-red-500 mt-1" : "mt-1"
-							}
+							className={errors.email ? "border-red-500 mt-1" : "mt-1"}
 						/>
 						{errors.email && (
 							<p className="text-red-500 text-xs mt-1">
@@ -332,10 +289,7 @@ const EditUserForm = ({
 					{/* IT Asset ID and Employee ID */}
 					<div className="grid grid-cols-2 gap-3">
 						<div>
-							<Label
-								htmlFor="it_asset_id"
-								className="text-sm font-medium"
-							>
+							<Label htmlFor="it_asset_id" className="text-sm font-medium">
 								IT Asset ID
 							</Label>
 							<Input
@@ -344,11 +298,7 @@ const EditUserForm = ({
 								})}
 								type="number"
 								placeholder="IT Asset ID"
-								className={
-									errors.it_asset_id
-										? "border-red-500 mt-1"
-										: "mt-1"
-								}
+								className={errors.it_asset_id ? "border-red-500 mt-1" : "mt-1"}
 							/>
 							{errors.it_asset_id && (
 								<p className="text-red-500 text-xs mt-1">
@@ -358,21 +308,14 @@ const EditUserForm = ({
 						</div>
 
 						<div>
-							<Label
-								htmlFor="employee_id"
-								className="text-sm font-medium"
-							>
+							<Label htmlFor="employee_id" className="text-sm font-medium">
 								Employee ID
 							</Label>
 							<Input
 								{...register("employee_id")}
 								type="text"
 								placeholder="Employee ID"
-								className={
-									errors.employee_id
-										? "border-red-500 mt-1"
-										: "mt-1"
-								}
+								className={errors.employee_id ? "border-red-500 mt-1" : "mt-1"}
 							/>
 							{errors.employee_id && (
 								<p className="text-red-500 text-xs mt-1">
@@ -410,25 +353,18 @@ const EditUserForm = ({
 									</SelectTrigger>
 									<SelectContent className="z-[1000]">
 										<SelectGroup>
-											<SelectLabel>
-												Available Roles
-											</SelectLabel>
-											<SelectItem value="none">
-												No Role
-											</SelectItem>
+											<SelectLabel>Available Roles</SelectLabel>
+											<SelectItem value="none">No Role</SelectItem>
 
 											{(currentUser?.is_superuser ||
-												currentUser?.role ===
-													"botanist") && (
+												currentUser?.role === "botanist") && (
 												<SelectItem value="botanist">
 													Approved Botanist
 												</SelectItem>
 											)}
 
 											{currentUser?.is_superuser && (
-												<SelectItem value="finance">
-													Finance Officer
-												</SelectItem>
+												<SelectItem value="finance">Finance Officer</SelectItem>
 											)}
 										</SelectGroup>
 									</SelectContent>
@@ -436,9 +372,7 @@ const EditUserForm = ({
 							)}
 						/>
 						{errors.role && (
-							<p className="text-red-500 text-xs mt-1">
-								{errors.role.message}
-							</p>
+							<p className="text-red-500 text-xs mt-1">{errors.role.message}</p>
 						)}
 					</div>
 
@@ -446,25 +380,22 @@ const EditUserForm = ({
 					<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
 						{selectedRole === "none" && (
 							<p className="text-sm text-gray-600 dark:text-gray-400">
-								<strong>No Role:</strong> This user will have
-								basic access but cannot perform specialized
-								actions.
+								<strong>No Role:</strong> This user will have basic access but
+								cannot perform specialized actions.
 							</p>
 						)}
 
 						{selectedRole === "botanist" && (
 							<p className="text-sm text-green-700 dark:text-green-400">
-								<strong>Approved Botanist:</strong> This user
-								can perform botanical determinations and access
-								botanical features.
+								<strong>Approved Botanist:</strong> This user can perform
+								botanical determinations and access botanical features.
 							</p>
 						)}
 
 						{selectedRole === "finance" && (
 							<p className="text-sm text-purple-700 dark:text-purple-400">
-								<strong>Finance Officer:</strong> This user can
-								manage financial aspects and access financial
-								reporting.
+								<strong>Finance Officer:</strong> This user can manage financial
+								aspects and access financial reporting.
 							</p>
 						)}
 					</div>
@@ -494,10 +425,9 @@ const EditUserForm = ({
 							)}
 						</div>
 						<p className="text-xs text-gray-500 ml-6">
-							Staff members have access to administrative features
-							and can manage other users.
-							{user?.is_superuser &&
-								" (Cannot be disabled for super admin)"}
+							Staff members have access to administrative features and can
+							manage other users.
+							{user?.is_superuser && " (Cannot be disabled for super admin)"}
 						</p>
 
 						<div className="flex items-center space-x-2">
@@ -524,17 +454,16 @@ const EditUserForm = ({
 						</div>
 						<p className="text-xs text-gray-500 ml-6">
 							Inactive users cannot log in to the system.
-							{user?.is_superuser &&
-								" (Cannot be disabled for super admin)"}
+							{user?.is_superuser && " (Cannot be disabled for super admin)"}
 						</p>
 
 						{!watchedIsActive && (
 							<div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
 								<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
 								<div className="text-sm text-amber-800 dark:text-amber-200">
-									<strong>Warning:</strong> Deactivating this
-									user will prevent them from logging in. They
-									will lose access to all system features.
+									<strong>Warning:</strong> Deactivating this user will prevent
+									them from logging in. They will lose access to all system
+									features.
 								</div>
 							</div>
 						)}
@@ -557,6 +486,7 @@ const EditUserForm = ({
 					variant="default"
 					disabled={isSubmitting || !isValid || !isDirty}
 				>
+					{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					{isSubmitting ? "Updating..." : "Update User"}
 				</Button>
 			</ResponsiveModalFooter>

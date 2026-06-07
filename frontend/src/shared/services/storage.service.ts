@@ -73,9 +73,7 @@ class StorageService {
 			for (let i = 0; i < value.length; i++) {
 				encrypted += String.fromCharCode(
 					value.charCodeAt(i) ^
-						this.encryptionKey.charCodeAt(
-							i % this.encryptionKey.length
-						)
+						this.encryptionKey.charCodeAt(i % this.encryptionKey.length)
 				);
 			}
 			return btoa(encrypted);
@@ -101,9 +99,7 @@ class StorageService {
 			for (let i = 0; i < decoded.length; i++) {
 				decrypted += String.fromCharCode(
 					decoded.charCodeAt(i) ^
-						this.encryptionKey.charCodeAt(
-							i % this.encryptionKey.length
-						)
+						this.encryptionKey.charCodeAt(i % this.encryptionKey.length)
 				);
 			}
 			return decrypted;
@@ -288,11 +284,7 @@ class StorageService {
 	}
 
 	// Enhanced Session Storage methods
-	setSessionItem<T>(
-		key: string,
-		value: T,
-		options: StorageOptions = {}
-	): void {
+	setSessionItem<T>(key: string, value: T, options: StorageOptions = {}): void {
 		try {
 			const storageKey = this.getStorageKey(
 				key,
@@ -473,9 +465,7 @@ class StorageService {
 
 			// Clean sessionStorage
 			sessionKeys.forEach((key) => {
-				if (
-					key.startsWith(STORAGE_CONFIG.STORAGE_TYPES.SESSION.PREFIX)
-				) {
+				if (key.startsWith(STORAGE_CONFIG.STORAGE_TYPES.SESSION.PREFIX)) {
 					const rawKey = key.substring(
 						STORAGE_CONFIG.STORAGE_TYPES.SESSION.PREFIX.length
 					);
@@ -520,10 +510,7 @@ class StorageService {
 		// Collect all items with timestamps
 		for (let i = 0; i < localStorage.length; i++) {
 			const key = localStorage.key(i);
-			if (
-				key &&
-				key.startsWith(STORAGE_CONFIG.STORAGE_TYPES.LOCAL.PREFIX)
-			) {
+			if (key && key.startsWith(STORAGE_CONFIG.STORAGE_TYPES.LOCAL.PREFIX)) {
 				const value = localStorage.getItem(key);
 				if (value) {
 					try {
@@ -571,7 +558,6 @@ class StorageService {
 
 	// Typed convenience methods using storage config keys
 
-
 	setTheme(theme: string): void {
 		this.setItem(STORAGE_CONFIG.KEYS.THEME, theme, {
 			ttl: STORAGE_CONFIG.TTL.THEME_SETTINGS,
@@ -581,8 +567,6 @@ class StorageService {
 	getTheme(): string | null {
 		return this.getItem<string>(STORAGE_CONFIG.KEYS.THEME);
 	}
-
-
 
 	// JWT Token management methods
 	private readonly ACCESS_TOKEN_KEY = "cannabis_access_token";
@@ -637,8 +621,6 @@ class StorageService {
 			return true;
 		}
 	}
-
-
 }
 
 export const storage = new StorageService();

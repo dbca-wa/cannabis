@@ -32,8 +32,8 @@ export class ApiClientService {
 	private onUnauthorized: (() => void) | null = null;
 	private isRefreshing = false;
 	private failedQueue: Array<{
-		resolve: (value: any) => void;
-		reject: (error: any) => void;
+		resolve: (value: unknown) => void;
+		reject: (reason: unknown) => void;
 	}> = [];
 
 	constructor() {
@@ -46,8 +46,6 @@ export class ApiClientService {
 
 		this.setupInterceptors();
 	}
-
-
 
 	private setupInterceptors(): void {
 		// Add JWT token to requests
@@ -188,6 +186,8 @@ export class ApiClientService {
 
 	private async handleUnauthorized(): Promise<void> {
 		storage.clearTokens();
+		// Notify the user why they're being redirected
+		// (import is not available here — the onUnauthorized callback should handle the toast)
 		if (this.onUnauthorized) {
 			this.onUnauthorized();
 		}
@@ -211,9 +211,7 @@ export class ApiClientService {
 
 				Object.entries(data).forEach(([field, errors]) => {
 					if (errors) {
-						const errorArray = Array.isArray(errors)
-							? errors
-							: [errors];
+						const errorArray = Array.isArray(errors) ? errors : [errors];
 						fieldErrors![field] = errorArray;
 						fieldMessages.push(`${field}: ${errorArray[0]}`);
 					}
@@ -223,7 +221,18 @@ export class ApiClientService {
 					message = fieldMessages[0];
 				}
 			} else if (typeof data === "string") {
-				message = data;
+				// Never pass raw HTML through as an error message
+				if (data.includes("<!DOCTYPE") || data.includes("<html")) {
+					// HTML error page — use a generic message based on status code
+					if (status === 403)
+						message = "Access denied. Please check your permissions.";
+					else if (status === 404) message = "Resource not found.";
+					else if (status === 500)
+						message = "Server error. Please try again later.";
+					else message = `Request failed (${status})`;
+				} else {
+					message = data;
+				}
 			}
 		}
 
@@ -281,9 +290,17 @@ export class ApiClientService {
 		return response.data;
 	}
 
-
-
-
+	async postBlob(
+		url: string,
+		data?: unknown,
+		config?: AxiosRequestConfig
+	): Promise<Blob> {
+		const response = await this.client.post(url, data, {
+			...config,
+			responseType: "blob",
+		});
+		return response.data;
+	}
 
 	// Skip auth for public endpoints
 	async getPublic<T>(url: string, config?: AxiosRequestConfig): Promise<T> {

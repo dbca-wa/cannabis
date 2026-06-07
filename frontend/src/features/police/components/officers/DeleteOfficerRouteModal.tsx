@@ -10,7 +10,7 @@ import {
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { Button } from "@/shared/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const DeleteOfficerRouteModal = () => {
 	const navigate = useNavigate();
@@ -25,7 +25,7 @@ export const DeleteOfficerRouteModal = () => {
 	} = usePoliceOfficer(officerId ? parseInt(officerId) : 0);
 
 	const handleClose = () => {
-		navigate("/police/officers");
+		navigate("/officers");
 	};
 
 	const handleDelete = async () => {
@@ -46,11 +46,7 @@ export const DeleteOfficerRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Loading..."
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Loading..." description="">
 					<PageLoading text="Loading officer details..." />
 				</ResponsiveModalContent>
 			</ResponsiveModal>
@@ -63,11 +59,7 @@ export const DeleteOfficerRouteModal = () => {
 				open={true}
 				onOpenChange={(open) => !open && handleClose()}
 			>
-				<ResponsiveModalContent
-					side="bottom"
-					title="Error"
-					description=""
-				>
+				<ResponsiveModalContent side="bottom" title="Error" description="">
 					<ErrorAlert
 						error={error || "Officer not found"}
 						title="Failed to load officer"
@@ -99,8 +91,7 @@ export const DeleteOfficerRouteModal = () => {
 							</p>
 							<p className="text-sm text-red-700 mt-1">
 								Officer: {officer.full_name}
-								{officer.badge_number &&
-									` (Badge: ${officer.badge_number})`}
+								{officer.badge_number && ` (Badge: ${officer.badge_number})`}
 							</p>
 						</div>
 					</div>
@@ -118,6 +109,9 @@ export const DeleteOfficerRouteModal = () => {
 							onClick={handleDelete}
 							disabled={deleteOfficerMutation.isPending}
 						>
+							{deleteOfficerMutation.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
 							{deleteOfficerMutation.isPending
 								? "Deleting..."
 								: "Delete Officer"}

@@ -64,7 +64,7 @@ export const userPreferencesSchema = z.object({
 	css_theme_class: z.string().optional(),
 	display_preferences: z
 		.object({
-			submissions: displayModeChoiceEnum,
+			cases: displayModeChoiceEnum,
 			certificates: displayModeChoiceEnum,
 		})
 		.optional(),

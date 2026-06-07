@@ -17,7 +17,7 @@ export interface PaginatedResponse<T> {
 export interface Certificate {
 	id: number;
 	certificate_number: string; // Auto-generated (e.g., CRT2024-001)
-	submission?: number; // Submission ID (optional for context)
+	case?: number; // Case ID (optional for context)
 	pdf_generating: boolean;
 	pdf_file: string | null; // File path
 	pdf_url: string | null; // Full URL from serializer method
@@ -48,7 +48,7 @@ export interface AdditionalInvoiceFee {
 export interface Invoice {
 	id: number;
 	invoice_number: string; // Auto-generated (e.g., INV2024-001)
-	submission?: number; // Submission ID (optional for context)
+	case?: number; // Case ID (optional for context)
 	customer_number: string;
 	subtotal: string; // Decimal as string
 	tax_amount: string; // Decimal as string
@@ -67,26 +67,25 @@ export interface Invoice {
 
 // Certificate creation request
 export interface CertificateCreateRequest {
-	submission: number; // Submission ID
+	caseObj: number; // Case ID
 }
 
 // Invoice creation request
 export interface InvoiceCreateRequest {
-	submission: number; // Submission ID
+	caseObj: number; // Case ID
 	customer_number: string;
 }
 
 // Paginated certificate response
-export interface PaginatedCertificatesResponse
-	extends PaginatedResponse<Certificate> {}
+export type PaginatedCertificatesResponse = PaginatedResponse<Certificate>;
 
 // Paginated invoice response
-export interface PaginatedInvoicesResponse extends PaginatedResponse<Invoice> {}
+export type PaginatedInvoicesResponse = PaginatedResponse<Invoice>;
 
 // Certificate search parameters
 export interface CertificateSearchParams {
 	search?: string; // Search by certificate number or case number
-	submission?: number; // Filter by submission ID
+	case?: number; // Filter by case ID
 	ordering?: string; // Sort order (e.g., '-created_at', 'certificate_number')
 	limit?: number;
 	offset?: number;
@@ -95,7 +94,7 @@ export interface CertificateSearchParams {
 // Invoice search parameters
 export interface InvoiceSearchParams {
 	search?: string; // Search by invoice number or customer number
-	submission?: number; // Filter by submission ID
+	case?: number; // Filter by case ID
 	ordering?: string; // Sort order (e.g., '-created_at', 'invoice_number')
 	limit?: number;
 	offset?: number;

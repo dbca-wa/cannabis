@@ -109,8 +109,6 @@ export function isDjangoFieldErrors(
 	);
 }
 
-
-
 /**
  * Enhanced error message extraction that handles Django, ApiClient, and generic errors
  * **Handles all error formats in one place**
@@ -293,7 +291,7 @@ export function getErrorCode(error: unknown): string {
 }
 
 /**
- * Convert unknown error to a standardized format
+ * Convert unknown error to a standardised format
  * Enhanced with Django error support
  */
 export function normalizeError(error: unknown): {

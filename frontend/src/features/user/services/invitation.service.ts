@@ -18,7 +18,9 @@ class InvitationService {
 		return generateRequestId("invitation");
 	}
 
-	async sendInvitation(inviteData: InviteUserRequest): Promise<ServiceResult<InviteRecord>> {
+	async sendInvitation(
+		inviteData: InviteUserRequest
+	): Promise<ServiceResult<InviteRecord>> {
 		const requestId = this.generateRequestId();
 		logger.info("Sending user invitation", {
 			email: inviteData.external_user_data?.email,
@@ -44,14 +46,18 @@ class InvitationService {
 				success: true,
 			};
 		} catch (error: unknown) {
-			const enhancedError = errorHandlingService.handleError(error, {
-				action: "send_invitation",
-				email: inviteData.external_user_data?.email,
-				role: inviteData.role,
-				requestId
-			}, {
-				showToast: false // Let the component handle the toast
-			});
+			const enhancedError = errorHandlingService.handleError(
+				error,
+				{
+					action: "send_invitation",
+					email: inviteData.external_user_data?.email,
+					role: inviteData.role,
+					requestId,
+				},
+				{
+					showToast: false, // Let the component handle the toast
+				}
+			);
 
 			return {
 				data: {} as InviteRecord,
@@ -61,7 +67,9 @@ class InvitationService {
 		}
 	}
 
-	async getInvitations(params: InvitationSearchParams = {}): Promise<ServiceResult<PaginatedResponse<InviteRecord>>> {
+	async getInvitations(
+		params: InvitationSearchParams = {}
+	): Promise<ServiceResult<PaginatedResponse<InviteRecord>>> {
 		const requestId = this.generateRequestId();
 		logger.info("Fetching invitations list", { params, requestId });
 
@@ -145,7 +153,9 @@ class InvitationService {
 		}
 	}
 
-	async searchExternalUsers(query: string): Promise<ServiceResult<ExternalUserSearchResponse>> {
+	async searchExternalUsers(
+		query: string
+	): Promise<ServiceResult<ExternalUserSearchResponse>> {
 		const requestId = this.generateRequestId();
 		logger.info("Searching external users", { query, requestId });
 
@@ -184,7 +194,9 @@ class InvitationService {
 		}
 	}
 
-	async resendInvitation(inviteId: number): Promise<ServiceResult<InviteRecord>> {
+	async resendInvitation(
+		inviteId: number
+	): Promise<ServiceResult<InviteRecord>> {
 		const requestId = this.generateRequestId();
 		logger.info("Resending invitation", { inviteId, requestId });
 
@@ -232,7 +244,7 @@ class InvitationService {
 
 		const expiresAt = new Date(invite.expires_at);
 		const now = new Date();
-		
+
 		return expiresAt > now;
 	}
 

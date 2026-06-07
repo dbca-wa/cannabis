@@ -1,10 +1,16 @@
-// Re-export police types from shared types
+// Police feature types — canonical definitions
 export type {
+	OfficerRank,
 	PoliceStation,
+	PoliceStationTiny,
 	PoliceOfficer,
+	PoliceOfficerTiny,
 	PoliceStationCreateRequest,
 	PoliceStationUpdateRequest,
 	PoliceOfficerCreateRequest,
 	PoliceOfficerUpdateRequest,
-	OfficerRank,
-} from "@/shared/types/backend-api.types";
+	PaginatedPoliceStationsResponse,
+	PaginatedPoliceOfficersResponse,
+	PoliceStationSearchParams,
+	PoliceOfficerSearchParams,
+} from "./police.types";

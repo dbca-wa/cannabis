@@ -1,12 +1,7 @@
-/**
- * Certificate feature types
- * Re-exports types from backend-api.types.ts for convenience
- */
-
+// Certificate feature types — canonical definitions
 export type {
 	Certificate,
 	CertificateCreateRequest,
 	PaginatedCertificatesResponse,
 	CertificateSearchParams,
-	CertificatesTableFilterPreferences,
-} from "@/shared/types/backend-api.types";
+} from "./certificates.types";

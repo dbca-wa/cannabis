@@ -21,14 +21,14 @@ interface SuccessAlertProps {
 	}>;
 }
 
-export function SuccessAlert({
+export const SuccessAlert = ({
 	title = "Success",
 	message,
 	onDismiss,
 	className,
 	children,
 	actions = [],
-}: SuccessAlertProps) {
+}: SuccessAlertProps) => {
 	return (
 		<Alert
 			variant="default"
@@ -84,4 +84,4 @@ export function SuccessAlert({
 			</div>
 		</Alert>
 	);
-}
+};

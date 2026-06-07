@@ -5,28 +5,21 @@ import {
 import { useNavigate } from "react-router";
 import { CreateOfficerForm } from "./CreateOfficerForm";
 import { useCreatePoliceOfficer } from "../../hooks/usePoliceOfficers";
+import type { PoliceOfficerCreateRequest } from "@/shared/types/backend-api.types";
 
 export const CreateOfficerRouteModal = () => {
 	const navigate = useNavigate();
 	const createOfficerMutation = useCreatePoliceOfficer();
 
 	const handleClose = () => {
-		navigate("/police/officers");
+		navigate("/officers");
 	};
 
-	const handleSubmit = async (data: any) => {
+	const handleSubmit = async (data: unknown) => {
 		try {
-			// Transform form data to API format
-			const transformedData = {
-				badge_number: data.badge_number || undefined,
-				first_name: data.first_name || undefined,
-				last_name: data.last_name,
-				rank: data.rank,
-				station: data.station
-					? parseInt(data.station)
-					: undefined,
-			};
-			await createOfficerMutation.mutateAsync(transformedData);
+			await createOfficerMutation.mutateAsync(
+				data as PoliceOfficerCreateRequest
+			);
 			handleClose();
 		} catch (error) {
 			// Error is handled by the mutation

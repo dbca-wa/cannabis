@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Loader2 } from "lucide-react";
 import {
 	Select,
 	SelectContent,
@@ -41,41 +42,55 @@ export const EditOfficerForm = ({
 	// Form setup with officer data
 	const form = useForm<EditOfficerFormData>({
 		resolver: zodResolver(editOfficerSchema),
+		mode: "onChange",
 		defaultValues: {
 			badge_number: officer.badge_number || "",
 			first_name: officer.first_name || "",
 			last_name: officer.last_name || "",
-			rank: officer.rank || "unknown", // Use the actual rank from backend, fallback to "unknown"
-			station: officer.station ? officer.station.toString() : "none", // Use station ID from backend
+			rank: officer.rank || "unknown",
+			station: officer.station ? officer.station.toString() : "none",
 		},
 	});
 
 	const handleSubmit = async (data: EditOfficerFormData) => {
 		try {
-			// Transform data to match backend expectations
 			const transformedData = {
-				badge_number: data.badge_number || undefined,
-				first_name: data.first_name || undefined,
+				badge_number: data.badge_number || null,
+				first_name: data.first_name || null,
 				last_name: data.last_name,
 				rank: data.rank,
 				station:
 					data.station && data.station !== "none"
 						? parseInt(data.station)
-						: undefined,
+						: null,
 			};
 			await onSubmit(transformedData);
-		} catch (error) {
-			// Error handling is done in the parent component
-			console.error("Form submission error:", error);
+		} catch (error: unknown) {
+			// Surface server-side validation errors
+			const err = error as { response?: { data?: Record<string, string[]> } };
+			const serverErrors = err?.response?.data;
+			if (serverErrors) {
+				if (serverErrors.last_name) {
+					form.setError("last_name", {
+						message: Array.isArray(serverErrors.last_name)
+							? serverErrors.last_name[0]
+							: (serverErrors.last_name as string),
+					});
+				}
+				if (serverErrors.badge_number) {
+					form.setError("badge_number", {
+						message: Array.isArray(serverErrors.badge_number)
+							? serverErrors.badge_number[0]
+							: (serverErrors.badge_number as string),
+					});
+				}
+			}
 		}
 	};
 
 	return (
 		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit(handleSubmit)}
-				className="space-y-4"
-			>
+			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				{/* Badge Number */}
 				<FormField
 					control={form.control}
@@ -122,7 +137,9 @@ export const EditOfficerForm = ({
 					name="last_name"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Last Name *</FormLabel>
+							<FormLabel>
+								Last Name <span className="text-red-500">*</span>
+							</FormLabel>
 							<FormControl>
 								<Input
 									placeholder="Enter officer's last name"
@@ -142,7 +159,9 @@ export const EditOfficerForm = ({
 					render={({ field }) => {
 						return (
 							<FormItem>
-								<FormLabel>Rank *</FormLabel>
+								<FormLabel>
+									Rank <span className="text-red-500">*</span>
+								</FormLabel>
 								<Select
 									onValueChange={(value) => {
 										field.onChange(value);
@@ -157,10 +176,7 @@ export const EditOfficerForm = ({
 									</FormControl>
 									<SelectContent>
 										{officerRankOptions.map((rank) => (
-											<SelectItem
-												key={rank.value}
-												value={rank.value}
-											>
+											<SelectItem key={rank.value} value={rank.value}>
 												{rank.label}
 											</SelectItem>
 										))}
@@ -187,11 +203,7 @@ export const EditOfficerForm = ({
 											: null
 									}
 									onValueChange={(stationId) => {
-										field.onChange(
-											stationId
-												? stationId.toString()
-												: "none"
-										);
+										field.onChange(stationId ? stationId.toString() : "none");
 									}}
 									placeholder="Search for a station (optional)"
 									disabled={isLoading}
@@ -213,7 +225,8 @@ export const EditOfficerForm = ({
 					>
 						Cancel
 					</Button>
-					<Button type="submit" disabled={isLoading}>
+					<Button type="submit" disabled={isLoading || !form.formState.isValid}>
+						{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 						{isLoading ? "Updating..." : "Update Officer"}
 					</Button>
 				</div>

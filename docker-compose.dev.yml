@@ -28,23 +28,25 @@ services:
             - "8000:8000"
         volumes:
             - ./backend:/usr/src/app/backend
-            # - backend-prince:/usr/lib/prince
             - ./backend/files:/usr/src/app/backend/files
         environment:
             - DJANGO_SETTINGS_MODULE=config.settings
             - DEBUG=True
             - PYTHONPATH=/usr/src/app/backend
-        # extra_hosts:
-        #     - "host.docker.internal:host-gateway"
+            - DATABASE_URL=postgresql://postgres:123@db:5432/cannabis
+            - REDIS_URL=redis://redis:6379/1
         env_file:
             - ./backend/.development.env
         command: python manage.py runserver 0.0.0.0:8000
         depends_on:
-            - db
+            db:
+                condition: service_started
+            redis:
+                condition: service_healthy
         networks:
             - cannabis-dev
 
-    # Add the new database service
+    # PostgreSQL Database
     db:
         image: postgres:17
         volumes:
@@ -59,9 +61,26 @@ services:
         networks:
             - cannabis-dev
 
+    # Redis Cache Service
+    redis:
+        image: redis:7-alpine
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        command: redis-server --appendonly yes
+        networks:
+            - cannabis-dev
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+            start_period: 5s
+
 volumes:
-    backend-prince: # Volume to cache Prince XML installation
     postgres_data: # Volume for persistent DB data
+    redis_data: # Volume for persistent Redis data
 
 networks:
     cannabis-dev:

@@ -21,7 +21,7 @@ export const CreateCertificateRouteModal = () => {
 	const handleSubmit = async (data: CreateCertificateFormData) => {
 		try {
 			await createCertificate.mutateAsync({
-				submission: data.submission,
+				case: data.case,
 			});
 			handleClose();
 		} catch (error) {
@@ -36,9 +36,8 @@ export const CreateCertificateRouteModal = () => {
 				<DialogHeader>
 					<DialogTitle>Generate Certificate</DialogTitle>
 					<DialogDescription>
-						Generate a botanical identification certificate for a
-						submission. The certificate number will be
-						auto-generated.
+						Generate a botanical identification certificate for a caseObj. The
+						certificate number will be auto-generated.
 					</DialogDescription>
 				</DialogHeader>
 				<CreateCertificateForm

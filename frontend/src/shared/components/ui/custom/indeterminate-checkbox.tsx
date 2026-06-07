@@ -3,8 +3,9 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check, Minus } from "lucide-react";
 import { cn } from "@/shared/utils/index";
 
-export interface IndeterminateCheckboxProps
-	extends React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root> {
+export interface IndeterminateCheckboxProps extends React.ComponentPropsWithoutRef<
+	typeof CheckboxPrimitive.Root
+> {
 	indeterminate?: boolean;
 }
 

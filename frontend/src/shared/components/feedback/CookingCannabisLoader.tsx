@@ -32,6 +32,7 @@ export const CookingCannabisLoader = ({
 	useEffect(() => {
 		if (isComplete) {
 			// Snap progress to 100% immediately when complete
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setAnimatedProgress(100);
 			setTimeout(() => onComplete?.(), 800); // Shorter delay
 		}
@@ -40,6 +41,7 @@ export const CookingCannabisLoader = ({
 	// Also snap to 100% if progress reaches 100 (backup)
 	useEffect(() => {
 		if (progress >= 100) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setAnimatedProgress(100);
 		}
 	}, [progress]);
@@ -154,9 +156,7 @@ export const CookingCannabisLoader = ({
 				</h3>
 
 				{/* Business message from context */}
-				<p className="text-gray-400 text-sm rainbow-glow mb-2">
-					{message}
-				</p>
+				<p className="text-gray-400 text-sm rainbow-glow mb-2">{message}</p>
 
 				{/* Progress percentage */}
 				<p className="text-gray-400 text-sm mb-2">

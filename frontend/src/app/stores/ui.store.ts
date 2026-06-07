@@ -70,9 +70,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 		if (syncToServer && this.isUserAuthenticated()) {
 			try {
 				// Import dynamically to avoid circular dependencies
-				const { UserPreferencesService } = await import(
-					"@/features/user/services/userPreferences.service"
-				);
+				const { UserPreferencesService } =
+					await import("@/features/user/services/userPreferences.service");
 				await UserPreferencesService.updateUIPreferences({
 					dataViewMode: newMode,
 					sidebarCollapsed: this.state.sidebarCollapsed,
@@ -110,11 +109,11 @@ export class UIStore extends BaseStore<UIStoreState> {
 				// If user is authenticated, try to load server preferences first
 				if (this.isUserAuthenticated()) {
 					try {
-						const { PreferencesSyncService } = await import(
-							"@/shared/services/preferencesSync.service"
-						);
-						const serverPreferences = await PreferencesSyncService.loadPreferencesOnLogin();
-						
+						const { PreferencesSyncService } =
+							await import("@/shared/services/preferencesSync.service");
+						const serverPreferences =
+							await PreferencesSyncService.loadPreferencesOnLogin();
+
 						if (serverPreferences) {
 							this.loadFromServerPreferences(serverPreferences);
 						} else {
@@ -165,8 +164,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 					"Skipping localStorage init - server preferences already loaded",
 					{
 						lastSyncTimestamp: this.state.lastSyncTimestamp,
-						timeSinceSync:
-							Date.now() - this.state.lastSyncTimestamp,
+						timeSinceSync: Date.now() - this.state.lastSyncTimestamp,
 					}
 				);
 				return;
@@ -180,10 +178,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 					theme: storedTheme,
 				});
 			}
-			if (
-				storedLoader &&
-				["cook", "base", "minimal"].includes(storedLoader)
-			) {
+			if (storedLoader && ["cook", "base", "minimal"].includes(storedLoader)) {
 				runInAction(() => {
 					this.state.selectedLoader = storedLoader;
 				});
@@ -204,7 +199,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 				});
 			}
 
-			logger.info("UI store initialized from localStorage", {
+			logger.info("UI store initialised from localStorage", {
 				finalTheme: this.state.theme,
 				finalLoader: this.state.selectedLoader,
 				finalItemsPerPage: this.state.itemsPerPage,
@@ -235,7 +230,10 @@ export class UIStore extends BaseStore<UIStoreState> {
 					});
 				}
 			} catch (error) {
-				logger.error("Failed to sync theme to server", { theme: newTheme, error });
+				logger.error("Failed to sync theme to server", {
+					theme: newTheme,
+					error,
+				});
 			}
 		}
 
@@ -282,9 +280,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 		root.classList.remove("light", "dark");
 
 		if (this.state.theme === "system") {
-			const systemTheme = window.matchMedia(
-				"(prefers-color-scheme: dark)"
-			).matches
+			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+				.matches
 				? "dark"
 				: "light";
 			root.classList.add(systemTheme);
@@ -312,9 +309,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 		if (syncToServer && this.isUserAuthenticated()) {
 			try {
 				// Import dynamically to avoid circular dependencies
-				const { UserPreferencesService } = await import(
-					"@/features/user/services/userPreferences.service"
-				);
+				const { UserPreferencesService } =
+					await import("@/features/user/services/userPreferences.service");
 				await UserPreferencesService.updateUIPreferences({
 					dataViewMode: this.state.dataViewMode,
 					sidebarCollapsed: collapsed,
@@ -368,9 +364,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 		if (syncToServer && this.isUserAuthenticated()) {
 			try {
 				// Import dynamically to avoid circular dependencies
-				const { UserPreferencesService } = await import(
-					"@/features/user/services/userPreferences.service"
-				);
+				const { UserPreferencesService } =
+					await import("@/features/user/services/userPreferences.service");
 				await UserPreferencesService.updateUIPreferences({
 					dataViewMode: this.state.dataViewMode,
 					sidebarCollapsed: this.state.sidebarCollapsed,
@@ -422,9 +417,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 		if (syncToServer && this.isUserAuthenticated()) {
 			try {
 				// Import dynamically to avoid circular dependencies
-				const { UserPreferencesService } = await import(
-					"@/features/user/services/userPreferences.service"
-				);
+				const { UserPreferencesService } =
+					await import("@/features/user/services/userPreferences.service");
 				await UserPreferencesService.updatePreferences({
 					items_per_page: itemsPerPage,
 				});
@@ -502,8 +496,6 @@ export class UIStore extends BaseStore<UIStoreState> {
 		return this.maxWidthClasses[targetWidth];
 	};
 
-
-
 	/**
 	 * Check if user is authenticated by checking for tokens
 	 */
@@ -531,7 +523,7 @@ export class UIStore extends BaseStore<UIStoreState> {
 			storage.removeItem("preferences-migrated-to-server");
 			storage.removeItem("preferences-last-sync");
 			storage.removeItem("preference-sync-notification-shown");
-			
+
 			// Clear removed search filter localStorage items
 			storage.removeItem("userkind-filter");
 			storage.removeItem("usersearch-filter");
@@ -562,8 +554,6 @@ export class UIStore extends BaseStore<UIStoreState> {
 
 		logger.info("UI store reset complete");
 	}
-
-
 
 	/**
 	 * Load preferences from server data (called after successful server fetch)
@@ -606,16 +596,12 @@ export class UIStore extends BaseStore<UIStoreState> {
 						serverValue: preferences.items_per_page,
 						currentValue: this.state.itemsPerPage,
 					});
-					this.state.itemsPerPage =
-						preferences.items_per_page as ItemsPerPage;
+					this.state.itemsPerPage = preferences.items_per_page as ItemsPerPage;
 				} else {
-					logger.warn(
-						"Invalid or missing items_per_page from server",
-						{
-							serverValue: preferences.items_per_page,
-							currentValue: this.state.itemsPerPage,
-						}
-					);
+					logger.warn("Invalid or missing items_per_page from server", {
+						serverValue: preferences.items_per_page,
+						currentValue: this.state.itemsPerPage,
+					});
 				}
 
 				// Load UI preferences from JSON field
@@ -625,12 +611,10 @@ export class UIStore extends BaseStore<UIStoreState> {
 						(preferences.ui_preferences.dataViewMode === "grid" ||
 							preferences.ui_preferences.dataViewMode === "list")
 					) {
-						this.state.dataViewMode =
-							preferences.ui_preferences.dataViewMode;
+						this.state.dataViewMode = preferences.ui_preferences.dataViewMode;
 					}
 					if (
-						typeof preferences.ui_preferences.sidebarCollapsed ===
-						"boolean"
+						typeof preferences.ui_preferences.sidebarCollapsed === "boolean"
 					) {
 						this.state.sidebarCollapsed =
 							preferences.ui_preferences.sidebarCollapsed;
@@ -638,12 +622,11 @@ export class UIStore extends BaseStore<UIStoreState> {
 					if (
 						preferences.ui_preferences.defaultContentWidth &&
 						["sm", "md", "lg", "xl", "2xl", "full"].includes(
-							preferences.ui_preferences
-								.defaultContentWidth as string
+							preferences.ui_preferences.defaultContentWidth as string
 						)
 					) {
-						this.state.defaultContentWidth = preferences
-							.ui_preferences.defaultContentWidth as ContentWidth;
+						this.state.defaultContentWidth = preferences.ui_preferences
+							.defaultContentWidth as ContentWidth;
 					}
 				}
 
@@ -665,8 +648,6 @@ export class UIStore extends BaseStore<UIStoreState> {
 		}
 	};
 
-
-
 	/**
 	 * Get current UI preferences in server format
 	 */
@@ -683,15 +664,12 @@ export class UIStore extends BaseStore<UIStoreState> {
 		};
 	};
 
-
 	/**
 	 * Get last sync timestamp
 	 */
 	get lastSyncTimestamp() {
 		return this.state.lastSyncTimestamp;
 	}
-
-
 
 	async dispose() {
 		logger.info("UI store disposed");
@@ -707,40 +685,52 @@ export class UIStore extends BaseStore<UIStoreState> {
 			isAuthenticated: this.isUserAuthenticated(),
 			localStorageTheme: storage.getItem<Theme>(this.storageKey),
 			documentClasses: document.documentElement.className,
-			hasTokens: !!(localStorage.getItem("cannabis_access_token") && localStorage.getItem("cannabis_refresh_token")),
+			hasTokens: !!(
+				localStorage.getItem("cannabis_access_token") &&
+				localStorage.getItem("cannabis_refresh_token")
+			),
 		};
-		
+
 		logger.info("🔍 Theme Debug State", debugInfo);
 		console.table(debugInfo);
-		
+
 		return debugInfo;
 	}
 
 	/**
 	 * Sync theme to server with retry logic
 	 */
-	private async syncThemeToServer(theme: Theme, retryCount: number = 0): Promise<boolean> {
+	private async syncThemeToServer(
+		theme: Theme,
+		retryCount: number = 0
+	): Promise<boolean> {
 		const maxRetries = 2;
-		
+
 		try {
-			const { UserPreferencesService } = await import(
-				"@/features/user/services/userPreferences.service"
-			);
-			
+			const { UserPreferencesService } =
+				await import("@/features/user/services/userPreferences.service");
+
 			await UserPreferencesService.updateTheme(theme);
 			return true;
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
-			const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('timeout');
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			const isNetworkError =
+				errorMessage.includes("fetch") ||
+				errorMessage.includes("network") ||
+				errorMessage.includes("timeout");
 
 			// Retry on network errors
 			if (isNetworkError && retryCount < maxRetries) {
 				const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
-				await new Promise(resolve => setTimeout(resolve, delay));
+				await new Promise((resolve) => setTimeout(resolve, delay));
 				return this.syncThemeToServer(theme, retryCount + 1);
 			}
-			
-			logger.error("Failed to sync theme to server", { theme, error: errorMessage });
+
+			logger.error("Failed to sync theme to server", {
+				theme,
+				error: errorMessage,
+			});
 			return false;
 		}
 	}
@@ -750,9 +740,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 	 */
 	private async syncLoaderToServer(loader: Loader): Promise<boolean> {
 		try {
-			const { UserPreferencesService } = await import(
-				"@/features/user/services/userPreferences.service"
-			);
+			const { UserPreferencesService } =
+				await import("@/features/user/services/userPreferences.service");
 
 			await UserPreferencesService.updateLoaderStyle(loader);
 			return true;

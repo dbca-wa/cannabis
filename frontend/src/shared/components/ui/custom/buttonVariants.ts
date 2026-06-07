@@ -16,8 +16,10 @@ export const buttonVariants = cva(
 				// "dark:border-input dark:bg-input/30 dark:hover:bg-accent/10"
 				secondary:
 					"bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
-				ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 button-ghost-light-mode",
-				cancel: "bg-accent hover:bg-gray-200/80 hover:text-accent-foreground dark:hover:bg-accent/50",
+				ghost:
+					"hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 button-ghost-light-mode",
+				cancel:
+					"bg-accent hover:bg-gray-200/80 hover:text-accent-foreground dark:hover:bg-accent/50",
 				link: "text-primary underline-offset-4 hover:underline",
 				cannabis:
 					"bg-cannabis-green text-white shadow-xs hover:bg-cannabis-green-dark",
@@ -28,16 +30,14 @@ export const buttonVariants = cva(
 				cannabisPurple:
 					"bg-cannabis-purple text-white shadow-xs hover:bg-cannabis-purple/80",
 				police: cn(
-					// Base police styling (when not hovered)
+					// Base police styling — solid blue gradient
 					"relative overflow-hidden text-white font-semibold shadow-lg",
 					"bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800",
-					"transition-all duration-75", // Super fast transition
-					// Hover effects with fast animation
-					"hover:shadow-lg hover:scale-101",
-					// Fast siren animation on hover - matches the always-animating speed
-					"hover:bg-gradient-to-r hover:from-red-600 hover:via-blue-600 hover:to-red-600",
-					"hover:bg-[length:200%_100%]",
-					"hover:animate-[police-siren_.5s_linear_infinite]" // Linear for consistent speed
+					"transition-all duration-75",
+					// Hover effects
+					"hover:shadow-xl hover:scale-101",
+					// Uses .police-siren-effect class defined in main.css
+					"police-siren-effect"
 				),
 				floatingSidebarButton: cn(
 					// Base styling - clean transparent button
@@ -46,9 +46,9 @@ export const buttonVariants = cva(
 					"transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
 					// Organic border radius matching aura
 					"rounded-[35%_65%_55%_45%_/_25%_55%_45%_75%]",
-					// Light theme colors (default) - clear but readable against aura
+					// Light theme colours (default) - clear but readable against aura
 					"text-[#3730a3] text-blue-700 hover:text-[#312e81]",
-					// Dark theme colors
+					// Dark theme colours
 					"dark:text-blue-400 dark:hover:text-blue-300",
 					// Active state - bright emerald for both modes
 					"data-[active=true]:text-[#059669] data-[active=true]:hover:text-[#059669]",

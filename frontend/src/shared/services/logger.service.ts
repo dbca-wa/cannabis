@@ -22,7 +22,7 @@ class LoggerService {
 				const line = lines[i];
 				if ((line && line.includes(".tsx")) || line.includes(".ts")) {
 					// Extract filename from the stack trace
-					const match = line.match(/([^\/\\]+\.tsx?)/);
+					const match = line.match(/([^/\\]+\.tsx?)/);
 					if (match) {
 						return match[1];
 					}
@@ -57,7 +57,7 @@ class LoggerService {
 				timeParts.find((part) => part.type === "second")?.value || "00";
 
 			return `${hour}:${minute}:${second} AWST`;
-		} catch (error) {
+		} catch {
 			// Fallback to local timezone if Perth timezone fails
 			try {
 				const now = new Date();
@@ -71,20 +71,17 @@ class LoggerService {
 				const timeParts = timeFormatter.formatToParts(now);
 
 				const hour =
-					timeParts.find((part) => part.type === "hour")?.value ||
-					"00";
+					timeParts.find((part) => part.type === "hour")?.value || "00";
 				const minute =
-					timeParts.find((part) => part.type === "minute")?.value ||
-					"00";
+					timeParts.find((part) => part.type === "minute")?.value || "00";
 				const second =
-					timeParts.find((part) => part.type === "second")?.value ||
-					"00";
+					timeParts.find((part) => part.type === "second")?.value || "00";
 
 				console.warn(
 					"Logger: Perth timezone formatting failed, using local timezone"
 				);
 				return `${hour}:${minute}:${second} LOCAL`;
-			} catch (fallbackError) {
+			} catch {
 				// Final fallback to ISO string if all formatting fails
 				console.warn(
 					"Logger: All timezone formatting failed, using ISO string"
@@ -135,7 +132,7 @@ class LoggerService {
 
 		const contextInfo = this.formatContext(enhancedContext);
 
-		// Level-specific colors
+		// Level-specific colours
 		let headerStyle: string;
 		switch (level) {
 			case "error":
@@ -162,11 +159,7 @@ class LoggerService {
 		const header = `${level.toUpperCase()} | ${timestamp}`;
 
 		return {
-			formattedArgs: [
-				`%c${header}%c\n${message}`,
-				headerStyle,
-				messageStyle,
-			],
+			formattedArgs: [`%c${header}%c\n${message}`, headerStyle, messageStyle],
 			contextObject: contextInfo.hasContext
 				? contextInfo.contextObject
 				: undefined,

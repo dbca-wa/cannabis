@@ -25,12 +25,14 @@ export const CannabisLoader = ({
 	// Handle completion
 	useEffect(() => {
 		if (isComplete) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setAnimatedProgress(100);
 			setTimeout(() => onComplete?.(), 800);
 		}
 	}, [isComplete, onComplete]);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		if (progress >= 100) setAnimatedProgress(100);
 	}, [progress]);
 
@@ -64,9 +66,7 @@ export const CannabisLoader = ({
 								key={i}
 								className="absolute w-8 h-2 bg-gradient-to-r from-green-400 to-green-600 rounded-full"
 								style={{
-									transform: `rotate(${
-										i * 45
-									}deg) translateY(-32px)`,
+									transform: `rotate(${i * 45}deg) translateY(-32px)`,
 									transformOrigin: "center 32px",
 									animationDelay: `${i * 0.1}s`,
 									opacity: 0.7,
@@ -88,9 +88,7 @@ export const CannabisLoader = ({
 								key={i}
 								className="absolute w-6 h-1.5 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full opacity-80"
 								style={{
-									transform: `rotate(${
-										i * 60
-									}deg) translateY(-20px)`,
+									transform: `rotate(${i * 60}deg) translateY(-20px)`,
 									transformOrigin: "center 20px",
 									animationDelay: `${i * 0.15}s`,
 								}}
@@ -116,21 +114,11 @@ export const CannabisLoader = ({
 									key={i}
 									className="absolute w-1 h-1 bg-green-400 rounded-full animate-ping"
 									style={{
-										left: `${
-											Math.cos((i * 30 * Math.PI) / 180) *
-												30 +
-											6
-										}px`,
-										top: `${
-											Math.sin((i * 30 * Math.PI) / 180) *
-												30 +
-											6
-										}px`,
+										left: `${Math.cos((i * 30 * Math.PI) / 180) * 30 + 6}px`,
+										top: `${Math.sin((i * 30 * Math.PI) / 180) * 30 + 6}px`,
 										animationDelay: `${i * 0.2}s`,
 										animationDuration: "2s",
-										opacity:
-											(animatedProgress / 100) * 0.6 +
-											0.2, // More visible with progress
+										opacity: (animatedProgress / 100) * 0.6 + 0.2, // More visible with progress
 									}}
 								/>
 							))}
@@ -184,10 +172,7 @@ export const CannabisLoader = ({
 								style={{
 									animationDelay: leaf.delay,
 									animationDuration: "2s",
-									opacity: Math.min(
-										0.8,
-										0.3 + (animatedProgress / 100) * 0.5
-									),
+									opacity: Math.min(0.8, 0.3 + (animatedProgress / 100) * 0.5),
 								}}
 							></div>
 						))}
@@ -202,9 +187,7 @@ export const CannabisLoader = ({
 						{isComplete ? "Complete ✓" : "App initialising"}
 					</span>
 				</div>
-				<div className="text-xs text-green-600 mt-1 opacity-75">
-					{message}
-				</div>
+				<div className="text-xs text-green-600 mt-1 opacity-75">{message}</div>
 				<div className="text-xs text-green-500 mt-1">
 					{animatedProgress.toFixed(0)}% complete
 				</div>

@@ -1,6 +1,13 @@
 // Feedback components (loading, error, success states)
 export * from "./feedback";
 
+// Shared UI components (cross-feature)
+export { Logo } from "./Logo";
+export { PageHeader } from "./PageHeader";
+export { CountUp } from "./CountUp";
+export { SortHeader, cycleSort, sortBy } from "./SortHeader";
+export type { SortDir } from "./SortHeader";
+
 // Layout components
 export { default as ContentLayout } from "./layout/ContentLayout";
 export { default as MainLayout } from "./layout/MainLayout";
@@ -39,3 +46,7 @@ export * from "./ui/custom/search-combobox-skeleton-presets";
 export * from "./ui/custom/command-input-with-loading";
 export * from "./ui/custom/search-error-display";
 // Component types
+
+// Cross-feature component re-exports
+export * from "./police";
+export * from "./defendants";

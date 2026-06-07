@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -140,9 +141,7 @@ const PasswordUpdate = () => {
 				message: string;
 				password_last_changed: string;
 			}>(ENDPOINTS.AUTH.UPDATE_PASSWORD, {
-				current_password: isFirstTime
-					? undefined
-					: values.currentPassword,
+				current_password: isFirstTime ? undefined : values.currentPassword,
 				new_password: values.newPassword,
 				confirm_password: values.confirmPassword,
 				is_first_time: isFirstTime,
@@ -173,27 +172,22 @@ const PasswordUpdate = () => {
 					});
 				} else if (apiError.fieldErrors) {
 					// Handle other field errors
-					Object.entries(apiError.fieldErrors).forEach(
-						([field, errors]) => {
-							if (errors && errors.length > 0) {
-								const fieldName =
-									field === "current_password"
-										? "currentPassword"
-										: field === "new_password"
+					Object.entries(apiError.fieldErrors).forEach(([field, errors]) => {
+						if (errors && errors.length > 0) {
+							const fieldName =
+								field === "current_password"
+									? "currentPassword"
+									: field === "new_password"
 										? "newPassword"
 										: field === "confirm_password"
-										? "confirmPassword"
-										: field;
-								form.setError(
-									fieldName as keyof PasswordUpdateFormData,
-									{
-										type: "manual",
-										message: errors[0],
-									}
-								);
-							}
+											? "confirmPassword"
+											: field;
+							form.setError(fieldName as keyof PasswordUpdateFormData, {
+								type: "manual",
+								message: errors[0],
+							});
 						}
-					);
+					});
 				}
 			}
 		} finally {
@@ -220,17 +214,16 @@ const PasswordUpdate = () => {
 						{fromInvitation
 							? "Welcome! Please set a secure password to complete your account setup"
 							: fromResetCode
-							? "Your reset code has been verified. Please set a new secure password"
-							: isFirstTime
-							? "Please set a secure password for your account"
-							: "Update your current password"}
+								? "Your reset code has been verified. Please set a new secure password"
+								: isFirstTime
+									? "Please set a secure password for your account"
+									: "Update your current password"}
 					</p>
 					{fromInvitation && temporaryPassword && (
-						<div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+						<div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300">
 							<p>
-								<strong>Note:</strong> Your temporary password
-								has been automatically set. Please create a new
-								secure password below.
+								<strong>Note:</strong> Your temporary password has been
+								automatically set. Please create a new secure password below.
 							</p>
 						</div>
 					)}
@@ -238,10 +231,7 @@ const PasswordUpdate = () => {
 			</CardHeader>
 			<CardContent>
 				<Form {...form}>
-					<form
-						onSubmit={form.handleSubmit(onSubmit)}
-						className="space-y-4"
-					>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 						{/* Current password field - only show if not first time */}
 						{!isFirstTime && (
 							<FormField
@@ -334,8 +324,8 @@ const PasswordUpdate = () => {
 							{isSubmitting
 								? "Updating Password..."
 								: isFirstTime
-								? "Set Password"
-								: "Update Password"}
+									? "Set Password"
+									: "Update Password"}
 						</Button>
 
 						{/* Cancel button for non-first-time updates */}

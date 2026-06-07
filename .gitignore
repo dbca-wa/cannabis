@@ -1,15 +1,110 @@
-.vscode
-*.DS_Store
-*.lnk
-# Frontend
-# frontend
-frontend/node_modules
-frontend/dist
+# Root-level gitignore for monorepo
+# Specific ignores are in frontend/.gitignore and backend/.gitignore
+uat_creds.yaml
+prod_creds.yaml
 
+# Kubernetes cluster credential files (downloaded from Rancher)
+az-aks-oim03.yaml
+aks-bcs-prod-01.yaml
+aks-cannabis-prod.yaml
 
-# Backend
-backend/files
-backend/etl
+# Custom Redeploy script
+redeploy.sh
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Environment variables/secrets
+.env
+.env.local
+.env.*
+!.env.example
+license.dat
+**/license.dat
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts (covered by subdirectory gitignores, but listed for clarity)
+dist/
+build/
 *.pyc
-*.env
-*license.dat
+__pycache__/
+node_modules/
+
+# Coverage reports (covered by subdirectory gitignores)
+coverage/
+htmlcov/
+.coverage
+*.cover
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.backup
+
+# Media directories (should never be in Git)
+dumped_media/
+/media/
+uploads/
+backend/media/
+backend/files/
+
+# ETL
+backend/etl/
+
+# Build artifacts (generated files)
+staticfiles/
+
+# Raw data (source files, not generated)
+public/data/raw/
+
+# ETL raw data (large CSV files)
+backend/etl/data/raw/
+
+# Large binary files
+*.pdf
+*.zip
+*.tar.gz
+*.sql
+*.dump
+
+# Coverage files (generated)
+coverage.json
+**/coverage.json
+
+# Generated email preview files (created by email testing endpoints)
+backend/test_email_preview.html
+backend/test_email_preview.eml
+backend/email_previews/
+
+# Editor uploaded images (served from media, not committed)
+backend/files/editor/

@@ -1,5 +1,8 @@
 // Backend API types that match Django serializers exactly
 // This file serves as the single source of truth for API contracts
+// Feature-specific types are defined in their feature modules and re-exported here
+
+import type { CasePhase } from "@/features/cases/types/cases.types";
 
 // ============================================================================
 // AUTHENTICATION TYPES (JWT)
@@ -97,7 +100,7 @@ export interface UserPreferences {
 	is_dark_mode: boolean;
 	css_theme_class: string;
 	display_preferences: {
-		submissions: DisplayModeChoice;
+		cases: DisplayModeChoice;
 		certificates: DisplayModeChoice;
 	};
 	notification_settings: {
@@ -142,6 +145,12 @@ export interface User {
 
 	// Nested preferences
 	preferences: UserPreferences;
+
+	// Signature status (annotated for botanist users)
+	has_signature?: boolean;
+
+	// Cases count (annotated in list view)
+	cases_count?: number;
 }
 
 // JWT authentication response (matches UserJWTTokenSerializer)
@@ -181,6 +190,8 @@ export interface UserTiny {
 	is_superuser: boolean; // Added for role badge display consistency
 	date_joined: string;
 	last_login: string | null;
+	has_signature?: boolean; // Present for botanist users in admin views
+	cases_count?: number; // Annotated in list view
 }
 
 // User creation request (matches UserCreateSerializer)
@@ -338,7 +349,7 @@ export interface PaginatedResponse<T> {
 }
 
 // Paginated users response
-export interface PaginatedUsersResponse extends PaginatedResponse<User> {}
+export type PaginatedUsersResponse = PaginatedResponse<User>;
 
 // ============================================================================
 // SEARCH AND FILTER TYPES
@@ -413,9 +424,7 @@ export const isDjangoNonFieldErrors = (
 	error: DjangoErrorResponse
 ): error is DjangoNonFieldErrors => {
 	return (
-		typeof error === "object" &&
-		error !== null &&
-		"non_field_errors" in error
+		typeof error === "object" && error !== null && "non_field_errors" in error
 	);
 };
 
@@ -436,133 +445,24 @@ export const isStringError = (error: DjangoErrorResponse): error is string => {
 };
 
 // ============================================================================
-// POLICE TYPES (matches Django PoliceStation and PoliceOfficer models)
+// POLICE TYPES (re-exported from feature module)
 // ============================================================================
 
-// Officer rank choices (matches PoliceOfficer.SeniorityChoices in Django)
-export type OfficerRank =
-	| "unknown"
-	| "unsworn_officer"
-	| "sworn_officer"
-	| "constable"
-	| "police_constable"
-	| "first_class_constable"
-	| "senior_constable"
-	| "detective"
-	| "detective_first_class_constable"
-	| "detective_senior_constable"
-	| "senior_detective"
-	| "sergeant"
-	| "inspector"
-	| "other";
-
-// Police Station (matches PoliceStationSerializer)
-export interface PoliceStation {
-	id: number;
-	name: string;
-	address: string | null;
-	phone: string | null;
-	officer_count: number; // Computed field from serializer
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Lightweight Police Station (matches PoliceStationTinySerializer)
-export interface PoliceStationTiny {
-	id: number;
-	name: string;
-	phone: string | null;
-	address: string;
-	postcode: string;
-}
-
-// Police Officer (matches PoliceOfficerSerializer)
-export interface PoliceOfficer {
-	id: number;
-	badge_number: string | null;
-	first_name: string | null;
-	last_name: string | null;
-	full_name: string; // Computed field
-	rank: OfficerRank;
-	rank_display: string; // Computed field from get_rank_display()
-	is_sworn: boolean; // Computed field
-	station: number | null; // Foreign key ID
-	station_details: PoliceStationTiny | null; // Nested object
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Lightweight Police Officer (matches PoliceOfficerTinySerializer)
-export interface PoliceOfficerTiny {
-	id: number;
-	badge_number: string | null;
-	first_name: string | null; // Added for form pre-selection
-	last_name: string | null; // Added for form pre-selection
-	full_name: string;
-	rank: OfficerRank; // Added rank field for form pre-selection
-	rank_display: string;
-	station: number | null; // Added station ID for form pre-selection
-	station_name: string | null;
-	email: string;
-	is_sworn: boolean;
-}
-
-// Police Station creation request (matches PoliceStationSerializer fields)
-export interface PoliceStationCreateRequest {
-	name: string;
-	address?: string | null;
-	phone?: string | null;
-}
-
-// Police Station update request (partial update)
-export interface PoliceStationUpdateRequest {
-	name?: string;
-	address?: string | null;
-	phone?: string | null;
-}
-
-// Police Officer creation request (matches PoliceOfficerCreateSerializer)
-export interface PoliceOfficerCreateRequest {
-	badge_number?: string | undefined;
-	first_name?: string | undefined;
-	last_name: string;
-	rank: OfficerRank;
-	station?: number | undefined;
-}
-
-// Police Officer update request (partial update)
-export interface PoliceOfficerUpdateRequest {
-	badge_number?: string | undefined;
-	first_name?: string | undefined;
-	last_name?: string;
-	rank?: OfficerRank;
-	station?: number | undefined;
-}
-
-// Paginated police responses
-export interface PaginatedPoliceStationsResponse
-	extends PaginatedResponse<PoliceStation> {}
-export type PaginatedPoliceOfficersResponse =
-	PaginatedResponse<PoliceOfficerTiny>;
-
-// Police search parameters
-export interface PoliceStationSearchParams {
-	search?: string; // Backend uses 'search' parameter for text search
-	limit?: number;
-	offset?: number;
-}
-
-export interface PoliceOfficerSearchParams {
-	search?: string; // Backend uses 'search' parameter for text search
-	station?: number; // Filter by station ID
-	rank?: OfficerRank; // Filter by rank
-	is_sworn?: boolean; // Filter by sworn status
-	include_unknown?: boolean; // Include unknown/other ranks
-	unknown_only?: boolean; // Show ONLY unknown/other ranks (for data quality review)
-	ordering?: string; // Sort order (e.g., 'name', '-rank', 'station')
-	limit?: number;
-	offset?: number;
-}
+export type {
+	OfficerRank,
+	PoliceStation,
+	PoliceStationTiny,
+	PoliceOfficer,
+	PoliceOfficerTiny,
+	PoliceStationCreateRequest,
+	PoliceStationUpdateRequest,
+	PoliceOfficerCreateRequest,
+	PoliceOfficerUpdateRequest,
+	PaginatedPoliceStationsResponse,
+	PaginatedPoliceOfficersResponse,
+	PoliceStationSearchParams,
+	PoliceOfficerSearchParams,
+} from "@/features/police/types/police.types";
 
 // ============================================================================
 // TABLE FILTER PREFERENCE TYPES
@@ -578,8 +478,7 @@ export interface BaseTableFilterPreferences {
 }
 
 // Police Officers table filter preferences
-export interface OfficersTableFilterPreferences
-	extends BaseTableFilterPreferences {
+export interface OfficersTableFilterPreferences extends BaseTableFilterPreferences {
 	stationFilter?: string; // "all" or station ID as string
 	rankFilter?: string; // "all" or specific rank
 	swornFilter?: string; // "all", "true", "false"
@@ -588,35 +487,22 @@ export interface OfficersTableFilterPreferences
 }
 
 // Police Stations table filter preferences
-export interface StationsTableFilterPreferences
-	extends BaseTableFilterPreferences {
-	// Currently only has sorting, but can be extended
-}
+export type StationsTableFilterPreferences = BaseTableFilterPreferences;
 
 // Users table filter preferences
-export interface UsersTableFilterPreferences
-	extends BaseTableFilterPreferences {
+export interface UsersTableFilterPreferences extends BaseTableFilterPreferences {
 	roleFilter?: string; // "all" or specific role
 	statusFilter?: string; // "all", "active", "inactive"
 }
 
 // Defendants table filter preferences
-export interface DefendantsTableFilterPreferences
-	extends BaseTableFilterPreferences {
-	// Currently only has sorting, but can be extended for case count filters
-}
+export type DefendantsTableFilterPreferences = BaseTableFilterPreferences;
 
 // Certificates table filter preferences
-export interface CertificatesTableFilterPreferences
-	extends BaseTableFilterPreferences {
-	// Can be extended for status filters, date range filters, etc.
-}
+export type CertificatesTableFilterPreferences = BaseTableFilterPreferences;
 
 // Invoices table filter preferences
-export interface InvoicesTableFilterPreferences
-	extends BaseTableFilterPreferences {
-	// Can be extended for status filters, amount range filters, etc.
-}
+export type InvoicesTableFilterPreferences = BaseTableFilterPreferences;
 
 // Combined table filter preferences
 export interface TableFilterPreferences {
@@ -629,145 +515,37 @@ export interface TableFilterPreferences {
 }
 
 // ============================================================================
-// CERTIFICATE & INVOICE TYPES (matches Django Certificate and Invoice models)
+// CERTIFICATE & INVOICE TYPES (re-exported from feature modules)
 // ============================================================================
 
-// Certificate (matches CertificateSerializer)
-export interface Certificate {
-	id: number;
-	certificate_number: string; // Auto-generated (e.g., CRT2024-001)
-	submission?: number; // Submission ID (optional for context)
-	pdf_generating: boolean;
-	pdf_file: string | null; // File path
-	pdf_url: string | null; // Full URL from serializer method
-	pdf_size: number; // Size in bytes
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-	// Additional context data (optional)
-	submission_case_number?: string;
-	defendant_names?: string;
-}
+export type {
+	Certificate,
+	CertificateCreateRequest,
+	PaginatedCertificatesResponse,
+	CertificateSearchParams,
+} from "@/features/certificates/types/certificates.types";
 
-// Additional Invoice Fee (matches AdditionalInvoiceFeeSerializer)
-export type InvoiceFeeType = "fuel" | "call_out" | "forensic";
-
-export interface AdditionalInvoiceFee {
-	id: number;
-	invoice?: number; // Invoice ID (optional for creation)
-	claim_kind: InvoiceFeeType;
-	claim_kind_display: string;
-	units: number; // km for fuel, hours for forensic, times for call out
-	description: string | null;
-	calculated_cost: string; // Decimal as string
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Invoice (matches InvoiceSerializer)
-export interface Invoice {
-	id: number;
-	invoice_number: string; // Auto-generated (e.g., INV2024-001)
-	submission?: number; // Submission ID (optional for context)
-	customer_number: string;
-	subtotal: string; // Decimal as string
-	tax_amount: string; // Decimal as string
-	total: string; // Decimal as string
-	pdf_generating: boolean;
-	pdf_file: string | null; // File path
-	pdf_url: string | null; // Full URL from serializer method
-	pdf_size: number; // Size in bytes
-	additional_fees?: AdditionalInvoiceFee[]; // Related fees
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-	// Additional context data (optional)
-	submission_case_number?: string;
-	defendant_names?: string;
-}
-
-// Certificate creation request
-export interface CertificateCreateRequest {
-	submission: number; // Submission ID
-}
-
-// Invoice creation request
-export interface InvoiceCreateRequest {
-	submission: number; // Submission ID
-	customer_number: string;
-}
-
-// Paginated certificate response
-export interface PaginatedCertificatesResponse
-	extends PaginatedResponse<Certificate> {}
-
-// Paginated invoice response
-export interface PaginatedInvoicesResponse extends PaginatedResponse<Invoice> {}
-
-// Certificate search parameters
-export interface CertificateSearchParams {
-	search?: string; // Search by certificate number or case number
-	submission?: number; // Filter by submission ID
-	ordering?: string; // Sort order (e.g., '-created_at', 'certificate_number')
-	limit?: number;
-	offset?: number;
-}
-
-// Invoice search parameters
-export interface InvoiceSearchParams {
-	search?: string; // Search by invoice number or customer number
-	submission?: number; // Filter by submission ID
-	ordering?: string; // Sort order (e.g., '-created_at', 'invoice_number')
-	limit?: number;
-	offset?: number;
-}
+export type {
+	InvoiceFeeType,
+	AdditionalInvoiceFee,
+	Invoice,
+	InvoiceCreateRequest,
+	PaginatedInvoicesResponse,
+	InvoiceSearchParams,
+} from "@/features/invoices/types/invoices.types";
 
 // ============================================================================
-// DEFENDANTS TYPES (matches Django Defendant model and serializers)
+// DEFENDANTS TYPES (re-exported from feature module)
 // ============================================================================
 
-// Complete defendant object (matches DefendantSerializer)
-export interface Defendant {
-	id: number;
-	first_name: string | null;
-	last_name: string;
-	full_name: string; // Computed field
-	pdf_name: string; // Computed field
-	cases_count: number; // Computed field from serializer
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Lightweight defendant (matches DefendantTinySerializer)
-export interface DefendantTiny {
-	id: number;
-	first_name: string | null;
-	last_name: string;
-	full_name: string; // Computed field
-	cases_count: number; // Computed field from serializer
-}
-
-// Defendant creation request (matches DefendantSerializer fields)
-export interface DefendantCreateRequest {
-	first_name?: string | null;
-	last_name: string;
-}
-
-// Defendant update request (partial update)
-export interface DefendantUpdateRequest {
-	first_name?: string | null;
-	last_name?: string;
-}
-
-// Paginated defendants response
-export interface PaginatedDefendantsResponse
-	extends PaginatedResponse<DefendantTiny> {}
-
-// Defendant search parameters
-export interface DefendantSearchParams {
-	search?: string; // Backend uses 'search' parameter for text search
-	ordering?: string; // Sort order (e.g., 'last_name', '-cases_count')
-	limit?: number;
-	offset?: number;
-}
+export type {
+	Defendant,
+	DefendantTiny,
+	DefendantCreateRequest,
+	DefendantUpdateRequest,
+	PaginatedDefendantsResponse,
+	DefendantSearchParams,
+} from "@/features/defendants/types/defendants.types";
 
 // ============================================================================
 // UTILITY TYPES
@@ -801,265 +579,61 @@ export interface RequestConfig {
 	silent?: boolean; // Don't log errors
 }
 // ============================================================================
-// SUBMISSIONS TYPES (matches Django Submission, DrugBag, and BotanicalAssessment models)
+// SUBMISSIONS/CASES TYPES (re-exported from feature modules)
 // ============================================================================
 
-// Submission phase choices (matches Submission.PhaseChoices in Django)
-// NEW 6-PHASE WORKFLOW (updated from 8 phases)
-export type SubmissionPhase =
-	| "data_entry"
-	| "finance_approval"
-	| "botanist_review"
-	| "documents"
-	| "send_emails"
-	| "complete";
+export type {
+	CasePhase,
+	PhaseHistoryEntry,
+	SendBackRequest,
+	SendBackResponse,
+	Case,
+	CaseTiny,
+	CaseCreateRequest,
+	CaseDraft,
+	CaseUpdateRequest,
+	PaginatedCasesResponse,
+	CaseSearchParams,
+	CasesSearchParams,
+	WorkflowActionRequest,
+	WorkflowActionResponse,
+} from "@/features/cases/types/cases.types";
 
-// Phase history entry (matches SubmissionPhaseHistorySerializer)
-export interface PhaseHistoryEntry {
-	id: number;
-	from_phase: SubmissionPhase;
-	from_phase_display: string; // Human-readable display name
-	to_phase: SubmissionPhase;
-	to_phase_display: string; // Human-readable display name
-	action: "advance" | "send_back";
-	action_display: string; // Human-readable display name
-	user: number | null; // User ID who performed the action
-	user_details: UserTiny | null; // Nested user object
-	reason: string | null; // Reason for send-back actions (null for advances)
-	timestamp: string; // ISO datetime string
-	created_at: string; // ISO datetime string
-}
+export type {
+	DrugBagContentType,
+	BotanicalDetermination,
+	DeterminationType,
+	DrugBag,
+	DrugBagCreateRequest,
+	DrugBagUpdateRequest,
+	PaginatedDrugBagsResponse,
+} from "@/features/cases/types/drugBags.types";
 
-// Send-back request (for POST /api/v1/submissions/{id}/send-back/)
-export interface SendBackRequest {
-	target_phase: SubmissionPhase;
-	reason: string;
-}
-
-// Send-back response
-export interface SendBackResponse {
-	message: string;
-	new_phase: SubmissionPhase;
-	sent_back_by: string;
-	sent_back_at: string; // ISO datetime string
-	reason: string;
-}
-
-// Drug bag content type choices (matches DrugBag.ContentType in Django)
-export type DrugBagContentType =
-	| "plant"
-	| "plant_material"
-	| "cutting"
-	| "stalk"
-	| "stem"
-	| "seed"
-	| "seed_material"
-	| "unknown_seed"
-	| "seedling"
-	| "head"
-	| "rootball"
-	| "poppy"
-	| "poppy_plant"
-	| "poppy_capsule"
-	| "poppy_head"
-	| "poppy_seed"
-	| "mushroom"
-	| "tablet"
-	| "unknown"
-	| "unsure";
-
-// Botanical assessment determination choices (matches BotanicalAssessment.DeterminationChoices)
-export type BotanicalDetermination =
-	| "pending"
-	| "cannabis_sativa"
-	| "cannabis_indica"
-	| "cannabis_hybrid"
-	| "mixed"
-	| "papaver_somniferum"
-	| "degraded"
-	| "not_cannabis"
-	| "unidentifiable"
-	| "inconclusive";
-
-// Botanical Assessment (matches BotanicalAssessmentSerializer)
-export interface BotanicalAssessment {
-	id: number;
-	determination: BotanicalDetermination | null;
-	determination_display: string; // Computed field from get_determination_display()
-	is_cannabis: boolean; // Computed property
-	assessment_date: string | null; // ISO datetime string
-	botanist_notes: string | null;
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Drug Bag (matches DrugBagSerializer)
-export interface DrugBag {
-	id: number;
-	submission: number; // Foreign key to submission
-	content_type: DrugBagContentType;
-	content_type_display: string; // Computed field from get_content_type_display()
-	seal_tag_numbers: string;
-	new_seal_tag_numbers: string | null;
-	property_reference: string | null;
-	gross_weight: string | null; // DecimalField as string
-	net_weight: string | null; // DecimalField as string
-	security_movement_envelope: string; // Computed property from submission
-	assessment: BotanicalAssessment | null; // Nested assessment
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Complete Submission (matches SubmissionSerializer)
-export interface Submission {
-	id: number;
-	case_number: string;
-	received: string; // ISO datetime string
-	phase: SubmissionPhase;
-	phase_display: string; // Computed field from get_phase_display()
-	security_movement_envelope: string;
-	internal_comments: string | null;
-	is_draft: boolean; // Whether this is a draft submission
-
-	// Finance fields (for invoice calculation)
-	forensic_hours: string | null; // DecimalField as string
-	fuel_distance_km: string | null; // DecimalField as string
-
-	// Staff assignments (foreign key IDs)
-	approved_botanist: number | null;
-	finance_officer: number | null;
-	requesting_officer: number | null;
-	submitting_officer: number | null;
-	station: number | null;
-
-	// Staff assignment details (nested objects)
-	approved_botanist_details: UserTiny | null;
-	finance_officer_details: UserTiny | null;
-	requesting_officer_details: PoliceOfficerTiny | null;
-	submitting_officer_details: PoliceOfficerTiny | null;
-	station_details: PoliceStationTiny | null;
-
-	// Defendants (many-to-many)
-	defendants: number[]; // Array of defendant IDs
-	defendants_details: DefendantTiny[]; // Array of nested defendant objects
-
-	// Related objects
-	bags: DrugBag[];
-	certificates: Certificate[];
-	invoices: Invoice[];
-	additional_fees: AdditionalInvoiceFee[];
-
-	// Phase history (audit trail of all phase transitions)
-	phase_history: PhaseHistoryEntry[];
-
-	// Computed properties
-	cannabis_present: boolean;
-	bags_received: number;
-	total_plants: number;
-
-	// Workflow timestamps
-	finance_approved_at: string | null; // ISO datetime string
-	botanist_approved_at: string | null; // ISO datetime string
-	documents_generated_at: string | null; // ISO datetime string (renamed from certificates_generated_at)
-	certificates_generated_at: string | null; // Legacy field
-	invoices_generated_at: string | null;
-	emails_sent_at: string | null; // ISO datetime string
-	completed_at: string | null; // ISO datetime string
-
-	// Audit fields
-	created_at: string; // ISO datetime string
-	updated_at: string; // ISO datetime string
-}
-
-// Lightweight Submission for lists (matches SubmissionListSerializer)
-export interface SubmissionTiny {
-	id: number;
-	case_number: string;
-	phase: SubmissionPhase;
-	phase_display: string;
-	received: string; // ISO datetime string
-	approved_botanist_name: string | null;
-	finance_officer_name: string | null;
-	requesting_officer_name: string | null;
-	bags_count: number; // Computed field
-	defendants_count: number; // Computed field
-	cannabis_present: boolean; // Computed property
-	is_draft: boolean; // Whether this is a draft submission
-	created_at: string; // ISO datetime string
-}
-
-// Submission creation request (matches SubmissionCreateSerializer)
-export interface SubmissionCreateRequest {
-	case_number: string;
-	received: string; // ISO datetime string
-	security_movement_envelope: string;
-	requesting_officer?: number | null;
-	submitting_officer?: number | null;
-	defendants?: number[]; // Array of defendant IDs
-	is_draft?: boolean; // Whether this is a draft submission (defaults to true)
-}
-
-// Submission update request (matches SubmissionUpdateSerializer)
-export interface SubmissionUpdateRequest {
-	case_number?: string;
-	received?: string; // ISO datetime string
-	security_movement_envelope?: string;
-	internal_comments?: string | null;
-	forensic_hours?: string | null; // DecimalField as string
-	fuel_distance_km?: string | null; // DecimalField as string
-	approved_botanist?: number | null;
-	finance_officer?: number | null;
-	requesting_officer?: number | null;
-	submitting_officer?: number | null;
-	station?: number | null;
-	defendants?: number[]; // Array of defendant IDs
-	is_draft?: boolean; // Whether this is a draft submission
-}
-
-// Paginated submissions response
-export interface PaginatedSubmissionsResponse
-	extends PaginatedResponse<SubmissionTiny> {}
-
-// Submission search parameters
-export interface SubmissionSearchParams {
-	search?: string; // Search by case number
-	phase?: SubmissionPhase; // Filter by phase
-	approved_botanist?: number; // Filter by botanist ID
-	finance_officer?: number; // Filter by finance officer ID
-	requesting_officer?: number; // Filter by requesting officer ID
-	submitting_officer?: number; // Filter by submitting officer ID
-	station?: number; // Filter by station ID
-	defendants?: number[]; // Filter by defendant IDs
-	cannabis_present?: boolean; // Filter by cannabis presence
-	is_draft?: boolean; // Filter by draft status
-	received_after?: string; // ISO date string
-	received_before?: string; // ISO date string
-	ordering?: string; // Sort order (e.g., '-received', 'case_number')
-	limit?: number;
-	offset?: number;
-}
+export type {
+	BotanicalAssessment,
+	BotanicalAssessmentRequest,
+} from "@/features/cases/types/assessments.types";
 
 // ============================================================================
 // DASHBOARD TYPES (matches dashboard API endpoints)
 // ============================================================================
 
-// User role in submission (for dashboard my submissions)
-export type UserRoleInSubmission = "botanist" | "finance" | "admin";
+// User role in case (for dashboard my cases)
+export type UserRoleInCase = "botanist" | "finance" | "admin";
 
-// Dashboard user submission (matches dashboard my submissions endpoint)
-export interface DashboardUserSubmission {
+// Dashboard user case (matches dashboard my cases endpoint)
+export interface DashboardUserCase {
 	id: number;
 	case_number: string;
-	phase: SubmissionPhase;
+	phase: CasePhase;
 	phase_display: string;
 	received: string; // ISO datetime string
-	is_draft: boolean;
-	role_in_submission: UserRoleInSubmission;
+	role_in_submission: UserRoleInCase;
 }
 
-// Dashboard user submissions response (matches GET /submissions/my/)
-export interface DashboardUserSubmissionsResponse {
-	results: DashboardUserSubmission[];
+// Dashboard user cases response (matches GET /cases/my/)
+export interface DashboardUserCasesResponse {
+	results: DashboardUserCase[];
 	count: number;
 }
 
@@ -1078,124 +652,44 @@ export interface StatisticsComparisonData {
 	change_percentage: number;
 }
 
-// Certificate statistics response (matches GET /submissions/stats/certificates/)
+// Certificate statistics response (matches GET /cases/stats/certificates/)
 export interface CertificateStatisticsResponse {
 	current_month: StatisticsPeriodData;
 	previous_month: StatisticsComparisonData | null;
 	previous_year_same_month: StatisticsComparisonData | null;
 }
 
-// Revenue statistics response (matches GET /submissions/stats/revenue/)
+// Revenue statistics response (matches GET /cases/stats/revenue/)
 export interface RevenueStatisticsResponse {
 	current_month: StatisticsPeriodData;
 	previous_month: StatisticsComparisonData | null;
 	previous_year_same_month: StatisticsComparisonData | null;
 }
 
-// Submission update request (matches SubmissionUpdateSerializer)
-export interface SubmissionUpdateRequest {
-	approved_botanist?: number | null;
-	finance_officer?: number | null;
-	internal_comments?: string | null;
-	defendants?: number[]; // Array of defendant IDs
-	phase?: SubmissionPhase;
-}
-
-// Drug bag creation request (matches DrugBagCreateSerializer)
-export interface DrugBagCreateRequest {
-	submission: number;
-	content_type: DrugBagContentType;
-	seal_tag_numbers: string;
-	new_seal_tag_numbers?: string | null;
-	property_reference?: string | null;
-	gross_weight?: string | null; // DecimalField as string
-	net_weight?: string | null; // DecimalField as string
-}
-
-// Drug bag update request (partial update)
-export interface DrugBagUpdateRequest {
-	content_type?: DrugBagContentType;
-	seal_tag_numbers?: string;
-	new_seal_tag_numbers?: string | null;
-	property_reference?: string | null;
-	gross_weight?: string | null; // DecimalField as string
-	net_weight?: string | null; // DecimalField as string
-}
-
-// Botanical assessment creation/update request (matches BotanicalAssessmentSerializer)
-export interface BotanicalAssessmentRequest {
-	determination?: BotanicalDetermination | null;
-	assessment_date?: string | null; // ISO datetime string
-	botanist_notes?: string | null;
-}
-
-// Paginated submissions response
-export interface PaginatedSubmissionsResponse
-	extends PaginatedResponse<SubmissionTiny> {}
-
-// Paginated drug bags response
-export interface PaginatedDrugBagsResponse extends PaginatedResponse<DrugBag> {}
-
-// Submissions search parameters
-export interface SubmissionsSearchParams {
-	search?: string; // Search case number, officer names, defendant names
-	phase?: SubmissionPhase; // Filter by workflow phase
-	botanist?: number; // Filter by assigned botanist ID
-	finance?: number; // Filter by assigned finance officer ID
-	cannabis_only?: boolean; // Show only submissions with cannabis present
-	draft_only?: boolean; // Show only draft submissions
-	date_from?: string; // Filter by received date (from) - ISO date string
-	date_to?: string; // Filter by received date (to) - ISO date string
-	full?: boolean; // Return full serializer instead of list serializer
-	limit?: number;
-	offset?: number;
-	ordering?: string; // Sort field (e.g., "-received", "case_number")
-}
-
-// Workflow action request
-export interface WorkflowActionRequest {
-	action: "advance_phase" | "generate_certificate" | "generate_invoice";
-	customer_number?: string; // Required for generate_invoice action
-}
-
-// Workflow action response
-export interface WorkflowActionResponse {
-	message: string;
-	new_phase?: SubmissionPhase;
-	certificate_number?: string;
-	invoice_number?: string;
-	total?: string;
-}
-
-// ============================================================================
-// DOCUMENTS TYPES (Certificates and Invoices)
-// ============================================================================
-
 // ============================================================================
 // TABLE FILTER PREFERENCES (for server-side persistence)
 // ============================================================================
 
-// Submissions table filter preferences
-export interface SubmissionsTableFilterPreferences {
+// Cases table filter preferences
+export interface CasesTableFilterPreferences {
 	searchQuery?: string;
-	phase?: SubmissionPhase | "all";
+	phase?: CasePhase | "all";
 	botanist?: number | "all";
-	finance?: number | "all";
-	requestingOfficer?: number | "all";
+	officer?: number | "all";
+	station?: number | "all";
 	dateFrom?: string;
 	dateTo?: string;
-	draftOnly?: boolean;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 }
 
-// Update the main TableFilterMap to include submissions, certificates, and invoices
+// Update the main TableFilterMap to include cases, certificates, and invoices
 export interface TableFilterMap {
 	users: UsersTableFilterPreferences;
 	"police-officers": OfficersTableFilterPreferences;
 	"police-stations": StationsTableFilterPreferences;
 	defendants: DefendantsTableFilterPreferences;
-	submissions: SubmissionsTableFilterPreferences;
+	cases: CasesTableFilterPreferences;
 	certificates: CertificatesTableFilterPreferences;
 	invoices: InvoicesTableFilterPreferences;
 }
@@ -1227,20 +721,31 @@ export interface SystemSettings {
 // DASHBOARD TYPES (for dashboard-specific API responses)
 // ============================================================================
 
-// Dashboard submission (matches MySubmissionsView response)
-export interface DashboardSubmission {
+// Pending attention case (matches PendingAttentionSerializer)
+export interface PendingAttentionCase {
 	id: number;
 	case_number: string;
-	phase: SubmissionPhase;
+	phase: CasePhase;
 	phase_display: string;
 	received: string; // ISO datetime string
-	is_draft: boolean;
+	approved_botanist_name: string | null;
+	finance_officer_name: string | null;
+	bags_count: number;
+}
+
+// Dashboard case (matches MyCasesView response)
+export interface DashboardCase {
+	id: number;
+	case_number: string;
+	phase: CasePhase;
+	phase_display: string;
+	received: string; // ISO datetime string
 	role_in_submission: "botanist" | "finance" | "admin" | "user";
 }
 
-// Dashboard submissions response (matches MySubmissionsView)
-export interface DashboardSubmissionsResponse {
-	results: DashboardSubmission[];
+// Dashboard cases response (matches MyCasesView)
+export interface DashboardCasesResponse {
+	results: DashboardCase[];
 	count: number;
 }
 

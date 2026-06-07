@@ -109,9 +109,7 @@ export const InviteUserComboBox = React.forwardRef<
 								<>
 									<UserPlus className="h-4 w-4 text-muted-foreground" />
 									<div className="flex-1 min-w-0 py-1">
-										<div className="truncate font-medium">
-											{displayValue}
-										</div>
+										<div className="truncate font-medium">{displayValue}</div>
 										{selectedUserData && (
 											<div className="-mt-1.5 text-xs text-slate-700 dark:text-slate-700 truncate">
 												{selectedUserData.email}
@@ -170,17 +168,13 @@ export const InviteUserComboBox = React.forwardRef<
 												<CommandItem
 													key={user.email}
 													value={user.email}
-													onSelect={() =>
-														handleSelect(user)
-													}
+													onSelect={() => handleSelect(user)}
 													className="flex items-center gap-2 py-2"
 												>
 													<Check
 														className={cn(
 															"h-4 w-4",
-															value === user.email
-																? "opacity-100"
-																: "opacity-0"
+															value === user.email ? "opacity-100" : "opacity-0"
 														)}
 													/>
 													<UserPlus className="h-4 w-4 text-muted-foreground" />

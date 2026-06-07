@@ -9,10 +9,10 @@ export const CreateStationRouteModal = () => {
 	const navigate = useNavigate();
 
 	const handleClose = () => {
-		navigate("/police/stations");
+		navigate("/stations");
 	};
 
-	// The form handles the submission internally
+	// The form handles the case internally
 
 	return (
 		<ResponsiveModal
@@ -26,10 +26,7 @@ export const CreateStationRouteModal = () => {
 				title="Add Police Station"
 				description="Create a new police station record"
 			>
-				<CreateStationForm
-					onSuccess={handleClose}
-					onCancel={handleClose}
-				/>
+				<CreateStationForm onSuccess={handleClose} onCancel={handleClose} />
 			</ResponsiveModalContent>
 		</ResponsiveModal>
 	);
