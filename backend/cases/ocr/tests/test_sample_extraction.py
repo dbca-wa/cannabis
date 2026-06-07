@@ -4,6 +4,7 @@ import os
 import sys
 
 import django
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -15,6 +16,12 @@ from cases.ocr.client import TesseractOcrClient  # noqa: E402
 from cases.ocr.parser import PoliceFormParser  # noqa: E402
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "Police form sample.pdf")
+
+if not os.path.exists(FIXTURE):
+    pytest.skip(
+        "OCR fixture file not available (not committed to repo)",
+        allow_module_level=True,
+    )
 
 with open(FIXTURE, "rb") as f:
     data = f.read()

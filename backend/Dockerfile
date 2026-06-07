@@ -61,6 +61,11 @@ ENV ENVIRONMENT="production" \
     IT_ASSETS_URL="http://dummy" \
     MAIN_DOMAIN="dummy.local" \
     MAINTAINER_EMAIL="dummy@dummy.local" \
+    DEFAULT_FROM_EMAIL="dummy@dummy.local" \
+    AZURE_ACCOUNT_NAME="dummyaccount" \
+    AZURE_ACCOUNT_KEY="dummykey" \
+    AZURE_CONTAINER="dummycontainer" \
+    SENTRY_URL="" \
     DEBUG="False"
 RUN python manage.py collectstatic --noinput
 

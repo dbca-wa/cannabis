@@ -1,5 +1,7 @@
 """Extended tests for submission workflow and certificate views."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -152,14 +154,25 @@ class TestSubmissionWorkflowView:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_generate_invoice(self, admin_client, finance_sub):
+    @patch("cases.services.pdf_service.subprocess.run")
+    @patch("cases.services.pdf_service.render_to_string")
+    def test_generate_invoice(
+        self, mock_render, mock_subprocess, admin_client, finance_sub
+    ):
         """POST generate_invoice creates an invoice."""
+        mock_render.return_value = "<html>Invoice</html>"
+        mock_subprocess.return_value = Mock(returncode=0, stderr="")
+
         url = reverse("case_workflow", kwargs={"pk": finance_sub.pk})
-        response = admin_client.post(
-            url,
-            {"action": "generate_invoice", "customer_number": "CUST-001"},
-            format="json",
-        )
+        with patch("builtins.open", create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                b"%PDF-1.4 fake content"
+            )
+            response = admin_client.post(
+                url,
+                {"action": "generate_invoice", "customer_number": "CUST-001"},
+                format="json",
+            )
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -170,12 +183,23 @@ class TestSubmissionWorkflowView:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_generate_certificate(self, admin_client, documents_sub):
+    @patch("cases.services.pdf_service.subprocess.run")
+    @patch("cases.services.pdf_service.render_to_string")
+    def test_generate_certificate(
+        self, mock_render, mock_subprocess, admin_client, documents_sub
+    ):
         """POST generate_certificate creates a certificate."""
+        mock_render.return_value = "<html>Certificate</html>"
+        mock_subprocess.return_value = Mock(returncode=0, stderr="")
+
         url = reverse("case_workflow", kwargs={"pk": documents_sub.pk})
-        response = admin_client.post(
-            url, {"action": "generate_certificate"}, format="json"
-        )
+        with patch("builtins.open", create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                b"%PDF-1.4 fake content"
+            )
+            response = admin_client.post(
+                url, {"action": "generate_certificate"}, format="json"
+            )
 
         assert response.status_code == status.HTTP_201_CREATED
         assert "certificate_number" in response.data
@@ -298,10 +322,21 @@ class TestCertificateViews:
 class TestGenerateTestCertificateView:
     """Tests for GenerateTestCertificateView — generates test PDF with mock data."""
 
-    def test_generates_pdf_with_empty_body(self, authenticated_client):
+    @patch("cases.services.pdf_service.subprocess.run")
+    @patch("cases.services.pdf_service.render_to_string")
+    def test_generates_pdf_with_empty_body(
+        self, mock_render, mock_subprocess, authenticated_client
+    ):
         """POST generates a PDF using hardcoded mock data (no input required)."""
+        mock_render.return_value = "<html>Test Certificate</html>"
+        mock_subprocess.return_value = Mock(returncode=0, stderr="")
+
         url = reverse("test_certificate")
-        response = authenticated_client.post(url, {}, format="json")
+        with patch("builtins.open", create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                b"%PDF-1.4 fake content"
+            )
+            response = authenticated_client.post(url, {}, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         assert response["Content-Type"] == "application/pdf"
