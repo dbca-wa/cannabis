@@ -119,12 +119,8 @@ else:
 # endregion ========================================================================================
 
 # region Email Config =========================================================
-if ENVIRONMENT in ["staging", "production"]:
-    EMAIL_USE_SSL = True
-else:
-    EMAIL_USE_SSL = False
-
 # Email backend — can be overridden via EMAIL_BACKEND env var.
+# Default: SMTP relay (internal mail-relay.lan.fyi)
 # For development: set EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 if env("EMAIL_BACKEND", default=""):
     EMAIL_BACKEND = env("EMAIL_BACKEND")
@@ -133,13 +129,13 @@ elif ENVIRONMENT in ("development", "local"):
 else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-EMAIL_HOST = env("EMAIL_HOST", default="smtp.mandrillapp.com")
-EMAIL_PORT = int(env("EMAIL_PORT", default=587))
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="")
+# SMTP relay config
+EMAIL_HOST = env("EMAIL_HOST", default="mail-relay.lan.fyi")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", default="Cannabis <cannabis-noreply@dbca.wa.gov.au>"
+)
 ENVELOPE_EMAIL_RECIPIENTS = [MAINTAINER_EMAIL]
 ENVELOPE_USE_HTML_EMAIL = True
 
