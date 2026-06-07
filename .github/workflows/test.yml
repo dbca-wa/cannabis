@@ -275,7 +275,9 @@ jobs:
           DEBUG: "False"
           ENVIRONMENT: development
           EXTERNAL_PASS: "test-external-pass"
-          DEFAULT_FROM_EMAIL: "test-noreply@example.com"
+          MAIN_DOMAIN: "localhost:3000"
+          DEFAULT_FROM_EMAIL: "Cannabis <cannabis-noreply@dbca.wa.gov.au>"
+          MAINTAINER_EMAIL: "test@example.com"
           EMAIL_HOST: "localhost"
           EMAIL_PORT: "25"
         run: |
