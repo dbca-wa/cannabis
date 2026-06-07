@@ -10,6 +10,7 @@ import {
 	CardTitle,
 } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface DataEntryPhaseContentProps {
 	caseObj: Case;
@@ -145,7 +146,7 @@ export const DataEntryPhaseContent = observer<DataEntryPhaseContentProps>(
 								</p>
 								<p className="text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
 									<Calendar className="h-4 w-4" />
-									{new Date(caseObj.received).toLocaleDateString()}
+									{formatDate(caseObj.received)}
 								</p>
 							</div>
 							<div>

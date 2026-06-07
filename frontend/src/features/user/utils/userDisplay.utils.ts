@@ -43,3 +43,57 @@ export const getUserRoleColorClass = (
 	}
 	return isDark ? "text-gray-400" : "text-gray-600";
 };
+
+/**
+ * Safely determine a user's role from potentially incomplete data
+ */
+export const determineUserRole = (
+	userData: { role?: string } | null
+): "botanist" | "finance" | "none" => {
+	if (!userData) return "none";
+	if (
+		userData.role &&
+		["botanist", "finance", "none"].includes(userData.role)
+	) {
+		return userData.role as "botanist" | "finance" | "none";
+	}
+	return "none";
+};
+
+/**
+ * Get role badge configuration with label and Tailwind classes
+ */
+export const getRoleBadgeConfig = (user: {
+	is_superuser: boolean;
+	role: string;
+}): {
+	label: string;
+	classes: string;
+} => {
+	if (user.is_superuser) {
+		return {
+			label: "Admin",
+			classes: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+		};
+	}
+	switch (user.role) {
+		case "botanist":
+			return {
+				label: "Botanist",
+				classes:
+					"bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+			};
+		case "finance":
+			return {
+				label: "Finance",
+				classes:
+					"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+			};
+		default:
+			return {
+				label: "No Role",
+				classes:
+					"bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+			};
+	}
+};

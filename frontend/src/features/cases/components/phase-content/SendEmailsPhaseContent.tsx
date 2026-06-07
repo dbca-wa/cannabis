@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { toast } from "sonner";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface SendEmailsPhaseContentProps {
 	caseObj: Case;
@@ -254,10 +255,7 @@ export const SendEmailsPhaseContent = observer<SendEmailsPhaseContentProps>(
 											<p className="text-sm font-medium">{doc.label}</p>
 											{emailsSent && caseObj.emails_sent_at && (
 												<p className="text-xs text-gray-500">
-													Sent on{" "}
-													{new Date(
-														caseObj.emails_sent_at
-													).toLocaleDateString()}
+													Sent on {formatDate(caseObj.emails_sent_at)}
 												</p>
 											)}
 										</div>

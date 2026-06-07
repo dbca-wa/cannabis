@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useOcrUpload } from "@/features/cases/hooks/useOcrUpload";
+import { formatFileSize } from "@/shared/utils/number.utils";
 
 const ACCEPTED_MIME_TYPES = [
 	"application/pdf",
@@ -22,13 +23,6 @@ const ACCEPTED_MIME_TYPES = [
 ];
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const ACCEPTED_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.tiff,.tif";
-
-/** Format bytes into a human-readable string. */
-const formatFileSize = (bytes: number): string => {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 interface OcrUploadZoneProps {
 	onExtracted: () => void;

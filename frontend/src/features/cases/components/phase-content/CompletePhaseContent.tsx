@@ -19,6 +19,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface CompletePhaseContentProps {
 	caseObj: Case;
@@ -204,8 +205,7 @@ export const CompletePhaseContent = observer<CompletePhaseContentProps>(
 									</p>
 									{certificate?.created_at && (
 										<p className="text-xs text-gray-500 dark:text-gray-400">
-											Generated on{" "}
-											{new Date(certificate.created_at).toLocaleDateString()}
+											Generated on {formatDate(certificate.created_at)}
 										</p>
 									)}
 								</div>
@@ -252,8 +252,7 @@ export const CompletePhaseContent = observer<CompletePhaseContentProps>(
 									</p>
 									{invoice?.created_at && (
 										<p className="text-xs text-gray-500 dark:text-gray-400">
-											Generated on{" "}
-											{new Date(invoice.created_at).toLocaleDateString()}
+											Generated on {formatDate(invoice.created_at)}
 										</p>
 									)}
 								</div>

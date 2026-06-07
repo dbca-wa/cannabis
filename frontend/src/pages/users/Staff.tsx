@@ -44,42 +44,11 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { useUsers } from "@/features/user/hooks/useUsers";
 import { StaffFilters } from "@/features/user/components/StaffFilters";
+import { getRoleBadgeConfig } from "@/features/user/utils/userDisplay.utils";
 import { staffSearchStore } from "@/app/stores/derived/staff-search.store";
 import { cn } from "@/shared/utils/style.utils";
 
 import type { UserRole } from "@/shared/types/backend-api.types";
-
-function getRoleBadge(user: { is_superuser: boolean; role: string }): {
-	label: string;
-	classes: string;
-} {
-	if (user.is_superuser) {
-		return {
-			label: "Admin",
-			classes: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-		};
-	}
-	switch (user.role) {
-		case "botanist":
-			return {
-				label: "Botanist",
-				classes:
-					"bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-			};
-		case "finance":
-			return {
-				label: "Finance",
-				classes:
-					"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-			};
-		default:
-			return {
-				label: "No Role",
-				classes:
-					"bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-			};
-	}
-}
 
 const Staff = observer(() => {
 	const navigate = useNavigate();
@@ -324,7 +293,7 @@ const Staff = observer(() => {
 								</TableRow>
 							) : (
 								filteredUsers.map((u) => {
-									const roleBadge = getRoleBadge(u);
+									const roleBadge = getRoleBadgeConfig(u);
 									return (
 										<TableRow
 											key={u.id}

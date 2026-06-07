@@ -53,6 +53,7 @@ import {
 	generateFilename,
 } from "@/shared/utils/export.utils";
 import { toast } from "sonner";
+import { formatDate } from "@/shared/utils/date.utils";
 
 import type { Certificate } from "@/shared/types/backend-api.types";
 
@@ -484,9 +485,7 @@ export const CertificatesTable = () => {
 											<span className="text-gray-400">N/A</span>
 										)}
 									</TableCell>
-									<TableCell>
-										{new Date(cert.created_at).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{formatDate(cert.created_at)}</TableCell>
 									<TableCell>
 										{cert.signed_pdf_file ? (
 											<Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">

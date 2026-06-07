@@ -1,4 +1,5 @@
 import { type Case, type CaseTiny } from "@/shared/types/backend-api.types";
+import type { UICasePhase } from "../components/PhaseIndicator";
 
 /**
  * Check if a case can be deleted (no associated certificates/invoices)
@@ -95,4 +96,43 @@ export const getPhaseDisplay = (phase: string): string => {
 	};
 
 	return displayMap[phase] || phase;
+};
+
+/**
+ * Get human-readable label for a UI case phase
+ */
+export const getPhaseLabel = (phase: UICasePhase): string => {
+	const labels: Record<UICasePhase, string> = {
+		data_entry_start: "Data Entry",
+		finance_approval_provided: "Finance Approval",
+		botanist_approval_provided: "Botanist Approval",
+		in_review: "Review",
+		certificate_generation_start: "Certificate Generation",
+		invoice_generation_start: "Invoice Generation",
+		sending_emails: "Sending Emails",
+		complete: "Complete",
+	};
+	return labels[phase] || phase;
+};
+
+/**
+ * Get description text for phase advancement confirmation dialog
+ */
+export const getAdvancementDescription = (
+	currentPhase: UICasePhase,
+	nextPhase: UICasePhase
+): string => {
+	const descriptions: Record<string, string> = {
+		"data_entry_start->finance_approval_provided":
+			" This indicates that data entry is complete and the case is ready for finance approval.",
+		"finance_approval_provided->botanist_approval_provided":
+			" This confirms finance approval and moves the case to botanist approval.",
+		"botanist_approval_provided->in_review":
+			" This confirms botanist approval and moves the case to final review.",
+		"in_review->certificate_generation_start":
+			" This will trigger automatic certificate generation.",
+	};
+
+	const key = `${currentPhase}->${nextPhase}`;
+	return descriptions[key] || "";
 };

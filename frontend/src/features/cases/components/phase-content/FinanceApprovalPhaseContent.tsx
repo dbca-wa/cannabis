@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useSystemSettings } from "@/shared/hooks/data/useSystemSettings";
 import { CaseFormLayout } from "../CaseFormLayout";
 import { InvoicePDFPreview } from "../InvoicePDFPreview";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface FinanceApprovalPhaseContentProps {
 	caseObj: Case;
@@ -633,7 +634,7 @@ export const FinanceApprovalPhaseContent =
 									</p>
 									<p className="text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
 										<Calendar className="h-4 w-4" />
-										{new Date(caseObj.received).toLocaleDateString()}
+										{formatDate(caseObj.received)}
 									</p>
 								</div>
 								<div>

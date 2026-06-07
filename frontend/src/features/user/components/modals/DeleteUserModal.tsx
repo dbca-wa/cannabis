@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router";
 
 import { Spinner } from "@/shared/components/feedback/Spinner";
 import { useUserById } from "@/features/user/hooks/useUserById";
+import { formatDate } from "@/shared/utils/date.utils";
 
 const DeleteUserModal = () => {
 	const navigate = useNavigate();
@@ -166,9 +167,7 @@ const DeleteUserModal = () => {
 									Joined:
 								</span>
 								<div className="text-gray-900 dark:text-gray-100">
-									{user.date_joined
-										? new Date(user.date_joined).toLocaleDateString()
-										: "N/A"}
+									{user.date_joined ? formatDate(user.date_joined) : "N/A"}
 								</div>
 							</div>
 						</div>

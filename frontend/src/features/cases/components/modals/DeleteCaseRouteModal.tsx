@@ -10,6 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import { AlertTriangle, FileText, Calendar, User, Loader2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { getPhaseBadgeClass } from "../../utils/cases.utils";
+import { formatDate } from "@/shared/utils/date.utils";
 
 export const DeleteCaseRouteModal = () => {
 	const navigate = useNavigate();
@@ -149,7 +150,7 @@ export const DeleteCaseRouteModal = () => {
 								Received:
 							</span>
 							<span className="text-gray-700 dark:text-gray-300">
-								{new Date(caseObj.received).toLocaleDateString()}
+								{formatDate(caseObj.received)}
 							</span>
 						</div>
 

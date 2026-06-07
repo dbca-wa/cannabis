@@ -27,6 +27,7 @@ import {
 import { CertificatePDFPreview } from "@/features/cases/components/CertificatePDFPreview";
 import { InvoicePDFPreview } from "@/features/cases/components/InvoicePDFPreview";
 import { useDocumentGeneration } from "@/features/cases/hooks/useDocumentGeneration";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface DocumentsPhaseContentProps {
 	caseObj: Case;
@@ -481,8 +482,7 @@ export const DocumentsPhaseContent = observer<DocumentsPhaseContentProps>(
 									<p className="text-sm font-medium">Certificate</p>
 									{certificate?.created_at && (
 										<p className="text-xs text-gray-500">
-											Generated on{" "}
-											{new Date(certificate.created_at).toLocaleDateString()}
+											Generated on {formatDate(certificate.created_at)}
 										</p>
 									)}
 								</div>
@@ -522,8 +522,7 @@ export const DocumentsPhaseContent = observer<DocumentsPhaseContentProps>(
 									<p className="text-sm font-medium">Invoice</p>
 									{invoice?.created_at && (
 										<p className="text-xs text-gray-500">
-											Generated on{" "}
-											{new Date(invoice.created_at).toLocaleDateString()}
+											Generated on {formatDate(invoice.created_at)}
 										</p>
 									)}
 								</div>

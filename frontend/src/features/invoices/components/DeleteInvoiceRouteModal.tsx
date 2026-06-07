@@ -12,6 +12,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useInvoiceById, useDeleteInvoice } from "../hooks/useInvoices";
+import { formatDate } from "@/shared/utils/date.utils";
 
 export const DeleteInvoiceRouteModal: React.FC = () => {
 	const navigate = useNavigate();
@@ -94,7 +95,7 @@ export const DeleteInvoiceRouteModal: React.FC = () => {
 					</div>
 					<div className="flex justify-between">
 						<span className="font-medium">Created:</span>
-						<span>{new Date(invoice.created_at).toLocaleDateString()}</span>
+						<span>{formatDate(invoice.created_at)}</span>
 					</div>
 				</div>
 				<AlertDialogFooter>

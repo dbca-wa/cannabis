@@ -28,6 +28,7 @@ import {
 } from "@/shared/components/ui/select";
 import Calendar22 from "@/shared/components/ui/calendar-22";
 import { Button } from "@/shared/components/ui/button";
+import { formatDate } from "@/shared/utils/date.utils";
 
 interface BotanistReviewPhaseContentProps {
 	caseObj: Case;
@@ -377,7 +378,7 @@ export const BotanistReviewPhaseContent =
 									</p>
 									<p className="text-base text-gray-900 dark:text-gray-100 flex items-center gap-2">
 										<Calendar className="h-4 w-4" />
-										{new Date(caseObj.received).toLocaleDateString()}
+										{formatDate(caseObj.received)}
 									</p>
 								</div>
 								<div>
@@ -545,9 +546,7 @@ export const BotanistReviewPhaseContent =
 																Assessment Date
 															</p>
 															<p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-																{new Date(
-																	bag.assessment.assessment_date
-																).toLocaleDateString()}
+																{formatDate(bag.assessment.assessment_date)}
 															</p>
 														</div>
 													)}

@@ -51,6 +51,8 @@ import {
 	generateFilename,
 } from "@/shared/utils/export.utils";
 import { toast } from "sonner";
+import { formatDate } from "@/shared/utils/date.utils";
+import { formatCurrency } from "@/shared/utils/number.utils";
 
 import type { Invoice } from "@/shared/types/backend-api.types";
 
@@ -199,15 +201,6 @@ export const InvoicesTable = () => {
 		) : (
 			<ArrowDown className="ml-2 h-4 w-4" />
 		);
-	};
-
-	// Format currency
-	const formatCurrency = (amount: string | number) => {
-		const num = typeof amount === "string" ? parseFloat(amount) : amount;
-		return new Intl.NumberFormat("en-AU", {
-			style: "currency",
-			currency: "AUD",
-		}).format(num);
 	};
 
 	// Render loading state
@@ -482,9 +475,7 @@ export const InvoicesTable = () => {
 									<TableCell className="font-semibold">
 										{formatCurrency(invoice.total)}
 									</TableCell>
-									<TableCell>
-										{new Date(invoice.created_at).toLocaleDateString()}
-									</TableCell>
+									<TableCell>{formatDate(invoice.created_at)}</TableCell>
 									<TableCell className="text-right">
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>

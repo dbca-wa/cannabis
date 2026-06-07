@@ -21,6 +21,7 @@ import {
 } from "./PhaseIndicator";
 import type { Case } from "@/shared/types/backend-api.types";
 import { useDocumentGeneration } from "../hooks/useDocumentGeneration";
+import { getPhaseLabel, getAdvancementDescription } from "../utils/cases.utils";
 
 interface WorkflowActionsProps {
 	caseObj: Case;
@@ -251,41 +252,6 @@ export const WorkflowActions: React.FC<WorkflowActionsProps> = ({
 		</>
 	);
 };
-
-// Helper function to get phase label
-function getPhaseLabel(phase: UICasePhase): string {
-	const labels: Record<UICasePhase, string> = {
-		data_entry_start: "Data Entry",
-		finance_approval_provided: "Finance Approval",
-		botanist_approval_provided: "Botanist Approval",
-		in_review: "Review",
-		certificate_generation_start: "Certificate Generation",
-		invoice_generation_start: "Invoice Generation",
-		sending_emails: "Sending Emails",
-		complete: "Complete",
-	};
-	return labels[phase] || phase;
-}
-
-// Helper function to get advancement description
-function getAdvancementDescription(
-	currentPhase: UICasePhase,
-	nextPhase: UICasePhase
-): string {
-	const descriptions: Record<string, string> = {
-		"data_entry_start->finance_approval_provided":
-			" This indicates that data entry is complete and the case is ready for finance approval.",
-		"finance_approval_provided->botanist_approval_provided":
-			" This confirms finance approval and moves the case to botanist approval.",
-		"botanist_approval_provided->in_review":
-			" This confirms botanist approval and moves the case to final review.",
-		"in_review->certificate_generation_start":
-			" This will trigger automatic certificate generation.",
-	};
-
-	const key = `${currentPhase}->${nextPhase}`;
-	return descriptions[key] || "";
-}
 
 // Compact version for inline use
 interface WorkflowActionsCompactProps {

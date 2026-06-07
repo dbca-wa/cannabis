@@ -26,6 +26,8 @@ import {
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import type { EditUserFormData, Role } from "@/features/user/types/users.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { determineUserRole } from "@/features/user/utils/userDisplay.utils";
+import { formatDate } from "@/shared/utils/date.utils";
 import { Spinner } from "@/shared/components/feedback/Spinner";
 import { logger } from "@/shared/services/logger.service";
 import { AlertCircle, User, Calendar, Loader2 } from "lucide-react";
@@ -35,24 +37,6 @@ interface EditUserFormProps {
 	onSubmit: (data: EditUserFormData) => void;
 	isSubmitting?: boolean;
 }
-
-// Helper function to safely determine user role
-const determineUserRole = (
-	userData: {
-		role?: string;
-	} | null
-): Role => {
-	if (!userData) return "none";
-
-	if (
-		userData.role &&
-		["botanist", "finance", "none"].includes(userData.role)
-	) {
-		return userData.role as Role;
-	}
-
-	return "none";
-};
 
 const EditUserForm = ({
 	onCancel,
@@ -216,14 +200,12 @@ const EditUserForm = ({
 								<div className="flex items-center gap-1">
 									<Calendar className="h-3 w-3" />
 									<span className="font-medium">Joined:</span>{" "}
-									{user?.date_joined
-										? new Date(user.date_joined).toLocaleDateString()
-										: "N/A"}
+									{user?.date_joined ? formatDate(user.date_joined) : "N/A"}
 								</div>
 								{user?.last_login && (
 									<div className="flex items-center gap-1">
 										<span className="font-medium">Last Login:</span>{" "}
-										{new Date(user.last_login).toLocaleDateString()}
+										{formatDate(user.last_login)}
 									</div>
 								)}
 							</div>

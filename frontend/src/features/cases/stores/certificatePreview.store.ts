@@ -6,6 +6,7 @@ import {
 	runInAction,
 } from "mobx";
 import { logger } from "@/shared/services/logger.service";
+import { formatDate } from "@/shared/utils/date.utils";
 import type { CertificateData } from "./caseForm.store";
 
 // Certificate preview state interface
@@ -288,9 +289,7 @@ export class CertificatePreviewStore {
 					<h1>Cannabis Botanical Identification Certificate</h1>
 					<div class="case-info">
 						<p><strong>Case Number:</strong> ${data.case_number}</p>
-						<p><strong>Received:</strong> ${new Date(
-							data.received_date
-						).toLocaleDateString()}</p>
+						<p><strong>Received:</strong> ${formatDate(data.received_date)}</p>
 					</div>
 				</header>
 
