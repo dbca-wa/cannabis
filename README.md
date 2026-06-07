@@ -1,12 +1,15 @@
 <div align="center">
   <img src="frontend/public/cannabis.svg" alt="C" width="350" height="350"/>
   <div>👮 → 📞 → 👩‍🔬 → 📅 → 🔬 → 💻 → 📄 → ✅ → 🏛️</div>
-</div>
 
-[![Deploy](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml)
-[![Staging](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml/badge.svg?branch=staging)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml)
-![Frontend Coverage](https://img.shields.io/badge/frontend--coverage-0%25-red)
-![Backend Coverage](https://img.shields.io/badge/backend--coverage-0%25-red)
+  <br/><br/>
+
+  [![Deploy](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-prod.yml)
+  [![Staging](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml/badge.svg?branch=staging)](https://github.com/dbca-wa/cannabis/actions/workflows/deploy-staging.yml)
+
+  ![Frontend Coverage](https://img.shields.io/badge/frontend--coverage-0%25-red)
+  ![Backend Coverage](https://img.shields.io/badge/backend--coverage-0%25-red)
+</div>
 
 ## System Overview
 
