@@ -58,12 +58,7 @@ export const PoliceStationsTable = observer(
 				search: stationsSearchStore.state.searchTerm || undefined,
 				ordering: ordering,
 			}),
-			[
-				stationsSearchStore.state.currentPage,
-				pagination.pageSize,
-				stationsSearchStore.state.searchTerm,
-				ordering,
-			]
+			[pagination.pageSize, ordering]
 		);
 
 		// Fetch stations with search, pagination, and ordering

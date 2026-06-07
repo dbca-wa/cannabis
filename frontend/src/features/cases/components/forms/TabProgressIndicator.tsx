@@ -18,7 +18,7 @@ export const TabProgressIndicator: React.FC<TabProgressIndicatorProps> = ({
 		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setWasComplete(isComplete);
 		setIsComplete(newIsComplete);
-	}, [progress]);
+	}, [progress, isComplete]);
 
 	// Calculate SVG circle properties
 	const radius = 8;

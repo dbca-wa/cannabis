@@ -19,14 +19,14 @@ export const DefendantsFilters = observer(() => {
 		if (debouncedSearch !== store.state.searchTerm) {
 			store.setSearchTerm(debouncedSearch);
 		}
-	}, [debouncedSearch]);
+	}, [debouncedSearch, store]);
 
 	// Sync store → local when store resets (e.g. clearSearchAndFilters)
 	useEffect(() => {
 		if (store.state.searchTerm !== localSearch) {
 			setLocalSearch(store.state.searchTerm);
 		}
-	}, [store.state.searchTerm]);
+	}, [store.state.searchTerm, localSearch]);
 
 	return (
 		<FilterContainer>

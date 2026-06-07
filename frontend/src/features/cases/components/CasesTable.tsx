@@ -96,16 +96,7 @@ export const CasesTable = observer(
 				officer: casesSearchStore.state.filters.officer ?? undefined,
 				station: casesSearchStore.state.filters.station ?? undefined,
 			}),
-			[
-				casesSearchStore.state.currentPage,
-				pagination.pageSize,
-				casesSearchStore.state.searchTerm,
-				ordering,
-				casesSearchStore.state.filters.phase,
-				casesSearchStore.state.filters.botanist,
-				casesSearchStore.state.filters.officer,
-				casesSearchStore.state.filters.station,
-			]
+			[pagination.pageSize, ordering]
 		);
 
 		// Fetch data

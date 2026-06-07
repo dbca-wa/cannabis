@@ -138,6 +138,45 @@ const SettingsContent = () => {
 	);
 	const [showConfirmation, setShowConfirmation] = useState(false);
 
+	const applySettingsChanges = useCallback(
+		async (changes: Record<string, string>) => {
+			if (!settings || !user) return;
+
+			const success = await updateSettings(
+				changes as SystemSettingsUpdateRequest
+			);
+
+			if (success) {
+				settingsNotificationService.showUpdateSuccess(
+					Object.keys(changes),
+					settings.environment,
+					settings.last_modified_by || undefined
+				);
+				setPendingChanges({});
+				setShowConfirmation(false);
+				securityService.logSecurityEvent("settings_modified", {
+					userId: user.id,
+					changes: Object.keys(changes),
+					environment: settings.environment,
+				});
+			} else {
+				if (Object.keys(validationErrors).length > 0) {
+					settingsNotificationService.showValidationError(
+						validationErrors,
+						settings.environment
+					);
+				} else if (error) {
+					settingsNotificationService.showUpdateError(
+						error,
+						Object.keys(changes),
+						settings.environment
+					);
+				}
+			}
+		},
+		[settings, user, updateSettings, validationErrors, error]
+	);
+
 	const handleSettingsUpdate = useCallback(
 		async (field: string, value: string) => {
 			if (!settings || !user) return;
@@ -178,49 +217,9 @@ const SettingsContent = () => {
 				return;
 			}
 
-			// eslint-disable-next-line react-hooks/immutability
 			await applySettingsChanges({ [field]: value });
 		},
-		[settings, user, clearError]
-	);
-
-	const applySettingsChanges = useCallback(
-		async (changes: Record<string, string>) => {
-			if (!settings || !user) return;
-
-			const success = await updateSettings(
-				changes as SystemSettingsUpdateRequest
-			);
-
-			if (success) {
-				settingsNotificationService.showUpdateSuccess(
-					Object.keys(changes),
-					settings.environment,
-					settings.last_modified_by || undefined
-				);
-				setPendingChanges({});
-				setShowConfirmation(false);
-				securityService.logSecurityEvent("settings_modified", {
-					userId: user.id,
-					changes: Object.keys(changes),
-					environment: settings.environment,
-				});
-			} else {
-				if (Object.keys(validationErrors).length > 0) {
-					settingsNotificationService.showValidationError(
-						validationErrors,
-						settings.environment
-					);
-				} else if (error) {
-					settingsNotificationService.showUpdateError(
-						error,
-						Object.keys(changes),
-						settings.environment
-					);
-				}
-			}
-		},
-		[settings, user, updateSettings, validationErrors, error]
+		[settings, user, clearError, applySettingsChanges]
 	);
 
 	const handleConfirmChanges = useCallback(() => {

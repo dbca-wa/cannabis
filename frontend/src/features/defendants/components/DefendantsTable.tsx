@@ -59,12 +59,7 @@ export const DefendantsTable = observer(
 				search: defendantsSearchStore.state.searchTerm || undefined,
 				ordering,
 			}),
-			[
-				defendantsSearchStore.state.currentPage,
-				pagination.pageSize,
-				defendantsSearchStore.state.searchTerm,
-				ordering,
-			]
+			[pagination.pageSize, ordering]
 		);
 
 		// Fetch data
@@ -156,7 +151,7 @@ export const DefendantsTable = observer(
 					description: "Reset filters",
 				},
 			],
-			[exportHook.exportCSV, navigate, handleResetFilters]
+			[exportHook, navigate, handleResetFilters]
 		);
 
 		useKeyboardShortcuts({ shortcuts });

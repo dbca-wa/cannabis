@@ -309,7 +309,8 @@ export function useSystemSettings(
 			// eslint-disable-next-line react-hooks/set-state-in-effect
 			loadSettings();
 		}
-	}, [autoLoad]); // Only depend on autoLoad to prevent re-runs
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally limited deps to prevent infinite loop — effect runs once on mount
+	}, [autoLoad]);
 
 	// Cleanup on unmount
 	useEffect(() => {

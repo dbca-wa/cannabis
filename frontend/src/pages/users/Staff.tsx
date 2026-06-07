@@ -106,12 +106,7 @@ const Staff = observer(() => {
 					? staffSearchStore.state.filters.status
 					: "all",
 		}),
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[
-			staffSearchStore.state.searchTerm,
-			staffSearchStore.state.filters.role,
-			staffSearchStore.state.filters.status,
-		]
+		[]
 	);
 
 	const { users, isLoading, isError, inviteUser, isInviting, refreshUsers } =
@@ -150,8 +145,7 @@ const Staff = observer(() => {
 			return 0;
 		});
 		return sorted;
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [users, staffSearchStore.state.filters.status, sortField, sortDirection]);
+	}, [users, sortField, sortDirection]);
 
 	// Sorting
 	const handleSort = (field: string) => {

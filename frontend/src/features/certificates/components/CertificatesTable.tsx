@@ -97,7 +97,7 @@ export const CertificatesTable = () => {
 				pagination.setPage(1);
 			}
 		}
-	}, [certificatesResponse, pagination.pageSize]);
+	}, [certificatesResponse, pagination]);
 
 	// Memoize certificates array
 	const certificates = useMemo(
@@ -163,7 +163,10 @@ export const CertificatesTable = () => {
 	}, [bulkSelection, certificates]);
 
 	// Navigation handlers
-	const handleCreate = () => navigate("/docs/certificates/add");
+	const handleCreate = useCallback(
+		() => navigate("/docs/certificates/add"),
+		[navigate]
+	);
 	const handleEdit = (cert: Certificate) =>
 		navigate(`/docs/certificates/${cert.id}`);
 	const handleDelete = (cert: Certificate) =>

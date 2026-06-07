@@ -36,6 +36,24 @@ interface EditUserFormProps {
 	isSubmitting?: boolean;
 }
 
+// Helper function to safely determine user role
+const determineUserRole = (
+	userData: {
+		role?: string;
+	} | null
+): Role => {
+	if (!userData) return "none";
+
+	if (
+		userData.role &&
+		["botanist", "finance", "none"].includes(userData.role)
+	) {
+		return userData.role as Role;
+	}
+
+	return "none";
+};
+
 const EditUserForm = ({
 	onCancel,
 	onSubmit,
@@ -80,20 +98,6 @@ const EditUserForm = ({
 	const watchedIsActive = watch("is_active");
 	const watchedIsStaff = watch("is_staff");
 
-	// Helper function to safely determine user role
-	const determineUserRole = (userData: typeof user): Role => {
-		if (!userData) return "none";
-
-		if (
-			userData.role &&
-			["botanist", "finance", "none"].includes(userData.role)
-		) {
-			return userData.role as Role;
-		}
-
-		return "none";
-	};
-
 	useEffect(() => {
 		if (user && !isLoading && !formInitialised) {
 			logger.debug("Populating form with user data", {
@@ -118,7 +122,6 @@ const EditUserForm = ({
 			reset(formData);
 			setFormInitialised(true);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [user, isLoading, reset, formInitialised]);
 
 	if (!user || isLoading || !formInitialised) {

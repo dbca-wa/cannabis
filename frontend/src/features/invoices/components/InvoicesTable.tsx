@@ -93,7 +93,7 @@ export const InvoicesTable = () => {
 				pagination.setPage(1);
 			}
 		}
-	}, [invoicesResponse, pagination.pageSize]);
+	}, [invoicesResponse, pagination]);
 
 	// Memoize invoices array
 	const invoices = useMemo(
@@ -155,7 +155,10 @@ export const InvoicesTable = () => {
 	}, [bulkSelection, invoices]);
 
 	// Navigation handlers
-	const handleCreate = () => navigate("/docs/invoices/add");
+	const handleCreate = useCallback(
+		() => navigate("/docs/invoices/add"),
+		[navigate]
+	);
 	const handleEdit = (invoice: Invoice) =>
 		navigate(`/docs/invoices/${invoice.id}`);
 	const handleDelete = (invoice: Invoice) =>
