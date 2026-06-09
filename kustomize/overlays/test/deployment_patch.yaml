@@ -19,15 +19,10 @@ spec:
             - secretRef:
                 name: cannabis-env-test
           volumeMounts:
-            - name: cannabis-media-blob-test
-              mountPath: /usr/src/app/backend/files
             - name: prince2-license-test
               mountPath: /usr/lib/prince/license
               readOnly: true
       volumes:
-        - name: cannabis-media-blob-test
-          persistentVolumeClaim:
-            claimName: pvc-cannabis-media-data-blob-test
         - name: prince2-license-test
           configMap:
             defaultMode: 420

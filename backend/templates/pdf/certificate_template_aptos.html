@@ -14,30 +14,27 @@
         }
 
         body {
-            font-family: Times, 'Times New Roman', serif;
+            font-family: 'Aptos', 'Calibri', 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 30px; /* Reduced from 48px */
+            padding: 30px;
             color: #000;
             line-height: 1.6;
             font-size: 12px;
             background: white;
-            /* Create a flex container for the entire page */
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
 
-        /* Main content wrapper - takes available space */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header styling */
         .header-section {
             position: relative;
-            margin-bottom: 15px; /* Reduced from 20px */
+            margin-bottom: 15px;
         }
 
         .form-reference-right {
@@ -45,7 +42,6 @@
             top: 0;
             right: 0;
             font-size: 10px;
-            {% comment %} font-style: italic; {% endcomment %}
             color: #555;
             text-align: right;
         }
@@ -54,7 +50,6 @@
             top: 0;
             left: 0;
             font-size: 10px;
-            {% comment %} font-style: italic; {% endcomment %}
             color: #555;
             text-align: left;
         }
@@ -71,18 +66,16 @@
             text-decoration: underline;
             text-decoration-thickness: 2px;
             text-underline-offset: 4px;
-            margin-bottom: 8px; /* Reduced from 10px */
+            margin-bottom: 8px;
             color: #1a365d;
         }
 
         .state-info {
-            margin-bottom: 5px; /* Reduced from 25px to match React */
+            margin-bottom: 5px;
         }
 
         .state-name {
             font-size: 11px;
-            {% comment %} font-weight: bold; {% endcomment %}
-            {% comment %} letter-spacing: 2px; {% endcomment %}
             margin-bottom: 3px;
         }
 
@@ -92,10 +85,9 @@
         }
 
         .legislation:last-child {
-            margin-bottom: 0px; /* Changed from 20px to match React */
+            margin-bottom: 0px;
         }
 
-        /* Reference numbers styling */
         .reference-numbers {
             padding-bottom: 5px;
             margin-top: 10px;
@@ -112,7 +104,6 @@
             font-weight: bold;
         }
 
-        /* Certificate content */
         .certificate-content {
             text-align: justify;
             font-size: 14px !important;
@@ -120,8 +111,8 @@
 
         .opening-statement {
             font-size: 14px;
-            margin-bottom: 10px; /* Reduced from 12px */
-            padding: 10px 5px 8px 5px; /* Reduced padding */
+            margin-bottom: 10px;
+            padding: 10px 5px 8px 5px;
         }
 
         .opening-statement strong {
@@ -135,30 +126,28 @@
             font-style: italic;
         }
 
-        /* Sections styling */
         .certificate-section {
-            margin-bottom: 10px; /* Reduced from 12px */
+            margin-bottom: 10px;
         }
 
         .section-header {
             font-size: 14px;
             font-weight: bold;
             color: #1a365d;
-            margin-bottom: 8px; /* Reduced from 12px */
+            margin-bottom: 8px;
         }
 
         .section-intro {
             margin-left: 20px;
-            margin-bottom: 8px; /* Reduced from 10px */
+            margin-bottom: 8px;
         }
 
         .section-content {
             margin-left: 20px;
             background-color: #f8f9fa;
-            padding: 10px; /* Reduced from 12px */
+            padding: 10px;
             border-radius: 0 4px 4px 0;
             font-size: 14px !important;
-            /* Ensure background prints */
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -175,22 +164,18 @@
             border-left: 4px solid #ffc958;
         }
 
-        /* Bottom content that gets pushed to bottom */
         .bottom-content {
-            /* Position at bottom of page */
             margin-top: auto;
-            /* Prevent breaking inside */
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
-        /* Footer section */
         .footer-section {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            min-height: 60px; /* Reduced from 70px */
-            margin-bottom: 10px; /* Reduced from 15px */
+            min-height: 60px;
+            margin-bottom: 10px;
         }
 
         .signature-section {
@@ -204,8 +189,8 @@
 
         .signature-line {
             border-bottom: 2px solid #000;
-            height: 50px; /* Reduced from 60px */
-            margin-bottom: 6px; /* Reduced from 8px */
+            height: 50px;
+            margin-bottom: 6px;
         }
 
         .signature-label {
@@ -215,19 +200,19 @@
         }
 
         .footer-logo img {
-            height: 50px; /* Reduced from 60px */
+            height: 50px;
             width: auto;
             object-fit: contain;
         }
 
         .dbca-details {
-            text-align: right; /* Changed from left to right */
-            font-size: 14px; /* Changed from 10px to 14px */
+            text-align: right;
+            font-size: 14px;
             max-width: 300px;
         }
 
         .dbca-details div {
-            font-size: 14px; /* Changed from 10px to 14px */
+            font-size: 14px;
             margin-bottom: 1px;
         }
 
@@ -236,19 +221,17 @@
             margin-bottom: 4px;
         }
 
-        /* Certification box */
         .certification-box {
             background-color: #f0f8ff;
             border: 2px solid #2B6493;
             border-radius: 6px;
-            padding: 6px; /* Reduced from 8px */
-            margin: 15px 0; /* Reduced from 20px 0 */
+            padding: 6px;
+            margin: 15px 0;
             text-align: center;
             width: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            /* Ensure background prints */
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -294,18 +277,15 @@
             font-weight: normal;
         }
 
-        /* PrinceXML specific page break rules */
         @media print {
             .bottom-content {
                 page-break-inside: avoid;
             }
 
-            /* Force new page if bottom content doesn't fit */
             .bottom-content-new-page {
                 page-break-before: always;
             }
 
-            /* Force background colors to print */
             .section-content,
             .certification-box {
                 -webkit-print-color-adjust: exact !important;
@@ -330,9 +310,7 @@
             <!-- Form Number and Reference - Top Right -->
             <div class="form-reference-right">
                 <div>Form M.D.14</div>
-                <!-- Removed reference number line to match React -->
             </div>
-
 
             <!-- Centered Content -->
             <div class="header-center">
@@ -356,7 +334,7 @@
             </div>
         </div>
 
-        <!-- DBCA and Police Reference Numbers -->
+        <!-- Reference Numbers -->
         <div class="reference-numbers">
             <div class="reference-number">
                 <strong>Certificate No.</strong> {{ certificate_number }}
@@ -437,17 +415,12 @@
                 </div>
             </div>
         </div>
-                <!-- Certification Statement -->
+        <!-- Certification Statement -->
         <div class="certification-box">
-            {% comment %} <div class="cert-number">
-                Cert. No. <span class="cert-highlight">{{ certificate_number }}</span>
-            </div> {% endcomment %}
             <div class="cert-date">
                 Certified on <span class="cert-highlight">{{ certification_date }}</span>
                 at the<span class="cert-highlight"> WA Herbarium, Kensington</span>
             </div>
-
-            <!-- Removed fees section to match React -->
         </div>
 
     </div>

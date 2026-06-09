@@ -128,12 +128,13 @@ class TestBuildCertificateContext:
             "police_reference_number",
             "approved_botanist",
             "quantity_of_bags",
+            "quantity_of_bags_words",
             "tag_numbers",
             "description",
             "defendant",
             "police_officer",
             "receipt_date",
-            "result",
+            "species_name",
             "other_matters",
             "certification_date",
             "logo_path",
@@ -158,7 +159,7 @@ class TestBuildCertificateContext:
         assert "Connor, Sarah" in context["defendant"]
         assert context["police_officer"] == "John Smith"
         assert context["receipt_date"] == "15 March 2024"
-        assert "Cannabis sativa" in context["result"]
+        assert "Cannabis sativa" in context["species_name"]
         assert context["other_matters"] == "Sample stored in freezer."
         assert context["certification_date"] == "20 March 2024"
         assert context["dbca_org_data"]["state"] == "WA"

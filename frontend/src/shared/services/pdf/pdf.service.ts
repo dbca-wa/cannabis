@@ -1,14 +1,14 @@
 import { apiClient } from "@/shared/services/api/client.service";
-import { PDF_ENDPOINTS } from "./pdf.endpoints";
+import { ENDPOINTS } from "@/shared/services/api/endpoints";
 
 export const downloadCertificatePdf = async (
 	certificateId: number
 ): Promise<Blob> => {
-	return apiClient.getBlob(PDF_ENDPOINTS.DOWNLOAD_CERTIFICATE(certificateId));
+	return apiClient.getBlob(ENDPOINTS.CERTIFICATES.DOWNLOAD(certificateId));
 };
 
 export const downloadInvoicePdf = async (invoiceId: number): Promise<Blob> => {
-	return apiClient.getBlob(PDF_ENDPOINTS.DOWNLOAD_INVOICE(invoiceId));
+	return apiClient.getBlob(ENDPOINTS.INVOICES.DOWNLOAD(invoiceId));
 };
 
 export const openBlobInNewTab = (blob: Blob): void => {

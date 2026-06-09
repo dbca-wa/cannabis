@@ -28,7 +28,8 @@ const DevelopmentContent = () => {
 	const [emailTestingMode, setEmailTestingMode] = useState(false);
 
 	const generateTestCertificateMutation = useMutation({
-		mutationFn: () => apiClient.postBlob("cases/certificates/test/generate"),
+		mutationFn: (variant: string) =>
+			apiClient.postBlob(`cases/certificates/test/generate?variant=${variant}`),
 		onSuccess: (blob) => {
 			openBlobInNewTab(blob);
 			toast.success("Test certificate generated");
@@ -226,19 +227,41 @@ const DevelopmentContent = () => {
 								<p className="text-[12px] text-muted-foreground mt-1">
 									Generate test certificate PDFs.
 								</p>
-								<Button
-									size="sm"
-									className="mt-3 cursor-pointer"
-									onClick={() => generateTestCertificateMutation.mutate()}
-									disabled={generateTestCertificateMutation.isPending}
-								>
-									{generateTestCertificateMutation.isPending && (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									)}
-									{generateTestCertificateMutation.isPending
-										? "Generating..."
-										: "Generate Test Certificate"}
-								</Button>
+								<div className="flex flex-wrap gap-2 mt-3">
+									<Button
+										size="sm"
+										className="cursor-pointer"
+										onClick={() =>
+											generateTestCertificateMutation.mutate("base")
+										}
+										disabled={generateTestCertificateMutation.isPending}
+									>
+										{generateTestCertificateMutation.isPending && (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										)}
+										Base (Times)
+									</Button>
+									<Button
+										size="sm"
+										className="cursor-pointer"
+										onClick={() =>
+											generateTestCertificateMutation.mutate("aptos")
+										}
+										disabled={generateTestCertificateMutation.isPending}
+									>
+										Aptos
+									</Button>
+									<Button
+										size="sm"
+										className="cursor-pointer"
+										onClick={() =>
+											generateTestCertificateMutation.mutate("semi_aptos")
+										}
+										disabled={generateTestCertificateMutation.isPending}
+									>
+										Semi-Aptos
+									</Button>
+								</div>
 							</div>
 						</div>
 					</Card>

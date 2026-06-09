@@ -7,10 +7,6 @@ secretGenerator:
     type: Opaque
     envs:
       - .env
-  - name: cannabis-azure-storage-secret
-    type: Opaque
-    envs:
-      - .env.azurestorageaccount
 configMapGenerator:
   - name: prince2-license
     files:
@@ -32,6 +28,6 @@ patches:
   - path: service_patch.yaml
 images:
   - name: ghcr.io/dbca-wa/cannabis-backend
-    newTag: latest
+    newTag: v1.0.0
   - name: ghcr.io/dbca-wa/cannabis-frontend
-    newTag: latest
+    newTag: v1.0.0

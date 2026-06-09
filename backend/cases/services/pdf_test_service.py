@@ -6,17 +6,26 @@ from django.template.loader import render_to_string
 from .pdf_service import PDFService
 
 CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
+CERTIFICATE_TEMPLATE_APTOS = "pdf/certificate_template_aptos.html"
+CERTIFICATE_TEMPLATE_SEMI_APTOS = "pdf/certificate_template_semi_aptos.html"
 INVOICE_TEMPLATE = "pdf/invoice_template.html"
 
 
 class TestPDFService:
     """Generates test PDFs with hardcoded mock data for template previewing."""
 
+    VARIANT_MAP = {
+        "base": CERTIFICATE_TEMPLATE,
+        "aptos": CERTIFICATE_TEMPLATE_APTOS,
+        "semi_aptos": CERTIFICATE_TEMPLATE_SEMI_APTOS,
+    }
+
     @staticmethod
-    def generate_test_certificate() -> bytes:
-        """Generate a test certificate PDF with mock data."""
+    def generate_test_certificate(variant: str = "base") -> bytes:
+        """Generate a test certificate PDF for the specified template variant."""
+        template = TestPDFService.VARIANT_MAP.get(variant, CERTIFICATE_TEMPLATE)
         context = TestPDFService._build_certificate_context()
-        html = render_to_string(CERTIFICATE_TEMPLATE, context)
+        html = render_to_string(template, context)
         return PDFService._html_to_pdf(html)
 
     @staticmethod
@@ -31,18 +40,21 @@ class TestPDFService:
         """Build a complete mock context for the certificate template."""
         logo_path = settings.BASE_DIR / "staticfiles" / "images" / "BCSTransparent.png"
         return {
-            "certificate_number": "TEST-00001",
-            "police_reference_number": "POL-TEST-2025-001",
+            "certificate_number": "5555",
+            "police_reference_number": "POL-2026-SOC-001",
             "approved_botanist": "Dr. Jane Smith",
-            "defendant": "John Alexander Doe",
-            "quantity_of_bags": 3,
-            "tag_numbers": "A001, A002, A003",
-            "description": "green dried plant material",
-            "police_officer": "Senior Constable M. Johnson",
-            "receipt_date": "15 January 2025",
-            "result": "The material examined is Cannabis sativa L.",
-            "other_matters": "Nil",
-            "certification_date": "22 January 2025",
+            "defendant": "UNKNOWN",
+            "quantity_of_bags": 2,
+            "quantity_of_bags_words": "two",
+            "tag_numbers": "T107381, T107390",
+            "new_tag_numbers": "T119009, T119010",
+            "receiving_officer": "Unsworn Officer NEUTRON, Jimmy",
+            "description": "quantity of plant",
+            "police_officer": "Unsworn Officer PD9999 NEUTRON, Jimmy on behalf of Sworn Officer PD9998 LIGHTYEAR, Buzz of Serious and Organised Crime Divisional Office",
+            "receipt_date": "20 March 2026",
+            "species_name": "Cannabis sativa",
+            "other_matters": "Subsamples placed into Security Movement Envelope WW00999999",
+            "certification_date": "28 March 2026",
             "logo_path": f"file://{logo_path}",
             "dbca_org_data": {
                 "address": "Locked Bag 104",
