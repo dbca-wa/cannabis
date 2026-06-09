@@ -7,6 +7,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Suppress transitions during theme switching to prevent flicker */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+	transition-duration: 0s !important;
+}
+
 :root {
 	--font-size: 16px;
 	--radius: 0.625rem;

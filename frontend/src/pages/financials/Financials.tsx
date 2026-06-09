@@ -1,3 +1,4 @@
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Navigate } from "react-router";
@@ -5,6 +6,7 @@ import SettingsContent from "@/features/admin/components/SettingsContent";
 
 const Financials = () => {
 	const { user } = useAuth();
+	useDocumentTitle("Financials");
 
 	// Access guard: staff or superuser only
 	if (!user?.is_staff && !user?.is_superuser) {

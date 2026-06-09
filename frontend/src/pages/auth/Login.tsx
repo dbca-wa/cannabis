@@ -31,9 +31,11 @@ import { useLocation } from "react-router";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { logger } from "@/shared/services/logger.service";
 import * as z from "zod";
-import { Head } from "@/shared/components/layout/Head";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 const Login = () => {
+	useDocumentTitle("Login");
+
 	const VERSION = import.meta.env.VITE_APP_VERSION || "Unset";
 	const VITE_PRODUCTION_BACKEND_API_URL = import.meta.env
 		.VITE_PRODUCTION_BACKEND_API_URL;
@@ -98,7 +100,6 @@ const Login = () => {
 	if (isLoading && !loginError) {
 		return (
 			<>
-				<Head title="Loading..." />
 				<Card className="bg-card">
 					<CardHeader>
 						<CardTitle className="text-2xl text-center">
@@ -115,7 +116,6 @@ const Login = () => {
 
 	return (
 		<Card className="bg-card">
-			<Head title="Login" />
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />

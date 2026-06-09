@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { observer } from "mobx-react-lite";
 
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { PoliceButton } from "@/shared/components/NewCaseButton";
 import { PageTransition } from "@/shared/components/PageTransition";
@@ -52,6 +53,7 @@ import type { UserRole } from "@/shared/types/backend-api.types";
 
 const Staff = observer(() => {
 	const navigate = useNavigate();
+	useDocumentTitle("Staff");
 
 	// Invite dialog state
 	const [inviteOpen, setInviteOpen] = useState(false);

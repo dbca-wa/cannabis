@@ -218,6 +218,8 @@ export class UIStore extends BaseStore<UIStoreState> {
 
 		// Always update localStorage for offline fallback
 		storage.setItem(this.storageKey, newTheme);
+		// Store plain-text copy for index.html flash-prevention script
+		localStorage.setItem("cannabis-theme-resolved", this.resolvedTheme);
 		this.applyTheme();
 
 		// Sync to server if user is authenticated
@@ -277,18 +279,35 @@ export class UIStore extends BaseStore<UIStoreState> {
 
 	applyTheme = () => {
 		const root = window.document.documentElement;
-		root.classList.remove("light", "dark");
 
-		if (this.state.theme === "system") {
-			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-				.matches
-				? "dark"
-				: "light";
-			root.classList.add(systemTheme);
-			return;
+		// Temporarily disable all CSS transitions to prevent flicker
+		root.classList.add("theme-switching");
+
+		const resolvedTheme =
+			this.state.theme === "system"
+				? window.matchMedia("(prefers-color-scheme: dark)").matches
+					? "dark"
+					: "light"
+				: this.state.theme;
+
+		// Atomically swap the class without an intermediate state
+		if (resolvedTheme === "dark") {
+			root.classList.add("dark");
+			root.classList.remove("light");
+		} else {
+			root.classList.add("light");
+			root.classList.remove("dark");
 		}
 
-		root.classList.add(this.state.theme);
+		// Persist resolved theme for flash-prevention script in index.html
+		localStorage.setItem("cannabis-theme-resolved", resolvedTheme);
+
+		// Re-enable transitions after the browser has painted the new theme
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				root.classList.remove("theme-switching");
+			});
+		});
 	};
 
 	setSidebarOpen = (open: boolean) => {

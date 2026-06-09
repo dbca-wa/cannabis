@@ -3,12 +3,14 @@ import { Shield } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { securityService } from "@/features/admin/services/security.service";
 import DevelopmentContent from "@/features/admin/components/DevelopmentContent";
 
 const Admin = () => {
 	const { user } = useAuth();
+	useDocumentTitle("Admin");
 
 	useEffect(() => {
 		const accessCheck = securityService.checkAdminAccess(user);

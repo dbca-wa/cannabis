@@ -15,7 +15,6 @@ import {
 } from "@/shared/hooks/ui/useKeyboardShortcuts";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useBreakpoint } from "@/shared/hooks/ui/useResponsive";
-import { Head } from "./Head";
 import UserMenu from "./UserMenu";
 import HamburgerMenu from "./HamburgerMenu";
 import MobileSidebar from "./MobileSidebar";
@@ -28,12 +27,7 @@ interface ContentLayoutProps {
 	className?: string;
 	maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 	showErrorBoundary?: boolean;
-	// Head component props
 	title?: string;
-	description?: string;
-	keywords?: string;
-	url?: string;
-	isStandalone?: boolean;
 }
 
 const ContentLayout = observer(
@@ -45,12 +39,6 @@ const ContentLayout = observer(
 		className,
 		maxWidth, // Optional override, defaults to UIStore preference
 		showErrorBoundary = true,
-		// Head component props
-		title,
-		description,
-		keywords,
-		url,
-		isStandalone,
 	}: ContentLayoutProps) => {
 		const navigate = useNavigate();
 		const uiStore = useUIStore();
@@ -129,16 +117,6 @@ const ContentLayout = observer(
 
 		const finalContent = (
 			<>
-				{/* Head component for page metadata */}
-				{title && (
-					<Head
-						title={title}
-						description={description}
-						keywords={keywords}
-						url={url}
-						isStandalone={isStandalone}
-					/>
-				)}
 				{content}
 				{/* Global Keyboard Shortcuts Help */}
 				<KeyboardShortcutsHelp

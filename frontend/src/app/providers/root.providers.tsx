@@ -1,5 +1,4 @@
 import { type ReactNode, useState, useCallback } from "react";
-import { HelmetProvider } from "react-helmet-async";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { StoreProvider, useUIStore } from "./store.provider";
 import { QueryProvider } from "./query.provider";
@@ -83,14 +82,12 @@ const AppContent = ({ children }: RootProviderProps) => {
 			)}
 		>
 			<ErrorBoundary>
-				<HelmetProvider>
-					<QueryProvider>
-						<TooltipProvider>
-							<LoadingOrchestrator>{children}</LoadingOrchestrator>
-							<Toaster position="bottom-right" />
-						</TooltipProvider>
-					</QueryProvider>
-				</HelmetProvider>
+				<QueryProvider>
+					<TooltipProvider>
+						<LoadingOrchestrator>{children}</LoadingOrchestrator>
+						<Toaster position="bottom-right" />
+					</TooltipProvider>
+				</QueryProvider>
 			</ErrorBoundary>
 		</div>
 	);

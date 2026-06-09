@@ -20,7 +20,7 @@ import { CaseDetailsSection } from "@/features/cases/components/forms/sections/C
 import { DefendantsSection } from "@/features/cases/components/forms/sections/DefendantsSection";
 import { OfficersStationSection } from "@/features/cases/components/forms/sections/OfficersStationSection";
 import { DrugBagsSection } from "@/features/cases/components/forms/sections/DrugBagsSection";
-import { Head } from "@/shared/components/layout/Head";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { SectionCard } from "@/features/cases/components/forms/wizard/SectionCard";
 import { WizardStepper } from "@/features/cases/components/forms/wizard/WizardStepper";
 import type { StepState } from "@/features/cases/components/forms/wizard/WizardStepper";
@@ -348,9 +348,10 @@ const CreateCaseContent = observer(() => {
 });
 
 export const CreateCase = () => {
+	useDocumentTitle("New Case");
+
 	return (
 		<CaseStoresProvider>
-			<Head title="Create Case" />
 			<CreateCaseContent />
 		</CaseStoresProvider>
 	);

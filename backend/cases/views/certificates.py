@@ -117,10 +117,19 @@ class GenerateTestCertificateView(APIView):
     """POST: Generate a test certificate PDF with mock data. Returns raw PDF bytes."""
 
     permission_classes = [IsAuthenticated]
+    VALID_VARIANTS = {"base", "aptos", "semi_aptos"}
 
     def post(self, request):
+        variant = request.query_params.get("variant", "base")
+        if variant not in self.VALID_VARIANTS:
+            return Response(
+                {
+                    "detail": f"Invalid variant. Choose from: {', '.join(sorted(self.VALID_VARIANTS))}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
-            pdf_bytes = TestPDFService.generate_test_certificate()
+            pdf_bytes = TestPDFService.generate_test_certificate(variant=variant)
         except Exception as e:
             return Response(
                 {"detail": f"PDF generation failed: {str(e)}"},

@@ -1,12 +1,15 @@
 import { Link } from "react-router";
 import { Button } from "@/shared/components/ui/button";
 import { FileQuestion, Home } from "lucide-react";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 /**
  * 404 Not Found page displayed for unmatched routes.
  * Standalone full-page view — does not use the sidebar layout.
  */
 const NotFound = () => {
+	useDocumentTitle("Page Not Found");
+
 	return (
 		<div className="h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
 			<div className="space-y-6 max-w-md">

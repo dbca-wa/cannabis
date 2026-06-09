@@ -39,7 +39,6 @@ import { Input } from "@/shared/components/ui/input";
 import CannabisLogo from "@/shared/components/layout/CannabisLogo";
 import { logger } from "@/shared/services/logger.service";
 import { apiClient, ENDPOINTS, type ApiError } from "@/shared/services/api";
-import { Head } from "@/shared/components/layout/Head";
 
 const PasswordUpdate = () => {
 	const navigate = useNavigate();
@@ -201,7 +200,6 @@ const PasswordUpdate = () => {
 
 	return (
 		<Card className="w-full max-w-xl md:min-w-lg lg:min-w-xl">
-			<Head title="Update Password" />
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />

@@ -11,7 +11,7 @@ import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { Button } from "@/shared/components/ui/button";
 import type { BreadcrumbItem } from "@/shared/components/ui/breadcrumb";
-import { Head } from "@/shared/components/layout/Head";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 const EditCaseContent = observer(() => {
 	const navigate = useNavigate();
@@ -115,6 +115,8 @@ const EditCaseContent = observer(() => {
 });
 
 export const EditCase = () => {
+	useDocumentTitle("Edit Case");
+
 	const breadcrumbs: BreadcrumbItem[] = [
 		{ label: "Cases", href: "/cases" },
 		{ label: "Edit Case", current: true },
@@ -122,8 +124,7 @@ export const EditCase = () => {
 
 	return (
 		<CaseStoresProvider>
-			<ContentLayout breadcrumbs={breadcrumbs}>
-				<Head title="Edit Case" />
+			<ContentLayout breadcrumbs={breadcrumbs} title="Edit Case">
 				<SectionWrapper variant="default">
 					<EditCaseContent />
 				</SectionWrapper>

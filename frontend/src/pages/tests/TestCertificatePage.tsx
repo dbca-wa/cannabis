@@ -1,5 +1,4 @@
 // Route for testing certificate generation flow
-import { Head } from "@/shared/components/layout/Head";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -202,7 +201,6 @@ const TestCertificatePage = () => {
 
 	return (
 		<>
-			<Head title="Certificate Test" />
 			<div className="mb-4">
 				<Button
 					variant="ghost"

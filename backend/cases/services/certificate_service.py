@@ -26,6 +26,54 @@ CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
 class CertificateService:
     """Business logic for certificate operations."""
 
+    ONES = [
+        "",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+    ]
+    TENS = [
+        "",
+        "",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+    ]
+
+    @staticmethod
+    def _number_to_words(n: int) -> str:
+        """Convert an integer (0–99) to its English word form."""
+        if n < 0:
+            return str(n)
+        if n < 20:
+            return CertificateService.ONES[n]
+        if n < 100:
+            tens = CertificateService.TENS[n // 10]
+            ones = CertificateService.ONES[n % 10]
+            return f"{tens}-{ones}" if ones else tens
+        return str(n)
+
     @staticmethod
     def get_certificate(pk):
         """Retrieve a certificate by primary key.
@@ -112,6 +160,7 @@ class CertificateService:
                 else ""
             ),
             "quantity_of_bags": bags.count(),
+            "quantity_of_bags_words": CertificateService._number_to_words(bags.count()),
             "tag_numbers": tag_numbers,
             "description": descriptions,
             "defendant": defendant_display,
@@ -121,7 +170,11 @@ class CertificateService:
                 else ""
             ),
             "receipt_date": receipt_date,
-            "result": primary_assessment.botanist_notes or "",
+            "species_name": (
+                primary_assessment.get_determination_display()
+                if primary_assessment.determination
+                else "Unknown"
+            ),
             "other_matters": submission.internal_comments or "Nil",
             "certification_date": certification_date,
             "logo_path": str(

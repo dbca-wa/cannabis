@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Head } from "@/shared/components/layout/Head";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Switch } from "@/shared/components/ui/switch";
@@ -67,7 +66,6 @@ const TestEmailPage = () => {
 
 	return (
 		<>
-			<Head title="Test Emails" />
 			<div className="mb-4">
 				<Button
 					variant="ghost"

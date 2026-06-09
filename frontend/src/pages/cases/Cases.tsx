@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Outlet, useMatch } from "react-router";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { PageTransition } from "@/shared/components/PageTransition";
 import { PoliceButton } from "@/shared/components/NewCaseButton";
@@ -43,6 +44,8 @@ const Cases = () => {
 	const isEditPage = useMatch("/cases/:submissionId");
 	const isDetailPage = useMatch("/cases/:submissionId/detail");
 	const isFullPageChild = isAddPage || isEditPage || isDetailPage;
+
+	useDocumentTitle("Cases");
 
 	return (
 		<>
