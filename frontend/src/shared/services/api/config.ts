@@ -9,17 +9,22 @@
 
 const getProductionApiUrl = (): string => {
 	if (typeof window !== "undefined") {
-		return `${window.location.origin}/api/v1/`;
+		return `${window.location.origin}/api/v1`;
 	}
 	// Non-browser context (tests, SSR) — no API URL available
 	return "";
 };
 
+// BASE_URL never has a trailing slash.
+// Endpoints always start with a leading slash.
+// This prevents double-slash issues when concatenating.
+const rawBaseUrl = import.meta.env.DEV
+	? import.meta.env.VITE_DEV_BACKEND_API_URL || "http://127.0.0.1:8000/api/v1"
+	: getProductionApiUrl();
+
 export const API_CONFIG = {
-	// Base URL configuration
-	BASE_URL: import.meta.env.DEV
-		? import.meta.env.VITE_DEV_BACKEND_API_URL || "http://127.0.0.1:8000/api/v1"
-		: getProductionApiUrl(),
+	// Base URL — guaranteed no trailing slash
+	BASE_URL: rawBaseUrl.replace(/\/+$/, ""),
 
 	// Request configuration
 	TIMEOUT: 30000,

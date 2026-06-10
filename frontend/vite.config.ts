@@ -4,19 +4,16 @@ import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 
 // CSP Configuration — production values replace the dev meta tag during build
+// Note: 'unsafe-inline' is needed for the theme detection script in index.html.
+// connect-src uses 'self' which covers same-origin API calls (no hardcoded domain needed).
 const CSP_PRODUCTION = {
 	defaultSrc: ["'self'"],
-	scriptSrc: ["'self'", "blob:"],
-	scriptSrcElem: ["'self'", "blob:"],
+	scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
 	workerSrc: ["'self'", "blob:"],
 	styleSrc: ["'self'", "'unsafe-inline'"],
-	imgSrc: ["'self'", "data:", "blob:", "https:"],
+	imgSrc: ["'self'", "data:", "blob:", "http:", "https:"],
 	fontSrc: ["'self'", "data:"],
-	connectSrc: [
-		"'self'",
-		"https://cannabis.dbca.wa.gov.au",
-		"https://*.ingest.us.sentry.io",
-	],
+	connectSrc: ["'self'", "https://*.ingest.us.sentry.io"],
 	frameSrc: ["'self'", "blob:"],
 	objectSrc: ["'none'"],
 	baseUri: ["'self'"],
@@ -30,7 +27,6 @@ function generateCSP(config: Record<string, string[]>): string {
 	const directiveMap: Record<string, string> = {
 		defaultSrc: "default-src",
 		scriptSrc: "script-src",
-		scriptSrcElem: "script-src-elem",
 		workerSrc: "worker-src",
 		styleSrc: "style-src",
 		imgSrc: "img-src",
