@@ -320,6 +320,13 @@ jobs:
             echo "✅ Kustomize versions updated to ${VERSION}"
           fi
 
+      - name: Sync staging with main
+        run: |
+          git fetch origin main
+          git checkout -B staging origin/main
+          git push origin staging --force
+          echo "✅ Staging branch synced with main"
+
       - name: Deployment summary
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}

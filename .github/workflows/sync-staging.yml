@@ -1,8 +1,7 @@
 name: Sync Staging with Main
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -27,7 +26,6 @@ jobs:
       - name: Sync staging with main
         run: |
           git fetch origin main
-          git fetch origin staging || true
           git checkout -B staging origin/main
           git push origin staging --force
 
