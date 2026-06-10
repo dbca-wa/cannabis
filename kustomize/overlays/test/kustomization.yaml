@@ -28,6 +28,6 @@ patches:
   - path: service_patch.yaml
 images:
   - name: ghcr.io/dbca-wa/cannabis-backend
-    newTag: v1.0.1
+    newTag: v1.0.2
   - name: ghcr.io/dbca-wa/cannabis-frontend
-    newTag: v1.0.1
+    newTag: v1.0.2
