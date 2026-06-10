@@ -97,24 +97,35 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 if DEBUG:
     # Development: Use local file storage
-    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
     MEDIA_URL = "/files/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "files")
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 else:
     # Production: Use Azure Blob Storage
-    DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
     AZURE_ACCOUNT_NAME = env("AZURE_ACCOUNT_NAME")
     AZURE_ACCOUNT_KEY = env("AZURE_ACCOUNT_KEY")
     AZURE_CONTAINER = env("AZURE_CONTAINER", default="media")
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.azure_storage.AzureStorage",
+            "OPTIONS": {
+                "azure_container": AZURE_CONTAINER,
+                "account_name": AZURE_ACCOUNT_NAME,
+                "account_key": AZURE_ACCOUNT_KEY,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
-
-# STATICFILES_STORAGE = "storages.backends.azure_storage.AzureStorage"
-# DEFAULT_FILE_STORAGE = "storages.backends.azure_storage.AzureStorage"
-# STORAGES = {
-#     "default": {
-#         "BACKEND": "storages.backends.azure_storage.AzureStorage",
-#     },
-# }
 
 # endregion ========================================================================================
 
