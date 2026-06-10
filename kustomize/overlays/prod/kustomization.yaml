@@ -3,35 +3,35 @@ kind: Kustomization
 namespace: cannabis
 nameSuffix: -prod
 secretGenerator:
-  - name: cannabis-env
-    type: Opaque
-    envs:
-      - .env
-  - name: cannabis-azure-storage-secret
-    type: Opaque
-    envs:
-      - .env.azurestorageaccount
+    - name: cannabis-env
+      type: Opaque
+      envs:
+          - .env
+    - name: cannabis-azure-storage-secret
+      type: Opaque
+      envs:
+          - .env.azurestorageaccount
 configMapGenerator:
-  - name: prince2-license
-    files:
-      - license.dat
+    - name: prince2-license
+      files:
+          - license.dat
 generatorOptions:
-  disableNameSuffixHash: true
+    disableNameSuffixHash: true
 resources:
-  - ../../base
-  - ingress.yaml
-  - media_pvc.yaml
-  - pdb.yaml
+    - ../../base
+    - ingress.yaml
+    - media_pvc.yaml
+    - pdb.yaml
 labels:
-  - includeSelectors: true
-    pairs:
-      variant: prod
+    - includeSelectors: true
+      pairs:
+          variant: prod
 patches:
-  - path: deployment_patch.yaml
-  - path: deployment_hpa_patch.yaml
-  - path: service_patch.yaml
+    - path: deployment_patch.yaml
+    - path: deployment_hpa_patch.yaml
+    - path: service_patch.yaml
 images:
-  - name: ghcr.io/dbca-wa/cannabis-backend
-    newTag: v1.0.3
-  - name: ghcr.io/dbca-wa/cannabis-frontend
-    newTag: v1.0.3
+    - name: ghcr.io/dbca-wa/cannabis-backend
+      newTag: v1.0.3
+    - name: ghcr.io/dbca-wa/cannabis-frontend
+      newTag: v1.0.3
