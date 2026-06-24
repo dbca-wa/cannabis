@@ -137,9 +137,8 @@ class CertificateService:
 
         primary_assessment = bags_with_assessments[0].assessment
 
-        certification_date = ""
         if primary_assessment.assessment_date:
-            certification_date = primary_assessment.assessment_date.strftime("%d %B %Y")
+            primary_assessment.assessment_date.strftime("%d %B %Y")
 
         receipt_date = ""
         if submission.received:
@@ -148,8 +147,31 @@ class CertificateService:
         defendant_display = (
             "; ".join(d.pdf_name for d in defendants)
             if defendants.exists()
-            else "Unknown"
+            else "UNKNOWN"
         )
+
+        def format_officer_legal(officer):
+            """Format officer in legal certificate format: Rank BadgeNumber SURNAME, FirstName of Organisation"""
+            if not officer:
+                return "[Pending]"
+            parts = []
+            rank = (
+                officer.get_rank_display()
+                if hasattr(officer, "get_rank_display")
+                else ""
+            )
+            if rank and rank.lower() != "unknown":
+                parts.append(rank)
+            if officer.badge_number:
+                parts.append(officer.badge_number)
+            if officer.last_name:
+                parts.append(officer.last_name.upper())
+            result = " ".join(parts)
+            if officer.first_name:
+                result += f", {officer.first_name}"
+            if hasattr(officer, "station") and officer.station:
+                result += f" of {officer.station.name}"
+            return result.strip() or officer.full_name or "[Pending]"
 
         return {
             "certificate_number": certificate.certificate_number,
@@ -162,21 +184,22 @@ class CertificateService:
             "quantity_of_bags": bags.count(),
             "quantity_of_bags_words": CertificateService._number_to_words(bags.count()),
             "tag_numbers": tag_numbers,
+            "new_tag_numbers": ", ".join(
+                bag.new_seal_tag_numbers for bag in bags if bag.new_seal_tag_numbers
+            )
+            or "[Pending]",
             "description": descriptions,
             "defendant": defendant_display,
-            "police_officer": (
-                submission.submitting_officer.full_name
-                if submission.submitting_officer
-                else ""
-            ),
+            "police_officer": format_officer_legal(submission.submitting_officer),
+            "receiving_officer": format_officer_legal(submission.requesting_officer),
             "receipt_date": receipt_date,
             "species_name": (
                 primary_assessment.get_determination_display()
                 if primary_assessment.determination
                 else "Unknown"
             ),
-            "other_matters": submission.internal_comments or "Nil",
-            "certification_date": certification_date,
+            "other_matters": submission.additional_notes or "None",
+            "certification_date": "",  # Empty for unsigned — set during signing
             "logo_path": str(
                 settings.BASE_DIR / "staticfiles" / "images" / "BCSTransparent.png"
             ),
@@ -193,20 +216,14 @@ class CertificateService:
         """Validate that a certificate can be generated for the given submission.
 
         Checks:
-        - The assigned botanist has a signature on file.
         - No locked certificate already exists.
         - No certificate already exists at all.
+
+        Note: Signature check is NOT done here — that's for the signing step only.
 
         Raises:
             ValidationError: If generation is not permitted.
         """
-        if submission.approved_botanist:
-            if not Signature.objects.filter(user=submission.approved_botanist).exists():
-                raise ValidationError(
-                    "The assigned botanist must upload a signature "
-                    "before certificate generation."
-                )
-
         existing_cert = submission.certificates.first()
         if existing_cert and existing_cert.is_locked:
             raise ValidationError(
@@ -226,7 +243,7 @@ class CertificateService:
         template context, renders the PDF, and stores it on the certificate.
 
         Returns:
-            The newly created Certificate instance (with pdf_file populated).
+            The newly created Certificate instance (with unsigned_pdf_file populated).
 
         Raises:
             ValidationError: If validation fails or data is incomplete.
@@ -240,9 +257,9 @@ class CertificateService:
         pdf_bytes = PDFService._html_to_pdf(html)
 
         filename = f"certificate_{certificate.certificate_number}.pdf"
-        certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
-        certificate.pdf_size = len(pdf_bytes)
-        certificate.save(update_fields=["pdf_file", "pdf_size"])
+        certificate.unsigned_pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
+        certificate.unsigned_pdf_size = len(pdf_bytes)
+        certificate.save(update_fields=["unsigned_pdf_file", "unsigned_pdf_size"])
 
         submission.certificates_generated_at = timezone.now()
         submission.save(update_fields=["certificates_generated_at"])
@@ -276,13 +293,13 @@ class CertificateService:
         html = render_to_string(CERTIFICATE_TEMPLATE, context)
         pdf_bytes = PDFService._html_to_pdf(html)
 
-        if certificate.pdf_file:
-            certificate.pdf_file.delete(save=False)
+        if certificate.unsigned_pdf_file:
+            certificate.unsigned_pdf_file.delete(save=False)
 
         filename = f"certificate_{certificate.certificate_number}.pdf"
-        certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
-        certificate.pdf_size = len(pdf_bytes)
-        certificate.save(update_fields=["pdf_file", "pdf_size"])
+        certificate.unsigned_pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
+        certificate.unsigned_pdf_size = len(pdf_bytes)
+        certificate.save(update_fields=["unsigned_pdf_file", "unsigned_pdf_size"])
 
         return certificate
 
@@ -347,14 +364,16 @@ class CertificateService:
     def validate_signing_permission(submission, user):
         """Validate that the user has permission to sign the certificate.
 
-        Only the assigned botanist may sign.
+        The assigned botanist or admin/staff users may sign.
 
         Raises:
-            PermissionDenied: If the user is not the assigned botanist.
+            PermissionDenied: If the user is not the assigned botanist or staff.
         """
-        if submission.approved_botanist_id != user.id:
+        is_assigned_botanist = submission.approved_botanist_id == user.id
+        is_staff_or_admin = user.is_staff or user.is_superuser
+        if not (is_assigned_botanist or is_staff_or_admin):
             raise PermissionDenied(
-                "Only the assigned botanist may sign this certificate."
+                "Only the assigned botanist or staff may sign this certificate."
             )
 
     @staticmethod
@@ -520,17 +539,12 @@ class CertificateService:
             settings.BASE_DIR, "templates/pdf/styles/certificate_styles.css"
         )
 
-        context = {
-            "certificate_number": certificate.certificate_number,
-            "css_path": certificate_css_path,
-            "base_url": settings.BASE_DIR,
-            "signature_image_data": signature_data_uri,
-            "submission": submission,
-            "certificate": certificate,
-        }
+        context = CertificateService.build_certificate_context(submission, certificate)
+        context["certification_date"] = timezone.now().strftime("%d %B %Y")
+        context["signature_image_data"] = signature_data_uri
 
         try:
-            html_content = get_template("pdf/certificate.html").render(context)
+            html_content = get_template(CERTIFICATE_TEMPLATE).render(context)
         except Exception as e:
             settings.LOGGER.error(f"Template rendering failed during signing: {e}")
             raise ValidationError("Failed to render certificate template.")

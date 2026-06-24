@@ -19,9 +19,9 @@ export interface Certificate {
 	certificate_number: string; // Auto-generated (e.g., CRT2024-001)
 	case?: number; // Case ID (optional for context)
 	pdf_generating: boolean;
-	pdf_file: string | null; // File path
+	unsigned_pdf_file: string | null; // File path
 	pdf_url: string | null; // Full URL from serializer method
-	pdf_size: number; // Size in bytes
+	unsigned_pdf_size: number; // Size in bytes
 	created_at: string; // ISO datetime string
 	updated_at: string; // ISO datetime string
 	// Additional context data (optional)

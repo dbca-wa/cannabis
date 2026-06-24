@@ -14,6 +14,7 @@ from .draft_service import (
     upsert_user_draft,
 )
 from .drug_bag_service import DrugBagService
+from .email_service import EmailService
 from .invoice_service import (
     InvoiceService,
     build_invoice_context,
@@ -37,6 +38,7 @@ __all__ = [
     # Service classes
     "CertificateService",
     "DashboardService",
+    "EmailService",
     "DrugBagService",
     "InvoiceService",
     "OcrService",

@@ -92,17 +92,17 @@ def test_send_back(api_client, workflow_submission, wf_finance_user):
     api_client.force_authenticate(user=wf_finance_user)
     url = reverse("case_send_back", kwargs={"pk": workflow_submission.pk})
     data = {
-        "target_phase": "data_entry",
+        "target_phase": "case_creation",
         "reason": "Missing defendant information",
     }
     response = api_client.post(url, data, format="json")
 
     assert response.status_code == 200
-    assert response.data["new_phase"] == "data_entry"
+    assert response.data["new_phase"] == "case_creation"
     assert response.data["reason"] == "Missing defendant information"
 
     workflow_submission.refresh_from_db()
-    assert workflow_submission.phase == Submission.PhaseChoices.DATA_ENTRY
+    assert workflow_submission.phase == Submission.PhaseChoices.CASE_CREATION
 
     # Verify history was recorded
     history = SubmissionPhaseHistory.objects.filter(
@@ -123,7 +123,7 @@ def test_send_back_any_authenticated_user(
     api_client.force_authenticate(user=wf_regular_user)
     url = reverse("case_send_back", kwargs={"pk": workflow_submission.pk})
     data = {
-        "target_phase": "data_entry",
+        "target_phase": "case_creation",
         "reason": "Test reason",
     }
     response = api_client.post(url, data, format="json")
@@ -151,7 +151,7 @@ def test_phase_history(api_client, workflow_submission, wf_finance_user):
     # Create some history entries
     SubmissionPhaseHistory.objects.create(
         submission=workflow_submission,
-        from_phase=Submission.PhaseChoices.DATA_ENTRY,
+        from_phase=Submission.PhaseChoices.CASE_CREATION,
         to_phase=Submission.PhaseChoices.INVOICING,
         action="advance",
         user=wf_finance_user,
@@ -159,7 +159,7 @@ def test_phase_history(api_client, workflow_submission, wf_finance_user):
     SubmissionPhaseHistory.objects.create(
         submission=workflow_submission,
         from_phase=Submission.PhaseChoices.INVOICING,
-        to_phase=Submission.PhaseChoices.DATA_ENTRY,
+        to_phase=Submission.PhaseChoices.CASE_CREATION,
         action="send_back",
         user=wf_finance_user,
         reason="Missing info",

@@ -102,13 +102,22 @@ export const SidebarNav = ({
 								item.to === "/"
 									? location.pathname === "/"
 									: location.pathname.startsWith(item.to);
+							// Only skip navigation if already on the exact same path
+							const isExactMatch = location.pathname === item.to;
 							const Icon = item.icon;
 
 							return (
 								<NavLink
 									key={item.to}
 									to={item.to}
-									onClick={onNavigate}
+									onClick={(e) => {
+										// Skip navigation if already on the exact same route
+										if (isExactMatch) {
+											e.preventDefault();
+											return;
+										}
+										onNavigate?.();
+									}}
 									className="relative block cursor-pointer"
 								>
 									<div

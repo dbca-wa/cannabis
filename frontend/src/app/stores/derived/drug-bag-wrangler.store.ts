@@ -1,0 +1,303 @@
+/**
+ * DrugBagWranglerStore — MobX store for managing in-memory drug bag state,
+ * client-side validation, and certificate preview preferences.
+ *
+ * Handles the full lifecycle of bags before they hit the server:
+ * add → edit → validate → persist (or reject with errors).
+ */
+
+import { BaseStore, type BaseStoreState } from "@/app/stores/base.store";
+import { makeObservable, action, computed } from "mobx";
+import { logger } from "@/shared/services/logger.service";
+import type {
+	DrugBagContentType,
+	BotanicalDetermination,
+} from "@/features/cases/types/drugBags.types";
+
+export type PreviewFontMode = "aptos" | "aptos-times" | "times";
+
+export interface InMemoryBag {
+	tempId: string;
+	seal_tag_numbers: string;
+	new_seal_tag_numbers: string;
+	content_type: DrugBagContentType;
+	determination: BotanicalDetermination;
+}
+
+export interface BagValidationError {
+	tempId: string;
+	field: string;
+	message: string;
+}
+
+interface DrugBagWranglerStoreState extends BaseStoreState {
+	/** In-memory bags not yet persisted to the server */
+	bags: InMemoryBag[];
+	/** Validation errors keyed by tempId + field */
+	validationErrors: BagValidationError[];
+	/** Whether a "Save Changes" operation is in progress */
+	isSaving: boolean;
+	/** Preview font preference */
+	previewFont: PreviewFontMode;
+}
+
+const INITIAL_STATE: DrugBagWranglerStoreState = {
+	loading: false,
+	error: null,
+	initialised: false,
+	bags: [],
+	validationErrors: [],
+	isSaving: false,
+	previewFont: "aptos-times",
+};
+
+export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
+	constructor() {
+		super({ ...INITIAL_STATE });
+
+		makeObservable(this, {
+			// Bag actions
+			addBag: action,
+			addBags: action,
+			updateBag: action,
+			removeBag: action,
+			clearBags: action,
+
+			// Validation
+			validate: action,
+			clearValidationErrors: action,
+
+			// Saving state
+			setSaving: action,
+
+			// Preview font
+			setPreviewFont: action,
+
+			// Reset
+			reset: action,
+
+			// Computed
+			bagCount: computed,
+			hasErrors: computed,
+			isValid: computed,
+			errorsForBag: computed,
+		});
+	}
+
+	// ============================================================================
+	// Bag Management
+	// ============================================================================
+
+	/** Add a single empty bag (no auto-generated tag) */
+	addBag = () => {
+		this.state.bags.push({
+			tempId: crypto.randomUUID(),
+			seal_tag_numbers: "",
+			new_seal_tag_numbers: "",
+			content_type: "plant",
+			determination: "pending",
+		});
+		logger.debug("DrugBagWrangler: added empty bag", {
+			count: this.state.bags.length,
+		});
+	};
+
+	/** Add multiple bags at once (from bulk modal) */
+	addBags = (bags: Omit<InMemoryBag, "tempId">[]) => {
+		const newBags: InMemoryBag[] = bags.map((b) => ({
+			...b,
+			tempId: crypto.randomUUID(),
+		}));
+		this.state.bags.push(...newBags);
+		logger.debug("DrugBagWrangler: added multiple bags", {
+			added: newBags.length,
+			total: this.state.bags.length,
+		});
+	};
+
+	/** Update a specific field on an in-memory bag */
+	updateBag = (
+		tempId: string,
+		field: keyof Omit<InMemoryBag, "tempId">,
+		value: string
+	) => {
+		const bag = this.state.bags.find((b) => b.tempId === tempId);
+		if (bag) {
+			(bag[field] as string) = value;
+			// Clear validation errors for this field
+			this.state.validationErrors = this.state.validationErrors.filter(
+				(e) => !(e.tempId === tempId && e.field === field)
+			);
+		}
+	};
+
+	/** Remove a bag by tempId */
+	removeBag = (tempId: string) => {
+		this.state.bags = this.state.bags.filter((b) => b.tempId !== tempId);
+		this.state.validationErrors = this.state.validationErrors.filter(
+			(e) => e.tempId !== tempId
+		);
+		logger.debug("DrugBagWrangler: removed bag", {
+			tempId,
+			remaining: this.state.bags.length,
+		});
+	};
+
+	/** Clear all in-memory bags (after successful persist) */
+	clearBags = () => {
+		this.state.bags = [];
+		this.state.validationErrors = [];
+	};
+
+	// ============================================================================
+	// Validation
+	// ============================================================================
+
+	/**
+	 * Validate all in-memory bags against rules:
+	 * - No empty original tag
+	 * - No duplicate original tags (within in-memory AND against server tags)
+	 * - Original tag !== new tag on same bag
+	 * - Content type must be set (not empty)
+	 * - Determination must be set (not "pending")
+	 *
+	 * @param serverTags - existing tag numbers from server-persisted bags
+	 * @returns true if all bags are valid
+	 */
+	validate = (serverTags: string[]): boolean => {
+		const errors: BagValidationError[] = [];
+		const allInMemoryTags = this.state.bags.map((b) => b.seal_tag_numbers);
+
+		for (const bag of this.state.bags) {
+			// Empty original tag
+			if (!bag.seal_tag_numbers.trim()) {
+				errors.push({
+					tempId: bag.tempId,
+					field: "seal_tag_numbers",
+					message: "Original tag is required",
+				});
+			}
+
+			// Duplicate within in-memory bags
+			const duplicateInMemory =
+				allInMemoryTags.filter((t) => t === bag.seal_tag_numbers).length > 1;
+			if (bag.seal_tag_numbers.trim() && duplicateInMemory) {
+				errors.push({
+					tempId: bag.tempId,
+					field: "seal_tag_numbers",
+					message: "Duplicate tag number",
+				});
+			}
+
+			// Duplicate against server-persisted bags
+			if (
+				bag.seal_tag_numbers.trim() &&
+				serverTags.includes(bag.seal_tag_numbers)
+			) {
+				errors.push({
+					tempId: bag.tempId,
+					field: "seal_tag_numbers",
+					message: "Tag already exists on this case",
+				});
+			}
+
+			// Original tag same as new tag
+			if (
+				bag.seal_tag_numbers.trim() &&
+				bag.new_seal_tag_numbers.trim() &&
+				bag.seal_tag_numbers === bag.new_seal_tag_numbers
+			) {
+				errors.push({
+					tempId: bag.tempId,
+					field: "new_seal_tag_numbers",
+					message: "New tag must differ from original",
+				});
+			}
+
+			// No content type (shouldn't happen with select, but safety)
+			if (!bag.content_type) {
+				errors.push({
+					tempId: bag.tempId,
+					field: "content_type",
+					message: "Content type is required",
+				});
+			}
+
+			// No determination
+			if (!bag.determination || bag.determination === "pending") {
+				errors.push({
+					tempId: bag.tempId,
+					field: "determination",
+					message: "Assessment determination is required",
+				});
+			}
+		}
+
+		this.state.validationErrors = errors;
+		return errors.length === 0;
+	};
+
+	clearValidationErrors = () => {
+		this.state.validationErrors = [];
+	};
+
+	// ============================================================================
+	// Saving State
+	// ============================================================================
+
+	setSaving = (isSaving: boolean) => {
+		this.state.isSaving = isSaving;
+	};
+
+	// ============================================================================
+	// Preview Font
+	// ============================================================================
+
+	setPreviewFont = (font: PreviewFontMode) => {
+		this.state.previewFont = font;
+	};
+
+	// ============================================================================
+	// Computed
+	// ============================================================================
+
+	get bagCount() {
+		return this.state.bags.length;
+	}
+
+	get hasErrors() {
+		return this.state.validationErrors.length > 0;
+	}
+
+	get isValid() {
+		return (
+			this.state.bags.length > 0 && this.state.validationErrors.length === 0
+		);
+	}
+
+	/** Get errors grouped by bag tempId */
+	get errorsForBag() {
+		const map = new Map<string, BagValidationError[]>();
+		for (const err of this.state.validationErrors) {
+			const existing = map.get(err.tempId) ?? [];
+			existing.push(err);
+			map.set(err.tempId, existing);
+		}
+		return map;
+	}
+
+	// ============================================================================
+	// Reset
+	// ============================================================================
+
+	reset() {
+		this.state.bags = [];
+		this.state.validationErrors = [];
+		this.state.isSaving = false;
+		this.state.previewFont = "aptos-times";
+		this.state.loading = false;
+		this.state.error = null;
+		this.state.initialised = false;
+		logger.info("DrugBagWranglerStore reset");
+	}
+}

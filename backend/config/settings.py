@@ -145,7 +145,7 @@ EMAIL_HOST = env("EMAIL_HOST", default="mail-relay.lan.fyi")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 
 DEFAULT_FROM_EMAIL = env(
-    "DEFAULT_FROM_EMAIL", default="Cannabis <noreply@dbca.wa.gov.au>"
+    "DEFAULT_FROM_EMAIL", default="Cannabis <cannabis-noreply@dbca.wa.gov.au>"
 )
 ENVELOPE_EMAIL_RECIPIENTS = [MAINTAINER_EMAIL]
 ENVELOPE_USE_HTML_EMAIL = True

@@ -85,7 +85,7 @@ const AppContent = ({ children }: RootProviderProps) => {
 				<QueryProvider>
 					<TooltipProvider>
 						<LoadingOrchestrator>{children}</LoadingOrchestrator>
-						<Toaster position="bottom-right" />
+						<Toaster position="top-right" />
 					</TooltipProvider>
 				</QueryProvider>
 			</ErrorBoundary>

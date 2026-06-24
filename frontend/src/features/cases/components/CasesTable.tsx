@@ -82,22 +82,20 @@ export const CasesTable = observer(
 		const ordering = sortDirection === "desc" ? `-${sortField}` : sortField;
 
 		// Build search parameters from store state
-		const searchParams = useMemo(
-			() => ({
-				page: casesSearchStore.state.currentPage,
-				limit: pagination.pageSize,
-				search: casesSearchStore.state.searchTerm || undefined,
-				ordering,
-				phase:
-					casesSearchStore.state.filters.phase !== "all"
-						? (casesSearchStore.state.filters.phase as CasePhase)
-						: undefined,
-				botanist: casesSearchStore.state.filters.botanist ?? undefined,
-				officer: casesSearchStore.state.filters.officer ?? undefined,
-				station: casesSearchStore.state.filters.station ?? undefined,
-			}),
-			[pagination.pageSize, ordering]
-		);
+		const searchParams = {
+			page: casesSearchStore.state.currentPage,
+			limit: pagination.pageSize,
+			search: casesSearchStore.state.searchTerm || undefined,
+			ordering,
+			phase:
+				casesSearchStore.state.filters.phase !== "all"
+					? (casesSearchStore.state.filters.phase as CasePhase)
+					: undefined,
+			botanist: casesSearchStore.state.filters.botanist ?? undefined,
+			officer: casesSearchStore.state.filters.officer ?? undefined,
+			station: casesSearchStore.state.filters.station ?? undefined,
+			tag_search: casesSearchStore.state.filters.tagSearch || undefined,
+		};
 
 		// Fetch data
 		const {
@@ -428,9 +426,9 @@ export const CasesTable = observer(
 											className="cursor-pointer"
 											onClick={(e) => {
 												if (e.ctrlKey || e.metaKey) {
-													window.open(`/cases/${caseObj.id}/detail`, "_blank");
+													window.open(`/cases/${caseObj.id}/process`, "_blank");
 												} else {
-													navigate(`/cases/${caseObj.id}/detail`);
+													navigate(`/cases/${caseObj.id}/process`);
 												}
 											}}
 										>
@@ -438,7 +436,7 @@ export const CasesTable = observer(
 											<TableCell>
 												<div className="flex items-center gap-2">
 													<Link
-														to={`/cases/${caseObj.id}/detail`}
+														to={`/cases/${caseObj.id}/process`}
 														onClick={(e) => e.stopPropagation()}
 														className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:underline underline-offset-2 transition-colors text-[14px] cursor-pointer"
 													>

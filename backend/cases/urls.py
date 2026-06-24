@@ -19,6 +19,11 @@ urlpatterns = [
         name="case_send_back",
     ),
     path(
+        "<int:pk>/send-documents",
+        views.SendDocumentsView.as_view(),
+        name="send_documents",
+    ),
+    path(
         "<int:pk>/phase-history",
         views.CasePhaseHistoryView.as_view(),
         name="case_phase_history",
@@ -28,6 +33,11 @@ urlpatterns = [
         "<int:pk>/bags",
         views.DrugBagListView.as_view(),
         name="drugbag_list",
+    ),
+    path(
+        "<int:pk>/bags/batch",
+        views.DrugBagBatchCreateView.as_view(),
+        name="drugbag_batch_create",
     ),
     path("bags/<int:pk>", views.DrugBagDetailView.as_view(), name="drugbag_detail"),
     # Botanical assessment endpoints
@@ -161,6 +171,11 @@ urlpatterns = [
         "stats/revenue",
         views.RevenueStatsView.as_view(),
         name="revenue_stats",
+    ),
+    path(
+        "stats/throughput",
+        views.MonthlyThroughputView.as_view(),
+        name="monthly_throughput",
     ),
     path(
         "stats/phase-counts",

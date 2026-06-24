@@ -15,12 +15,11 @@ import type {
 import type { DrugBag } from "./drugBags.types";
 
 // Case phase choices (matches Case.PhaseChoices in Django)
-// 8-PHASE WORKFLOW
+// 7-phase workflow
 export type CasePhase =
-	| "data_entry"
-	| "finance_approval"
-	| "botanist_review"
-	| "documents"
+	| "case_creation"
+	| "assessment"
+	| "unsigned_generation"
 	| "botanist_signoff"
 	| "invoicing"
 	| "send_emails"
@@ -196,19 +195,29 @@ export interface CasesSearchParams {
 	search?: string;
 	phase?: CasePhase;
 	botanist?: number;
+	officer?: number;
+	station?: number;
 	finance?: number;
 	cannabis_only?: boolean;
 	date_from?: string;
 	date_to?: string;
+	tag_search?: string;
 	full?: boolean;
+	page?: number;
 	limit?: number;
 	offset?: number;
 	ordering?: string;
 }
 
 // Workflow action request
+export type WorkflowAction =
+	| "advance_phase"
+	| "generate_certificate"
+	| "generate_invoice"
+	| "send_documents";
+
 export interface WorkflowActionRequest {
-	action: "advance_phase" | "generate_certificate" | "generate_invoice";
+	action: WorkflowAction;
 	customer_number?: string;
 }
 

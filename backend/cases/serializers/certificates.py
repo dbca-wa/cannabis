@@ -21,9 +21,9 @@ class CertificateSerializer(serializers.ModelSerializer):
             "submission_case_number",
             "defendant_names",
             "pdf_generating",
-            "pdf_file",
+            "unsigned_pdf_file",
             "pdf_url",
-            "pdf_size",
+            "unsigned_pdf_size",
             "signed_pdf_file",
             "signed_pdf_url",
             "signed_pdf_size",
@@ -40,11 +40,11 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     def get_pdf_url(self, obj):
         """Get full URL for the unsigned PDF file."""
-        if obj.pdf_file:
+        if obj.unsigned_pdf_file:
             request = self.context.get("request")
             if request:
-                return request.build_absolute_uri(obj.pdf_file.url)
-            return obj.pdf_file.url
+                return request.build_absolute_uri(obj.unsigned_pdf_file.url)
+            return obj.unsigned_pdf_file.url
         return None
 
     def get_signed_pdf_url(self, obj):

@@ -30,28 +30,28 @@ from cases.services.workflow_service import WorkflowService
 class TestWorkflowServiceAdvance:
     """Tests for WorkflowService.advance_case."""
 
-    def test_advance_from_assessment_to_data_entry(self, make_case, make_user):
-        """Advancing from assessment moves to data_entry."""
+    def test_advance_from_case_creation(self, make_case, make_user):
+        """Advancing from case_creation moves to assessment."""
         user = make_user(email="wf1@test.com", role="finance")
-        case = make_case(phase=Case.PhaseChoices.ASSESSMENT)
+        case = make_case(phase=Case.PhaseChoices.CASE_CREATION)
 
         result = WorkflowService.advance_case(case, user)
 
-        assert result == Case.PhaseChoices.DATA_ENTRY
+        assert result == Case.PhaseChoices.ASSESSMENT
         case.refresh_from_db()
-        assert case.phase == Case.PhaseChoices.DATA_ENTRY
+        assert case.phase == Case.PhaseChoices.ASSESSMENT
 
     def test_advance_creates_phase_history(self, make_case, make_user):
         """Advancing creates a CasePhaseHistory audit record."""
         user = make_user(email="wf2@test.com", role="finance")
-        case = make_case(phase=Case.PhaseChoices.DATA_ENTRY)
+        case = make_case(phase=Case.PhaseChoices.CASE_CREATION)
 
         WorkflowService.advance_case(case, user)
 
         history = CasePhaseHistory.objects.filter(submission=case).first()
         assert history is not None
-        assert history.from_phase == Case.PhaseChoices.DATA_ENTRY
-        assert history.to_phase == Case.PhaseChoices.UNSIGNED_GENERATION
+        assert history.from_phase == Case.PhaseChoices.CASE_CREATION
+        assert history.to_phase == Case.PhaseChoices.ASSESSMENT
         assert history.action == "advance"
         assert history.user == user
 
@@ -69,7 +69,6 @@ class TestWorkflowServiceAdvance:
         case = make_case(phase=Case.PhaseChoices.ASSESSMENT)
 
         expected_sequence = [
-            Case.PhaseChoices.DATA_ENTRY,
             Case.PhaseChoices.UNSIGNED_GENERATION,
             Case.PhaseChoices.BOTANIST_SIGNOFF,
             Case.PhaseChoices.INVOICING,
@@ -92,12 +91,12 @@ class TestWorkflowServiceSendBack:
         case = make_case(phase=Case.PhaseChoices.BOTANIST_SIGNOFF)
 
         result = WorkflowService.send_back_case(
-            case, Case.PhaseChoices.DATA_ENTRY, "Data incomplete", user
+            case, Case.PhaseChoices.CASE_CREATION, "Data incomplete", user
         )
 
-        assert result["new_phase"] == Case.PhaseChoices.DATA_ENTRY
+        assert result["new_phase"] == Case.PhaseChoices.CASE_CREATION
         case.refresh_from_db()
-        assert case.phase == Case.PhaseChoices.DATA_ENTRY
+        assert case.phase == Case.PhaseChoices.CASE_CREATION
 
     def test_send_back_requires_reason(self, make_case, make_user):
         """Send back without reason raises ValidationError."""
@@ -105,12 +104,14 @@ class TestWorkflowServiceSendBack:
         case = make_case(phase=Case.PhaseChoices.INVOICING)
 
         with pytest.raises(ValidationError):
-            WorkflowService.send_back_case(case, Case.PhaseChoices.DATA_ENTRY, "", user)
+            WorkflowService.send_back_case(
+                case, Case.PhaseChoices.CASE_CREATION, "", user
+            )
 
     def test_send_back_cannot_go_forward(self, make_case, make_user):
         """Send back to a later phase raises ValidationError."""
         user = make_user(email="sb3@test.com", role="finance")
-        case = make_case(phase=Case.PhaseChoices.DATA_ENTRY)
+        case = make_case(phase=Case.PhaseChoices.CASE_CREATION)
 
         with pytest.raises(ValidationError):
             WorkflowService.send_back_case(

@@ -4,8 +4,9 @@ Handles drug bag CRUD operations and botanical assessment creation/update logic.
 """
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 
 from ..models import BotanicalAssessment, DrugBag
 
@@ -48,23 +49,18 @@ class DrugBagService:
 
         Checks:
         - The drug bag does not already have an assessment.
-        - The user is a botanist or staff.
 
         Raises:
             ValidationError: If an assessment already exists.
-            PermissionDenied: If the user is not permitted.
         """
-        if hasattr(drug_bag, "assessment") and drug_bag.assessment is not None:
+        if BotanicalAssessment.objects.filter(drug_bag=drug_bag).exists():
             raise ValidationError("Assessment already exists for this drug bag.")
-
-        if not (user.role == "botanist" or user.is_staff):
-            raise PermissionDenied("Only botanists can create assessments.")
 
     @staticmethod
     def create_assessment(drug_bag, data, user):
         """Create a botanical assessment for a drug bag.
 
-        Validates permissions, creates the assessment record.
+        Validates that no assessment already exists, then creates the record.
 
         Args:
             drug_bag: The DrugBag instance.
@@ -76,7 +72,6 @@ class DrugBagService:
 
         Raises:
             ValidationError: If assessment already exists.
-            PermissionDenied: If user is not a botanist/staff.
         """
         DrugBagService.validate_assessment_creation(drug_bag, user)
 
@@ -93,11 +88,9 @@ class DrugBagService:
     def validate_assessment_update_permission(user):
         """Validate that the user can update botanical assessments.
 
-        Raises:
-            PermissionDenied: If the user is not a botanist or staff.
+        Any authenticated user with a role can update assessments.
         """
-        if not (user.role == "botanist" or user.is_staff):
-            raise PermissionDenied("Only botanists can update assessments.")
+        # No role restriction — IsAuthenticated on the view is sufficient
 
     @staticmethod
     def update_assessment_with_auto_date(assessment, validated_data):
@@ -121,3 +114,88 @@ class DrugBagService:
         assessment.save()
 
         return assessment
+
+    @staticmethod
+    @transaction.atomic
+    def batch_create(submission, bags_data, user):
+        """Create multiple bags with assessments in a single transaction.
+
+        Args:
+            submission: The Case instance.
+            bags_data: List of dicts with keys: seal_tag_numbers, new_seal_tag_numbers,
+                       content_type, determination, assessment_date.
+            user: The user performing the creation.
+
+        Returns:
+            List of created DrugBag instances (with nested assessment).
+
+        Raises:
+            ValidationError: If any tag number is duplicate within the batch or case.
+        """
+        # Collect all seal_tag_numbers from the batch for uniqueness validation
+        batch_tags = [entry["seal_tag_numbers"] for entry in bags_data]
+
+        # Check for duplicates within the batch itself
+        seen = set()
+        duplicates_in_batch = set()
+        for tag in batch_tags:
+            if tag in seen:
+                duplicates_in_batch.add(tag)
+            seen.add(tag)
+
+        if duplicates_in_batch:
+            raise ValidationError(
+                {
+                    "bags": f"Duplicate tag numbers within batch: "
+                    f"{', '.join(sorted(duplicates_in_batch))}"
+                }
+            )
+
+        # Check for conflicts with existing bags globally (any case)
+        global_conflicts = DrugBag.objects.filter(
+            seal_tag_numbers__in=batch_tags
+        ).select_related("submission")
+        if global_conflicts.exists():
+            conflict_details = [
+                f"'{bag.seal_tag_numbers}' on case {bag.submission.case_number} (id: {bag.submission.pk})"
+                for bag in global_conflicts[:5]
+            ]
+            raise ValidationError(
+                {
+                    "bags": f"Tag numbers already exist: "
+                    f"{', '.join(conflict_details)}"
+                }
+            )
+
+        # Create all bags and assessments
+        created_bags = []
+        for entry in bags_data:
+            bag = DrugBag.objects.create(
+                submission=submission,
+                seal_tag_numbers=entry["seal_tag_numbers"],
+                new_seal_tag_numbers=entry.get("new_seal_tag_numbers") or "",
+                content_type=entry.get("content_type", DrugBag.ContentType.PLANT),
+            )
+
+            determination = entry.get("determination")
+            if determination and determination != "pending":
+                BotanicalAssessment.objects.create(
+                    drug_bag=bag,
+                    determination=determination,
+                    assessment_date=entry.get("assessment_date") or timezone.now(),
+                )
+
+            created_bags.append(bag)
+
+        settings.LOGGER.info(
+            f"User {user} batch-created {len(created_bags)} bags "
+            f"for case {submission.case_number}"
+        )
+
+        # Refresh to include nested assessment relations
+        bag_ids = [bag.pk for bag in created_bags]
+        return list(
+            DrugBag.objects.filter(pk__in=bag_ids)
+            .prefetch_related("assessment")
+            .order_by("seal_tag_numbers")
+        )

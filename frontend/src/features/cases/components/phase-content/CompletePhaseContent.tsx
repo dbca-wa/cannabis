@@ -106,11 +106,12 @@ export const CompletePhaseContent = observer<CompletePhaseContentProps>(
 		// Get phase colour for timeline
 		const getPhaseColor = (phase: string): string => {
 			const colorMap: Record<string, string> = {
-				data_entry: "bg-gray-500",
-				finance_approval: "bg-cyan-500",
-				botanist_review: "bg-green-500",
-				documents: "bg-purple-500",
-				send_emails: "bg-orange-500",
+				case_creation: "bg-amber-500",
+				assessment: "bg-teal-500",
+				unsigned_generation: "bg-blue-500",
+				botanist_signoff: "bg-violet-500",
+				invoicing: "bg-rose-500",
+				send_emails: "bg-sky-500",
 				complete: "bg-emerald-500",
 			};
 			return colorMap[phase] || "bg-gray-500";

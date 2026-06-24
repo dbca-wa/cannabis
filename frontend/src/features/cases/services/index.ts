@@ -15,6 +15,7 @@ export {
 	createDrugBag,
 	updateDrugBag,
 	deleteDrugBag,
+	batchCreateDrugBags,
 } from "./drugBags.service";
 export {
 	getAssessmentById,

@@ -50,11 +50,21 @@ export const generateInvoice = async (
  */
 export const regenerateInvoice = async (
 	submissionId: number,
-	invoiceId: number
+	invoiceId: number,
+	customerNumber?: string
 ): Promise<Invoice> => {
 	return apiClient.post<Invoice>(
-		ENDPOINTS.CASES.DOCUMENTS.REGENERATE_INVOICE(submissionId, invoiceId)
+		ENDPOINTS.CASES.DOCUMENTS.REGENERATE_INVOICE(submissionId, invoiceId),
+		customerNumber ? { customer_number: customerNumber } : undefined
 	);
+};
+
+/**
+ * Delete an invoice record.
+ * DELETE /cases/invoices/{invoiceId}
+ */
+export const deleteInvoice = async (invoiceId: number): Promise<void> => {
+	return apiClient.delete(ENDPOINTS.INVOICES.DELETE(invoiceId));
 };
 
 /**

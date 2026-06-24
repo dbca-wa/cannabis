@@ -79,7 +79,7 @@ export const DeleteCaseRouteModal = () => {
 	}
 
 	// Check if case can be deleted (only in data entry phase)
-	const canDelete = caseObj.phase === "data_entry";
+	const canDelete = caseObj.phase === "case_creation";
 	const warningMessage = !canDelete
 		? "This case cannot be deleted because it has progressed beyond the data entry phase. Only cases in data entry phase can be deleted."
 		: null;

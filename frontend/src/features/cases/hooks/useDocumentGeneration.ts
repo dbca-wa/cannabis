@@ -76,8 +76,13 @@ export const useDocumentGeneration = (submissionId: number) => {
 	});
 
 	const regenerateInvoiceMutation = useMutation({
-		mutationFn: (invoiceId: number) =>
-			regenerateInvoice(submissionId, invoiceId),
+		mutationFn: ({
+			invoiceId,
+			customerNumber,
+		}: {
+			invoiceId: number;
+			customerNumber?: string;
+		}) => regenerateInvoice(submissionId, invoiceId, customerNumber),
 		onSuccess: (invoice) => {
 			invalidateCase();
 			toast.success(

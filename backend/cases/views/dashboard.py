@@ -46,6 +46,16 @@ class RevenueStatsView(APIView):
         return Response(data, status=HTTP_200_OK)
 
 
+class MonthlyThroughputView(APIView):
+    """GET: Monthly throughput data for the current financial year."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = DashboardService.get_monthly_throughput()
+        return Response(data, status=HTTP_200_OK)
+
+
 class PendingAttentionView(APIView):
     """GET: Submissions requiring the current user's attention based on role."""
 

@@ -16,6 +16,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useRevenueStats } from "@/features/dash/hooks/useRevenueStats";
+import { useMonthlyThroughput } from "@/features/dash/hooks/useMonthlyThroughput";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { QuicklinkCards } from "@/features/dash/components/QuicklinkCards";
 import { NewCaseButton } from "@/shared/components/NewCaseButton";
@@ -55,7 +56,7 @@ const currentYear = new Date().getFullYear();
 const fyStartYear = currentCalendarMonth >= 6 ? currentYear : currentYear - 1;
 const fyLabel = `FY ${fyStartYear}/${String(fyStartYear + 1).slice(2)}`;
 
-const chartData = FY_MONTHS.map((month) => ({
+const PLACEHOLDER_CHART_DATA = FY_MONTHS.map((month) => ({
 	month,
 	cases: null,
 	certs: null,
@@ -117,6 +118,18 @@ const Home = () => {
 		isLoading: isLoadingRevenue,
 		isError: isRevenueError,
 	} = useRevenueStats();
+
+	const { data: throughputData } = useMonthlyThroughput();
+
+	// Build chart data from API response, falling back to placeholder
+	const chartData = throughputData
+		? throughputData.map((entry) => ({
+				...entry,
+				forecastCases: null,
+				forecastCerts: null,
+				forecastRevenue: null,
+			}))
+		: PLACEHOLDER_CHART_DATA;
 
 	const isLoading = isLoadingRevenue;
 	const isError = isRevenueError;
@@ -185,92 +198,8 @@ const Home = () => {
 			{!isLoading && !isError && (
 				/* Real content — single smooth fade-in for the whole dashboard */
 				<div className="space-y-6 animate-in fade-in duration-500">
-					{/* Mobile: Cards at top */}
-					<div className="lg:hidden">
-						<QuicklinkCards />
-					</div>
-
-					{/* Monthly Revenue — full width */}
-					<Card className="group relative overflow-hidden p-6 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 dark:from-emerald-800 dark:via-emerald-700 dark:to-teal-800 text-white border-0 shadow-lg">
-						{/* Sheen effect on hover */}
-						<div
-							className="absolute top-0 -left-full w-full h-full group-hover:animate-sheen pointer-events-none z-10"
-							style={{
-								background:
-									"linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.12) 55%, transparent 70%)",
-							}}
-						/>
-						<div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-white/10 dark:bg-white/15 blur-2xl" />
-						<div className="absolute -left-10 -bottom-20 w-52 h-52 rounded-full bg-lime-300/20 dark:bg-lime-300/25 blur-3xl" />
-						<div className="relative flex flex-col">
-							<div className="flex items-start justify-between mb-6">
-								<div>
-									<div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] bg-white/15 backdrop-blur px-2.5 py-1 rounded-full mb-3">
-										<DollarSign className="w-3 h-3" />
-										Monthly Revenue
-									</div>
-									<div className="text-[13px] text-white/80">
-										{CALENDAR_MONTHS[currentCalendarMonth]} {currentYear} ·{" "}
-										{fyLabel}
-									</div>
-								</div>
-								<div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-									<DollarSign className="w-6 h-6" />
-								</div>
-							</div>
-
-							<div className="flex-1 flex flex-col justify-center">
-								<div className="text-[52px] tracking-tight leading-none">
-									<CountUp
-										to={currentMonthRevenue}
-										prefix="$"
-										decimals={0}
-										duration={1.6}
-									/>
-								</div>
-								{yoyChange != null && (
-									<div className="flex items-center gap-2 text-[13px] text-white/85 mt-3">
-										<span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur px-2 py-0.5 rounded-full">
-											<TrendingUp className="w-3 h-3" />
-											{yoyChange >= 0 ? "+" : ""}
-											{Math.round(yoyChange)}% YoY
-										</span>
-									</div>
-								)}
-							</div>
-
-							<div className="mt-6 pt-5 border-t border-white/20">
-								{revenueTarget > 0 ? (
-									<>
-										<div className="flex items-center justify-between text-[12px] text-white/85 mb-2">
-											<span>
-												vs. {CALENDAR_MONTHS[currentCalendarMonth]} last year
-											</span>
-											<span>
-												<CountUp to={revenueProgress} suffix="%" /> of $
-												{revenueTarget.toLocaleString()}
-											</span>
-										</div>
-										<div className="h-2 rounded-full bg-white/15 overflow-hidden">
-											<motion.div
-												initial={{ width: 0 }}
-												animate={{
-													width: `${Math.min(revenueProgress, 100)}%`,
-												}}
-												transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-												className="h-full bg-gradient-to-r from-lime-300 to-white rounded-full"
-											/>
-										</div>
-									</>
-								) : (
-									<div className="text-[12px] text-white/60">
-										No comparison data available for{" "}
-										{CALENDAR_MONTHS[currentCalendarMonth]} last year
-									</div>
-								)}
-							</div>
-						</div>
-					</Card>
+					{/* Quicklink Cards — always at top */}
+					<QuicklinkCards />
 
 					{/* Monthly Throughput — full width */}
 					<Card className="p-6">
@@ -285,10 +214,10 @@ const Home = () => {
 							(d) => d.cases !== null || d.certs !== null || d.revenue !== null
 						) ? (
 							<>
-								<ResponsiveContainer width="100%" height={290}>
+								<ResponsiveContainer width="100%" height={380}>
 									<AreaChart
 										data={chartData}
-										margin={{ left: -12, right: 0, top: 20, bottom: 0 }}
+										margin={{ left: 0, right: 10, top: 20, bottom: 0 }}
 									>
 										<defs>
 											<linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
@@ -341,6 +270,14 @@ const Home = () => {
 											fontSize={11}
 											tickLine={false}
 											axisLine={false}
+											label={{
+												value: "Cases / Certs",
+												angle: -90,
+												position: "insideLeft",
+												style: { fontSize: 10, fill: "#9ca3af" },
+												offset: 10,
+											}}
+											allowDecimals={false}
 										/>
 										<YAxis
 											yAxisId="right"
@@ -349,7 +286,18 @@ const Home = () => {
 											fontSize={11}
 											tickLine={false}
 											axisLine={false}
-											tickFormatter={(v: number) => `${Math.round(v / 1000)}k`}
+											label={{
+												value: "Revenue ($)",
+												angle: 90,
+												position: "insideRight",
+												style: { fontSize: 10, fill: "#9ca3af" },
+												offset: 10,
+											}}
+											tickFormatter={(v: number) =>
+												v >= 1000
+													? `$${Math.round(v / 1000)}k`
+													: `$${Math.round(v)}`
+											}
 										/>
 										<Tooltip content={ChartTooltipContent} />
 										<Area
@@ -477,10 +425,86 @@ const Home = () => {
 						)}
 					</Card>
 
-					{/* Desktop: Cards at bottom */}
-					<div className="hidden lg:block">
-						<QuicklinkCards />
-					</div>
+					{/* Monthly Revenue */}
+					<Card className="group relative overflow-hidden p-6">
+						{/* Subtle sheen effect on hover */}
+						<div
+							className="absolute top-0 -left-full w-full h-full group-hover:animate-sheen pointer-events-none z-10"
+							style={{
+								background:
+									"linear-gradient(120deg, transparent 30%, rgba(16,185,129,0.06) 45%, rgba(16,185,129,0.06) 55%, transparent 70%)",
+							}}
+						/>
+						<div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 blur-2xl" />
+						<div className="relative flex flex-col">
+							<div className="flex items-start justify-between mb-6">
+								<div>
+									<div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full mb-3">
+										<DollarSign className="w-3 h-3" />
+										Monthly Revenue
+									</div>
+									<div className="text-[13px] text-muted-foreground">
+										{CALENDAR_MONTHS[currentCalendarMonth]} {currentYear} ·{" "}
+										{fyLabel}
+									</div>
+								</div>
+								<div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+									<DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+								</div>
+							</div>
+
+							<div className="flex-1 flex flex-col justify-center">
+								<div className="text-[52px] tracking-tight leading-none text-foreground">
+									<CountUp
+										to={currentMonthRevenue}
+										prefix="$"
+										decimals={0}
+										duration={1.6}
+									/>
+								</div>
+								{yoyChange != null && (
+									<div className="flex items-center gap-2 text-[13px] text-muted-foreground mt-3">
+										<span className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+											<TrendingUp className="w-3 h-3" />
+											{yoyChange >= 0 ? "+" : ""}
+											{Math.round(yoyChange)}% YoY
+										</span>
+									</div>
+								)}
+							</div>
+
+							<div className="mt-6 pt-5 border-t border-border/40">
+								{revenueTarget > 0 ? (
+									<>
+										<div className="flex items-center justify-between text-[12px] text-muted-foreground mb-2">
+											<span>
+												vs. {CALENDAR_MONTHS[currentCalendarMonth]} last year
+											</span>
+											<span>
+												<CountUp to={revenueProgress} suffix="%" /> of $
+												{revenueTarget.toLocaleString()}
+											</span>
+										</div>
+										<div className="h-2 rounded-full bg-muted overflow-hidden">
+											<motion.div
+												initial={{ width: 0 }}
+												animate={{
+													width: `${Math.min(revenueProgress, 100)}%`,
+												}}
+												transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+												className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+											/>
+										</div>
+									</>
+								) : (
+									<div className="text-[12px] text-muted-foreground">
+										No comparison data available for{" "}
+										{CALENDAR_MONTHS[currentCalendarMonth]} last year
+									</div>
+								)}
+							</div>
+						</div>
+					</Card>
 				</div>
 			)}
 		</>

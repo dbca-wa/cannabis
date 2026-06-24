@@ -5,21 +5,35 @@ interface WizardLayoutProps {
 	formPanel: ReactNode;
 	previewPanel: ReactNode;
 	showPreview: boolean;
-	onTogglePreview: () => void;
+	/** When true, renders only the preview panel at full width (no form panel) */
+	fullWidthPreview?: boolean;
 }
 
 /**
- * WizardLayout — Responsive layout manager for form and preview panels.
+ * Responsive layout manager for form and preview panels.
  *
  * Layout modes:
+ * - Full-width preview: Preview only, no form panel (used by certificate step)
  * - Ultra-wide (≥1920px): Side-by-side 50/50 split via CSS Grid
- * - Standard (<1920px): Toggle between form and preview views
+ * - Standard (<1920px): Single panel toggled between form and preview
  */
 export const WizardLayout = ({
 	formPanel,
 	previewPanel,
 	showPreview,
+	fullWidthPreview = false,
 }: WizardLayoutProps) => {
+	// Full-width preview mode — no split, no toggle, just the preview
+	if (fullWidthPreview) {
+		return (
+			<div className="h-full flex flex-col">
+				<div className="flex-1 overflow-y-auto">
+					<div className="max-w-5xl mx-auto">{previewPanel}</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="h-full flex flex-col">
 			{/* Main content area */}
@@ -31,12 +45,12 @@ export const WizardLayout = ({
 
 					{/* Preview panel — right column */}
 					<div className="overflow-y-auto pl-4 border-l">
-						<div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 mb-4 border-b z-10">
+						{/* <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 mb-4 border-b z-10">
 							<h3 className="text-lg font-semibold">Live Preview</h3>
 							<p className="text-sm text-muted-foreground">
 								See how your case will appear
 							</p>
-						</div>
+						</div> */}
 						{previewPanel}
 					</div>
 				</div>
@@ -58,15 +72,7 @@ export const WizardLayout = ({
 							showPreview ? "block" : "hidden"
 						)}
 					>
-						<div className="max-w-4xl mx-auto">
-							<div className="mb-6">
-								<h3 className="text-xl font-semibold">Live Preview</h3>
-								<p className="text-sm text-muted-foreground">
-									See how your case will appear
-								</p>
-							</div>
-							{previewPanel}
-						</div>
+						<div className="max-w-4xl mx-auto">{previewPanel}</div>
 					</div>
 				</div>
 			</div>

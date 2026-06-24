@@ -7,11 +7,13 @@ import {
 	createDrugBag,
 	updateDrugBag,
 	deleteDrugBag,
+	batchCreateDrugBags,
 } from "../services/drugBags.service";
 import {
 	type DrugBagCreateRequest,
 	type DrugBagUpdateRequest,
 } from "@/shared/types/backend-api.types";
+import type { DrugBagBatchCreateRequest } from "../types/drugBags.types";
 import { casesQueryKeys } from "./useCases";
 
 export const drugBagsQueryKeys = {
@@ -44,8 +46,9 @@ export const useDrugBags = (submissionId: number | null) => {
 			queryClient.invalidateQueries({
 				queryKey: drugBagsQueryKeys.list(newDrugBag.case),
 			});
+			// Invalidate all case detail queries to ensure bags array is refreshed
 			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(newDrugBag.case),
+				queryKey: ["cases"],
 			});
 			toast.success(
 				`Drug bag "${newDrugBag.seal_tag_numbers}" created successfully!`
@@ -64,10 +67,10 @@ export const useDrugBags = (submissionId: number | null) => {
 				drugBagsQueryKeys.detail(updatedDrugBag.id),
 				updatedDrugBag
 			);
-			queryClient.invalidateQueries({
+			await queryClient.invalidateQueries({
 				queryKey: drugBagsQueryKeys.list(updatedDrugBag.case),
 			});
-			queryClient.invalidateQueries({
+			await queryClient.invalidateQueries({
 				queryKey: casesQueryKeys.detail(updatedDrugBag.case),
 			});
 			toast.success(
@@ -94,16 +97,36 @@ export const useDrugBags = (submissionId: number | null) => {
 			queryClient.removeQueries({
 				queryKey: drugBagsQueryKeys.detail(id),
 			});
-			queryClient.invalidateQueries({
+			await queryClient.invalidateQueries({
 				queryKey: drugBagsQueryKeys.list(submissionId),
 			});
-			queryClient.invalidateQueries({
+			await queryClient.invalidateQueries({
 				queryKey: casesQueryKeys.detail(submissionId),
 			});
 			toast.success("Drug bag deleted successfully!");
 		},
 		onError: (error: unknown) => {
 			toast.error(`Failed to delete drug bag: ${getErrorMessage(error)}`);
+		},
+	});
+
+	const batchCreateMutation = useMutation({
+		mutationFn: ({
+			caseId,
+			data,
+		}: {
+			caseId: number;
+			data: DrugBagBatchCreateRequest;
+		}) => batchCreateDrugBags(caseId, data),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: drugBagsQueryKeys.lists(),
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
+			toast.success("Bags created successfully!");
+		},
+		onError: (error: unknown) => {
+			toast.error(`Failed to create bags: ${getErrorMessage(error)}`);
 		},
 	});
 
@@ -114,12 +137,14 @@ export const useDrugBags = (submissionId: number | null) => {
 		isError: drugBagsQuery.isError,
 		error: drugBagsQuery.error,
 		isRefetching: drugBagsQuery.isRefetching,
-		createDrugBag: createDrugBagMutation.mutate,
-		updateDrugBag: updateDrugBagMutation.mutate,
-		deleteDrugBag: deleteDrugBagMutation.mutate,
+		createDrugBag: createDrugBagMutation.mutateAsync,
+		updateDrugBag: updateDrugBagMutation.mutateAsync,
+		deleteDrugBag: deleteDrugBagMutation.mutateAsync,
+		batchCreateDrugBags: batchCreateMutation.mutateAsync,
 		isCreating: createDrugBagMutation.isPending,
 		isUpdating: updateDrugBagMutation.isPending,
 		isDeleting: deleteDrugBagMutation.isPending,
+		isBatchCreating: batchCreateMutation.isPending,
 		refetch: drugBagsQuery.refetch,
 	};
 };

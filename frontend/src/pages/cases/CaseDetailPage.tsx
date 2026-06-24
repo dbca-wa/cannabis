@@ -27,8 +27,8 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
  * Features a beautiful animated progress indicator, phase-specific content, and role-based actions.
  *
  * Features:
- * - Phase progress indicator with 6 workflow phases
- * - Phase-specific content display (data entry, finance, botanist, documents, emails, complete)
+ * - Phase progress indicator with 7 workflow phases
+ * - Phase-specific content display (creation, assessment, certificate, sign-off, invoicing, email, complete)
  * - Role-based phase advancement and send-back functionality
  * - URL parameter support for viewing specific phases
  * - Loading states and error handling
@@ -76,10 +76,9 @@ export const CaseDetailPage: React.FC = observer(() => {
 	// Validate phase string
 	const isValidPhase = (phase: string): phase is CasePhase => {
 		const validPhases: CasePhase[] = [
-			"data_entry",
-			"finance_approval",
-			"botanist_review",
-			"documents",
+			"case_creation",
+			"assessment",
+			"unsigned_generation",
 			"botanist_signoff",
 			"invoicing",
 			"send_emails",
@@ -303,7 +302,11 @@ export const CaseDetailPage: React.FC = observer(() => {
 	const userRole = getUserRole();
 
 	return (
-		<ContentLayout maxWidth="full" title={`Case ${caseObj.case_number}`}>
+		<ContentLayout
+			maxWidth="full"
+			title={`Case ${caseObj.case_number}`}
+			hideBreadcrumb
+		>
 			<div className="space-y-6">
 				{/* Back Button */}
 				<div>

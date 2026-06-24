@@ -16,7 +16,7 @@ def submission(db, user):
         case_number="CASE-001",
         received=timezone.now(),
         station=station,
-        phase=Case.PhaseChoices.DATA_ENTRY,
+        phase=Case.PhaseChoices.CASE_CREATION,
     )
 
 

@@ -86,10 +86,11 @@ export const useCases = (params: CasesSearchParams = {}) => {
 			return updateCase(id, data);
 		},
 		onSuccess: async (updatedCase) => {
-			queryClient.setQueryData(
-				casesQueryKeys.detail(updatedCase.id),
-				updatedCase
-			);
+			// Invalidate the detail query to refetch full case data (with nested relations)
+			// instead of replacing cache with partial PATCH response
+			await queryClient.invalidateQueries({
+				queryKey: casesQueryKeys.detail(updatedCase.id),
+			});
 			queryClient.invalidateQueries({
 				queryKey: casesQueryKeys.lists(),
 			});

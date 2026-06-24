@@ -78,6 +78,7 @@ export const ENDPOINTS = {
 		BAGS: {
 			LIST: (caseId: string | number) => `/cases/${caseId}/bags`,
 			CREATE: (caseId: string | number) => `/cases/${caseId}/bags`,
+			BATCH_CREATE: (caseId: string | number) => `/cases/${caseId}/bags/batch`,
 			DETAIL: (id: string | number) => `/cases/bags/${id}`,
 			UPDATE: (id: string | number) => `/cases/bags/${id}`,
 			DELETE: (id: string | number) => `/cases/bags/${id}`,
@@ -136,6 +137,7 @@ export const ENDPOINTS = {
 		MY_SUBMISSIONS: "/cases/my",
 		STATS_CERTIFICATES: "/cases/stats/certificates",
 		STATS_REVENUE: "/cases/stats/revenue",
+		STATS_THROUGHPUT: "/cases/stats/throughput",
 		PENDING_ATTENTION: "/cases/pending-attention",
 	},
 

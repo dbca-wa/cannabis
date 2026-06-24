@@ -89,6 +89,14 @@ def _apply_filters(queryset, params):
             search_q = search_q | Q(pk=int(search))
         queryset = queryset.filter(search_q).distinct()
 
+    # Tag number search — filters cases that have bags matching the tag
+    tag_search = params.get("tag_search")
+    if tag_search:
+        queryset = queryset.filter(
+            Q(bags__seal_tag_numbers__icontains=tag_search)
+            | Q(bags__new_seal_tag_numbers__icontains=tag_search)
+        ).distinct()
+
     return queryset
 
 

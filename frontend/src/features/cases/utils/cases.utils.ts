@@ -1,5 +1,10 @@
 import { type Case, type CaseTiny } from "@/shared/types/backend-api.types";
 import type { UICasePhase } from "../components/PhaseIndicator";
+import {
+	PHASE_DISPLAY_NAMES,
+	PHASE_HEX_COLOURS,
+	PHASE_BADGE_COLOURS,
+} from "@/shared/constants/phases.config";
 
 /**
  * Check if a case can be deleted (no associated certificates/invoices)
@@ -29,18 +34,19 @@ export const formatCaseDisplayName = (caseObj: Case | CaseTiny): string => {
 };
 
 /**
- * Get phase colour class for UI display
+ * Get phase colour class for UI display (text colour)
  */
 export const getPhaseColorClass = (
 	phase: string,
 	isDark: boolean = false
 ): string => {
 	const colorMap: Record<string, { light: string; dark: string }> = {
-		data_entry: { light: "text-gray-600", dark: "text-gray-400" },
-		finance_approval: { light: "text-cyan-600", dark: "text-cyan-400" },
-		botanist_review: { light: "text-green-600", dark: "text-green-400" },
-		documents: { light: "text-purple-600", dark: "text-purple-400" },
-		send_emails: { light: "text-orange-600", dark: "text-orange-400" },
+		case_creation: { light: "text-amber-600", dark: "text-amber-400" },
+		assessment: { light: "text-teal-600", dark: "text-teal-400" },
+		unsigned_generation: { light: "text-blue-600", dark: "text-blue-400" },
+		botanist_signoff: { light: "text-violet-600", dark: "text-violet-400" },
+		invoicing: { light: "text-rose-600", dark: "text-rose-400" },
+		send_emails: { light: "text-sky-600", dark: "text-sky-400" },
 		complete: { light: "text-emerald-600", dark: "text-emerald-400" },
 	};
 
@@ -54,65 +60,31 @@ export const getPhaseColorClass = (
  * Get phase background colour class for badges
  */
 export const getPhaseBadgeClass = (phase: string): string => {
-	const badgeMap: Record<string, string> = {
-		data_entry: "bg-gray-100 text-gray-800",
-		finance_approval: "bg-cyan-100 text-cyan-800",
-		botanist_review: "bg-green-100 text-green-800",
-		documents: "bg-purple-100 text-purple-800",
-		send_emails: "bg-orange-100 text-orange-800",
-		complete: "bg-emerald-100 text-emerald-800",
-	};
-
-	return badgeMap[phase] || "bg-gray-100 text-gray-800";
+	return (
+		PHASE_BADGE_COLOURS[phase as UICasePhase] ||
+		"bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+	);
 };
 
 /**
- * Get phase hex colour for progress indicators
+ * Get phase hex colour for progress indicators and charts
  */
 export const getPhaseColor = (phase: string): string => {
-	const colorMap: Record<string, string> = {
-		data_entry: "#6c757d",
-		finance_approval: "#17a2b8",
-		botanist_review: "#28a745",
-		documents: "#6f42c1",
-		send_emails: "#fd7e14",
-		complete: "#28a745",
-	};
-
-	return colorMap[phase] || "#6c757d";
+	return PHASE_HEX_COLOURS[phase as UICasePhase] || "#6b7280";
 };
 
 /**
  * Get phase display name
  */
 export const getPhaseDisplay = (phase: string): string => {
-	const displayMap: Record<string, string> = {
-		data_entry: "Data Entry",
-		finance_approval: "Finance Approval",
-		botanist_review: "Botanist Review",
-		documents: "Documents",
-		send_emails: "Send Emails",
-		complete: "Complete",
-	};
-
-	return displayMap[phase] || phase;
+	return PHASE_DISPLAY_NAMES[phase as UICasePhase] || phase;
 };
 
 /**
  * Get human-readable label for a UI case phase
  */
 export const getPhaseLabel = (phase: UICasePhase): string => {
-	const labels: Record<UICasePhase, string> = {
-		data_entry_start: "Data Entry",
-		finance_approval_provided: "Finance Approval",
-		botanist_approval_provided: "Botanist Approval",
-		in_review: "Review",
-		certificate_generation_start: "Certificate Generation",
-		invoice_generation_start: "Invoice Generation",
-		sending_emails: "Sending Emails",
-		complete: "Complete",
-	};
-	return labels[phase] || phase;
+	return PHASE_DISPLAY_NAMES[phase] || phase;
 };
 
 /**
@@ -123,14 +95,18 @@ export const getAdvancementDescription = (
 	nextPhase: UICasePhase
 ): string => {
 	const descriptions: Record<string, string> = {
-		"data_entry_start->finance_approval_provided":
-			" This indicates that data entry is complete and the case is ready for finance approval.",
-		"finance_approval_provided->botanist_approval_provided":
-			" This confirms finance approval and moves the case to botanist approval.",
-		"botanist_approval_provided->in_review":
-			" This confirms botanist approval and moves the case to final review.",
-		"in_review->certificate_generation_start":
-			" This will trigger automatic certificate generation.",
+		"case_creation->assessment":
+			" Case creation is complete. Moving to assessment phase.",
+		"assessment->unsigned_generation":
+			" Assessment is complete. Moving to certificate generation.",
+		"unsigned_generation->botanist_signoff":
+			" Certificate generated. Moving to botanist sign-off.",
+		"botanist_signoff->invoicing":
+			" Certificate signed. Moving to invoice generation.",
+		"invoicing->send_emails":
+			" Invoice generated. Moving to email distribution.",
+		"send_emails->complete":
+			" Documents sent. Case will be marked as complete.",
 	};
 
 	const key = `${currentPhase}->${nextPhase}`;

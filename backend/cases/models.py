@@ -89,18 +89,18 @@ class Case(AuditModel):
 
     # Workflow phase - 7-phase state machine
     class PhaseChoices(models.TextChoices):
-        ASSESSMENT = "assessment", "Awaiting Assessment"
-        DATA_ENTRY = "data_entry", "Awaiting Data Entry"
-        UNSIGNED_GENERATION = "unsigned_generation", "Awaiting Unsigned Cert"
-        BOTANIST_SIGNOFF = "botanist_signoff", "Awaiting Signature"
-        INVOICING = "invoicing", "Awaiting Invoice"
-        SEND_EMAILS = "send_emails", "Awaiting Email"
+        CASE_CREATION = "case_creation", "Case Creation"
+        ASSESSMENT = "assessment", "Assessment"
+        UNSIGNED_GENERATION = "unsigned_generation", "Unsigned Certificate"
+        BOTANIST_SIGNOFF = "botanist_signoff", "Botanist Sign-Off"
+        INVOICING = "invoicing", "Invoicing"
+        SEND_EMAILS = "send_emails", "Email"
         COMPLETE = "complete", "Complete"
 
     phase = models.CharField(
         max_length=30,
         choices=PhaseChoices.choices,
-        default=PhaseChoices.ASSESSMENT,
+        default=PhaseChoices.CASE_CREATION,
         help_text="Current phase of the case workflow",
     )
 
@@ -116,6 +116,13 @@ class Case(AuditModel):
         null=True,
         verbose_name="Internal Comments",
         help_text="Any internal comments not showing on certificate",
+    )
+
+    additional_notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Additional Notes",
+        help_text="Section C certificate content (additional notes for the examining botanist)",
     )
 
     # Finance-related fields (for invoice calculation)
@@ -431,15 +438,15 @@ class Certificate(AuditModel):
         default=False,
         help_text="Whether PDF is currently being generated",
     )
-    pdf_file = models.FileField(
+    unsigned_pdf_file = models.FileField(
         upload_to="certificates/",
         blank=True,
         null=True,
-        help_text="Generated PDF certificate",
+        help_text="Unsigned PDF certificate",
     )
-    pdf_size = models.PositiveIntegerField(
+    unsigned_pdf_size = models.PositiveIntegerField(
         default=0,
-        help_text="Size of the PDF in bytes",
+        help_text="Size of the unsigned PDF in bytes",
     )
 
     # Signed PDF slot — holds the signed version, never overwrites the unsigned PDF
@@ -646,8 +653,10 @@ class AdditionalInvoiceFee(AuditModel):
         help_text="Type of additional fee",
     )
 
-    units = models.PositiveIntegerField(
-        default=1,
+    units = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
         help_text="Number of units (km for fuel, hours for forensic, times for call out)",
     )
 

@@ -1,7 +1,7 @@
 """Workflow service — phase transition and send-back business logic.
 
 Handles the 7-phase case state machine:
-  assessment → data_entry → unsigned_generation → botanist_signoff →
+  case_creation → assessment → unsigned_generation → botanist_signoff →
   invoicing → send_emails → complete
 """
 
@@ -14,8 +14,8 @@ from ..models import Case, CasePhaseHistory
 
 # Ordered phase sequence for transition validation
 PHASE_ORDER = [
+    Case.PhaseChoices.CASE_CREATION,
     Case.PhaseChoices.ASSESSMENT,
-    Case.PhaseChoices.DATA_ENTRY,
     Case.PhaseChoices.UNSIGNED_GENERATION,
     Case.PhaseChoices.BOTANIST_SIGNOFF,
     Case.PhaseChoices.INVOICING,
@@ -25,8 +25,8 @@ PHASE_ORDER = [
 
 # Forward transitions mapping
 PHASE_TRANSITIONS = {
-    Case.PhaseChoices.ASSESSMENT: Case.PhaseChoices.DATA_ENTRY,
-    Case.PhaseChoices.DATA_ENTRY: Case.PhaseChoices.UNSIGNED_GENERATION,
+    Case.PhaseChoices.CASE_CREATION: Case.PhaseChoices.ASSESSMENT,
+    Case.PhaseChoices.ASSESSMENT: Case.PhaseChoices.UNSIGNED_GENERATION,
     Case.PhaseChoices.UNSIGNED_GENERATION: Case.PhaseChoices.BOTANIST_SIGNOFF,
     Case.PhaseChoices.BOTANIST_SIGNOFF: Case.PhaseChoices.INVOICING,
     Case.PhaseChoices.INVOICING: Case.PhaseChoices.SEND_EMAILS,

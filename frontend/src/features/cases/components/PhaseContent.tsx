@@ -12,12 +12,6 @@ const DataEntryPhaseContent = lazy(() =>
 	}))
 );
 
-const FinanceApprovalPhaseContent = lazy(() =>
-	import("./phase-content/FinanceApprovalPhaseContent").then((m) => ({
-		default: m.FinanceApprovalPhaseContent,
-	}))
-);
-
 const BotanistReviewPhaseContent = lazy(() =>
 	import("./phase-content/BotanistReviewPhaseContent").then((m) => ({
 		default: m.BotanistReviewPhaseContent,
@@ -82,13 +76,15 @@ export const PhaseContent = observer<PhaseContentProps>(
 			};
 
 			switch (phase) {
-				case "data_entry":
+				case "case_creation":
 					return <DataEntryPhaseContent {...commonProps} />;
-				case "finance_approval":
-					return <FinanceApprovalPhaseContent {...commonProps} />;
-				case "botanist_review":
+				case "assessment":
+					return <DataEntryPhaseContent {...commonProps} />;
+				case "unsigned_generation":
+					return <DocumentsPhaseContent {...commonProps} />;
+				case "botanist_signoff":
 					return <BotanistReviewPhaseContent {...commonProps} />;
-				case "documents":
+				case "invoicing":
 					return <DocumentsPhaseContent {...commonProps} />;
 				case "send_emails":
 					return <SendEmailsPhaseContent {...commonProps} />;

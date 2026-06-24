@@ -44,8 +44,13 @@ class CertificateInline(admin.TabularInline):
 
     model = Certificate
     extra = 0
-    fields = ("certificate_number", "pdf_generating", "pdf_file", "pdf_size")
-    readonly_fields = ("certificate_number", "pdf_size", "created_at")
+    fields = (
+        "certificate_number",
+        "pdf_generating",
+        "unsigned_pdf_file",
+        "unsigned_pdf_size",
+    )
+    readonly_fields = ("certificate_number", "unsigned_pdf_size", "created_at")
 
 
 class InvoiceInline(admin.TabularInline):
@@ -201,7 +206,7 @@ class CaseAdmin(admin.ModelAdmin):
 
     # Custom actions
     actions = [
-        "advance_to_data_entry",
+        "advance_to_case_creation",
         "advance_to_unsigned_generation",
         "mark_complete",
     ]
@@ -209,10 +214,11 @@ class CaseAdmin(admin.ModelAdmin):
     def phase_colored(self, obj):
         """Color-coded phase display"""
         colors = {
-            "data_entry": "#6c757d",  # Gray
-            "finance_approval": "#17a2b8",  # Cyan
-            "botanist_review": "#28a745",  # Green
-            "documents": "#6f42c1",  # Purple
+            "case_creation": "#6c757d",  # Gray
+            "assessment": "#17a2b8",  # Cyan
+            "unsigned_generation": "#28a745",  # Green
+            "botanist_signoff": "#6f42c1",  # Purple
+            "invoicing": "#fd7e14",  # Orange
             "send_emails": "#fd7e14",  # Orange
             "complete": "#28a745",  # Green
         }
@@ -248,12 +254,12 @@ class CaseAdmin(admin.ModelAdmin):
 
     cannabis_status.short_description = "Cannabis"
 
-    def advance_to_data_entry(self, request, queryset):
-        """Move cases to data entry"""
-        updated = queryset.update(phase=Case.PhaseChoices.DATA_ENTRY)
-        self.message_user(request, f"{updated} cases moved to data entry")
+    def advance_to_case_creation(self, request, queryset):
+        """Move cases to case creation phase"""
+        updated = queryset.update(phase=Case.PhaseChoices.CASE_CREATION)
+        self.message_user(request, f"{updated} cases moved to case creation")
 
-    advance_to_data_entry.short_description = "Advance to data entry"
+    advance_to_case_creation.short_description = "Move to case creation"
 
     def advance_to_unsigned_generation(self, request, queryset):
         """Move cases to unsigned generation"""
@@ -470,7 +476,12 @@ class CertificateAdmin(admin.ModelAdmin):
     )
     ordering = ("-created_at",)
 
-    readonly_fields = ("certificate_number", "pdf_size", "created_at", "updated_at")
+    readonly_fields = (
+        "certificate_number",
+        "unsigned_pdf_size",
+        "created_at",
+        "updated_at",
+    )
 
     def submission_link(self, obj):
         """Link to submission"""
@@ -485,7 +496,7 @@ class CertificateAdmin(admin.ModelAdmin):
             return format_html(
                 '<span style="background: #ffc107; color: #212529; padding: 2px 6px; border-radius: 3px;">Generating...</span>'
             )
-        elif obj.pdf_file:
+        elif obj.unsigned_pdf_file:
             return format_html(
                 '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px;">Ready</span>'
             )
@@ -498,8 +509,8 @@ class CertificateAdmin(admin.ModelAdmin):
 
     def pdf_size_formatted(self, obj):
         """Format PDF size"""
-        if obj.pdf_size > 0:
-            return f"{obj.pdf_size / 1024:.1f} KB"
+        if obj.unsigned_pdf_size > 0:
+            return f"{obj.unsigned_pdf_size / 1024:.1f} KB"
         return "0 KB"
 
     pdf_size_formatted.short_description = "PDF Size"
@@ -672,10 +683,11 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
     def from_phase_colored(self, obj):
         """Color-coded from phase"""
         colors = {
-            "data_entry": "#6c757d",
-            "finance_approval": "#17a2b8",
-            "botanist_review": "#28a745",
-            "documents": "#6f42c1",
+            "case_creation": "#6c757d",
+            "assessment": "#17a2b8",
+            "unsigned_generation": "#28a745",
+            "botanist_signoff": "#6f42c1",
+            "invoicing": "#fd7e14",
             "send_emails": "#fd7e14",
             "complete": "#28a745",
         }
@@ -691,10 +703,11 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
     def to_phase_colored(self, obj):
         """Color-coded to phase"""
         colors = {
-            "data_entry": "#6c757d",
-            "finance_approval": "#17a2b8",
-            "botanist_review": "#28a745",
-            "documents": "#6f42c1",
+            "case_creation": "#6c757d",
+            "assessment": "#17a2b8",
+            "unsigned_generation": "#28a745",
+            "botanist_signoff": "#6f42c1",
+            "invoicing": "#fd7e14",
             "send_emails": "#fd7e14",
             "complete": "#28a745",
         }

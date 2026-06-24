@@ -27,11 +27,24 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
     """Lightweight police officer serializer"""
 
     full_name = serializers.ReadOnlyField()
+    rank = serializers.CharField(read_only=True)
+    rank_display = serializers.CharField(source="get_rank_display", read_only=True)
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
     station_name = serializers.CharField(source="station.name", read_only=True)
 
     class Meta:
         model = PoliceOfficer
-        fields = ["id", "full_name", "badge_number", "station_name"]
+        fields = [
+            "id",
+            "full_name",
+            "rank",
+            "rank_display",
+            "badge_number",
+            "first_name",
+            "last_name",
+            "station_name",
+        ]
 
 
 class CaseListSerializer(serializers.ModelSerializer):
@@ -112,9 +125,9 @@ class CaseListSerializer(serializers.ModelSerializer):
         return names
 
     def get_certificate_id(self, obj):
-        """Return ID of first certificate that has a PDF (signed preferred, then unsigned)."""
+        """Return ID of first certificate only if it has been signed."""
         cert = obj.certificates.first()
-        if cert and (cert.signed_pdf_file or cert.pdf_file):
+        if cert and cert.signed_pdf_file:
             return cert.pk
         return None
 
@@ -170,6 +183,7 @@ class CaseSerializer(serializers.ModelSerializer):
             "phase_display",
             "security_movement_envelope",
             "internal_comments",
+            "additional_notes",
             # Finance fields
             "forensic_hours",
             "fuel_distance_km",

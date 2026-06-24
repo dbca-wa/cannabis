@@ -12,7 +12,6 @@ export {
 	canAdvancePhase,
 	type UICasePhase,
 } from "./PhaseIndicator";
-export { WorkflowActions, WorkflowActionsCompact } from "./WorkflowActions";
 export { PhaseProgressIndicator } from "./PhaseProgressIndicator";
 export { PhaseActionsBar } from "./PhaseActionsBar";
 export { PhaseContent } from "./PhaseContent";

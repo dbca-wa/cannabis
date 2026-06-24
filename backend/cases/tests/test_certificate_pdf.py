@@ -75,6 +75,7 @@ def full_submission(db, botanist, officer):
         approved_botanist=botanist,
         submitting_officer=officer,
         internal_comments="Sample stored in freezer.",
+        additional_notes="Sample stored in freezer.",
         phase=Submission.PhaseChoices.UNSIGNED_GENERATION,
     )
 
@@ -130,9 +131,11 @@ class TestBuildCertificateContext:
             "quantity_of_bags",
             "quantity_of_bags_words",
             "tag_numbers",
+            "new_tag_numbers",
             "description",
             "defendant",
             "police_officer",
+            "receiving_officer",
             "receipt_date",
             "species_name",
             "other_matters",
@@ -157,11 +160,11 @@ class TestBuildCertificateContext:
         assert "Seed" in context["description"]
         assert "Wilson, James" in context["defendant"]
         assert "Connor, Sarah" in context["defendant"]
-        assert context["police_officer"] == "John Smith"
+        assert context["police_officer"] == "WA1234 SMITH, John of Perth Central"
         assert context["receipt_date"] == "15 March 2024"
         assert "Cannabis sativa" in context["species_name"]
         assert context["other_matters"] == "Sample stored in freezer."
-        assert context["certification_date"] == "20 March 2024"
+        assert context["certification_date"] == ""
         assert context["dbca_org_data"]["state"] == "WA"
 
     def test_raises_when_no_bags(self, db, botanist, officer):
@@ -196,14 +199,14 @@ class TestBuildCertificateContext:
             build_certificate_context(sub, cert)
 
     def test_nil_for_empty_internal_comments(self, full_submission):
-        """other_matters defaults to 'Nil' when internal_comments is empty."""
-        full_submission.internal_comments = ""
-        full_submission.save(update_fields=["internal_comments"])
+        """other_matters defaults to 'None' when additional_notes is empty."""
+        full_submission.additional_notes = ""
+        full_submission.save(update_fields=["additional_notes"])
 
         cert = Certificate.objects.create(submission=full_submission)
         context = build_certificate_context(full_submission, cert)
 
-        assert context["other_matters"] == "Nil"
+        assert context["other_matters"] == "None"
 
 
 @pytest.mark.django_db
@@ -221,9 +224,9 @@ class TestGenerateUnsignedCertificate:
 
         cert = generate_unsigned_certificate(full_submission, botanist)
 
-        assert cert.pdf_file is not None
-        assert cert.pdf_file.name != ""
-        assert cert.pdf_size == len(fake_pdf)
+        assert cert.unsigned_pdf_file is not None
+        assert cert.unsigned_pdf_file.name != ""
+        assert cert.unsigned_pdf_size == len(fake_pdf)
         mock_html_to_pdf.assert_called_once()
 
     @patch("cases.services.pdf_service.PDFService._html_to_pdf")
@@ -236,8 +239,8 @@ class TestGenerateUnsignedCertificate:
 
         cert = generate_unsigned_certificate(full_submission, botanist)
 
-        cert.pdf_file.seek(0)
-        content = cert.pdf_file.read()
+        cert.unsigned_pdf_file.seek(0)
+        content = cert.unsigned_pdf_file.read()
         assert content.startswith(b"%PDF-")
 
 
@@ -250,7 +253,7 @@ class TestRegenerateCertificatePdf:
         """Regenerate replaces the stored PDF with fresh content."""
         cert = Certificate.objects.create(submission=full_submission)
         # Simulate an existing PDF
-        cert.pdf_file.save(
+        cert.unsigned_pdf_file.save(
             "old.pdf", SimpleUploadedFile("old.pdf", b"%PDF-old"), save=True
         )
 
@@ -259,9 +262,9 @@ class TestRegenerateCertificatePdf:
 
         updated = regenerate_certificate_pdf(cert)
 
-        assert updated.pdf_size == len(new_pdf)
-        updated.pdf_file.seek(0)
-        assert updated.pdf_file.read() == new_pdf
+        assert updated.unsigned_pdf_size == len(new_pdf)
+        updated.unsigned_pdf_file.seek(0)
+        assert updated.unsigned_pdf_file.read() == new_pdf
 
     def test_raises_when_locked(self, full_submission):
         """Raises ValidationError when certificate is locked."""

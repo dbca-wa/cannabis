@@ -46,3 +46,21 @@ export const getPendingAttention = async (): Promise<
 		ENDPOINTS.DASHBOARD.PENDING_ATTENTION
 	);
 };
+
+export interface MonthlyThroughputEntry {
+	month: string;
+	cases: number | null;
+	certs: number | null;
+	revenue: number | null;
+}
+
+/**
+ * Get monthly throughput data for the current financial year.
+ */
+export const getMonthlyThroughput = async (): Promise<
+	MonthlyThroughputEntry[]
+> => {
+	return apiClient.get<MonthlyThroughputEntry[]>(
+		ENDPOINTS.DASHBOARD.STATS_THROUGHPUT
+	);
+};

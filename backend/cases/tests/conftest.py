@@ -60,13 +60,13 @@ def submission(db, police_officer):
 
 @pytest.fixture
 def submission_data_entry(db, police_officer):
-    """Create a test submission in DATA_ENTRY phase."""
+    """Create a test submission in CASE_CREATION phase."""
     return Submission.objects.create(
         case_number="TEST-DE-001",
         received=timezone.now(),
         security_movement_envelope="ENV-DE-001",
         requesting_officer=police_officer,
-        phase=Submission.PhaseChoices.DATA_ENTRY,
+        phase=Submission.PhaseChoices.CASE_CREATION,
     )
 
 

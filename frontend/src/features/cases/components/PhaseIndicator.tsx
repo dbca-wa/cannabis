@@ -1,87 +1,41 @@
 /* eslint-disable react-refresh/only-export-components */
 import React from "react";
-import {
-	Check,
-	Clock,
-	FileText,
-	DollarSign,
-	Mail,
-	CheckCircle2,
-} from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/shared/utils/index";
+import type { CasePhase } from "@/shared/types/backend-api.types";
+import {
+	PHASE_STEPS,
+	PHASE_BADGE_COLOURS,
+	type PhaseStepConfig,
+} from "@/shared/constants/phases.config";
 
-// UI-only phase type for visual workflow display (does not match backend phases)
-// Backend uses: data_entry, finance_approval, botanist_review, documents, send_emails, complete
-export type UICasePhase =
-	| "data_entry_start"
-	| "finance_approval_provided"
-	| "botanist_approval_provided"
-	| "in_review"
-	| "certificate_generation_start"
-	| "invoice_generation_start"
-	| "sending_emails"
-	| "complete";
+/**
+ * UI phase type matching the backend CasePhase — used for the detail page stepper.
+ */
+export type UICasePhase = CasePhase;
 
-interface PhaseStep {
-	key: UICasePhase;
-	label: string;
-	icon: React.ComponentType<{ className?: string }>;
-	description: string;
-}
+// Re-export helpers that other components need from canonical config
+export {
+	getPhaseProgress,
+	getNextPhase,
+	isValidPhase,
+} from "@/shared/constants/phases.config";
 
-const PHASE_STEPS: PhaseStep[] = [
-	{
-		key: "data_entry_start",
-		label: "Data Entry",
-		icon: FileText,
-		description: "Initial data entry and case creation",
-	},
-	{
-		key: "finance_approval_provided",
-		label: "Finance Approval",
-		icon: DollarSign,
-		description: "Finance officer approval",
-	},
-	{
-		key: "botanist_approval_provided",
-		label: "Botanist Approval",
-		icon: Check,
-		description: "Botanist approval and assessment",
-	},
-	{
-		key: "in_review",
-		label: "Review",
-		icon: Clock,
-		description: "Final review before generation",
-	},
-	{
-		key: "certificate_generation_start",
-		label: "Certificate Generation",
-		icon: FileText,
-		description: "Generating certificates",
-	},
-	{
-		key: "invoice_generation_start",
-		label: "Invoice Generation",
-		icon: DollarSign,
-		description: "Generating invoices",
-	},
-	{
-		key: "sending_emails",
-		label: "Sending Emails",
-		icon: Mail,
-		description: "Sending notifications",
-	},
-	{
-		key: "complete",
-		label: "Complete",
-		icon: CheckCircle2,
-		description: "Case complete",
-	},
-];
+/**
+ * Check if the current phase can be manually advanced by the given user role.
+ * All non-complete phases can be advanced by botanists, finance officers, or admins.
+ */
+export const canAdvancePhase = (
+	currentPhase: CasePhase,
+	userRole: "botanist" | "finance" | "none" | null
+): boolean => {
+	if (currentPhase === "complete") return false;
+	if (!userRole || userRole === "none") return false;
+	return true;
+};
 
 interface PhaseIndicatorProps {
-	currentPhase: UICasePhase;
+	currentPhase: CasePhase;
 	className?: string;
 	variant?: "horizontal" | "vertical";
 	showLabels?: boolean;
@@ -110,23 +64,22 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 	if (variant === "vertical") {
 		return (
 			<div className={cn("space-y-4", className)}>
-				{PHASE_STEPS.map((step, index) => {
+				{PHASE_STEPS.map((step: PhaseStepConfig, index: number) => {
 					const status = getStepStatus(index);
 					const Icon = step.icon;
 
 					return (
 						<div key={step.key} className="flex items-start gap-3">
-							{/* Icon and connector */}
 							<div className="flex flex-col items-center">
 								<div
 									className={cn(
 										"flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors",
 										status === "complete" &&
-											"border-green-500 bg-green-500 text-white",
+											"border-emerald-500 bg-emerald-500 text-white",
 										status === "current" &&
-											"border-blue-500 bg-blue-500 text-white",
+											"border-blue-500 bg-blue-500 text-white step-pulse",
 										status === "upcoming" &&
-											"border-gray-300 bg-white text-gray-400"
+											"border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
 									)}
 								>
 									{status === "complete" ? (
@@ -139,26 +92,28 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 									<div
 										className={cn(
 											"mt-2 h-12 w-0.5 transition-colors",
-											index < currentIndex ? "bg-green-500" : "bg-gray-300"
+											index < currentIndex
+												? "bg-emerald-500"
+												: "bg-gray-300 dark:bg-gray-600"
 										)}
 									/>
 								)}
 							</div>
 
-							{/* Content */}
 							<div className="flex-1 pt-1">
 								<div
 									className={cn(
-										"font-medium transition-colors",
-										status === "complete" && "text-green-700",
-										status === "current" && "text-blue-700",
-										status === "upcoming" && "text-gray-500"
+										"font-medium text-sm transition-colors",
+										status === "complete" &&
+											"text-emerald-600 dark:text-emerald-400",
+										status === "current" && "text-blue-600 dark:text-blue-400",
+										status === "upcoming" && "text-gray-500 dark:text-gray-400"
 									)}
 								>
 									{step.label}
 								</div>
 								{showDescriptions && (
-									<div className="mt-1 text-sm text-gray-600">
+									<div className="mt-1 text-xs text-muted-foreground">
 										{step.description}
 									</div>
 								)}
@@ -174,7 +129,7 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 	return (
 		<div className={cn("w-full", className)}>
 			<div className="flex items-center justify-between">
-				{PHASE_STEPS.map((step, index) => {
+				{PHASE_STEPS.map((step: PhaseStepConfig, index: number) => {
 					const status = getStepStatus(index);
 					const Icon = step.icon;
 					const isLast = index === PHASE_STEPS.length - 1;
@@ -182,16 +137,15 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 					return (
 						<React.Fragment key={step.key}>
 							<div className="flex flex-col items-center">
-								{/* Icon */}
 								<div
 									className={cn(
 										"flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors",
 										status === "complete" &&
-											"border-green-500 bg-green-500 text-white",
+											"border-emerald-500 bg-emerald-500 text-white",
 										status === "current" &&
-											"border-blue-500 bg-blue-500 text-white",
+											"border-blue-500 bg-blue-500 text-white step-pulse",
 										status === "upcoming" &&
-											"border-gray-300 bg-white text-gray-400"
+											"border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500"
 									)}
 								>
 									{status === "complete" ? (
@@ -201,34 +155,36 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 									)}
 								</div>
 
-								{/* Label */}
 								{showLabels && (
 									<div
 										className={cn(
-											"mt-2 text-center text-xs font-medium transition-colors",
-											status === "complete" && "text-green-700",
-											status === "current" && "text-blue-700",
-											status === "upcoming" && "text-gray-500"
+											"mt-2 text-center text-xs font-medium transition-colors whitespace-nowrap",
+											status === "complete" &&
+												"text-emerald-600 dark:text-emerald-400",
+											status === "current" &&
+												"text-blue-600 dark:text-blue-400",
+											status === "upcoming" &&
+												"text-gray-500 dark:text-gray-400"
 										)}
 									>
 										{step.label}
 									</div>
 								)}
 
-								{/* Description */}
 								{showDescriptions && (
-									<div className="mt-1 text-center text-xs text-gray-600">
+									<div className="mt-1 text-center text-xs text-muted-foreground">
 										{step.description}
 									</div>
 								)}
 							</div>
 
-							{/* Connector line */}
 							{!isLast && (
 								<div
 									className={cn(
 										"mx-2 h-0.5 flex-1 transition-colors",
-										index < currentIndex ? "bg-green-500" : "bg-gray-300"
+										index < currentIndex
+											? "bg-emerald-500"
+											: "bg-gray-300 dark:bg-gray-600"
 									)}
 								/>
 							)}
@@ -242,7 +198,7 @@ export const PhaseIndicator: React.FC<PhaseIndicatorProps> = ({
 
 // Compact badge version for tables
 interface PhaseBadgeProps {
-	phase: UICasePhase;
+	phase: CasePhase;
 	className?: string;
 }
 
@@ -252,23 +208,11 @@ export const PhaseBadge: React.FC<PhaseBadgeProps> = ({ phase, className }) => {
 
 	const Icon = step.icon;
 
-	const colorClasses: Record<UICasePhase, string> = {
-		data_entry_start: "bg-gray-100 text-gray-800 border-gray-300",
-		finance_approval_provided: "bg-blue-100 text-blue-800 border-blue-300",
-		botanist_approval_provided: "bg-green-100 text-green-800 border-green-300",
-		in_review: "bg-yellow-100 text-yellow-800 border-yellow-300",
-		certificate_generation_start:
-			"bg-purple-100 text-purple-800 border-purple-300",
-		invoice_generation_start: "bg-indigo-100 text-indigo-800 border-indigo-300",
-		sending_emails: "bg-orange-100 text-orange-800 border-orange-300",
-		complete: "bg-emerald-100 text-emerald-800 border-emerald-300",
-	};
-
 	return (
 		<span
 			className={cn(
 				"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-				colorClasses[phase],
+				PHASE_BADGE_COLOURS[phase],
 				className
 			)}
 		>
@@ -276,57 +220,4 @@ export const PhaseBadge: React.FC<PhaseBadgeProps> = ({ phase, className }) => {
 			{step.label}
 		</span>
 	);
-};
-
-// Progress percentage calculation
-export const getPhaseProgress = (phase: UICasePhase): number => {
-	const index = PHASE_STEPS.findIndex((step) => step.key === phase);
-	if (index === -1) return 0;
-	return Math.round(((index + 1) / PHASE_STEPS.length) * 100);
-};
-
-// Get next phase in workflow
-export const getNextPhase = (currentPhase: UICasePhase): UICasePhase | null => {
-	const index = PHASE_STEPS.findIndex((step) => step.key === currentPhase);
-	if (index === -1 || index === PHASE_STEPS.length - 1) return null;
-	return PHASE_STEPS[index + 1].key;
-};
-
-// Check if phase can be manually advanced
-export const canAdvancePhase = (
-	currentPhase: UICasePhase,
-	userRole: "botanist" | "finance" | "none" | null
-): boolean => {
-	// Only certain phases can be manually advanced
-	const manualPhases: UICasePhase[] = [
-		"data_entry_start",
-		"finance_approval_provided",
-		"botanist_approval_provided",
-		"in_review",
-	];
-
-	if (!manualPhases.includes(currentPhase)) return false;
-
-	// Role-based restrictions
-	if (currentPhase === "data_entry_start") {
-		// Both botanist and finance can advance from data entry
-		return userRole === "botanist" || userRole === "finance";
-	}
-
-	if (currentPhase === "finance_approval_provided") {
-		// Only finance officer can provide finance approval
-		return userRole === "finance";
-	}
-
-	if (currentPhase === "botanist_approval_provided") {
-		// Only botanist can provide botanist approval
-		return userRole === "botanist";
-	}
-
-	if (currentPhase === "in_review") {
-		// Both can advance from review
-		return userRole === "botanist" || userRole === "finance";
-	}
-
-	return false;
 };

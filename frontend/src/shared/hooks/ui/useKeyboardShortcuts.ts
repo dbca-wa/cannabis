@@ -39,6 +39,22 @@ export function useKeyboardShortcuts({
 			const keyboardEvent = event as KeyboardEvent;
 			if (!enabled) return;
 
+			// Skip shortcuts when user is typing in an input, textarea, or select
+			const activeEl = document.activeElement;
+			if (activeEl) {
+				const tagName = activeEl.tagName.toLowerCase();
+				if (
+					tagName === "input" ||
+					tagName === "textarea" ||
+					tagName === "select"
+				) {
+					return;
+				}
+				if ((activeEl as HTMLElement).isContentEditable) {
+					return;
+				}
+			}
+
 			const activeShortcuts = shortcutsRef.current.filter(
 				(shortcut) => !shortcut.disabled
 			);

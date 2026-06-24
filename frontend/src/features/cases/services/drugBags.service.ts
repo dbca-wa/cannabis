@@ -5,6 +5,7 @@ import {
 	type DrugBagCreateRequest,
 	type DrugBagUpdateRequest,
 } from "@/shared/types/backend-api.types";
+import type { DrugBagBatchCreateRequest } from "../types/drugBags.types";
 import { ENDPOINTS } from "@/shared/services/api/endpoints";
 
 /**
@@ -31,7 +32,12 @@ export const getDrugBagById = async (id: number): Promise<DrugBag> => {
 export const createDrugBag = async (
 	data: DrugBagCreateRequest
 ): Promise<DrugBag> => {
-	return apiClient.post<DrugBag>(ENDPOINTS.CASES.BAGS.CREATE(data.case), data);
+	// Backend serializer expects 'submission' not 'case'
+	const { case: caseId, ...rest } = data;
+	return apiClient.post<DrugBag>(ENDPOINTS.CASES.BAGS.CREATE(caseId), {
+		submission: caseId,
+		...rest,
+	});
 };
 
 /**
@@ -49,4 +55,17 @@ export const updateDrugBag = async (
  */
 export const deleteDrugBag = async (id: number): Promise<void> => {
 	await apiClient.delete(ENDPOINTS.CASES.BAGS.DELETE(id));
+};
+
+/**
+ * Batch create multiple drug bags for a case.
+ */
+export const batchCreateDrugBags = async (
+	caseId: number,
+	data: DrugBagBatchCreateRequest
+): Promise<DrugBag[]> => {
+	return apiClient.post<DrugBag[]>(
+		ENDPOINTS.CASES.BAGS.BATCH_CREATE(caseId),
+		data
+	);
 };

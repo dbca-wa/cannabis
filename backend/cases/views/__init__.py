@@ -7,6 +7,7 @@ Re-exports all view classes so that existing imports like
 from .bags import (  # noqa: F401
     BotanicalAssessmentCreateView,
     BotanicalAssessmentDetailView,
+    DrugBagBatchCreateView,
     DrugBagDetailView,
     DrugBagListView,
 )
@@ -25,6 +26,7 @@ from .certificates import (  # noqa: F401
 from .crud import CaseDetailView, CaseListView  # noqa: F401
 from .dashboard import (  # noqa: F401
     CertificateStatsView,
+    MonthlyThroughputView,
     MyCasesView,
     PendingAttentionView,
     PhaseCountsView,
@@ -48,12 +50,14 @@ from .workflow import (  # noqa: F401
     CasePhaseHistoryView,
     CaseSendBackView,
     CaseWorkflowView,
+    SendDocumentsView,
 )
 
 __all__ = [
     # bags
     "BotanicalAssessmentCreateView",
     "BotanicalAssessmentDetailView",
+    "DrugBagBatchCreateView",
     "DrugBagDetailView",
     "DrugBagListView",
     # certificates
@@ -76,6 +80,7 @@ __all__ = [
     "PendingAttentionView",
     "PhaseCountsView",
     "RevenueStatsView",
+    "MonthlyThroughputView",
     # drafts
     "CaseDraftView",
     # invoices
@@ -98,4 +103,5 @@ __all__ = [
     "CasePhaseHistoryView",
     "CaseSendBackView",
     "CaseWorkflowView",
+    "SendDocumentsView",
 ]

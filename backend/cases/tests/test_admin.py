@@ -42,7 +42,7 @@ def admin_case(db, officer):
         received=timezone.now(),
         security_movement_envelope="ENV-ADM-001",
         requesting_officer=officer,
-        phase=Case.PhaseChoices.DATA_ENTRY,
+        phase=Case.PhaseChoices.CASE_CREATION,
     )
 
 
