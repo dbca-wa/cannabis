@@ -37,7 +37,7 @@ def data_entry_sub(db, officer):
         received=timezone.now(),
         security_movement_envelope="ENV-WF-001",
         requesting_officer=officer,
-        phase=Submission.PhaseChoices.DATA_ENTRY,
+        phase=Submission.PhaseChoices.CASE_CREATION,
     )
 
 
@@ -131,7 +131,7 @@ class TestSubmissionWorkflowView:
 
         assert response.status_code == status.HTTP_200_OK
         data_entry_sub.refresh_from_db()
-        assert data_entry_sub.phase == Submission.PhaseChoices.UNSIGNED_GENERATION
+        assert data_entry_sub.phase == Submission.PhaseChoices.ASSESSMENT
 
     def test_advance_from_complete_fails(self, admin_client, complete_sub):
         """Cannot advance from COMPLETE phase."""
@@ -205,7 +205,7 @@ class TestSubmissionWorkflowView:
         assert "certificate_number" in response.data
 
     def test_generate_certificate_already_exists(self, admin_client, documents_sub):
-        """POST generate_certificate when cert exists fails."""
+        """POST generate_certificate when cert exists regenerates it."""
         Certificate.objects.create(submission=documents_sub)
 
         url = reverse("case_workflow", kwargs={"pk": documents_sub.pk})
@@ -213,7 +213,7 @@ class TestSubmissionWorkflowView:
             url, {"action": "generate_certificate"}, format="json"
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.django_db
@@ -226,7 +226,7 @@ class TestSubmissionSendBackView:
         response = finance_client.post(
             url,
             {
-                "target_phase": Submission.PhaseChoices.DATA_ENTRY,
+                "target_phase": Submission.PhaseChoices.CASE_CREATION,
                 "reason": "Needs corrections",
             },
             format="json",
@@ -234,7 +234,7 @@ class TestSubmissionSendBackView:
 
         assert response.status_code == status.HTTP_200_OK
         finance_sub.refresh_from_db()
-        assert finance_sub.phase == Submission.PhaseChoices.DATA_ENTRY
+        assert finance_sub.phase == Submission.PhaseChoices.CASE_CREATION
 
     def test_send_back_any_role_can_send_back(self, botanist_client, finance_sub):
         """Any authenticated user can send back (only IsAuthenticated required)."""
@@ -242,7 +242,7 @@ class TestSubmissionSendBackView:
         response = botanist_client.post(
             url,
             {
-                "target_phase": Submission.PhaseChoices.DATA_ENTRY,
+                "target_phase": Submission.PhaseChoices.CASE_CREATION,
                 "reason": "Reason",
             },
             format="json",
@@ -255,7 +255,7 @@ class TestSubmissionSendBackView:
         url = reverse("case_send_back", kwargs={"pk": finance_sub.pk})
         response = finance_client.post(
             url,
-            {"target_phase": Submission.PhaseChoices.DATA_ENTRY},
+            {"target_phase": Submission.PhaseChoices.CASE_CREATION},
             format="json",
         )
 

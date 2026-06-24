@@ -83,11 +83,12 @@ class _MockCertificate:
 class _MockInvoice:
     """Lightweight stand-in for an Invoice when none exists yet."""
 
-    def __init__(self, invoice_number, subtotal, tax_amount, total):
+    def __init__(self, invoice_number, subtotal, tax_amount, total, customer_number=""):
         self.invoice_number = invoice_number
         self.subtotal = subtotal
         self.tax_amount = tax_amount
         self.total = total
+        self.customer_number = customer_number
 
 
 def _build_mock_certificate(submission):

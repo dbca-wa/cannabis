@@ -36,7 +36,7 @@ def bag_submission(db, officer):
         received=timezone.now(),
         security_movement_envelope="ENV-BAG-001",
         requesting_officer=officer,
-        phase=Submission.PhaseChoices.DATA_ENTRY,
+        phase=Submission.PhaseChoices.CASE_CREATION,
     )
 
 
@@ -122,7 +122,7 @@ class TestPhaseHistoryView:
         # Create a history entry
         SubmissionPhaseHistory.objects.create(
             submission=bag_submission,
-            from_phase=Submission.PhaseChoices.DATA_ENTRY,
+            from_phase=Submission.PhaseChoices.CASE_CREATION,
             to_phase=Submission.PhaseChoices.INVOICING,
             action="advance",
             user=superuser,

@@ -160,7 +160,7 @@ class CertificateService:
                 if hasattr(officer, "get_rank_display")
                 else ""
             )
-            if rank:
+            if rank and rank.lower() != "unknown":
                 parts.append(rank)
             if officer.badge_number:
                 parts.append(officer.badge_number)

@@ -78,14 +78,14 @@ def test_submission_ordering(authenticated_client, police_officer):
         received=timezone.now(),
         security_movement_envelope="ENV-A",
         requesting_officer=police_officer,
-        phase=Submission.PhaseChoices.DATA_ENTRY,
+        phase=Submission.PhaseChoices.CASE_CREATION,
     )
     Submission.objects.create(
         case_number="ZZZ-001",
         received=timezone.now(),
         security_movement_envelope="ENV-Z",
         requesting_officer=police_officer,
-        phase=Submission.PhaseChoices.DATA_ENTRY,
+        phase=Submission.PhaseChoices.CASE_CREATION,
     )
 
     url = reverse("case_list")

@@ -54,7 +54,7 @@ def submissions_set(db, officer, botanist, finance):
     """Create a set of submissions in various phases."""
     subs = []
     phases = [
-        Submission.PhaseChoices.DATA_ENTRY,
+        Submission.PhaseChoices.CASE_CREATION,
         Submission.PhaseChoices.INVOICING,
         Submission.PhaseChoices.BOTANIST_SIGNOFF,
         Submission.PhaseChoices.UNSIGNED_GENERATION,
@@ -121,12 +121,12 @@ class TestSubmissionListViewFiltering:
         """Filter submissions by phase."""
         url = reverse("case_list")
         response = authenticated_client.get(
-            url, {"phase": Submission.PhaseChoices.DATA_ENTRY}
+            url, {"phase": Submission.PhaseChoices.CASE_CREATION}
         )
 
         assert response.status_code == status.HTTP_200_OK
         for sub in response.data["results"]:
-            assert sub["phase"] == Submission.PhaseChoices.DATA_ENTRY
+            assert sub["phase"] == Submission.PhaseChoices.CASE_CREATION
 
     def test_filter_by_botanist(self, authenticated_client, submissions_set, botanist):
         """Filter submissions by assigned botanist."""

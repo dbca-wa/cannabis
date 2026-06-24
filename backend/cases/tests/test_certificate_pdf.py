@@ -131,9 +131,11 @@ class TestBuildCertificateContext:
             "quantity_of_bags",
             "quantity_of_bags_words",
             "tag_numbers",
+            "new_tag_numbers",
             "description",
             "defendant",
             "police_officer",
+            "receiving_officer",
             "receipt_date",
             "species_name",
             "other_matters",
@@ -158,11 +160,11 @@ class TestBuildCertificateContext:
         assert "Seed" in context["description"]
         assert "Wilson, James" in context["defendant"]
         assert "Connor, Sarah" in context["defendant"]
-        assert context["police_officer"] == "John Smith"
+        assert context["police_officer"] == "WA1234 SMITH, John of Perth Central"
         assert context["receipt_date"] == "15 March 2024"
         assert "Cannabis sativa" in context["species_name"]
         assert context["other_matters"] == "Sample stored in freezer."
-        assert context["certification_date"] == "20 March 2024"
+        assert context["certification_date"] == ""
         assert context["dbca_org_data"]["state"] == "WA"
 
     def test_raises_when_no_bags(self, db, botanist, officer):

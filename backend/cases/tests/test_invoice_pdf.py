@@ -157,7 +157,7 @@ class TestBuildInvoiceContext:
         context = build_invoice_context(full_submission, invoice)
 
         assert context["police_name"] == "Constable Smith"
-        assert context["police_id"] == "WA-5678"
+        assert context["police_id"] == "CUST-001"
         assert context["case_number"] == "CASE-2024-001"
 
     def test_staff_names_populated(self, full_submission, system_settings):
@@ -272,7 +272,7 @@ class TestBuildInvoiceContext:
         context = build_invoice_context(submission, invoice)
 
         assert context["police_name"] == ""
-        assert context["police_id"] == ""
+        assert context["police_id"] == "CUST-002"
         assert context["approved_botanist"] == ""
         assert context["finance_officer"] == ""
 
