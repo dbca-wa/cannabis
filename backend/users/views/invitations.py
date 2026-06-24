@@ -6,6 +6,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.template.loader import render_to_string
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import (
@@ -145,7 +146,6 @@ class InviteUserView(APIView):
         from datetime import timedelta
 
         from django.core.mail import send_mail
-        from django.template.loader import render_to_string
         from django.utils import timezone
         from django.utils.html import strip_tags
 

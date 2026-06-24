@@ -29,6 +29,13 @@ def pytest_configure():
         }
     }
 
+    # Silence noisy third-party loggers that flood test output (faker emits
+    # hundreds of DEBUG lines per test run). Keeps captured logs small.
+    import logging
+
+    for noisy_logger in ("faker", "factory", "PIL"):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
 
 # Import common fixtures so they're available to all tests
 pytest_plugins = [

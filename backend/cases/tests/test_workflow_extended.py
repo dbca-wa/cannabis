@@ -205,15 +205,24 @@ class TestSubmissionWorkflowView:
         assert "certificate_number" in response.data
 
     def test_generate_certificate_already_exists(self, admin_client, documents_sub):
-        """POST generate_certificate when cert exists regenerates it."""
+        """POST generate_certificate when cert exists regenerates the PDF."""
         Certificate.objects.create(submission=documents_sub)
 
         url = reverse("case_workflow", kwargs={"pk": documents_sub.pk})
-        response = admin_client.post(
-            url, {"action": "generate_certificate"}, format="json"
-        )
+        with (
+            patch("cases.services.pdf_service.subprocess.run") as mock_run,
+            patch("builtins.open", create=True) as mock_open,
+        ):
+            mock_run.return_value = Mock(returncode=0, stderr="")
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                b"%PDF-1.4 fake content"
+            )
+            response = admin_client.post(
+                url, {"action": "generate_certificate"}, format="json"
+            )
 
         assert response.status_code == status.HTTP_200_OK
+        assert "certificate_number" in response.data
 
 
 @pytest.mark.django_db

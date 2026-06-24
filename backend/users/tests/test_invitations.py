@@ -179,7 +179,7 @@ class TestExternalUserSearchView:
 class TestInviteUserView:
     """Tests for InviteUserView."""
 
-    @patch("django.template.loader.render_to_string", return_value="<p>Invite</p>")
+    @patch("users.views.invitations.render_to_string", return_value="<p>Invite</p>")
     @patch("django.core.mail.send_mail")
     def test_invite_user_success(self, mock_send_mail, mock_render, admin_client):
         """POST with valid data creates invitation and sends email."""
@@ -251,7 +251,7 @@ class TestInviteUserView:
 
         assert response.status_code == status.HTTP_409_CONFLICT
 
-    @patch("django.template.loader.render_to_string", return_value="<p>Invite</p>")
+    @patch("users.views.invitations.render_to_string", return_value="<p>Invite</p>")
     @patch("django.core.mail.send_mail")
     def test_invite_duplicate_pending(self, mock_send_mail, mock_render, admin_client):
         """POST with email that already has pending invite returns conflict."""
