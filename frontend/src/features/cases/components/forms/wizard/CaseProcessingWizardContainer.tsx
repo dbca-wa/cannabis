@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { useCaseProcessingWizardStore } from "@/app/providers/store.provider";
 import {
 	CASE_PROCESSING_STEPS,
 	type StepState,
 } from "@/app/stores/derived/case-processing-wizard.store";
+import { PHASE_KEYS } from "@/shared/constants/phases.config";
 import { FormPreviewToggle } from "./FormPreviewToggle";
 import { WizardStepper } from "./WizardStepper";
 import { WizardLayout } from "./WizardLayout";
@@ -138,30 +139,34 @@ export const CaseProcessingWizardContainer = observer(
 
 		// Phase-aware override: if the backend phase is past a step, that step is valid
 		// regardless of whether its artefacts are currently present. This prevents
-		// getting stuck on earlier steps when navigating back through a case.
-		const PHASE_ORDER = [
-			"case_creation",
-			"assessment",
-			"unsigned_generation",
-			"botanist_signoff",
-			"invoicing",
-			"send_emails",
-			"complete",
-		];
-		const currentPhaseIndex = PHASE_ORDER.indexOf(caseData?.phase as string);
+		const currentPhaseIndex = PHASE_KEYS.indexOf(
+			caseData?.phase as (typeof PHASE_KEYS)[number]
+		);
 
 		// A step is considered "past" if the case phase is beyond the phase that step corresponds to
 		const isPastStep = (stepPhaseIndex: number) =>
 			currentPhaseIndex > stepPhaseIndex;
 
-		const stepValidities = [
-			isStep0Valid || isPastStep(0),
-			isStep1Valid || isPastStep(1),
-			isStep2Valid || isPastStep(2),
-			isStep3Valid || isPastStep(3),
-			isStep4Valid || isPastStep(4),
-			isStep5Valid || isPastStep(5),
-		];
+		const stepValidities = useMemo(
+			() => [
+				isStep0Valid || isPastStep(0),
+				isStep1Valid || isPastStep(1),
+				isStep2Valid || isPastStep(2),
+				isStep3Valid || isPastStep(3),
+				isStep4Valid || isPastStep(4),
+				isStep5Valid || isPastStep(5),
+			],
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[
+				isStep0Valid,
+				isStep1Valid,
+				isStep2Valid,
+				isStep3Valid,
+				isStep4Valid,
+				isStep5Valid,
+				currentPhaseIndex,
+			]
+		);
 
 		// Derive visual state for each step
 		const stepStates: StepState[] = CASE_PROCESSING_STEPS.map((_, index) =>
@@ -339,7 +344,9 @@ export const CaseProcessingWizardContainer = observer(
 				}
 
 				// Navigate wizard to the target step and clear completed status for steps at/after target
-				const targetStepIndex = PHASE_ORDER.indexOf(targetPhase);
+				const targetStepIndex = PHASE_KEYS.indexOf(
+					targetPhase as (typeof PHASE_KEYS)[number]
+				);
 				if (targetStepIndex >= 0) {
 					// Remove completed status for the target step and all steps after it
 					for (let i = targetStepIndex; i < CASE_PROCESSING_STEPS.length; i++) {

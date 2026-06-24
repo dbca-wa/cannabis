@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
 import { Loader2, Undo2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";

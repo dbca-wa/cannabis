@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { useCaseCreationWizardStore } from "@/app/providers/store.provider";
 import { CASE_CREATION_STEPS } from "@/app/stores/derived/case-creation-wizard.store";
@@ -61,7 +61,10 @@ export const CaseCreationWizardContainer = observer(
 			caseData.station_id
 		);
 
-		const stepValidities = [isStep0Valid, isStep1Valid, isStep2Valid];
+		const stepValidities = useMemo(
+			() => [isStep0Valid, isStep1Valid, isStep2Valid],
+			[isStep0Valid, isStep1Valid, isStep2Valid]
+		);
 
 		// Derive visual state for each step
 		const stepStates: StepState[] = CASE_CREATION_STEPS.map((_, index) =>

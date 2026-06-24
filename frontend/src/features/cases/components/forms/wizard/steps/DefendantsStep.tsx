@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useMemo } from "react";
 
 import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
@@ -41,7 +42,10 @@ export const DefendantsStep = ({
 
 	// Derive defendants from server data
 	const defendants = (caseData?.defendants_details as DefendantTiny[]) ?? [];
-	const defendantIds = (caseData?.defendants as number[]) ?? [];
+	const defendantIds = useMemo(
+		() => (caseData?.defendants as number[]) ?? [],
+		[caseData?.defendants]
+	);
 
 	// Fetch the full defendant object when selected via combobox
 	const { data: defendantToAdd } = useDefendantById(selectedDefendantId);

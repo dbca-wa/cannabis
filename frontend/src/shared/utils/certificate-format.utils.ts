@@ -7,6 +7,7 @@
 
 /* Minimal Temporal type declaration for environments without ES2027 lib */
 declare global {
+	// eslint-disable-next-line @typescript-eslint/no-namespace
 	namespace Temporal {
 		interface PlainDate {
 			toLocaleString(

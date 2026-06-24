@@ -55,7 +55,7 @@ const DETERMINATION_OPTIONS: {
 	{ value: "inconclusive", label: "Inconclusive" },
 ];
 
-const TAG_PATTERN = /^[a-zA-Z0-9\s\-]*$/;
+const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
 
 const getContentTypeLabel = (value: DrugBagContentType): string =>
 	CONTENT_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value;

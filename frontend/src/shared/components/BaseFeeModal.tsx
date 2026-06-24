@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback } from "react";
 import {
 	Dialog,

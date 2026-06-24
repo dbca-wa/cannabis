@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useId, useEffect } from "react";
 import {
 	Dialog,
@@ -137,7 +138,7 @@ export const BulkAddBagsModal = ({
 		);
 	};
 
-	const TAG_PATTERN = /^[a-zA-Z0-9\s\-]*$/;
+	const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
 
 	const handleEntryTagChange = (entryId: string, newTag: string) => {
 		setEntries((prev) =>

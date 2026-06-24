@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useRef } from "react";
 import { FileText, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";

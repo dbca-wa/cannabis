@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useMemo } from "react";
 
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -52,7 +53,10 @@ export const CaseCreationSummaryStep = ({
 	const securityEnvelope =
 		(caseData?.security_movement_envelope as string) ?? "";
 	const defendants = (caseData?.defendants_details as DefendantTiny[]) ?? [];
-	const defendantIds = (caseData?.defendants as number[]) ?? [];
+	const defendantIds = useMemo(
+		() => (caseData?.defendants as number[]) ?? [],
+		[caseData?.defendants]
+	);
 	const requestingOfficer =
 		(caseData?.requesting_officer_id as number | null) ?? null;
 	const submittingOfficer =

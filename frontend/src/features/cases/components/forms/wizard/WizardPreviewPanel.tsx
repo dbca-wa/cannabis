@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * WizardPreviewPanel — Certificate template live preview.
  *

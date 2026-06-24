@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { RefreshCw, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -112,7 +113,6 @@ export const InvoiceStep = ({
 		return () => {
 			cancelled = true;
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [hasInvoice, invoiceId, caseId, fetchVersion]);
 
 	// Reset isGenerating when invoices first appear

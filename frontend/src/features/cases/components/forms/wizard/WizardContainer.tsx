@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { useCaseProcessingWizardStore } from "@/app/providers/store.provider";
 import {
@@ -56,7 +56,10 @@ export const WizardContainer = observer(
 			(caseData.bags as unknown[]).length > 0
 		);
 
-		const stepValidities = [isStep0Valid, isStep1Valid, isStep2Valid];
+		const stepValidities = useMemo(
+			() => [isStep0Valid, isStep1Valid, isStep2Valid],
+			[isStep0Valid, isStep1Valid, isStep2Valid]
+		);
 
 		// Derive visual state for each step using store method
 		const stepStates: StepState[] = CASE_PROCESSING_STEPS.map((_, index) =>
