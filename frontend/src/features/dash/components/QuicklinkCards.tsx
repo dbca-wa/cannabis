@@ -25,6 +25,13 @@ interface QuicklinkPhase {
 
 const QUICKLINK_PHASES: QuicklinkPhase[] = [
 	{
+		key: "case_creation",
+		label: "Case Creation",
+		description: "Awaiting Case Creation",
+		icon: ClipboardPen,
+		accent: "from-amber-500 to-orange-500",
+	},
+	{
 		key: "assessment",
 		label: "Assessment",
 		description: "Awaiting Assessment",
@@ -32,15 +39,8 @@ const QUICKLINK_PHASES: QuicklinkPhase[] = [
 		accent: "from-emerald-500 to-teal-500",
 	},
 	{
-		key: "data_entry",
-		label: "Data Entry",
-		description: "Awaiting Data Entry",
-		icon: ClipboardPen,
-		accent: "from-amber-500 to-orange-500",
-	},
-	{
 		key: "unsigned_generation",
-		label: "Unsigned Cert",
+		label: "Unsigned Certificate",
 		description: "Awaiting Unsigned Cert",
 		icon: FileText,
 		accent: "from-blue-500 to-indigo-500",
@@ -54,7 +54,7 @@ const QUICKLINK_PHASES: QuicklinkPhase[] = [
 	},
 	{
 		key: "invoicing",
-		label: "Invoice",
+		label: "Invoicing",
 		description: "Awaiting Invoice",
 		icon: Receipt,
 		accent: "from-rose-500 to-pink-500",
@@ -104,7 +104,7 @@ export const QuicklinkCards = () => {
 						to={`/cases?phase=${phase.key}`}
 						className="no-underline"
 					>
-						<Card className="p-5 relative overflow-hidden group hover:shadow-md transition-shadow h-full cursor-pointer">
+						<Card className="p-6 relative overflow-hidden group hover:shadow-md transition-shadow h-full cursor-pointer min-h-[140px]">
 							<div
 								className={`absolute -right-12 -top-12 w-48 h-48 rounded-full bg-gradient-to-br ${phase.accent} opacity-10 blur-xl group-hover:opacity-20 transition-opacity`}
 							/>
@@ -116,12 +116,12 @@ export const QuicklinkCards = () => {
 							</span>
 							<div className="flex items-center gap-4 relative h-full">
 								<div
-									className={`w-12 h-12 rounded-lg bg-gradient-to-br ${phase.accent} text-white flex items-center justify-center shadow-sm shrink-0`}
+									className={`w-14 h-14 rounded-lg bg-gradient-to-br ${phase.accent} text-white flex items-center justify-center shadow-sm shrink-0`}
 								>
-									<Icon className="w-6 h-6" />
+									<Icon className="w-7 h-7" />
 								</div>
 								<div className="flex-1 min-w-0">
-									<div className="text-[28px] tracking-tight leading-none">
+									<div className="text-[32px] tracking-tight leading-none">
 										<CountUp to={count} />
 									</div>
 									<div className="text-[13px] font-medium mt-1">

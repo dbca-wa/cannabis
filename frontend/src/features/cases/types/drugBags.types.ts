@@ -80,5 +80,19 @@ export interface DrugBagUpdateRequest {
 	net_weight?: string | null;
 }
 
+// Batch bag creation item (matches DrugBagBatchItemSerializer)
+export interface DrugBagBatchItem {
+	seal_tag_numbers: string;
+	new_seal_tag_numbers?: string | null;
+	content_type: DrugBagContentType;
+	determination?: BotanicalDetermination;
+	assessment_date?: string | null;
+}
+
+// Batch bag creation request (matches DrugBagBatchCreateSerializer)
+export interface DrugBagBatchCreateRequest {
+	bags: DrugBagBatchItem[];
+}
+
 // Paginated drug bags response
 export type PaginatedDrugBagsResponse = PaginatedResponse<DrugBag>;

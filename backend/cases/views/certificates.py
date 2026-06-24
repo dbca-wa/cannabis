@@ -96,20 +96,24 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
 
 
 class CertificateDownloadView(APIView):
-    """Download a certificate PDF file."""
+    """Download a certificate PDF file (signed if available, otherwise unsigned)."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         certificate = get_object_or_404(Certificate, pk=pk)
-        if not certificate.pdf_file:
+
+        if certificate.signed_pdf_file:
+            pdf_file = certificate.signed_pdf_file
+            filename = f"signed_{certificate.certificate_number}.pdf"
+        elif certificate.unsigned_pdf_file:
+            pdf_file = certificate.unsigned_pdf_file
+            filename = f"{certificate.certificate_number}.pdf"
+        else:
             raise NotFound("Certificate PDF has not been generated yet.")
-        response = HttpResponse(
-            certificate.pdf_file.read(), content_type="application/pdf"
-        )
-        response["Content-Disposition"] = (
-            f'attachment; filename="{certificate.certificate_number}.pdf"'
-        )
+
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
 
@@ -166,9 +170,11 @@ class CertificateGenerateView(APIView):
 class CertificatePdfView(APIView):
     """Download a certificate PDF scoped to a submission.
 
-    GET /submissions/{submission_id}/certificates/{certificate_id}/pdf/
+    GET /cases/{submission_id}/certificates/{certificate_id}/pdf
+    GET /cases/{submission_id}/certificates/{certificate_id}/pdf?version=unsigned
 
-    Returns the PDF file as a downloadable attachment.
+    Without query param: returns signed PDF if available, otherwise unsigned.
+    With ?version=unsigned: always returns the unsigned PDF.
     """
 
     permission_classes = [IsAuthenticated]
@@ -179,15 +185,26 @@ class CertificatePdfView(APIView):
             Certificate, pk=certificate_id, submission=submission
         )
 
-        if not certificate.pdf_file:
+        version = request.query_params.get("version")
+
+        if version == "unsigned":
+            # Explicitly requested the unsigned version
+            if not certificate.unsigned_pdf_file:
+                raise NotFound("Unsigned certificate PDF has not been generated yet.")
+            pdf_file = certificate.unsigned_pdf_file
+            filename = f"{certificate.certificate_number}.pdf"
+        elif certificate.signed_pdf_file:
+            # Default: serve signed if available
+            pdf_file = certificate.signed_pdf_file
+            filename = f"signed_{certificate.certificate_number}.pdf"
+        elif certificate.unsigned_pdf_file:
+            pdf_file = certificate.unsigned_pdf_file
+            filename = f"{certificate.certificate_number}.pdf"
+        else:
             raise NotFound("Certificate PDF has not been generated yet.")
 
-        response = HttpResponse(
-            certificate.pdf_file.read(), content_type="application/pdf"
-        )
-        response["Content-Disposition"] = (
-            f'attachment; filename="{certificate.certificate_number}.pdf"'
-        )
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
 

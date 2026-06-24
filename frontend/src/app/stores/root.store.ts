@@ -4,10 +4,18 @@ import { getErrorMessage } from "@/shared/utils";
 import { makeObservable, observable } from "mobx";
 import { AuthStore } from "./auth.store";
 import { UIStore } from "./ui.store";
+import { CaseProcessingWizardStore } from "./derived/case-processing-wizard.store";
+import { CaseCreationWizardStore } from "./derived/case-creation-wizard.store";
+import { DrugBagWranglerStore } from "./derived/drug-bag-wrangler.store";
 
 export class RootStore {
 	authStore: AuthStore;
 	uiStore: UIStore;
+	caseProcessingWizardStore: CaseProcessingWizardStore;
+	/** @deprecated Use caseProcessingWizardStore instead */
+	caseWizardStore: CaseProcessingWizardStore;
+	caseCreationWizardStore: CaseCreationWizardStore;
+	drugBagWranglerStore: DrugBagWranglerStore;
 
 	// System state
 	isInitialised = false;
@@ -17,6 +25,10 @@ export class RootStore {
 	constructor() {
 		this.authStore = new AuthStore();
 		this.uiStore = new UIStore();
+		this.caseProcessingWizardStore = new CaseProcessingWizardStore();
+		this.caseWizardStore = this.caseProcessingWizardStore;
+		this.caseCreationWizardStore = new CaseCreationWizardStore();
+		this.drugBagWranglerStore = new DrugBagWranglerStore();
 
 		// isInitialised observable
 		makeObservable(this, {

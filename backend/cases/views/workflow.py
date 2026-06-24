@@ -50,9 +50,24 @@ class CaseWorkflowView(APIView):
         )
 
     def generate_certificate(self, request, submission):
-        """Generate an unsigned certificate record for the submission."""
-        from ..services import generate_unsigned_certificate
+        """Generate an unsigned certificate record for the submission.
+        If a certificate already exists (and is not locked), regenerate its PDF."""
+        from ..services import generate_unsigned_certificate, regenerate_certificate_pdf
 
+        existing_cert = submission.certificates.first()
+
+        if existing_cert:
+            # Regenerate existing certificate's PDF (same cert number)
+            certificate = regenerate_certificate_pdf(existing_cert)
+            return Response(
+                {
+                    "message": "Certificate regenerated successfully",
+                    "certificate_number": certificate.certificate_number,
+                },
+                status=HTTP_200_OK,
+            )
+
+        # First-time generation
         certificate = generate_unsigned_certificate(submission, request.user)
 
         return Response(
@@ -78,6 +93,27 @@ class CaseWorkflowView(APIView):
             },
             status=HTTP_201_CREATED,
         )
+
+
+class SendDocumentsView(APIView):
+    """
+    POST: Send case certificate and invoice PDFs to the configured recipient.
+    Advances case phase to complete on success.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            case = Case.objects.get(pk=pk)
+        except Case.DoesNotExist:
+            raise NotFound("Case not found.")
+
+        from ..services import EmailService
+
+        result = EmailService.send_case_documents(case, request.user)
+
+        return Response(result, status=HTTP_200_OK)
 
 
 class CaseSendBackView(APIView):

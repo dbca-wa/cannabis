@@ -23,11 +23,6 @@ const TestCertificatePage = lazy(
 );
 const TestInvoicePage = lazy(() => import("@/pages/tests/TestInvoicePage"));
 const CasesPage = lazy(() => import("@/pages/cases/Cases"));
-const CaseDetailPage = lazy(() =>
-	import("@/pages/cases/CaseDetailPage").then((m) => ({
-		default: m.CaseDetailPage,
-	}))
-);
 const StaffPage = lazy(() => import("@/pages/users/Staff"));
 const OfficersPage = lazy(() => import("@/pages/police/Officers"));
 const StationsPage = lazy(() => import("@/pages/police/Stations"));
@@ -140,6 +135,11 @@ const CreateCase = lazy(() =>
 		default: m.CreateCase,
 	}))
 );
+const ProcessCase = lazy(() =>
+	import("@/pages/cases/ProcessCase").then((m) => ({
+		default: m.ProcessCase,
+	}))
+);
 const EditCase = lazy(() =>
 	import("@/pages/cases/EditCase").then((m) => ({
 		default: m.EditCase,
@@ -239,10 +239,10 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 				path: ":submissionId/delete",
 				element: DeleteCaseRouteModal,
 			},
-			// Full-page child routes (these replace the layout content)
+			// Full-page child routes
 			{
-				path: ":submissionId/detail",
-				element: CaseDetailPage,
+				path: ":id/process",
+				element: ProcessCase,
 			},
 		],
 	},

@@ -1,23 +1,33 @@
 import { Check, AlertTriangle } from "lucide-react";
 import { cn } from "@/shared/utils/style.utils";
 
-export type StepState = "active" | "completed" | "invalid" | "future";
+export type StepState =
+	| "active"
+	| "completed"
+	| "invalid"
+	| "inProgress"
+	| "future";
 
 interface WizardStepperProps {
 	currentStep: number;
 	stepStates: StepState[];
 	onStepClick: (stepIndex: number) => void;
+	/** Optional descriptions displayed below each step label (hidden on mobile, visible on lg+) */
+	stepDescriptions?: string[];
+	/** Custom step labels — defaults to the Process 2 steps if not provided */
+	stepLabels?: readonly string[];
 }
 
-const STEPS = ["Case Details", "Officers", "Assessment"] as const;
+const DEFAULT_STEPS = ["Case Details", "Officers", "Assessment"] as const;
 
 /**
  * Visual progress indicator for the case creation wizard.
  *
  * Horizontal layout on desktop (≥768px), vertical on mobile (<768px).
- * Each step renders in one of four visual states:
+ * Each step renders in one of five visual states:
  *  - active: blue background with pulse animation ring
  *  - completed: emerald background with white Check icon
+ *  - inProgress: amber background (no pulse), distinct from active
  *  - invalid: red background with AlertTriangle icon
  *  - future: gray background with reduced opacity
  *
@@ -27,7 +37,10 @@ export const WizardStepper = ({
 	currentStep,
 	stepStates,
 	onStepClick,
+	stepDescriptions,
+	stepLabels,
 }: WizardStepperProps) => {
+	const STEPS = stepLabels ?? DEFAULT_STEPS;
 	/**
 	 * Determine whether a step can be navigated to.
 	 * Blocked if any prior step is invalid, or if the step is the current one.
@@ -52,128 +65,174 @@ export const WizardStepper = ({
 		}
 	};
 
+	/**
+	 * Derive status text for a step based on its visual state.
+	 */
+	const getStatusText = (state: StepState): string => {
+		switch (state) {
+			case "completed":
+				return "✓ Done";
+			case "active":
+				return "Active";
+			case "inProgress":
+				return "In Progress";
+			case "invalid":
+				return "⚠ Invalid";
+			case "future":
+				return "Pending";
+		}
+	};
+
 	return (
 		<nav aria-label="Wizard progress" className="w-full">
-			{/* Desktop: Horizontal layout */}
-			<div
-				className="hidden md:grid w-full items-start"
-				style={{ gridTemplateColumns: `repeat(${STEPS.length}, 1fr)` }}
-			>
-				{STEPS.map((label, index) => {
-					const state = stepStates[index] ?? "future";
-					const clickable = isStepClickable(index);
-					const isFirst = index === 0;
-					const isLast = index === STEPS.length - 1;
-
-					// Alignment: first left-aligned, last right-aligned, middle centred
-					const stepAlignment = isFirst
-						? "items-start"
-						: isLast
-							? "items-end"
-							: "items-center";
-
-					// Connector line positioning relative to the grid cell
-					const connectorLeft = isFirst
-						? "calc(0% + 40px)"
-						: "calc(50% + 20px)";
-					const isSecondToLast = index === STEPS.length - 2;
-					const connectorRight = isSecondToLast
-						? "calc(-100% + 40px)"
-						: "calc(-50% + 20px)";
-
-					// Text alignment matching step position
-					const textAlignment = isFirst
-						? "text-left"
-						: isLast
-							? "text-right"
-							: "text-center";
-
-					// Connector is emerald if this step is completed
-					const connectorCompleted = state === "completed";
-
-					return (
-						<div
-							key={label}
-							className={cn("relative flex flex-col", stepAlignment)}
-						>
-							{/* Connector line between steps */}
-							{!isLast && (
+			{/* Desktop: Horizontal layout — flex with connectors for full-width even spacing */}
+			<div className="hidden md:block w-full">
+				{/* Connector lines — absolute positioned behind circles */}
+				<div className="flex w-full items-center" style={{ height: "40px" }}>
+					{STEPS.map((_, index) => {
+						if (index === STEPS.length - 1) return null;
+						const state = stepStates[index] ?? "future";
+						const nextState = stepStates[index + 1] ?? "future";
+						let connectorColor = "bg-gray-300";
+						if (state === "invalid" || nextState === "invalid") {
+							connectorColor = "bg-red-500";
+						} else {
+							const leftDone = state === "completed" || state === "active";
+							const rightDone =
+								nextState === "completed" || nextState === "active";
+							if (leftDone && rightDone) connectorColor = "bg-emerald-500";
+							else if (
+								leftDone &&
+								(nextState === "inProgress" || nextState === "active")
+							)
+								connectorColor = "bg-amber-400";
+						}
+						return (
+							<div
+								key={`connector-${index}`}
+								className="flex items-center"
+								style={{ flex: 1 }}
+							>
 								<div
 									className={cn(
-										"absolute h-0.5 transition-colors duration-300",
-										connectorCompleted ? "bg-emerald-500" : "bg-gray-300"
+										"h-0.5 flex-1 transition-colors duration-300",
+										connectorColor
 									)}
-									style={{
-										top: "20px",
-										left: connectorLeft,
-										right: connectorRight,
-									}}
 									aria-hidden="true"
 								/>
-							)}
+							</div>
+						);
+					})}
+				</div>
 
-							{/* Step circle button — min 44x44 touch target via padding */}
-							<button
-								type="button"
-								onClick={() => handleStepClick(index)}
-								disabled={!clickable}
+				{/* Step circles + labels — positioned on top of connectors */}
+				<div
+					className="flex w-full justify-between"
+					style={{ marginTop: "-40px" }}
+				>
+					{STEPS.map((label, index) => {
+						const state = stepStates[index] ?? "future";
+						const clickable = isStepClickable(index);
+						const description = stepDescriptions?.[index];
+						const isFirst = index === 0;
+						const isLast = index === STEPS.length - 1;
+
+						return (
+							<div
+								key={label}
 								className={cn(
-									"relative z-10 flex-shrink-0 p-0.5",
-									"focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-full",
-									clickable && "cursor-pointer",
-									state === "future" && "cursor-not-allowed opacity-50",
-									!clickable && state !== "future" && "cursor-default"
+									"relative flex flex-col flex-shrink-0",
+									isFirst
+										? "items-start"
+										: isLast
+											? "items-end"
+											: "items-center"
 								)}
-								aria-label={`${clickable ? "Go to " : ""}Step ${index + 1}: ${label}`}
 							>
-								{/* White background to mask the connector line */}
-								<div className="absolute inset-0 w-12 h-12 bg-white dark:bg-gray-900 rounded-full z-0 -m-1" />
+								{/* Step circle button */}
+								<button
+									type="button"
+									onClick={() => handleStepClick(index)}
+									disabled={!clickable}
+									className={cn(
+										"relative z-10 flex-shrink-0 p-0.5",
+										"focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-full",
+										clickable && "cursor-pointer",
+										state === "future" && "cursor-not-allowed",
+										!clickable && state !== "future" && "cursor-default"
+									)}
+									aria-label={`${clickable ? "Go to " : ""}Step ${index + 1}: ${label}`}
+								>
+									{/* White background to mask the connector line */}
+									<div className="absolute inset-0 w-12 h-12 bg-white dark:bg-gray-900 rounded-full z-0 -m-1" />
 
+									<div
+										className={cn(
+											"relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-4 font-semibold shadow-lg",
+											state !== "active" &&
+												"transition-[border-color,background-color,color,box-shadow] duration-300",
+											state === "active" &&
+												"border-blue-500 bg-blue-500 text-white step-pulse",
+											state === "completed" &&
+												"border-emerald-500 bg-emerald-500 text-white",
+											state === "inProgress" &&
+												"border-amber-400 bg-amber-400 text-white",
+											state === "invalid" &&
+												"border-red-500 bg-red-500 text-white",
+											state === "future" &&
+												"border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500",
+											clickable && "hover:scale-110 hover:shadow-xl"
+										)}
+										aria-current={state === "active" ? "step" : undefined}
+									>
+										{state === "invalid" ? (
+											<AlertTriangle className="h-5 w-5 animate-in zoom-in-50 duration-300" />
+										) : state === "completed" ? (
+											<Check className="h-6 w-6 animate-in zoom-in-50 duration-300" />
+										) : (
+											<span className="text-sm font-bold">{index + 1}</span>
+										)}
+									</div>
+								</button>
+
+								{/* Label, description, and status */}
 								<div
 									className={cn(
-										"relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-4 font-semibold shadow-lg",
-										state !== "active" &&
-											"transition-[border-color,background-color,color,box-shadow] duration-300",
-										state === "active" &&
-											"border-blue-500 bg-blue-500 text-white step-pulse",
-										state === "completed" &&
-											"border-emerald-500 bg-emerald-500 text-white",
-										state === "invalid" &&
-											"border-red-500 bg-red-500 text-white",
-										state === "future" &&
-											"border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500",
-										clickable && "hover:scale-110 hover:shadow-xl"
-									)}
-									aria-current={state === "active" ? "step" : undefined}
-								>
-									{state === "invalid" ? (
-										<AlertTriangle className="h-5 w-5 animate-in zoom-in-50 duration-300" />
-									) : state === "completed" ? (
-										<Check className="h-6 w-6 animate-in zoom-in-50 duration-300" />
-									) : (
-										<span className="text-sm font-bold">{index + 1}</span>
-									)}
-								</div>
-							</button>
-
-							{/* Label */}
-							<div className={cn("mt-2", textAlignment)}>
-								<div
-									className={cn(
-										"text-sm font-semibold transition-colors duration-300 whitespace-nowrap",
-										state === "active" && "text-blue-600 dark:text-blue-400",
-										state === "invalid" && "text-red-600 dark:text-red-400",
-										state === "completed" &&
-											"text-emerald-600 dark:text-emerald-400",
-										state === "future" && "text-gray-400 dark:text-gray-500"
+										"mt-2",
+										isFirst
+											? "text-left"
+											: isLast
+												? "text-right"
+												: "text-center"
 									)}
 								>
-									{label}
+									<div
+										className={cn(
+											"text-sm font-semibold transition-colors duration-300 whitespace-nowrap",
+											state === "active" && "text-blue-600 dark:text-blue-400",
+											state === "inProgress" &&
+												"text-amber-600 dark:text-amber-400",
+											state === "invalid" && "text-red-600 dark:text-red-400",
+											state === "completed" &&
+												"text-emerald-600 dark:text-emerald-400",
+											state === "future" && "text-gray-400 dark:text-gray-500"
+										)}
+									>
+										{label}
+									</div>
+									{description && (
+										<div className="text-xs text-muted-foreground mt-1 hidden lg:block whitespace-nowrap">
+											{description}
+										</div>
+									)}
+									<div className="text-xs text-gray-500 mt-0.5">
+										{getStatusText(state)}
+									</div>
 								</div>
 							</div>
-						</div>
-					);
-				})}
+						);
+					})}
+				</div>
 			</div>
 
 			{/* Mobile: Vertical layout */}
@@ -210,10 +269,12 @@ export const WizardStepper = ({
 													"border-blue-500 bg-blue-500 text-white step-pulse",
 												state === "completed" &&
 													"border-emerald-500 bg-emerald-500 text-white",
+												state === "inProgress" &&
+													"border-amber-400 bg-amber-400 text-white",
 												state === "invalid" &&
 													"border-red-500 bg-red-500 text-white",
 												state === "future" &&
-													"border-gray-300 bg-white text-gray-400 opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500",
+													"border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-500",
 												clickable && "hover:scale-110 hover:shadow-xl"
 											)}
 											aria-current={state === "active" ? "step" : undefined}
@@ -229,23 +290,45 @@ export const WizardStepper = ({
 									</button>
 
 									{/* Vertical connector line */}
-									{index < STEPS.length - 1 && (
-										<div
-											className={cn(
-												"w-0.5 h-8 mt-1 transition-colors duration-300",
-												state === "completed" ? "bg-emerald-500" : "bg-gray-300"
-											)}
-											aria-hidden="true"
-										/>
-									)}
+									{index < STEPS.length - 1 &&
+										(() => {
+											const nextState = stepStates[index + 1] ?? "future";
+											let mobileConnectorColor = "bg-gray-300";
+											if (state === "invalid" || nextState === "invalid") {
+												mobileConnectorColor = "bg-red-500";
+											} else {
+												const leftDone =
+													state === "completed" || state === "active";
+												const rightDone =
+													nextState === "completed" || nextState === "active";
+												if (leftDone && rightDone)
+													mobileConnectorColor = "bg-emerald-500";
+												else if (
+													leftDone &&
+													(nextState === "inProgress" || nextState === "active")
+												)
+													mobileConnectorColor = "bg-amber-400";
+											}
+											return (
+												<div
+													className={cn(
+														"w-0.5 h-8 mt-1 transition-colors duration-300",
+														mobileConnectorColor
+													)}
+													aria-hidden="true"
+												/>
+											);
+										})()}
 								</div>
 
-								{/* Step label */}
+								{/* Step label and status — no description on mobile */}
 								<div className="flex-1 pt-2.5">
 									<div
 										className={cn(
 											"text-sm font-semibold transition-colors duration-300",
 											state === "active" && "text-blue-600 dark:text-blue-400",
+											state === "inProgress" &&
+												"text-amber-600 dark:text-amber-400",
 											state === "invalid" && "text-red-600 dark:text-red-400",
 											state === "completed" &&
 												"text-emerald-600 dark:text-emerald-400",
@@ -253,6 +336,10 @@ export const WizardStepper = ({
 										)}
 									>
 										{label}
+									</div>
+									{/* Status indicator */}
+									<div className="text-xs text-gray-500 mt-0.5">
+										{getStatusText(state)}
 									</div>
 								</div>
 							</div>

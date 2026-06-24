@@ -123,6 +123,7 @@ export const getCurrentUser = async (): Promise<User> => {
 
 /**
  * Refresh the access token using the stored refresh token.
+ * Stores the rotated refresh token if the server provides one.
  */
 export const refreshToken = async (): Promise<{ access: string }> => {
 	const refresh = storage.getRefreshToken();
@@ -130,16 +131,18 @@ export const refreshToken = async (): Promise<{ access: string }> => {
 		throw new Error("No refresh token available");
 	}
 
-	const response = await apiClient.post<{ access: string }>(
-		ENDPOINTS.AUTH.REFRESH,
-		{ refresh }
-	);
+	const response = await apiClient.postPublic<{
+		access: string;
+		refresh?: string;
+	}>(ENDPOINTS.AUTH.REFRESH, { refresh });
 
 	if (!response.access) {
 		throw new Error("Invalid refresh response structure");
 	}
 
-	storage.setTokens(response.access, refresh);
+	// Store the new access token and rotated refresh token (if provided)
+	const newRefreshToken = response.refresh || refresh;
+	storage.setTokens(response.access, newRefreshToken);
 	return response;
 };
 

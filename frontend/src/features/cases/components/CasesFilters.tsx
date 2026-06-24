@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react-lite";
+import { useSearchParams } from "react-router";
 import { Search } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -21,21 +22,39 @@ import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
 const PHASE_OPTIONS = [
 	{ value: "all", label: "All States" },
-	{ value: "assessment", label: "Awaiting Assessment" },
-	{ value: "data_entry", label: "Awaiting Data Entry" },
-	{ value: "unsigned_generation", label: "Awaiting Unsigned Cert" },
-	{ value: "botanist_signoff", label: "Awaiting Signature" },
-	{ value: "invoicing", label: "Awaiting Invoice" },
-	{ value: "send_emails", label: "Awaiting Email" },
+	{ value: "case_creation", label: "Case Creation" },
+	{ value: "assessment", label: "Assessment" },
+	{ value: "unsigned_generation", label: "Unsigned Certificate" },
+	{ value: "botanist_signoff", label: "Botanist Sign-Off" },
+	{ value: "invoicing", label: "Invoicing" },
+	{ value: "send_emails", label: "Email" },
 	{ value: "complete", label: "Complete" },
 ];
 
 export const CasesFilters = observer(() => {
 	const store = casesSearchStore;
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	// Sync URL ?phase= param to store on mount/URL change
+	useEffect(() => {
+		const phaseParam = searchParams.get("phase");
+		if (phaseParam && phaseParam !== store.state.filters.phase) {
+			store.clearSearchAndFilters();
+			store.setFilters({ phase: phaseParam });
+			// Remove the param from URL after applying (clean URL)
+			searchParams.delete("phase");
+			setSearchParams(searchParams, { replace: true });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchParams]);
 
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);
+	const [localTagSearch, setLocalTagSearch] = useState(
+		store.state.filters.tagSearch
+	);
 	const debouncedSearch = useDebounce(localSearch, 300);
+	const debouncedTagSearch = useDebounce(localTagSearch, 300);
 
 	// Sync debounced value to store
 	useEffect(() => {
@@ -44,27 +63,66 @@ export const CasesFilters = observer(() => {
 		}
 	}, [debouncedSearch, store]);
 
-	// Sync store → local when store resets (e.g. clearSearchAndFilters)
+	// Sync debounced tag search to store
 	useEffect(() => {
-		if (store.state.searchTerm !== localSearch) {
-			setLocalSearch(store.state.searchTerm);
+		if (debouncedTagSearch !== store.state.filters.tagSearch) {
+			store.setFilters({ tagSearch: debouncedTagSearch });
 		}
-	}, [store.state.searchTerm, localSearch]);
+	}, [debouncedTagSearch, store]);
+
+	// Sync store → local ONLY when store resets externally (e.g. clearSearchAndFilters)
+	// We track the store value and only reset local if store was cleared to empty
+	useEffect(() => {
+		if (store.state.searchTerm === "" && localSearch !== "") {
+			// Only reset if the store was explicitly cleared (not during debounce lag)
+			if (debouncedSearch !== "") {
+				setLocalSearch("");
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [store.state.searchTerm]);
+
+	useEffect(() => {
+		if (store.state.filters.tagSearch === "" && localTagSearch !== "") {
+			if (debouncedTagSearch !== "") {
+				setLocalTagSearch("");
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [store.state.filters.tagSearch]);
 
 	return (
 		<FilterContainer>
-			{/* Search input — full width */}
-			<div className="relative">
-				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-600 dark:text-blue-400" />
-				<Input
-					type="text"
-					placeholder="Search by reference, ID, officer, or defendant..."
-					value={localSearch}
-					onChange={(e) => setLocalSearch(e.target.value)}
-					variant="search"
-					className="pl-9"
-					aria-label="Search cases"
-				/>
+			{/* Search inputs — tag search left of main search on desktop, below on mobile */}
+			<div className="flex flex-col md:flex-row gap-3">
+				<div className="relative md:w-[240px] shrink-0">
+					<img
+						src="/cannabis.svg"
+						alt=""
+						className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-70 pointer-events-none"
+						aria-hidden="true"
+					/>
+					<Input
+						type="text"
+						placeholder="Search by tag number..."
+						value={localTagSearch}
+						onChange={(e) => setLocalTagSearch(e.target.value)}
+						className="pl-9 bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-200 dark:border-emerald-800 focus-visible:border-emerald-400 dark:focus-visible:border-emerald-600 focus-visible:ring-emerald-400/50 dark:focus-visible:ring-emerald-600/50 focus-visible:ring-[3px]"
+						aria-label="Search by tag number"
+					/>
+				</div>
+				<div className="relative flex-1">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-600 dark:text-blue-400 pointer-events-none" />
+					<Input
+						type="text"
+						placeholder="Search by reference, ID, officer, or defendant..."
+						value={localSearch}
+						onChange={(e) => setLocalSearch(e.target.value)}
+						variant="search"
+						className="pl-9"
+						aria-label="Search cases"
+					/>
+				</div>
 			</div>
 
 			{/* Filter grid — responsive columns */}

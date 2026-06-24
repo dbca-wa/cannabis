@@ -120,6 +120,11 @@ class SystemSettings(models.Model):
         ),
         help_text="Email address to forward certificate notifications to",
     )
+    document_email_address = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Email address to send completed documents to. Falls back to forward_certificate_emails_to.",
+    )
 
     # Development/Testing email settings
     send_emails_to_self = models.BooleanField(

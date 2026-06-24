@@ -1,19 +1,12 @@
 import React from "react";
-import { FileText, DollarSign, Check, Mail, CheckCircle2 } from "lucide-react";
-import { type CasePhase } from "@/shared/types/backend-api.types";
+import { Check } from "lucide-react";
+import { cn } from "@/shared/utils/index";
+import type { CasePhase } from "@/shared/types/backend-api.types";
+import {
+	PHASE_STEPS,
+	type PhaseStepConfig,
+} from "@/shared/constants/phases.config";
 import { getPhaseDisplay } from "@/features/cases/utils/cases.utils";
-
-// Phase descriptions for tooltips
-const PHASE_DESCRIPTIONS: Record<CasePhase, string> = {
-	data_entry: "Complete the initial form case with all required information",
-	finance_approval: "Finance team reviews budget and cost implications",
-	botanist_review: "Expert botanist reviews and approves the case details",
-	documents: "Generate certificates and invoices for the approved application",
-	botanist_signoff: "Botanist provides final sign-off on the case",
-	invoicing: "Generate and process invoices for the case",
-	send_emails: "Send notifications and documents to relevant parties",
-	complete: "Workflow completed successfully. All documents sent",
-};
 
 interface PhaseProgressIndicatorProps {
 	currentPhase: CasePhase;
@@ -23,51 +16,6 @@ interface PhaseProgressIndicatorProps {
 	className?: string;
 }
 
-// Phase configuration with icons and labels
-const PHASES: Array<{
-	key: CasePhase;
-	label: string;
-	shortLabel: string;
-	icon: React.ComponentType<{ className?: string }>;
-}> = [
-	{
-		key: "data_entry",
-		label: "Data Entry",
-		shortLabel: "Data Entry",
-		icon: FileText,
-	},
-	{
-		key: "finance_approval",
-		label: "Finance Approval",
-		shortLabel: "Finance",
-		icon: DollarSign,
-	},
-	{
-		key: "botanist_review",
-		label: "Botanist Review",
-		shortLabel: "Botanist",
-		icon: Check,
-	},
-	{
-		key: "documents",
-		label: "Documents",
-		shortLabel: "Documents",
-		icon: FileText,
-	},
-	{
-		key: "send_emails",
-		label: "Send Emails",
-		shortLabel: "Emails",
-		icon: Mail,
-	},
-	{
-		key: "complete",
-		label: "Complete",
-		shortLabel: "Complete",
-		icon: CheckCircle2,
-	},
-];
-
 export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 	currentPhase,
 	completedPhases,
@@ -75,11 +23,11 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 	onPhaseClick,
 	className = "",
 }) => {
-	// Calculate progress percentage based on current phase
-	const currentPhaseIndex = PHASES.findIndex((p) => p.key === currentPhase);
-	const progressPercent = (currentPhaseIndex / (PHASES.length - 1)) * 100;
+	const currentPhaseIndex = PHASE_STEPS.findIndex(
+		(p) => p.key === currentPhase
+	);
+	const progressPercent = (currentPhaseIndex / (PHASE_STEPS.length - 1)) * 100;
 
-	// Determine phase status
 	const getPhaseStatus = (
 		phaseKey: CasePhase
 	): "completed" | "current" | "future" => {
@@ -88,12 +36,10 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 		return "future";
 	};
 
-	// Check if phase is clickable (completed or current)
 	const isPhaseClickable = (phaseKey: CasePhase): boolean => {
 		return completedPhases.includes(phaseKey) || phaseKey === currentPhase;
 	};
 
-	// Get phase step classes based on status
 	const getPhaseStepClasses = (
 		phaseKey: CasePhase,
 		status: "completed" | "current" | "future"
@@ -101,7 +47,6 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 		const baseClasses =
 			"w-12 h-12 rounded-full border-4 flex items-center justify-center shadow-lg z-20 relative transition-all duration-300";
 
-		// Viewing indicator
 		const isViewing = viewingPhase === phaseKey;
 		const viewingRing = isViewing ? "ring-4 ring-blue-300 ring-offset-2" : "";
 
@@ -110,14 +55,12 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 		}
 
 		if (status === "current") {
-			// Slower pulse animation with custom class
 			return `${baseClasses} border-blue-500 bg-blue-500 text-white phase-pulse ${viewingRing}`;
 		}
 
 		return `${baseClasses} border-gray-300 bg-white text-gray-400 ${viewingRing}`;
 	};
 
-	// Get container classes for hover effect
 	const getContainerClasses = (phaseKey: CasePhase): string => {
 		const baseClasses =
 			"flex flex-col items-center transition-all duration-300";
@@ -131,8 +74,12 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 	};
 
 	return (
-		<div className={`bg-white rounded-xl shadow-lg p-6 md:p-8 ${className}`}>
-			{/* Custom CSS for slower pulse animation */}
+		<div
+			className={cn(
+				"bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 md:p-8",
+				className
+			)}
+		>
 			<style>{`
 				@keyframes phase-pulse {
 					0%, 100% { opacity: 1; }
@@ -143,11 +90,9 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 				}
 			`}</style>
 
-			{/* Phase Steps */}
 			<div className="relative">
-				{/* Progress Line Background */}
-				<div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 rounded-full z-0">
-					{/* Animated Progress Line */}
+				{/* Progress line background */}
+				<div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 dark:bg-gray-700 rounded-full z-0">
 					<div
 						className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
 						style={{ width: `${progressPercent}%` }}
@@ -155,9 +100,9 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 					/>
 				</div>
 
-				{/* Phase Steps Container */}
+				{/* Phase steps */}
 				<div className="relative flex justify-between items-start">
-					{PHASES.map((phase) => {
+					{PHASE_STEPS.map((phase: PhaseStepConfig) => {
 						const status = getPhaseStatus(phase.key);
 						const Icon = phase.icon;
 						const clickable = isPhaseClickable(phase.key);
@@ -173,7 +118,7 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 								}}
 								role="button"
 								tabIndex={clickable ? 0 : -1}
-								title={PHASE_DESCRIPTIONS[phase.key]}
+								title={phase.description}
 								aria-label={`${phase.label}: ${
 									status === "completed"
 										? "Completed"
@@ -189,9 +134,9 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 									}
 								}}
 							>
-								{/* Phase Circle with White Background */}
+								{/* Phase circle */}
 								<div className="relative">
-									<div className="absolute inset-0 w-16 h-16 bg-white rounded-full z-10 -m-2" />
+									<div className="absolute inset-0 w-16 h-16 bg-white dark:bg-gray-900 rounded-full z-10 -m-2" />
 									<div className={getPhaseStepClasses(phase.key, status)}>
 										{status === "completed" ? (
 											<Check className="w-6 h-6" />
@@ -201,17 +146,17 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 									</div>
 								</div>
 
-								{/* Phase Label */}
+								{/* Phase label */}
 								<div className="mt-3 text-center max-w-24">
-									<div className="text-sm font-semibold text-gray-900 hidden md:block">
+									<div className="text-sm font-semibold text-gray-900 dark:text-gray-100 hidden md:block">
 										{phase.label}
 									</div>
-									<div className="text-sm font-semibold text-gray-900 md:hidden">
+									<div className="text-sm font-semibold text-gray-900 dark:text-gray-100 md:hidden">
 										{phase.shortLabel}
 									</div>
-									<div className="text-xs text-gray-500 mt-1">
+									<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 										{status === "completed"
-											? "✓ Done"
+											? "Done"
 											: status === "current"
 												? "Active"
 												: "Pending"}
@@ -223,11 +168,11 @@ export const PhaseProgressIndicator: React.FC<PhaseProgressIndicatorProps> = ({
 				</div>
 			</div>
 
-			{/* Mobile-friendly phase indicator */}
+			{/* Mobile phase indicator */}
 			<div className="mt-4 md:hidden text-center">
-				<p className="text-sm text-gray-600">
+				<p className="text-sm text-gray-600 dark:text-gray-400">
 					Current Phase:{" "}
-					<span className="font-semibold text-gray-900">
+					<span className="font-semibold text-gray-900 dark:text-gray-100">
 						{getPhaseDisplay(currentPhase)}
 					</span>
 				</p>

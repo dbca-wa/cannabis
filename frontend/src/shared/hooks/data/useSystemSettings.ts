@@ -5,6 +5,6 @@ export const useSystemSettings = () => {
 	return useQuery({
 		queryKey: ["system", "settings"],
 		queryFn: () => SystemSettingsService.getSettings(),
-		staleTime: 10 * 60 * 1000, // 10 minutes - settings don't change often
+		staleTime: 0, // Always refetch on mount to pick up changes from other pages
 	});
 };

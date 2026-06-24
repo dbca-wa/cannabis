@@ -8,6 +8,7 @@ import {
 	DollarSign,
 	Fuel,
 	Percent,
+	Mail,
 } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -20,6 +21,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { BaseFeeModal } from "@/shared/components/BaseFeeModal";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
@@ -130,7 +132,10 @@ const SettingsContent = () => {
 
 	// Edit dialog state
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
-	const [editValue, setEditValue] = useState("");
+
+	// Email edit state
+	const [isEditingEmail, setIsEditingEmail] = useState(false);
+	const [emailValue, setEmailValue] = useState("");
 
 	// Confirmation dialog state
 	const [pendingChanges, setPendingChanges] = useState<Record<string, string>>(
@@ -233,19 +238,26 @@ const SettingsContent = () => {
 
 	const openEdit = (index: number) => {
 		if (!settings) return;
-		const rate = RATE_TYPES[index];
-		const currentValue = settings[rate.key as keyof SystemSettings];
 		setEditingIndex(index);
-		setEditValue(String(currentValue ?? ""));
 	};
 
-	const saveEdit = () => {
+	const saveEdit = async (value: string) => {
 		if (editingIndex === null || !settings) return;
 		const rate = RATE_TYPES[editingIndex];
-		const parsed = parseFloat(editValue);
-		if (isNaN(parsed)) return;
-		handleSettingsUpdate(rate.key, editValue);
+		await handleSettingsUpdate(rate.key, value);
 		setEditingIndex(null);
+	};
+
+	const openEmailEdit = () => {
+		if (!settings) return;
+		setEmailValue(settings.document_email_address ?? "");
+		setIsEditingEmail(true);
+	};
+
+	const saveEmailEdit = () => {
+		if (!settings) return;
+		handleSettingsUpdate("document_email_address", emailValue || "");
+		setIsEditingEmail(false);
 	};
 
 	if (!settings)
@@ -336,47 +348,65 @@ const SettingsContent = () => {
 						})}
 					</div>
 				</Card>
+
+				{/* Email configuration */}
+				<Card className="p-6">
+					<div className="flex items-center justify-between mb-5">
+						<div>
+							<h3>Document email</h3>
+							<p className="text-[13px] text-muted-foreground">
+								Email address where completed case documents are sent.
+							</p>
+						</div>
+					</div>
+
+					<div
+						onClick={openEmailEdit}
+						className="p-4 rounded-xl border border-border/70 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer group relative overflow-hidden"
+					>
+						<div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 opacity-[0.08] blur-xl group-hover:opacity-[0.15] transition-opacity" />
+						<div className="flex items-start gap-3 relative">
+							<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+								<Mail className="w-5 h-5" />
+							</div>
+							<div className="flex-1 min-w-0">
+								<div className="text-[13px]">Document Email Address</div>
+								<div className="text-[11px] text-muted-foreground truncate">
+									{settings.document_email_address
+										? "Configured"
+										: "Falls back to certificate forwarding address"}
+								</div>
+								<div className="mt-2 text-[16px] font-medium truncate">
+									{settings.document_email_address || (
+										<span className="text-muted-foreground italic">
+											Not set
+										</span>
+									)}
+								</div>
+							</div>
+						</div>
+					</div>
+				</Card>
 			</div>
 
-			{/* Edit pricing dialog */}
-			<Dialog
+			{/* Edit pricing modal (shared component) */}
+			<BaseFeeModal
 				open={editingIndex !== null}
 				onOpenChange={(open) => !open && setEditingIndex(null)}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>
-							Update {editingIndex !== null && RATE_TYPES[editingIndex].label}
-						</DialogTitle>
-					</DialogHeader>
-					<div>
-						<Label>Value</Label>
-						<Input
-							type="number"
-							step="0.01"
-							className="mt-1.5"
-							value={editValue}
-							onChange={(e) => setEditValue(e.target.value)}
-						/>
-					</div>
-					<DialogFooter>
-						<Button
-							variant="ghost"
-							className="cursor-pointer"
-							onClick={() => setEditingIndex(null)}
-						>
-							Cancel
-						</Button>
-						<Button
-							className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
-							onClick={saveEdit}
-							disabled={isUpdating}
-						>
-							{isUpdating ? "Saving…" : "Save"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+				rateKey={editingIndex !== null ? RATE_TYPES[editingIndex].key : ""}
+				currentValue={
+					editingIndex !== null
+						? String(
+								settings[
+									RATE_TYPES[editingIndex].key as keyof SystemSettings
+								] ?? ""
+							)
+						: ""
+				}
+				label={editingIndex !== null ? RATE_TYPES[editingIndex].label : ""}
+				onSave={saveEdit}
+				isSaving={isUpdating}
+			/>
 
 			{/* Security confirmation dialog */}
 			<ConfirmationDialog
@@ -391,6 +421,48 @@ const SettingsContent = () => {
 				isLoading={isUpdating}
 				changes={confirmationChanges}
 			/>
+
+			{/* Edit document email dialog */}
+			<Dialog
+				open={isEditingEmail}
+				onOpenChange={(open) => !open && setIsEditingEmail(false)}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Update Document Email Address</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-2">
+						<Label htmlFor="document_email">Email Address</Label>
+						<Input
+							id="document_email"
+							type="email"
+							className="mt-1.5"
+							value={emailValue}
+							onChange={(e) => setEmailValue(e.target.value)}
+							placeholder="e.g. documents@example.com"
+						/>
+						<p className="text-xs text-muted-foreground">
+							Leave empty to fall back to the certificate forwarding address.
+						</p>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="ghost"
+							className="cursor-pointer"
+							onClick={() => setIsEditingEmail(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
+							onClick={saveEmailEdit}
+							disabled={isUpdating}
+						>
+							{isUpdating ? "Saving…" : "Save"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</PageTransition>
 	);
 };

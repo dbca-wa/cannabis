@@ -24,6 +24,8 @@ interface ContentLayoutProps {
 	header?: ReactNode;
 	breadcrumbs?: BreadcrumbItem[];
 	showHomeBreadcrumb?: boolean;
+	/** Hide the breadcrumb text (keeps user menu and hamburger visible) */
+	hideBreadcrumb?: boolean;
 	className?: string;
 	maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 	showErrorBoundary?: boolean;
@@ -36,6 +38,7 @@ const ContentLayout = observer(
 		header,
 		breadcrumbs,
 		showHomeBreadcrumb = true,
+		hideBreadcrumb = false,
 		className,
 		maxWidth, // Optional override, defaults to UIStore preference
 		showErrorBoundary = true,
@@ -76,28 +79,43 @@ const ContentLayout = observer(
 					onClose={() => uiStore.setMobileSidebarOpen(false)}
 				/>
 
-				{/* Breadcrumbs section - always show for user menu */}
-				<div className="w-full px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							{/* Hamburger menu for mobile and tablet (below desktop) */}
-							{!isDesktop && (
-								<HamburgerMenu
-									isOpen={uiStore.isMobileSidebarOpen}
-									onToggle={() => uiStore.toggleMobileSidebar()}
-								/>
-							)}
-							{breadcrumbs && breadcrumbs.length > 0 ? (
-								<Breadcrumb items={breadcrumbs} showHome={showHomeBreadcrumb} />
-							) : showHomeBreadcrumb ? (
-								<Breadcrumb items={[]} showHome={true} />
-							) : (
-								<div /> // Empty div to maintain layout
-							)}
+				{/* Breadcrumbs section - hidden entirely when hideBreadcrumb is set */}
+				{hideBreadcrumb ? (
+					/* Minimal bar on mobile only — just the hamburger menu */
+					!isDesktop ? (
+						<div className="w-full px-4 sm:px-8 py-3">
+							<HamburgerMenu
+								isOpen={uiStore.isMobileSidebarOpen}
+								onToggle={() => uiStore.toggleMobileSidebar()}
+							/>
 						</div>
-						<UserMenu variant="breadcrumb" />
+					) : null
+				) : (
+					<div className="w-full px-4 sm:px-8 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								{/* Hamburger menu for mobile and tablet (below desktop) */}
+								{!isDesktop && (
+									<HamburgerMenu
+										isOpen={uiStore.isMobileSidebarOpen}
+										onToggle={() => uiStore.toggleMobileSidebar()}
+									/>
+								)}
+								{breadcrumbs && breadcrumbs.length > 0 ? (
+									<Breadcrumb
+										items={breadcrumbs}
+										showHome={showHomeBreadcrumb}
+									/>
+								) : showHomeBreadcrumb ? (
+									<Breadcrumb items={[]} showHome={true} />
+								) : (
+									<div />
+								)}
+							</div>
+							<UserMenu variant="breadcrumb" />
+						</div>
 					</div>
-				</div>
+				)}
 
 				{/* Full-width header section */}
 				{header && (

@@ -2,7 +2,6 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework.exceptions import (
     NotFound,
-    PermissionDenied,
     ValidationError,
 )
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -11,12 +10,14 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.views import APIView
 
-from ..models import BotanicalAssessment, DrugBag
+from ..models import BotanicalAssessment, Case, DrugBag
 from ..serializers import (
     BotanicalAssessmentSerializer,
+    DrugBagBatchCreateSerializer,
     DrugBagCreateSerializer,
     DrugBagSerializer,
 )
+from ..services import DrugBagService
 
 
 class DrugBagListView(ListCreateAPIView):
@@ -89,12 +90,11 @@ class BotanicalAssessmentCreateView(APIView):
             raise NotFound("Drug bag not found.")
 
         # Check if assessment already exists
-        if hasattr(drug_bag, "assessment"):
+        if BotanicalAssessment.objects.filter(drug_bag=drug_bag).exists():
             raise ValidationError("Assessment already exists for this drug bag.")
 
-        # Only botanists can create assessments
-        if not (request.user.role == "botanist" or request.user.is_staff):
-            raise PermissionDenied("Only botanists can create assessments.")
+        # Any authenticated user can create assessments during case processing
+        # (The view already requires IsAuthenticated)
 
         serializer = BotanicalAssessmentSerializer(data=request.data)
         if serializer.is_valid():
@@ -119,12 +119,9 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def check_object_permissions(self, request, obj):
-        """Only botanists can update assessments"""
+        """Check permissions for assessment access"""
         super().check_object_permissions(request, obj)
-
-        if request.method in ["PUT", "PATCH"]:
-            if not (request.user.role == "botanist" or request.user.is_staff):
-                self.permission_denied(request, "Only botanists can update assessments")
+        # Any authenticated user can update assessments during case processing
 
     def perform_update(self, serializer):
         # Auto-set assessment date if determination is being set
@@ -138,4 +135,30 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
 
         settings.LOGGER.info(
             f"Botanist {self.request.user} updated assessment: {serializer.instance}"
+        )
+
+
+class DrugBagBatchCreateView(APIView):
+    """Batch-create multiple drug bags (with optional assessments) in one request."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            submission = Case.objects.get(pk=pk)
+        except Case.DoesNotExist:
+            raise NotFound("Case not found.")
+
+        serializer = DrugBagBatchCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        bags = DrugBagService.batch_create(
+            submission=submission,
+            bags_data=serializer.validated_data["bags"],
+            user=request.user,
+        )
+
+        return Response(
+            DrugBagSerializer(bags, many=True).data,
+            status=HTTP_201_CREATED,
         )

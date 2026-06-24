@@ -171,8 +171,8 @@ class DashboardService:
         )
 
         active_phases = [
+            "case_creation",
             "assessment",
-            "data_entry",
             "unsigned_generation",
             "botanist_signoff",
             "invoicing",
@@ -220,6 +220,78 @@ class DashboardService:
         }
 
     @staticmethod
+    def get_monthly_throughput():
+        """Return monthly throughput for the current financial year.
+
+        Returns an array of 12 monthly entries (Jul–Jun) with:
+        - cases: count of cases received that month
+        - certs: count of certificates generated that month
+        - revenue: total invoice revenue that month
+        """
+        now = timezone.now()
+        # Australian FY starts July 1
+        if now.month >= 7:
+            fy_start = now.replace(
+                month=7, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+        else:
+            fy_start = now.replace(
+                year=now.year - 1,
+                month=7,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
+        months = []
+        for i in range(12):
+            month_start = fy_start + relativedelta(months=i)
+            month_end = month_start + relativedelta(months=1)
+
+            # Only include data for months up to and including current month
+            if month_start > now:
+                months.append(
+                    {
+                        "month": month_start.strftime("%b"),
+                        "cases": None,
+                        "certs": None,
+                        "revenue": None,
+                    }
+                )
+                continue
+
+            cases_count = Case.objects.filter(
+                received__gte=month_start.date(),
+                received__lt=month_end.date(),
+            ).count()
+
+            certs_count = Certificate.objects.filter(
+                created_at__gte=month_start,
+                created_at__lt=month_end,
+            ).count()
+
+            revenue_total = (
+                Invoice.objects.filter(
+                    created_at__gte=month_start,
+                    created_at__lt=month_end,
+                ).aggregate(total=Sum("total"))["total"]
+                or 0
+            )
+
+            months.append(
+                {
+                    "month": month_start.strftime("%b"),
+                    "cases": cases_count,
+                    "certs": certs_count,
+                    "revenue": float(revenue_total),
+                }
+            )
+
+        return months
+
+    @staticmethod
     def get_pending_attention_queryset(user):
         """Return queryset of cases needing the user's attention based on role.
 
@@ -229,7 +301,7 @@ class DashboardService:
         if user.role == "finance":
             role_filter = Q(
                 phase__in=[
-                    "data_entry",
+                    "case_creation",
                     "unsigned_generation",
                     "invoicing",
                     "send_emails",

@@ -28,3 +28,10 @@ export const useStore = () => {
 
 // Convenience hooks for commonly used stores
 export const useUIStore = () => useStore().uiStore;
+export const useCaseProcessingWizardStore = () =>
+	useStore().caseProcessingWizardStore;
+/** @deprecated Use useCaseProcessingWizardStore instead */
+export const useCaseWizardStore = () => useStore().caseProcessingWizardStore;
+export const useCaseCreationWizardStore = () =>
+	useStore().caseCreationWizardStore;
+export const useDrugBagWranglerStore = () => useStore().drugBagWranglerStore;

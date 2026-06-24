@@ -595,6 +595,7 @@ export type {
 	PaginatedCasesResponse,
 	CaseSearchParams,
 	CasesSearchParams,
+	WorkflowAction,
 	WorkflowActionRequest,
 	WorkflowActionResponse,
 } from "@/features/cases/types/cases.types";
@@ -706,6 +707,7 @@ export interface SystemSettings {
 	cost_per_kilometer_fuel: string;
 	tax_percentage: string;
 	forward_certificate_emails_to: string;
+	document_email_address: string | null;
 	send_emails_to_self: boolean;
 	environment: string;
 	send_emails_to_self_editable: boolean;

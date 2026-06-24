@@ -7,6 +7,7 @@ export interface CasesSearchFilters {
 	botanist: number | null;
 	officer: number | null;
 	station: number | null;
+	tagSearch: string;
 }
 
 interface CasesSearchStoreState extends BaseStoreState {
@@ -25,6 +26,7 @@ const CASES_DEFAULT_FILTERS: CasesSearchFilters = {
 	botanist: null,
 	officer: null,
 	station: null,
+	tagSearch: "",
 };
 
 const INITIAL_STATE: CasesSearchStoreState = {
@@ -160,6 +162,7 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 		if (this.state.filters.botanist !== CASES_DEFAULT_FILTERS.botanist) count++;
 		if (this.state.filters.officer !== CASES_DEFAULT_FILTERS.officer) count++;
 		if (this.state.filters.station !== CASES_DEFAULT_FILTERS.station) count++;
+		if (this.state.filters.tagSearch.length > 0) count++;
 
 		return count;
 	}
@@ -192,6 +195,10 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 
 		if (this.state.filters.station !== null) {
 			params.set("station", this.state.filters.station.toString());
+		}
+
+		if (this.state.filters.tagSearch) {
+			params.set("tag_search", this.state.filters.tagSearch);
 		}
 
 		return params;
@@ -252,6 +259,10 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 					typeof filters.station === "number"
 						? filters.station
 						: CASES_DEFAULT_FILTERS.station,
+				tagSearch:
+					typeof filters.tagSearch === "string"
+						? filters.tagSearch
+						: CASES_DEFAULT_FILTERS.tagSearch,
 			};
 		}
 

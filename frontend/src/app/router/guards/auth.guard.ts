@@ -4,11 +4,14 @@ import { logger } from "@/shared/services/logger.service";
 import {
 	hasValidTokens,
 	getCurrentUser,
+	refreshToken,
 } from "@/features/auth/services/auth.service";
+import { storage } from "@/shared/services/storage.service";
 
 /**
- * Helper function to check authentication status
- * Consolidates auth logic used by guards
+ * Helper function to check authentication status.
+ * Attempts a proactive token refresh if the access token is expired
+ * but a refresh token still exists.
  */
 const checkAuthStatus = async () => {
 	let isAuthenticated = false;
@@ -16,6 +19,21 @@ const checkAuthStatus = async () => {
 
 	try {
 		if (hasValidTokens()) {
+			// If access token is expired, try refreshing before making API calls
+			const accessToken = storage.getAccessToken();
+			if (accessToken && storage.isTokenExpired(accessToken)) {
+				logger.debug(
+					"[AuthGuard] Access token expired, attempting proactive refresh"
+				);
+				try {
+					await refreshToken();
+					logger.debug("[AuthGuard] Proactive token refresh succeeded");
+				} catch {
+					logger.debug("[AuthGuard] Proactive token refresh failed");
+					return { isAuthenticated: false, user: null };
+				}
+			}
+
 			const fetchedUser = await getCurrentUser();
 			if (fetchedUser) {
 				isAuthenticated = true;
@@ -28,7 +46,29 @@ const checkAuthStatus = async () => {
 				logger.debug("[AuthGuard] Auth check failed - no user data");
 			}
 		} else {
-			logger.debug("[AuthGuard] No valid tokens found");
+			// Tokens missing — check if we have a refresh token we can use
+			const refreshTokenValue = storage.getRefreshToken();
+			if (refreshTokenValue && !storage.isTokenExpired(refreshTokenValue)) {
+				logger.debug(
+					"[AuthGuard] Access token missing but refresh token available, attempting refresh"
+				);
+				try {
+					await refreshToken();
+					const fetchedUser = await getCurrentUser();
+					if (fetchedUser) {
+						isAuthenticated = true;
+						user = fetchedUser;
+						logger.debug("[AuthGuard] User authenticated after token refresh", {
+							userId: fetchedUser.id,
+							email: fetchedUser.email,
+						});
+					}
+				} catch {
+					logger.debug("[AuthGuard] Token refresh attempt failed");
+				}
+			} else {
+				logger.debug("[AuthGuard] No valid tokens found");
+			}
 		}
 	} catch (error) {
 		logger.debug("[AuthGuard] Auth check failed with exception", { error });

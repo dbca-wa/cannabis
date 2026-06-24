@@ -14,7 +14,11 @@ from rest_framework.status import (
 from rest_framework.views import APIView
 
 from ..models import AdditionalInvoiceFee, Case, Invoice
-from ..serializers import AdditionalInvoiceFeeSerializer, InvoiceSerializer
+from ..serializers import (
+    AdditionalInvoiceFeeSerializer,
+    InvoiceGenerateRequestSerializer,
+    InvoiceSerializer,
+)
 from ..services import generate_invoice, regenerate_invoice_pdf
 from ..services.pdf_test_service import TestPDFService
 
@@ -133,20 +137,44 @@ class InvoiceGenerateView(APIView):
 
     POST /cases/{pk}/invoices/generate
 
-    Expects `customer_number` in the request body. Creates the invoice record,
-    renders the PDF, and returns the invoice ID and PDF URL.
+    Accepts `customer_number` (required), optional `line_items` list, and
+    optional `tax_enabled` boolean. Creates the invoice record, renders the
+    PDF, and returns the invoice data including PDF URL.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         submission = get_object_or_404(Case, pk=pk)
-        customer_number = request.data.get("customer_number", "").strip()
 
-        invoice = generate_invoice(submission, customer_number, request.user)
+        serializer = InvoiceGenerateRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        serializer = InvoiceSerializer(invoice, context={"request": request})
-        return Response(serializer.data, status=HTTP_201_CREATED)
+        customer_number = serializer.validated_data["customer_number"]
+        line_items = serializer.validated_data.get("line_items")
+        tax_enabled = serializer.validated_data.get("tax_enabled", True)
+
+        # Convert line_items from OrderedDicts to plain dicts for the service
+        if line_items is not None:
+            line_items = [
+                {
+                    "fee_type": item["fee_type"],
+                    "quantity": item["quantity"],
+                    "rate": item["rate"],
+                }
+                for item in line_items
+            ]
+
+        invoice = generate_invoice(
+            submission,
+            customer_number,
+            request.user,
+            line_items=line_items,
+            tax_enabled=tax_enabled,
+        )
+
+        response_serializer = InvoiceSerializer(invoice, context={"request": request})
+        return Response(response_serializer.data, status=HTTP_201_CREATED)
 
 
 class InvoicePdfView(APIView):
@@ -178,6 +206,8 @@ class InvoiceRegenerateView(APIView):
 
     POST /cases/{pk}/invoices/{invoice_id}/regenerate
 
+    Optionally accepts { customer_number } in the body to update
+    the customer number before regenerating.
     Rebuilds the context from current submission data and overwrites the
     stored PDF file.
     """
@@ -187,6 +217,12 @@ class InvoiceRegenerateView(APIView):
     def post(self, request, pk, invoice_id):
         submission = get_object_or_404(Case, pk=pk)
         invoice = get_object_or_404(Invoice, pk=invoice_id, submission=submission)
+
+        # Optionally update customer number before regeneration
+        new_customer_number = request.data.get("customer_number")
+        if new_customer_number is not None:
+            invoice.customer_number = new_customer_number.strip()
+            invoice.save(update_fields=["customer_number"])
 
         invoice = regenerate_invoice_pdf(invoice)
 

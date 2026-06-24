@@ -9,6 +9,7 @@ class CaseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = [
+            "id",
             "case_number",
             "received",
             "security_movement_envelope",
@@ -16,6 +17,7 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             "submitting_officer",
             "defendants",
         ]
+        read_only_fields = ["id"]
 
     def validate(self, data):
         """

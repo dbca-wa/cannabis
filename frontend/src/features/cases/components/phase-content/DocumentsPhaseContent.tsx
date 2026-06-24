@@ -95,7 +95,7 @@ export const DocumentsPhaseContent = observer<DocumentsPhaseContentProps>(
 		// Handle invoice regeneration
 		const handleRegenerateInvoice = () => {
 			if (invoice) {
-				regenerateInvoice(invoice.id);
+				regenerateInvoice({ invoiceId: invoice.id });
 			}
 		};
 
@@ -214,7 +214,7 @@ export const DocumentsPhaseContent = observer<DocumentsPhaseContentProps>(
 												variant="outline"
 												className="w-full"
 												onClick={handleViewCertificate}
-												disabled={!certificate?.pdf_file}
+												disabled={!certificate?.unsigned_pdf_file}
 											>
 												<Eye className="mr-2 h-4 w-4" />
 												View Certificate
@@ -497,7 +497,7 @@ export const DocumentsPhaseContent = observer<DocumentsPhaseContentProps>(
 											<CheckCircle2 className="mr-1 h-3 w-3" />
 											Generated
 										</Badge>
-										{certificate?.pdf_file && (
+										{certificate?.unsigned_pdf_file && (
 											<Button
 												variant="outline"
 												size="sm"

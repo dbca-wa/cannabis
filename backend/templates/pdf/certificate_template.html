@@ -386,12 +386,12 @@
                 <div class="section-content blue-border">
                     {% if quantity_of_bags == 1 %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bag, tag number {{ tag_numbers }}, containing a
+                    movement bag, tag number {{ tag_numbers }}, containing
                     {{ description }} marked <strong>{{ defendant }}</strong> from
                     {{ police_officer }} on {{ receipt_date }}.
                     {% else %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bags, tag numbers {{ tag_numbers }}, containing a
+                    movement bags, tag numbers {{ tag_numbers }}, containing
                     {{ description }} marked <strong>{{ defendant }}</strong> from
                     {{ police_officer }} on {{ receipt_date }}.
                     {% endif %}
@@ -412,11 +412,11 @@
                     I identified the items as <em>{{ species_name }}</em>.
                     <br>
                     {% if quantity_of_bags == 1 %}
-                    The plant was sealed in a new drug movement bag, tag number
+                    The {{ description }} was sealed in a new drug movement bag, tag number
                     <strong>{{ new_tag_numbers }}</strong>. This bag was handed over to
                     <strong>{{ receiving_officer }}</strong> who was present during the examination.
                     {% else %}
-                    The plants were sealed in new drug movement bags, tag numbers
+                    The {{ description }} were sealed in new drug movement bags, tag numbers
                     <strong>{{ new_tag_numbers }}</strong>. These bags were handed over to
                     <strong>{{ receiving_officer }}</strong> who was present during the examination.
                     {% endif %}
@@ -437,18 +437,21 @@
                 </div>
             </div>
         </div>
-                <!-- Certification Statement -->
+                <!-- Certification Statement — only shown when certification_date is set (signed version) -->
+        {% if certification_date %}
         <div class="certification-box">
-            {% comment %} <div class="cert-number">
-                Cert. No. <span class="cert-highlight">{{ certificate_number }}</span>
-            </div> {% endcomment %}
             <div class="cert-date">
                 Certified on <span class="cert-highlight">{{ certification_date }}</span>
                 at the<span class="cert-highlight"> WA Herbarium, Kensington</span>
             </div>
-
-            <!-- Removed fees section to match React -->
         </div>
+        {% else %}
+        <div class="certification-box" style="background-color: #fffbeb; border: 2px dashed #d97706;">
+            <div class="cert-date" style="color: #92400e; font-weight: normal; font-size: 12px;">
+                Certification date will be added on botanist signature
+            </div>
+        </div>
+        {% endif %}
 
     </div>
 
@@ -460,7 +463,14 @@
             <!-- Signature section moved to left -->
             <div class="signature-section">
                 <div class="signature-box">
+                    {% if signature_image_data %}
+                    <div style="margin-bottom: -10px; text-align: center;">
+                        <img src="{{ signature_image_data }}" alt="Botanist Signature" style="max-height: 48px; max-width: 240px; object-fit: contain; display: inline-block;">
+                    </div>
+                    <div class="signature-line" style="height: 10px;"></div>
+                    {% else %}
                     <div class="signature-line"></div>
+                    {% endif %}
                     <div class="signature-label">
                         Signature of Approved Botanist
                     </div>

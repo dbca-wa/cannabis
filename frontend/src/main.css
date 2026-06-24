@@ -317,18 +317,18 @@ scrollbar-hide::-webkit-scrollbar {
 }
 
 @layer utilities {
-	/* Slow pulse animation for wizard stepper active step */
+	/* Pulse animation for wizard stepper active step — box-shadow ring pulse on blue */
 	@keyframes step-pulse {
 		0%,
 		100% {
-			opacity: 1;
+			box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
 		}
 		50% {
-			opacity: 0.7;
+			box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
 		}
 	}
 
 	.step-pulse {
-		animation: step-pulse 2s ease-in-out infinite;
+		animation: step-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
 }

@@ -2,13 +2,12 @@ import { z } from "zod";
 
 // Case phase choices (matches backend)
 export const submissionPhaseSchema = z.enum([
-	"data_entry_start",
-	"finance_approval_provided",
-	"botanist_approval_provided",
-	"in_review",
-	"certificate_generation_start",
-	"invoice_generation_start",
-	"sending_emails",
+	"case_creation",
+	"assessment",
+	"unsigned_generation",
+	"botanist_signoff",
+	"invoicing",
+	"send_emails",
 	"complete",
 ]);
 

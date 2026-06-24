@@ -8,9 +8,9 @@ export interface Certificate {
 	certificate_number: string;
 	case?: number;
 	pdf_generating: boolean;
-	pdf_file: string | null;
+	unsigned_pdf_file: string | null;
 	pdf_url: string | null;
-	pdf_size: number;
+	unsigned_pdf_size: number;
 	signed_pdf_file?: string | null;
 	signed_pdf_url?: string | null;
 	signed_pdf_size?: number;

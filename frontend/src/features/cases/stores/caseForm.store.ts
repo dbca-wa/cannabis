@@ -7,7 +7,6 @@ import {
 } from "mobx";
 import { logger } from "@/shared/services/logger.service";
 import { storage } from "@/shared/services/storage.service";
-import { apiClient } from "@/shared/services/api/client.service";
 import type {
 	CaseCreateRequest,
 	Case,
@@ -18,7 +17,6 @@ import type {
 	PoliceOfficerTiny,
 	PoliceStationTiny,
 	DefendantTiny,
-	CaseDraft,
 } from "@/shared/types/backend-api.types";
 import {
 	createCaseSchema,
@@ -557,85 +555,21 @@ export class CaseFormStore {
 			timestamp: new Date().toISOString(),
 		};
 
-		// Save to localStorage as fallback regardless of API result
+		// Save to localStorage only (no server draft API)
 		try {
 			storage.setItem(this.storageKey, draftData);
-		} catch (error) {
-			logger.error("Failed to save draft to localStorage", { error });
-		}
-
-		// Save to server via draft API
-		try {
-			const currentStep =
-				this.activeSection === "case-details"
-					? 0
-					: this.activeSection === "officers-station"
-						? 1
-						: 2;
-
-			await apiClient.put<CaseDraft>("/cases/drafts/", {
-				data: draftData,
-				current_step: currentStep,
-			});
-
 			this.markClean();
-			logger.debug("Draft saved to server", {
+			logger.debug("Draft saved to localStorage", {
 				timestamp: draftData.timestamp,
 				bagsCount: this.formData.bags.length,
 			});
 		} catch (error) {
-			// Server save failed — localStorage fallback already persisted
-			this.markClean();
-			logger.warn("Draft saved to localStorage only (server unavailable)", {
-				error,
-			});
+			logger.error("Failed to save draft to localStorage", { error });
 		}
 	};
 
 	loadDraft = async () => {
-		// Try loading from server first
-		try {
-			const serverDraft = await apiClient.get<CaseDraft>("/cases/drafts/");
-			if (serverDraft?.data && typeof serverDraft.data === "object") {
-				const draft = serverDraft.data as Record<string, unknown>;
-				runInAction(() => {
-					if (draft.formData && typeof draft.formData === "object") {
-						this.formData = {
-							...this.formData,
-							...(draft.formData as Partial<CaseFormData>),
-						};
-					}
-					this.selectedOfficers =
-						(draft.selectedOfficers as CaseFormStore["selectedOfficers"]) || {};
-					this.selectedStation = draft.selectedStation as
-						| PoliceStationTiny
-						| undefined;
-					this.selectedBotanist = draft.selectedBotanist as
-						| UserTiny
-						| undefined;
-					this.selectedFinanceOfficer = draft.selectedFinanceOfficer as
-						| UserTiny
-						| undefined;
-					this.selectedDefendants =
-						(draft.selectedDefendants as DefendantTiny[]) || [];
-					this.currentView = (draft.currentView as ViewMode) || "data-entry";
-					this.activeSection =
-						(draft.activeSection as FormSection) || "case-details";
-					this.isDirty = false;
-				});
-
-				logger.info("Draft loaded from server", {
-					timestamp: draft.timestamp,
-					bagsCount: this.formData.bags.length,
-				});
-				return;
-			}
-		} catch {
-			// Server draft not found (404) or network error — fall back to localStorage
-			logger.debug("No server draft found, falling back to localStorage");
-		}
-
-		// Fall back to localStorage
+		// Load from localStorage only (no server draft API)
 		try {
 			const draftData: unknown = storage.getItem(this.storageKey);
 			if (draftData && typeof draftData === "object" && draftData !== null) {
@@ -755,20 +689,12 @@ export class CaseFormStore {
 	};
 
 	clearDraft = async () => {
-		// Clear localStorage
+		// Clear localStorage only (no server draft API)
 		try {
 			storage.removeItem(this.storageKey);
+			logger.debug("Draft cleared from localStorage");
 		} catch (error) {
 			logger.error("Failed to clear draft from localStorage", { error });
-		}
-
-		// Delete from server
-		try {
-			await apiClient.delete("/cases/drafts/");
-			logger.debug("Draft cleared from server");
-		} catch {
-			// Server delete failed — localStorage already cleared
-			logger.debug("Draft cleared from localStorage only (server unavailable)");
 		}
 	};
 

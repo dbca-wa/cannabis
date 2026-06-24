@@ -25,7 +25,7 @@ import type {
 
 // Default service configuration
 const DEFAULT_CONFIG: SettingsServiceConfig = {
-	cacheTimeout: 10 * 60 * 1000, // 10 minutes (increased to reduce API calls)
+	cacheTimeout: 30 * 1000, // 30 seconds — ensures fresh data on page navigation
 	retryAttempts: 1, // Very conservative - only 1 retry
 	retryDelay: 2000, // 2 second base delay
 	enableOptimisticUpdates: true,

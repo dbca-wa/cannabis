@@ -3,8 +3,8 @@ import { apiClient } from "@/shared/services/api/client.service";
 import { dashboardKeys } from "./queryKeys";
 
 interface PhaseCountsResponse {
+	case_creation: number;
 	assessment: number;
-	data_entry: number;
 	unsigned_generation: number;
 	botanist_signoff: number;
 	invoicing: number;

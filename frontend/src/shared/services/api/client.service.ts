@@ -75,7 +75,7 @@ export class ApiClientService {
 					logger.info("Received 401 response, attempting token refresh...");
 
 					// Don't try to refresh if this is already a refresh request
-					if (originalRequest.url?.includes("/auth/refresh/")) {
+					if (originalRequest.url?.includes("/auth/refresh")) {
 						logger.warn("401 on refresh endpoint, logging out user");
 						await this.handleUnauthorized();
 						throw this.createApiError(error);
@@ -148,7 +148,10 @@ export class ApiClientService {
 			logger.info("Attempting to refresh access token...");
 
 			// Make refresh request without going through interceptors
-			const response = await axios.post<{ access: string }>(
+			const response = await axios.post<{
+				access: string;
+				refresh?: string;
+			}>(
 				`${API_CONFIG.BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
 				{ refresh: refreshToken },
 				{
@@ -158,9 +161,12 @@ export class ApiClientService {
 			);
 
 			if (response.data?.access) {
-				// Update stored access token, keep existing refresh token
-				storage.setTokens(response.data.access, refreshToken);
-				logger.info("Access token refreshed successfully");
+				// Store new access token and the rotated refresh token (if provided)
+				const newRefreshToken = response.data.refresh || refreshToken;
+				storage.setTokens(response.data.access, newRefreshToken);
+				logger.info("Access token refreshed successfully", {
+					refreshRotated: !!response.data.refresh,
+				});
 				return true;
 			}
 
