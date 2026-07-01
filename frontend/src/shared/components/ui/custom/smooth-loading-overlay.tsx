@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
+import React from "react";
+import { Loader2 } from "lucide-react";
 import { SearchErrorDisplay } from "./search-error-display";
 import { cn } from "@/shared/utils";
 
@@ -23,11 +24,14 @@ interface SmoothLoadingOverlayProps {
 }
 
 /**
- * SmoothLoadingOverlay prevents visual flashing by:
- * 1. Maintaining consistent dimensions to prevent size changes
- * 2. Showing skeleton on initial load when no data exists
- * 3. Showing overlay with previous results when searching
- * 4. Smooth transitions between states without layout shifts
+ * Keeps the results container ("the box") stable while data loads so the
+ * dropdown never collapses or remounts — only its contents change.
+ *
+ * It always renders a single wrapper of the same shape and renders `children`
+ * inside it. While a request is in flight with nothing to show yet, a spinner
+ * is layered on top rather than replacing the container. Paired with TanStack's
+ * `keepPreviousData`, the previous results stay on screen and update in place,
+ * eliminating the open/close flash on each keystroke.
  */
 export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	isInitialLoading,
@@ -44,35 +48,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 	hasFallbackData = false,
 	fallbackMessage,
 }) => {
-	const containerRef = useRef<HTMLDivElement>(null);
-	const [dimensions, setDimensions] = useState<{
-		width: number;
-		height: number;
-	} | null>(null);
-	const [previousChildren, setPreviousChildren] =
-		useState<React.ReactNode>(null);
-
-	// Store previous children when we have results to maintain content during loading
-	useEffect(() => {
-		if (hasResults && !isSearching) {
-			// eslint-disable-next-line react-hooks/set-state-in-effect
-			setPreviousChildren(children);
-		}
-	}, [hasResults, isSearching, children]);
-
-	// Measure and store dimensions when content is stable
-	useEffect(() => {
-		if (containerRef.current && hasResults && !isSearching) {
-			const rect = containerRef.current.getBoundingClientRect();
-
-			setDimensions({
-				width: rect.width,
-				height: rect.height,
-			});
-		}
-	}, [hasResults, isSearching]);
-
-	// Show error for initial data loading failures
+	// Initial-load error with no data to fall back to — offer a retry
 	if (error && !hasResults && !hasFallbackData && onRetry) {
 		const errorType =
 			error.message?.includes("network") || error.message?.includes("fetch")
@@ -80,18 +56,7 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 				: "initial";
 
 		return (
-			<div
-				ref={containerRef}
-				className={cn("transition-opacity duration-200", className)}
-				style={
-					dimensions
-						? {
-								width: dimensions.width,
-								minHeight: Math.max(dimensions.height, 120),
-							}
-						: { minHeight: 120 }
-				}
-			>
+			<div className={cn("min-h-[120px]", className)}>
 				<SearchErrorDisplay
 					error={error}
 					onRetry={onRetry}
@@ -104,28 +69,24 @@ export const SmoothLoadingOverlay: React.FC<SmoothLoadingOverlayProps> = ({
 		);
 	}
 
-	// Show skeleton when initially loading and no results yet
-	if (isInitialLoading && !hasResults) {
-		return null;
-	}
+	// Only overlay a spinner when there is genuinely nothing to show yet.
+	// During a keystroke refetch the previous results remain (keepPreviousData),
+	// so the list stays visible and just updates in place.
+	const showSpinner = (isInitialLoading || isSearching) && !hasResults;
 
-	// When searching with no results and no previous content to show
-	if (isSearching && !hasResults && !previousChildren) {
-		return null;
-	}
-
-	// Normal state - show content and measure dimensions
 	return (
-		<div
-			ref={containerRef}
-			className={cn("transition-opacity duration-200", className)}
-			style={
-				dimensions
-					? { width: dimensions.width, minHeight: dimensions.height }
-					: undefined
-			}
-		>
+		<div className={cn("relative min-h-[120px]", className)}>
 			{children}
+			{showSpinner && (
+				<div
+					className="absolute inset-0 flex items-center justify-center bg-popover/60"
+					role="status"
+					aria-live="polite"
+				>
+					<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+					<span className="sr-only">Loading results…</span>
+				</div>
+			)}
 		</div>
 	);
 };

@@ -1,35 +1,73 @@
 import { useState } from "react";
-import {
-	FlaskConical,
-	Send,
-	CheckCircle2,
-	Award,
-	FileText,
-	Loader2,
-} from "lucide-react";
+import { FlaskConical, Award, Loader2, ScanLine, Mail } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/shared/components/ui/select";
 import { PageTransition } from "@/shared/components/PageTransition";
-
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { useMutation } from "@tanstack/react-query";
-import { apiClient } from "@/shared/services/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient, ENDPOINTS } from "@/shared/services/api";
 import { openBlobInNewTab } from "@/shared/services/pdf/pdf.service";
 import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
+import { useSystemSettings } from "@/shared/hooks/data";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { UserRole } from "@/shared/types/backend-api.types";
 import { toast } from "sonner";
 
-/** Development tab — email testing, PDF generation tools */
+/** Development tab — feature toggles (OCR), email routing, a live invite-email
+ * preview, and a test certificate generator. */
 const DevelopmentContent = () => {
+	const queryClient = useQueryClient();
 	const { user } = useAuth();
-	const [recipientUserId, setRecipientUserId] = useState<number | null>(null);
+	const { data: settings } = useSystemSettings();
+
 	const [emailTestUserId, setEmailTestUserId] = useState<number | null>(null);
 	const [emailTestingMode, setEmailTestingMode] = useState(false);
 
+	// Test-invite tool state — default recipient is the current user's email.
+	const [inviteEmail, setInviteEmail] = useState(user?.email ?? "");
+	const [inviteRole, setInviteRole] = useState<UserRole>("botanist");
+
+	const ocrEnabled = settings?.ocr_enabled ?? false;
+
+	const toggleOcrMutation = useMutation({
+		mutationFn: (enabled: boolean) =>
+			apiClient.patch(ENDPOINTS.SYSTEM.SETTINGS, { ocr_enabled: enabled }),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["system"] });
+			toast.success("OCR setting updated");
+		},
+		onError: (error: Error) => {
+			toast.error("Failed to update OCR setting", {
+				description: error.message?.includes("<") ? undefined : error.message,
+			});
+		},
+	});
+
+	const sendTestInviteMutation = useMutation({
+		mutationFn: (params: { email: string; role: UserRole }) =>
+			apiClient.post(ENDPOINTS.AUTH.TEST_INVITE_EMAIL, params),
+		onSuccess: () => {
+			toast.success(`Test invitation email sent to ${inviteEmail}`);
+		},
+		onError: (error: Error) => {
+			toast.error("Failed to send test invitation", {
+				description: error.message?.includes("<") ? undefined : error.message,
+			});
+		},
+	});
+
 	const generateTestCertificateMutation = useMutation({
-		mutationFn: (variant: string) =>
-			apiClient.postBlob(`cases/certificates/test/generate?variant=${variant}`),
+		mutationFn: () =>
+			apiClient.postBlob("cases/certificates/test/generate?variant=base"),
 		onSuccess: (blob) => {
 			openBlobInNewTab(blob);
 			toast.success("Test certificate generated");
@@ -44,49 +82,17 @@ const DevelopmentContent = () => {
 		},
 	});
 
-	const generateTestInvoiceMutation = useMutation({
-		mutationFn: () => apiClient.postBlob("cases/invoices/test/generate"),
-		onSuccess: (blob) => {
-			openBlobInNewTab(blob);
-			toast.success("Test invoice generated");
-		},
-		onError: (error: Error) => {
-			const message = error.message?.includes("<")
-				? "Request failed. Please try again."
-				: error.message;
-			toast.error("Failed to generate test invoice", { description: message });
-		},
-	});
-
-	const sendTestEmailMutation = useMutation({
-		mutationFn: async () => {
-			return apiClient.post<{ message: string; recipient: string }>(
-				"communications/test-email/",
-				{ recipient_user_id: recipientUserId || user?.id }
-			);
-		},
-		onSuccess: (data) => {
-			toast.success("Test email sent", {
-				description: `Delivered to ${data.recipient}`,
-			});
-		},
-		onError: (error: Error) => {
-			toast.error("Could not send test email", { description: error.message });
-		},
-	});
-
 	const updateTestingModeMutation = useMutation({
 		mutationFn: async (params: {
 			email_testing_mode: boolean;
 			email_test_user: number | null;
 		}) => {
-			return apiClient.patch("system/settings/", params);
+			return apiClient.patch(ENDPOINTS.SYSTEM.SETTINGS, params);
 		},
 		onSuccess: () => {
 			toast.success("Email testing settings updated");
 		},
 		onError: (error: Error) => {
-			// Sanitise error message — never show raw HTML in toasts
 			const message = error.message?.includes("<")
 				? "Request failed. Please try again."
 				: error.message;
@@ -97,7 +103,110 @@ const DevelopmentContent = () => {
 	return (
 		<PageTransition>
 			<div className="space-y-6">
-				{/* Email Testing Mode */}
+				{/* OCR feature toggle */}
+				<Card className="p-6">
+					<div className="flex items-start gap-4">
+						<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
+							<ScanLine className="w-5 h-5" />
+						</div>
+						<div className="flex-1">
+							<h3 className="text-[14px] font-medium">Priority 3 Form OCR</h3>
+							<p className="text-[12px] text-muted-foreground mt-1">
+								When enabled, a drag-and-drop upload appears on case creation
+								and processing to optionally prefill case data from a scanned
+								form.
+							</p>
+						</div>
+						<Switch
+							aria-label="Toggle Priority 3 form OCR"
+							checked={ocrEnabled}
+							disabled={toggleOcrMutation.isPending}
+							onCheckedChange={(checked) => toggleOcrMutation.mutate(checked)}
+							className="data-[state=checked]:bg-emerald-600"
+						/>
+					</div>
+				</Card>
+
+				{/* Test invitation email */}
+				<Card className="p-6">
+					<div className="flex items-start gap-4 mb-4">
+						<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-sm shrink-0">
+							<Mail className="w-5 h-5" />
+						</div>
+						<div className="flex-1">
+							<h3 className="text-[14px] font-medium">Test Invitation Email</h3>
+							<p className="text-[12px] text-muted-foreground mt-1">
+								Send a live invitation email so you can preview it. No user or
+								invitation record is created.
+							</p>
+						</div>
+					</div>
+					<div className="space-y-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div className="space-y-1.5">
+								<Label htmlFor="test-invite-email" className="text-sm">
+									Recipient email
+								</Label>
+								<Input
+									id="test-invite-email"
+									type="email"
+									value={inviteEmail}
+									onChange={(e) => setInviteEmail(e.target.value)}
+									placeholder="name@dbca.wa.gov.au"
+								/>
+							</div>
+							<div className="space-y-1.5">
+								<Label htmlFor="test-invite-role" className="text-sm">
+									Role shown in email
+								</Label>
+								<Select
+									value={inviteRole}
+									onValueChange={(v) => setInviteRole(v as UserRole)}
+								>
+									<SelectTrigger
+										id="test-invite-role"
+										className="cursor-pointer"
+									>
+										<SelectValue placeholder="Select role" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="botanist" className="cursor-pointer">
+											Botanist
+										</SelectItem>
+										<SelectItem value="finance" className="cursor-pointer">
+											Finance
+										</SelectItem>
+										<SelectItem value="none" className="cursor-pointer">
+											None
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+						<div className="flex justify-end">
+							<Button
+								size="sm"
+								className="cursor-pointer"
+								disabled={
+									sendTestInviteMutation.isPending || !inviteEmail.trim()
+								}
+								onClick={() =>
+									sendTestInviteMutation.mutate({
+										email: inviteEmail.trim(),
+										role: inviteRole,
+									})
+								}
+							>
+								{sendTestInviteMutation.isPending && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
+								Send Test Email
+							</Button>
+						</div>
+					</div>
+				</Card>
+
+				{/* Email Testing Mode — controls routing of invite/password-reset emails */}
 				<Card className="p-6">
 					<div className="flex items-start gap-4 mb-6">
 						<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm shrink-0">
@@ -106,8 +215,8 @@ const DevelopmentContent = () => {
 						<div className="flex-1">
 							<h3 className="text-[14px] font-medium">Email Testing Mode</h3>
 							<p className="text-[12px] text-muted-foreground mt-1">
-								When enabled, all outgoing emails are redirected to the selected
-								test user.
+								When enabled, system emails (invitations and password resets)
+								are redirected to the selected test user.
 							</p>
 						</div>
 					</div>
@@ -166,132 +275,31 @@ const DevelopmentContent = () => {
 					</div>
 				</Card>
 
-				{/* Send Test Email */}
+				{/* Test Certificate generator */}
 				<Card className="p-6">
-					<div className="flex items-start gap-4 mb-6">
-						<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-sm shrink-0">
-							<Send className="w-5 h-5" />
+					<div className="flex items-start gap-4">
+						<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+							<Award className="w-5 h-5" />
 						</div>
 						<div>
-							<h3 className="text-[14px] font-medium">Send Test Email</h3>
+							<h3 className="text-[14px] font-medium">Test Certificate</h3>
 							<p className="text-[12px] text-muted-foreground mt-1">
-								Send a test email to verify delivery, template rendering, and
-								CID logo embedding.
+								Generate a sample certificate PDF to preview the template.
 							</p>
+							<Button
+								size="sm"
+								className="mt-3 cursor-pointer"
+								onClick={() => generateTestCertificateMutation.mutate()}
+								disabled={generateTestCertificateMutation.isPending}
+							>
+								{generateTestCertificateMutation.isPending && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
+								Generate Test Certificate
+							</Button>
 						</div>
-					</div>
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label className="text-sm">Recipient</Label>
-							<UserSearchCombobox
-								value={recipientUserId}
-								onValueChange={setRecipientUserId}
-								placeholder="Select recipient (defaults to you)..."
-							/>
-							<p className="text-xs text-muted-foreground">
-								Defaults to your account ({user?.email}) if no user is selected.
-							</p>
-						</div>
-						<Button
-							onClick={() => sendTestEmailMutation.mutate()}
-							disabled={sendTestEmailMutation.isPending}
-							className="w-full cursor-pointer"
-						>
-							{sendTestEmailMutation.isPending && (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							)}
-							{sendTestEmailMutation.isPending
-								? "Sending..."
-								: "Send Test Email"}
-						</Button>
-						{sendTestEmailMutation.isSuccess && (
-							<div className="flex items-center gap-2 text-sm text-emerald-600">
-								<CheckCircle2 className="w-4 h-4" />
-								<span>
-									Email sent to {sendTestEmailMutation.data?.recipient}
-								</span>
-							</div>
-						)}
 					</div>
 				</Card>
-
-				{/* Test Tools */}
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<Card className="p-6">
-						<div className="flex items-start gap-4">
-							<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
-								<Award className="w-5 h-5" />
-							</div>
-							<div>
-								<h3 className="text-[14px] font-medium">Test Certificates</h3>
-								<p className="text-[12px] text-muted-foreground mt-1">
-									Generate test certificate PDFs.
-								</p>
-								<div className="flex flex-wrap gap-2 mt-3">
-									<Button
-										size="sm"
-										className="cursor-pointer"
-										onClick={() =>
-											generateTestCertificateMutation.mutate("base")
-										}
-										disabled={generateTestCertificateMutation.isPending}
-									>
-										{generateTestCertificateMutation.isPending && (
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										)}
-										Base (Times)
-									</Button>
-									<Button
-										size="sm"
-										className="cursor-pointer"
-										onClick={() =>
-											generateTestCertificateMutation.mutate("aptos")
-										}
-										disabled={generateTestCertificateMutation.isPending}
-									>
-										Aptos
-									</Button>
-									<Button
-										size="sm"
-										className="cursor-pointer"
-										onClick={() =>
-											generateTestCertificateMutation.mutate("semi_aptos")
-										}
-										disabled={generateTestCertificateMutation.isPending}
-									>
-										Semi-Aptos
-									</Button>
-								</div>
-							</div>
-						</div>
-					</Card>
-					<Card className="p-6">
-						<div className="flex items-start gap-4">
-							<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white flex items-center justify-center shadow-sm shrink-0">
-								<FileText className="w-5 h-5" />
-							</div>
-							<div>
-								<h3 className="text-[14px] font-medium">Test Invoices</h3>
-								<p className="text-[12px] text-muted-foreground mt-1">
-									Generate test invoice PDFs.
-								</p>
-								<Button
-									size="sm"
-									className="mt-3 cursor-pointer"
-									onClick={() => generateTestInvoiceMutation.mutate()}
-									disabled={generateTestInvoiceMutation.isPending}
-								>
-									{generateTestInvoiceMutation.isPending && (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									)}
-									{generateTestInvoiceMutation.isPending
-										? "Generating..."
-										: "Generate Test Invoice"}
-								</Button>
-							</div>
-						</div>
-					</Card>
-				</div>
 			</div>
 		</PageTransition>
 	);

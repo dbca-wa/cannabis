@@ -67,7 +67,7 @@ const EditUserForm = ({
 		mode: "onChange", // Enable real-time validation
 		defaultValues: {
 			email: "",
-			first_name: "",
+			given_names: "",
 			last_name: "",
 			role: "none" as Role,
 			is_staff: false,
@@ -93,7 +93,7 @@ const EditUserForm = ({
 
 			const formData: EditUserFormData = {
 				email: user.email,
-				first_name: user.first_name || "",
+				given_names: user.given_names || "",
 				last_name: user.last_name || "",
 				role: userRole,
 				is_staff: user.is_staff,
@@ -133,7 +133,7 @@ const EditUserForm = ({
 		// Transform the data to match backend expectations
 		const transformedData: EditUserFormData = {
 			email: data.email ?? "",
-			first_name: data.first_name ?? "",
+			given_names: data.given_names ?? "",
 			last_name: data.last_name ?? "",
 			role: data.role ?? "none",
 			is_staff: data.is_staff,
@@ -216,20 +216,20 @@ const EditUserForm = ({
 				{/* Editable fields */}
 				<div className="space-y-4">
 					<div className="grid grid-cols-2 gap-3">
-						{/* First Name */}
+						{/* Given Names */}
 						<div>
-							<Label htmlFor="first_name" className="text-sm font-medium">
-								First Name
+							<Label htmlFor="given_names" className="text-sm font-medium">
+								Given Names
 							</Label>
 							<Input
-								{...register("first_name")}
+								{...register("given_names")}
 								type="text"
-								placeholder="First Name"
-								className={errors.first_name ? "border-red-500 mt-1" : "mt-1"}
+								placeholder="Given Names"
+								className={errors.given_names ? "border-red-500 mt-1" : "mt-1"}
 							/>
-							{errors.first_name && (
+							{errors.given_names && (
 								<p className="text-red-500 text-xs mt-1">
-									{errors.first_name.message}
+									{errors.given_names.message}
 								</p>
 							)}
 						</div>

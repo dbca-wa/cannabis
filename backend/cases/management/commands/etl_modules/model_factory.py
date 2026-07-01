@@ -15,10 +15,10 @@ from django.db import DatabaseError, IntegrityError, transaction
 
 from cases.models import (
     BotanicalAssessment,
-    Defendant,
     DrugBag,
     Submission,
 )
+from defendants.models import Defendant
 from police.models import PoliceOfficer, PoliceStation
 
 from .data_mapper import (
@@ -104,7 +104,7 @@ class ModelFactory:
                 if data.approved_botanist:
                     try:
                         approved_botanist = User.objects.get(
-                            first_name__icontains=data.approved_botanist.split()[0],
+                            given_names__icontains=data.approved_botanist.split()[0],
                             role="botanist",
                         )
                     except User.DoesNotExist:
@@ -115,7 +115,7 @@ class ModelFactory:
                             full_name_parts = data.approved_botanist.split()
                             if len(full_name_parts) >= 2:
                                 approved_botanist = User.objects.get(
-                                    first_name__iexact=full_name_parts[0],
+                                    given_names__iexact=full_name_parts[0],
                                     last_name__iexact=" ".join(full_name_parts[1:]),
                                     role="botanist",
                                 )
@@ -135,14 +135,15 @@ class ModelFactory:
                             "submitting_officer": submitting_officer,
                             "requesting_officer": requesting_officer,
                             "internal_comments": data.internal_comments,
+                            "additional_notes": data.additional_notes,
                             "security_movement_envelope": data.security_movement_envelope
                             or f"SME-{data.legacy_id}",
-                            "phase": Submission.PhaseChoices.COMPLETE,  # Historical data is complete
+                            "phase": Submission.PhaseChoices.COMPLETE,
+                            "is_legacy": True,
                         },
                     )
 
                     if not created:
-                        # Update existing submission
                         submission.case_number = data.case_number
                         submission.received = data.received
                         submission.approved_botanist = approved_botanist
@@ -150,6 +151,8 @@ class ModelFactory:
                         submission.requesting_officer = requesting_officer
                         if data.internal_comments:
                             submission.internal_comments = data.internal_comments
+                        if data.additional_notes:
+                            submission.additional_notes = data.additional_notes
                         if data.security_movement_envelope:
                             submission.security_movement_envelope = (
                                 data.security_movement_envelope
@@ -269,7 +272,7 @@ class ModelFactory:
         """
         try:
             # Skip if no meaningful data
-            if not data.first_name and not data.last_name and not data.badge_number:
+            if not data.given_names and not data.last_name and not data.badge_number:
                 logger.debug("Skipping officer creation - insufficient data")
                 return None
 
@@ -287,8 +290,8 @@ class ModelFactory:
                 try:
                     officer = PoliceOfficer.objects.get(badge_number=data.badge_number)
                     # Update existing officer
-                    if data.first_name:
-                        officer.first_name = data.first_name
+                    if data.given_names:
+                        officer.given_names = data.given_names
                     if data.last_name:
                         officer.last_name = data.last_name
                     officer.rank = rank
@@ -303,10 +306,10 @@ class ModelFactory:
                     pass
 
             # Try to find by name if no badge number match
-            if data.first_name and data.last_name:
+            if data.given_names and data.last_name:
                 try:
                     officer = PoliceOfficer.objects.get(
-                        first_name__iexact=data.first_name,
+                        given_names__iexact=data.given_names,
                         last_name__iexact=data.last_name,
                     )
                     # Update existing officer
@@ -323,13 +326,13 @@ class ModelFactory:
                 except PoliceOfficer.MultipleObjectsReturned:
                     # Multiple officers with same name, create new one
                     logger.warning(
-                        f"Multiple officers found with name {data.first_name} {data.last_name}"
+                        f"Multiple officers found with name {data.given_names} {data.last_name}"
                     )
 
             # Create new officer
             officer = PoliceOfficer.objects.create(
                 badge_number=data.badge_number,
-                first_name=data.first_name,
+                given_names=data.given_names,
                 last_name=data.last_name,
                 rank=rank,
                 station=station,
@@ -384,22 +387,22 @@ class ModelFactory:
         """
         try:
             # Skip if no meaningful data
-            if not data.first_name and not data.last_name:
+            if not data.given_names and not data.last_name:
                 logger.debug("Skipping defendant creation - no name data")
                 return None
 
             # Clean up names
-            first_name = data.first_name.strip() if data.first_name else None
+            given_names = data.given_names.strip() if data.given_names else None
             last_name = data.last_name.strip() if data.last_name else None
 
             # Skip if names are empty after cleaning
-            if not first_name and not last_name:
+            if not given_names and not last_name:
                 return None
 
             # Try to find existing defendant by exact name match
             try:
                 defendant = Defendant.objects.get(
-                    first_name__iexact=first_name or "",
+                    given_names__iexact=given_names or "",
                     last_name__iexact=last_name or "",
                 )
                 logger.debug(f"Found existing defendant: {defendant}")
@@ -409,7 +412,7 @@ class ModelFactory:
             except Defendant.MultipleObjectsReturned:
                 # Multiple defendants with same name - get the first one
                 defendant = Defendant.objects.filter(
-                    first_name__iexact=first_name or "",
+                    given_names__iexact=given_names or "",
                     last_name__iexact=last_name or "",
                 ).first()
                 logger.debug(f"Multiple defendants found, using first: {defendant}")
@@ -417,7 +420,7 @@ class ModelFactory:
 
             # Create new defendant
             defendant = Defendant.objects.create(
-                first_name=first_name, last_name=last_name
+                given_names=given_names, last_name=last_name
             )
 
             logger.debug(f"Created new defendant: {defendant}")
@@ -441,7 +444,7 @@ class ModelFactory:
         """
         try:
             # Check if we have any meaningful data
-            has_name = bool(data.first_name or data.last_name)
+            has_name = bool(data.given_names or data.last_name)
             has_badge = bool(data.badge_number)
             bool(data.station_name)
 
@@ -452,7 +455,7 @@ class ModelFactory:
 
             # Clean up the data
             cleaned_data = PoliceOfficerData(
-                first_name=data.first_name.strip() if data.first_name else None,
+                given_names=data.given_names.strip() if data.given_names else None,
                 last_name=data.last_name.strip() if data.last_name else None,
                 rank=data.rank or "unknown",
                 badge_number=data.badge_number.strip() if data.badge_number else None,
@@ -506,7 +509,7 @@ class ModelFactory:
         for defendant_data in defendants_data:
             try:
                 # Handle cases where given_names might contain multiple names
-                given_names = defendant_data.first_name or ""
+                given_names = defendant_data.given_names or ""
                 last_name = defendant_data.last_name or ""
 
                 # Clean up names
@@ -518,21 +521,21 @@ class ModelFactory:
                     continue
 
                 # Handle cases where given_names contains multiple words
-                # Take only the first name for first_name field
+                # Take only the first name for given_names field
                 if given_names:
                     name_parts = given_names.split()
-                    first_name = name_parts[0] if name_parts else given_names
+                    given_names = name_parts[0] if name_parts else given_names
 
                     # If there are multiple given names and no last name,
                     # treat the last given name as last name
                     if len(name_parts) > 1 and not last_name:
-                        first_name = " ".join(name_parts[:-1])
+                        given_names = " ".join(name_parts[:-1])
                         last_name = name_parts[-1]
                 else:
-                    first_name = None
+                    given_names = None
 
                 parsed_defendants.append(
-                    DefendantData(first_name=first_name, last_name=last_name)
+                    DefendantData(given_names=given_names, last_name=last_name)
                 )
 
             except Exception as e:
@@ -822,39 +825,53 @@ class ModelFactory:
                     self.error_handler.rollback_to_point(savepoint_id)
                 return None
 
-            # Map and create single drug bag with error handling
+            # Map and create drug bags (one per physical tag) with error handling
             try:
-                drug_bag_data = mapper.map_drug_bag_data(json_record)
-
-                drug_bag = self.create_drug_bag_with_error_handling(
-                    drug_bag_data, submission, record_id
+                drug_bags_data = mapper.map_drug_bags_data(json_record)
+                result_json = json_record.get("result", {})
+                cert_date_raw = json_record.get("cert_date", "")
+                assessment_data = mapper.map_botanical_assessment_data(
+                    result_json, cert_date_raw
                 )
 
-                if drug_bag:
-                    # Create botanical assessment for the bag
-                    try:
-                        result_json = json_record.get("result", {})
-                        cert_date_str = json_record.get("cert_date", "")
-                        assessment_data = mapper.map_botanical_assessment_data(
-                            result_json, cert_date_str
-                        )
-
-                        self.create_botanical_assessment_with_error_handling(
-                            assessment_data, drug_bag, record_id
-                        )
-                    except Exception as e:
+                for bag_data in drug_bags_data:
+                    drug_bag = self.create_drug_bag_with_error_handling(
+                        bag_data, submission, record_id
+                    )
+                    if drug_bag:
+                        try:
+                            self.create_botanical_assessment_with_error_handling(
+                                assessment_data, drug_bag, record_id
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                f"Error creating botanical assessment for bag "
+                                f"{bag_data.seal_tag_numbers} in record {record_id}: {e}"
+                            )
+                    else:
                         logger.warning(
-                            f"Error creating botanical assessment for bag in record {record_id}: {e}"
+                            f"No drug bag created for tag {bag_data.seal_tag_numbers} "
+                            f"in record {record_id}"
                         )
-                        # Continue - bag exists without assessment
-                else:
-                    logger.warning(f"No drug bag created for submission {record_id}")
 
             except Exception as e:
                 logger.warning(
                     f"Error processing drug bags for record {record_id}: {e}"
                 )
-                # Continue - submission exists without bags
+
+            # Link station to the case if resolved from police officer data
+            try:
+                if submission_data.station_name and not submission.station:
+                    pass
+
+                    station = self.create_or_update_police_station(
+                        submission_data.station_name
+                    )
+                    if station:
+                        submission.station = station
+                        submission.save(update_fields=["station"])
+            except Exception as e:
+                logger.warning(f"Error linking station for record {record_id}: {e}")
 
             # Commit the savepoint if we got this far
             if savepoint_id:
@@ -1031,7 +1048,7 @@ class ModelFactory:
                     # Try to find existing defendant
                     try:
                         existing = Defendant.objects.get(
-                            first_name__iexact=defendant_data.first_name or "",
+                            given_names__iexact=defendant_data.given_names or "",
                             last_name__iexact=defendant_data.last_name or "",
                         )
                         defendants.append(existing)
@@ -1064,20 +1081,29 @@ class ModelFactory:
             return self.create_drug_bag(data, submission)
         except ValidationError as e:
             self.error_handler.handle_validation_error(
-                record_id, e, context={"model": "DrugBag", "data": data.__dict__}
+                record_id,
+                e,
+                context={
+                    "model": "DrugBag",
+                    "data": data.__dict__,
+                    "source_data": {
+                        "seal_tag_numbers": data.seal_tag_numbers,
+                        "new_seal_tag_numbers": data.new_seal_tag_numbers,
+                        "content_type": data.content_type,
+                    },
+                },
             )
             return None
         except IntegrityError as e:
             should_continue = self.error_handler.handle_integrity_error(
                 record_id,
                 e,
-                context={"model": "DrugBag", "seal_tag": data.seal_tag_number},
+                context={"model": "DrugBag", "seal_tag": data.seal_tag_numbers},
             )
             if should_continue:
-                # Try to find existing bag
                 try:
                     existing = DrugBag.objects.get(
-                        submission=submission, seal_tag_number=data.seal_tag_number
+                        submission=submission, seal_tag_numbers=data.seal_tag_numbers
                     )
                     return existing
                 except DrugBag.DoesNotExist:
@@ -1085,7 +1111,17 @@ class ModelFactory:
             return None
         except Exception as e:
             self.error_handler.handle_validation_error(
-                record_id, e, context={"model": "DrugBag", "unexpected": True}
+                record_id,
+                e,
+                context={
+                    "model": "DrugBag",
+                    "unexpected": True,
+                    "source_data": {
+                        "seal_tag_numbers": data.seal_tag_numbers,
+                        "new_seal_tag_numbers": data.new_seal_tag_numbers,
+                        "content_type": data.content_type,
+                    },
+                },
             )
             return None
 

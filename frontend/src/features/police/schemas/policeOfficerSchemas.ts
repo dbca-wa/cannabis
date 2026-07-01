@@ -25,7 +25,7 @@ export const createOfficerSchema = z.object({
 		.string()
 		.max(20, "Badge number cannot exceed 20 characters")
 		.optional(),
-	first_name: z
+	given_names: z
 		.string()
 		.max(100, "First name cannot exceed 100 characters")
 		.trim()

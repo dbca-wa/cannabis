@@ -6,6 +6,8 @@ import { CaseStoresProvider } from "@/features/cases/components/providers/CaseSt
 import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
 import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationWizardContainer } from "@/features/cases/components/forms/wizard/CaseCreationWizardContainer";
+import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
+import { persistCaseExtras } from "@/features/cases/utils/persistCaseExtras";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
@@ -43,7 +45,7 @@ const CreateCaseContent = observer(() => {
 	const navigate = useNavigate();
 	const formStore = useCaseFormStore();
 	const wizardStore = useCaseCreationWizardStore();
-	const { createCase, executeWorkflowAction } = useCases();
+	const { createCase } = useCases();
 
 	useEffect(() => {
 		formStore.resetForm();
@@ -107,24 +109,31 @@ const CreateCaseContent = observer(() => {
 		wizardStore.setSubmitting(true);
 		const submissionData = formStore.getCaseCreateRequest();
 
+		// Capture extras the create serializer doesn't accept (OCR-prefilled bags,
+		// the selected station, and the scanned police form) before the form is
+		// reset, so they can be persisted in follow-up calls.
+		const bags = [...formStore.formData.bags];
+		const stationId = formStore.formData.station_id;
+		const policeForm = ocrResultStore.uploadedFile;
+
 		createCase(submissionData, {
-			onSuccess: (newCase) => {
+			onSuccess: async (newCase) => {
+				// Persist follow-up data (best-effort — never blocks creation).
+				await persistCaseExtras(newCase.id, { bags, stationId, policeForm });
+
 				wizardStore.setSubmitting(false);
-				// Advance phase from case_creation to assessment immediately
-				executeWorkflowAction({
-					id: newCase.id,
-					action: { action: "advance_phase" },
-				});
+				// New cases start in the Assessment phase — no phase advance needed.
 				// Navigate first, then clean up — prevents brief red flash
 				navigate(`/cases/${newCase.id}/process`);
 				void formStore.clearDraft();
 				formStore.resetForm();
+				ocrResultStore.clearAll();
 			},
 			onError: () => {
 				wizardStore.setSubmitting(false);
 			},
 		});
-	}, [formStore, wizardStore, createCase, executeWorkflowAction, navigate]);
+	}, [formStore, wizardStore, createCase, navigate]);
 
 	/**
 	 * Discard handler — clears draft and navigates to cases list.

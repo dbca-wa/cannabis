@@ -2,12 +2,9 @@ import { z } from "zod";
 
 // Case phase choices (matches backend)
 export const submissionPhaseSchema = z.enum([
-	"case_creation",
 	"assessment",
 	"unsigned_generation",
-	"botanist_signoff",
-	"invoicing",
-	"send_emails",
+	"batching",
 	"complete",
 ]);
 
@@ -65,17 +62,9 @@ export const updateCaseSchema = z.object({
 
 // Workflow action schema
 export const workflowActionSchema = z.object({
-	action: z.enum(
-		["advance_phase", "generate_certificate", "generate_invoice"],
-		{
-			message: "Please select a valid workflow action",
-		}
-	),
-	customer_number: z
-		.string()
-		.min(1, "Customer number is required for invoice generation")
-		.max(20, "Customer number must be 20 characters or less")
-		.optional(),
+	action: z.enum(["advance_phase", "generate_certificate"], {
+		message: "Please select a valid workflow action",
+	}),
 });
 
 // Cases search schema

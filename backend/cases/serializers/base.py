@@ -8,7 +8,6 @@ from ..models import Case
 from .bags import DrugBagSerializer
 from .certificates import CertificateSerializer
 from .dashboard import CasePhaseHistorySerializer
-from .invoices import AdditionalInvoiceFeeSerializer, InvoiceSerializer
 
 User = get_user_model()
 
@@ -29,7 +28,7 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
     rank = serializers.CharField(read_only=True)
     rank_display = serializers.CharField(source="get_rank_display", read_only=True)
-    first_name = serializers.CharField(read_only=True)
+    given_names = serializers.CharField(read_only=True)
     last_name = serializers.CharField(read_only=True)
     station_name = serializers.CharField(source="station.name", read_only=True)
 
@@ -41,7 +40,7 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
             "rank",
             "rank_display",
             "badge_number",
-            "first_name",
+            "given_names",
             "last_name",
             "station_name",
         ]
@@ -73,8 +72,16 @@ class CaseListSerializer(serializers.ModelSerializer):
         source="station.name", read_only=True, default=None
     )
     certificate_id = serializers.SerializerMethodField()
-    invoice_id = serializers.SerializerMethodField()
+    batch_id = serializers.IntegerField(source="batch.id", read_only=True, default=None)
+    batch_number = serializers.CharField(
+        source="batch.batch_number", read_only=True, default=None
+    )
+    batch_invoice_raised_number = serializers.CharField(
+        source="batch.invoice_raised_number", read_only=True, default=None
+    )
+    is_batch_eligible = serializers.ReadOnlyField()
     bags_count = serializers.SerializerMethodField()
+    certificates_count = serializers.SerializerMethodField()
     defendants_count = serializers.SerializerMethodField()
     defendant_names = serializers.SerializerMethodField()
     cannabis_present = serializers.ReadOnlyField()
@@ -95,8 +102,12 @@ class CaseListSerializer(serializers.ModelSerializer):
             "submitting_officer_station",
             "station_name",
             "certificate_id",
-            "invoice_id",
+            "batch_id",
+            "batch_number",
+            "batch_invoice_raised_number",
+            "is_batch_eligible",
             "bags_count",
+            "certificates_count",
             "defendants_count",
             "defendant_names",
             "cannabis_present",
@@ -105,6 +116,9 @@ class CaseListSerializer(serializers.ModelSerializer):
 
     def get_bags_count(self, obj):
         return obj.bags.count()
+
+    def get_certificates_count(self, obj):
+        return obj.certificates.count()
 
     def get_defendants_count(self, obj):
         return obj.defendants.count()
@@ -125,17 +139,10 @@ class CaseListSerializer(serializers.ModelSerializer):
         return names
 
     def get_certificate_id(self, obj):
-        """Return ID of first certificate only if it has been signed."""
+        """Return ID of the first certificate that has a generated PDF."""
         cert = obj.certificates.first()
-        if cert and cert.signed_pdf_file:
+        if cert and cert.pdf_file:
             return cert.pk
-        return None
-
-    def get_invoice_id(self, obj):
-        """Return ID of first invoice that has a PDF."""
-        invoice = obj.invoices.first()
-        if invoice and invoice.pdf_file:
-            return invoice.pk
         return None
 
 
@@ -164,14 +171,34 @@ class CaseSerializer(serializers.ModelSerializer):
     )
     bags = DrugBagSerializer(many=True, read_only=True)
     certificates = CertificateSerializer(many=True, read_only=True)
-    invoices = InvoiceSerializer(many=True, read_only=True)
-    additional_fees = AdditionalInvoiceFeeSerializer(many=True, read_only=True)
     phase_history = CasePhaseHistorySerializer(many=True, read_only=True)
+
+    # Batching
+    batch_id = serializers.IntegerField(source="batch.id", read_only=True, default=None)
+    batch_number = serializers.CharField(
+        source="batch.batch_number", read_only=True, default=None
+    )
+    batch_invoice_raised_number = serializers.CharField(
+        source="batch.invoice_raised_number", read_only=True, default=None
+    )
+    is_batch_eligible = serializers.ReadOnlyField()
 
     # Computed properties
     cannabis_present = serializers.ReadOnlyField()
     bags_received = serializers.ReadOnlyField()
     total_plants = serializers.ReadOnlyField()
+
+    # Optional stored Priority 3 form (read-only URL)
+    police_form_url = serializers.SerializerMethodField()
+
+    def get_police_form_url(self, obj):
+        """Return the stored police-form URL, or None if not set."""
+        if obj.police_form:
+            try:
+                return obj.police_form.url
+            except ValueError:
+                return None
+        return None
 
     class Meta:
         model = Case
@@ -184,9 +211,6 @@ class CaseSerializer(serializers.ModelSerializer):
             "security_movement_envelope",
             "internal_comments",
             "additional_notes",
-            # Finance fields
-            "forensic_hours",
-            "fuel_distance_km",
             # Staff assignments
             "approved_botanist",
             "approved_botanist_details",
@@ -202,19 +226,20 @@ class CaseSerializer(serializers.ModelSerializer):
             # Related objects
             "bags",
             "certificates",
-            "invoices",
-            "additional_fees",
             "phase_history",
+            # Batching
+            "batch_id",
+            "batch_number",
+            "batch_invoice_raised_number",
+            "is_batch_eligible",
             # Computed properties
             "cannabis_present",
             "bags_received",
             "total_plants",
+            # Police form
+            "police_form_url",
             # Workflow timestamps
-            "finance_approved_at",
-            "botanist_approved_at",
             "certificates_generated_at",
-            "invoices_generated_at",
-            "emails_sent_at",
             "completed_at",
             # Audit fields
             "created_at",
@@ -228,4 +253,5 @@ class CaseSerializer(serializers.ModelSerializer):
             "bags_received",
             "total_plants",
             "phase_display",
+            "police_form_url",
         ]

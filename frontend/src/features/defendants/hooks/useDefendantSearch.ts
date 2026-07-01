@@ -1,5 +1,5 @@
 import { searchDefendants } from "../services/defendants.service";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce } from "@/shared/hooks";
 import { cacheConfig, debounceConfig } from "@/shared/hooks/core/queryKeys";
@@ -88,6 +88,9 @@ export const useDefendantSearch = (
 		},
 		enabled: enabled && isSearchQuery,
 		...cacheConfig.search, // Use optimized cache settings
+		// Keep the previous results visible while the next query loads so the
+		// dropdown stays open and stable instead of flashing on each keystroke
+		placeholderData: keepPreviousData,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
@@ -115,7 +118,9 @@ export const useDefendantSearch = (
 	const hasInitialData = !!initialDataQuery.data?.results?.length;
 	const isInitialLoading =
 		isInitialDataRequest && initialDataQuery.isLoading && !hasInitialData;
-	const isSearching = isSearchQuery && searchQuery.isLoading;
+	// Use isFetching (not isLoading) so the input spinner shows during a
+	// keepPreviousData refetch while the previous list stays on screen
+	const isSearching = isSearchQuery && searchQuery.isFetching;
 
 	// Error handling functions
 	const retry = () => {

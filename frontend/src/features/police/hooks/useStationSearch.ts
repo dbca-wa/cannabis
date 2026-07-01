@@ -1,5 +1,5 @@
 import { policeStationsService } from "../services/policeStations.service";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce, cacheConfig, debounceConfig } from "@/shared/hooks/core";
 import type {
@@ -76,6 +76,8 @@ export const useStationSearch = (
 		},
 		enabled: enabled && isSearchQuery,
 		...cacheConfig.search, // Use optimized cache settings
+		// Keep previous results visible during the next search to avoid flashing
+		placeholderData: keepPreviousData,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
@@ -101,7 +103,8 @@ export const useStationSearch = (
 	const hasInitialData = !!initialDataQuery.data?.results?.length;
 	const isInitialLoading =
 		isInitialDataRequest && initialDataQuery.isLoading && !hasInitialData;
-	const isSearching = isSearchQuery && searchQuery.isLoading;
+	// isFetching keeps the input spinner active during a keepPreviousData refetch
+	const isSearching = isSearchQuery && searchQuery.isFetching;
 
 	// Error handling functions
 	const retry = () => {

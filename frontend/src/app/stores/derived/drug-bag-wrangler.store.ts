@@ -14,8 +14,6 @@ import type {
 	BotanicalDetermination,
 } from "@/features/cases/types/drugBags.types";
 
-export type PreviewFontMode = "aptos" | "aptos-times" | "times";
-
 export interface InMemoryBag {
 	tempId: string;
 	seal_tag_numbers: string;
@@ -37,8 +35,6 @@ interface DrugBagWranglerStoreState extends BaseStoreState {
 	validationErrors: BagValidationError[];
 	/** Whether a "Save Changes" operation is in progress */
 	isSaving: boolean;
-	/** Preview font preference */
-	previewFont: PreviewFontMode;
 }
 
 const INITIAL_STATE: DrugBagWranglerStoreState = {
@@ -48,7 +44,6 @@ const INITIAL_STATE: DrugBagWranglerStoreState = {
 	bags: [],
 	validationErrors: [],
 	isSaving: false,
-	previewFont: "aptos-times",
 };
 
 export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
@@ -66,12 +61,10 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 			// Validation
 			validate: action,
 			clearValidationErrors: action,
+			setValidationErrors: action,
 
 			// Saving state
 			setSaving: action,
-
-			// Preview font
-			setPreviewFont: action,
 
 			// Reset
 			reset: action,
@@ -95,7 +88,8 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 			seal_tag_numbers: "",
 			new_seal_tag_numbers: "",
 			content_type: "plant",
-			determination: "pending",
+			// Most cases are cannabis sativa — default to it to speed up entry.
+			determination: "cannabis_sativa",
 		});
 		logger.debug("DrugBagWrangler: added empty bag", {
 			count: this.state.bags.length,
@@ -166,55 +160,61 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 	 */
 	validate = (serverTags: string[]): boolean => {
 		const errors: BagValidationError[] = [];
-		const allInMemoryTags = this.state.bags.map((b) => b.seal_tag_numbers);
+
+		// Build a claimed-tag count across server tags plus every in-memory bag's
+		// original and new tag. Original and new tags share one namespace — any
+		// value used more than once is a conflict. A bag whose new tag equals its
+		// own original is reported separately (so we don't double-count it).
+		const counts = new Map<string, number>();
+		const bump = (value: string) => {
+			const v = (value ?? "").trim();
+			if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+		};
+		serverTags.forEach((t) => bump(t));
+		for (const bag of this.state.bags) {
+			const orig = bag.seal_tag_numbers.trim();
+			const neu = bag.new_seal_tag_numbers.trim();
+			bump(orig);
+			if (neu && neu !== orig) bump(neu);
+		}
 
 		for (const bag of this.state.bags) {
-			// Empty original tag
-			if (!bag.seal_tag_numbers.trim()) {
+			const orig = bag.seal_tag_numbers.trim();
+			const neu = bag.new_seal_tag_numbers.trim();
+
+			// Original tag — required and unique across the namespace.
+			if (!orig) {
 				errors.push({
 					tempId: bag.tempId,
 					field: "seal_tag_numbers",
 					message: "Original tag is required",
 				});
-			}
-
-			// Duplicate within in-memory bags
-			const duplicateInMemory =
-				allInMemoryTags.filter((t) => t === bag.seal_tag_numbers).length > 1;
-			if (bag.seal_tag_numbers.trim() && duplicateInMemory) {
+			} else if ((counts.get(orig) ?? 0) > 1) {
 				errors.push({
 					tempId: bag.tempId,
 					field: "seal_tag_numbers",
-					message: "Duplicate tag number",
+					message: "Tag already in use (duplicate or exists on this case)",
 				});
 			}
 
-			// Duplicate against server-persisted bags
-			if (
-				bag.seal_tag_numbers.trim() &&
-				serverTags.includes(bag.seal_tag_numbers)
-			) {
-				errors.push({
-					tempId: bag.tempId,
-					field: "seal_tag_numbers",
-					message: "Tag already exists on this case",
-				});
+			// New tag — optional, but must differ from the original and be unique.
+			if (neu) {
+				if (neu === orig) {
+					errors.push({
+						tempId: bag.tempId,
+						field: "new_seal_tag_numbers",
+						message: "New tag must differ from original",
+					});
+				} else if ((counts.get(neu) ?? 0) > 1) {
+					errors.push({
+						tempId: bag.tempId,
+						field: "new_seal_tag_numbers",
+						message: "Tag already in use (duplicate or exists on this case)",
+					});
+				}
 			}
 
-			// Original tag same as new tag
-			if (
-				bag.seal_tag_numbers.trim() &&
-				bag.new_seal_tag_numbers.trim() &&
-				bag.seal_tag_numbers === bag.new_seal_tag_numbers
-			) {
-				errors.push({
-					tempId: bag.tempId,
-					field: "new_seal_tag_numbers",
-					message: "New tag must differ from original",
-				});
-			}
-
-			// No content type (shouldn't happen with select, but safety)
+			// Content type must be set (shouldn't happen with select, but safety).
 			if (!bag.content_type) {
 				errors.push({
 					tempId: bag.tempId,
@@ -223,7 +223,7 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 				});
 			}
 
-			// No determination
+			// Determination must be a real value (not the pending placeholder).
 			if (!bag.determination || bag.determination === "pending") {
 				errors.push({
 					tempId: bag.tempId,
@@ -241,20 +241,18 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 		this.state.validationErrors = [];
 	};
 
+	/** Replace the validation errors wholesale (used to surface server-side
+	 * batch errors against the matching bags). */
+	setValidationErrors = (errors: BagValidationError[]) => {
+		this.state.validationErrors = errors;
+	};
+
 	// ============================================================================
 	// Saving State
 	// ============================================================================
 
 	setSaving = (isSaving: boolean) => {
 		this.state.isSaving = isSaving;
-	};
-
-	// ============================================================================
-	// Preview Font
-	// ============================================================================
-
-	setPreviewFont = (font: PreviewFontMode) => {
-		this.state.previewFont = font;
 	};
 
 	// ============================================================================
@@ -294,7 +292,6 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 		this.state.bags = [];
 		this.state.validationErrors = [];
 		this.state.isSaving = false;
-		this.state.previewFont = "aptos-times";
 		this.state.loading = false;
 		this.state.error = null;
 		this.state.initialised = false;

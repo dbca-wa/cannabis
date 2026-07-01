@@ -11,6 +11,13 @@ from .bags import (  # noqa: F401
     DrugBagDetailView,
     DrugBagListView,
 )
+from .batches import (  # noqa: F401
+    BatchDetailView,
+    BatchDownloadView,
+    BatchExportView,
+    BatchInvoiceRaisedView,
+    BatchListCreateView,
+)
 from .certificates import (  # noqa: F401
     AllCertificatesListView,
     CertificateDetailView,
@@ -20,10 +27,8 @@ from .certificates import (  # noqa: F401
     CertificatePdfView,
     CertificateRegenerateView,
     GenerateTestCertificateView,
-    SignCertificateView,
-    UnlockCertificateView,
 )
-from .crud import CaseDetailView, CaseListView  # noqa: F401
+from .crud import CaseDetailView, CaseListView, CaseNumberCheckView  # noqa: F401
 from .dashboard import (  # noqa: F401
     CertificateStatsView,
     MonthlyThroughputView,
@@ -33,24 +38,11 @@ from .dashboard import (  # noqa: F401
     RevenueStatsView,
 )
 from .drafts import CaseDraftView  # noqa: F401
-from .invoices import (  # noqa: F401
-    AdditionalInvoiceFeeListView,
-    AllInvoicesListView,
-    GenerateTestInvoiceView,
-    InvoiceDetailView,
-    InvoiceDownloadView,
-    InvoiceGenerateView,
-    InvoiceListView,
-    InvoicePdfView,
-    InvoiceRegenerateView,
-)
-from .ocr import OcrUploadView, ServiceUnavailable  # noqa: F401
-from .previews import CertificatePreviewView, InvoicePreviewView  # noqa: F401
+from .ocr import OcrUploadView, PoliceFormUploadView, ServiceUnavailable  # noqa: F401
+from .previews import CertificatePreviewView  # noqa: F401
 from .workflow import (  # noqa: F401
     CasePhaseHistoryView,
-    CaseSendBackView,
     CaseWorkflowView,
-    SendDocumentsView,
 )
 
 __all__ = [
@@ -60,6 +52,12 @@ __all__ = [
     "DrugBagBatchCreateView",
     "DrugBagDetailView",
     "DrugBagListView",
+    # batches
+    "BatchListCreateView",
+    "BatchDetailView",
+    "BatchDownloadView",
+    "BatchInvoiceRaisedView",
+    "BatchExportView",
     # certificates
     "AllCertificatesListView",
     "CertificateDetailView",
@@ -69,11 +67,10 @@ __all__ = [
     "CertificatePdfView",
     "CertificateRegenerateView",
     "GenerateTestCertificateView",
-    "SignCertificateView",
-    "UnlockCertificateView",
     # crud
     "CaseDetailView",
     "CaseListView",
+    "CaseNumberCheckView",
     # dashboard
     "CertificateStatsView",
     "MyCasesView",
@@ -83,25 +80,13 @@ __all__ = [
     "MonthlyThroughputView",
     # drafts
     "CaseDraftView",
-    # invoices
-    "AdditionalInvoiceFeeListView",
-    "AllInvoicesListView",
-    "GenerateTestInvoiceView",
-    "InvoiceDetailView",
-    "InvoiceDownloadView",
-    "InvoiceGenerateView",
-    "InvoiceListView",
-    "InvoicePdfView",
-    "InvoiceRegenerateView",
     # ocr
     "OcrUploadView",
+    "PoliceFormUploadView",
     "ServiceUnavailable",
     # previews
     "CertificatePreviewView",
-    "InvoicePreviewView",
     # workflow
     "CasePhaseHistoryView",
-    "CaseSendBackView",
     "CaseWorkflowView",
-    "SendDocumentsView",
 ]

@@ -18,3 +18,21 @@ export const uploadAndExtract = async (
 		}
 	);
 };
+
+/**
+ * Store (or replace) the scanned Priority 3 form against a case. Optional —
+ * callers treat failure as non-blocking.
+ */
+export const uploadPoliceForm = async (
+	caseId: number,
+	file: File
+): Promise<{ police_form_url: string | null }> => {
+	const formData = new FormData();
+	formData.append("file", file);
+
+	return apiClient.post<{ police_form_url: string | null }>(
+		ENDPOINTS.CASES.POLICE_FORM(caseId),
+		formData,
+		{ headers: { "Content-Type": "multipart/form-data" } }
+	);
+};

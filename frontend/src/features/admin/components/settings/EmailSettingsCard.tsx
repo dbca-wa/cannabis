@@ -35,16 +35,12 @@ import {
 	Loader2,
 	Save,
 	X,
-	Send,
 	CheckCircle,
 	AlertTriangle,
 	Info,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import {
-	errorHandlingService,
-	showSuccess,
-} from "@/shared/services/errorHandling.service";
+import { errorHandlingService } from "@/shared/services/errorHandling.service";
 import { logger } from "@/shared/services/logger.service";
 import type { SystemSettings } from "@/shared/types/backend-api.types";
 
@@ -71,7 +67,6 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isSendingTest, setIsSendingTest] = useState(false);
 
 	const form = useForm<EmailSettingsFormData>({
 		resolver: zodResolver(emailSettingsSchema),
@@ -162,31 +157,6 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 	const handleToggleChange = (value: boolean) => {
 		// Use the security-aware update handler
 		onSettingsUpdate("send_emails_to_self", value);
-	};
-
-	const sendTestEmail = async () => {
-		try {
-			setIsSendingTest(true);
-
-			// This would be a new endpoint for sending test emails
-			// For now, we'll simulate the API call
-			await new Promise((resolve) => setTimeout(resolve, 2000));
-
-			showSuccess(
-				`Test email sent to ${settings.forward_certificate_emails_to}`
-			);
-			logger.info("Test email sent", {
-				recipient: settings.forward_certificate_emails_to,
-				environment: settings.environment,
-			});
-		} catch (error) {
-			errorHandlingService.handleError(error, {
-				action: "send_test_email",
-				component: "EmailSettingsCard",
-			});
-		} finally {
-			setIsSendingTest(false);
-		}
 	};
 
 	const onSubmit = async (data: EmailSettingsFormData) => {
@@ -310,20 +280,6 @@ export const EmailSettingsCard: React.FC<EmailSettingsCardProps> = ({
 											{settings.forward_certificate_emails_to}
 										</span>
 									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={sendTestEmail}
-										disabled={isSendingTest}
-										className="flex items-center gap-2 transition-all duration-200 hover:scale-105 w-full sm:w-auto"
-									>
-										{isSendingTest ? (
-											<Loader2 className="h-4 w-4 animate-spin" />
-										) : (
-											<Send className="h-4 w-4" />
-										)}
-										{isSendingTest ? "Sending..." : "Test"}
-									</Button>
 								</div>
 							</div>
 

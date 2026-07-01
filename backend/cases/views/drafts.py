@@ -1,8 +1,9 @@
 from rest_framework.exceptions import NotFound
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..models import CaseDraft
 from ..serializers import CaseDraftSerializer
@@ -15,7 +16,7 @@ class CaseDraftView(APIView):
     DELETE: Remove the user's draft, return 204.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get(self, request):
         try:

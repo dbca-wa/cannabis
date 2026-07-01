@@ -1,17 +1,15 @@
 /**
- * Canonical phase configuration — single source of truth for the 7-phase workflow.
+ * Canonical phase configuration — single source of truth for the 5-phase workflow.
  *
  * All phase metadata (keys, labels, icons, colours, descriptions, ordering)
  * is defined here. Every other file imports from this module.
  */
 
 import {
-	ClipboardList,
 	FlaskConical,
 	FileText,
-	Pen,
-	Receipt,
-	Mail,
+	Boxes,
+	PackageCheck,
 	CheckCircle2,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -32,16 +30,6 @@ export interface PhaseStepConfig {
  */
 export const PHASE_STEPS: PhaseStepConfig[] = [
 	{
-		key: "case_creation",
-		label: "Case Creation",
-		shortLabel: "Creation",
-		icon: ClipboardList,
-		description: "Create the case with all required information",
-		badgeColour:
-			"bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700",
-		hexColour: "#f59e0b",
-	},
-	{
 		key: "assessment",
 		label: "Assessment",
 		shortLabel: "Assessment",
@@ -56,40 +44,30 @@ export const PHASE_STEPS: PhaseStepConfig[] = [
 		label: "Unsigned Certificate",
 		shortLabel: "Certificate",
 		icon: FileText,
-		description: "Generate the unsigned certificate PDF",
+		description: "Generate the certificate PDF(s)",
 		badgeColour:
 			"bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700",
 		hexColour: "#3b82f6",
 	},
 	{
-		key: "botanist_signoff",
-		label: "Botanist Sign-Off",
-		shortLabel: "Sign-Off",
-		icon: Pen,
-		description: "Botanist reviews and signs the certificate",
+		key: "batching",
+		label: "Batching",
+		shortLabel: "Batching",
+		icon: Boxes,
+		description: "Ready to be batched for cost tallying and packaging",
 		badgeColour:
 			"bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-900 dark:text-violet-200 dark:border-violet-700",
 		hexColour: "#8b5cf6",
 	},
 	{
-		key: "invoicing",
-		label: "Invoicing",
-		shortLabel: "Invoice",
-		icon: Receipt,
-		description: "Generate and process the invoice",
+		key: "in_batch",
+		label: "In Batch",
+		shortLabel: "In Batch",
+		icon: PackageCheck,
+		description: "Added to a batch, awaiting the invoice-raised number",
 		badgeColour:
-			"bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900 dark:text-rose-200 dark:border-rose-700",
-		hexColour: "#f43f5e",
-	},
-	{
-		key: "send_emails",
-		label: "Email",
-		shortLabel: "Email",
-		icon: Mail,
-		description: "Send certificate and invoice to recipient",
-		badgeColour:
-			"bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900 dark:text-sky-200 dark:border-sky-700",
-		hexColour: "#0ea5e9",
+			"bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700",
+		hexColour: "#f59e0b",
 	},
 	{
 		key: "complete",

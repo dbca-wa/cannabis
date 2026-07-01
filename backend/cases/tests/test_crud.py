@@ -1,97 +1,119 @@
-"""Tests for submission CRUD operations."""
+"""Tests for case CRUD endpoints."""
 
 import pytest
 from django.urls import reverse
-from django.utils import timezone
 
-from cases.models import Submission
+from common.tests.factories import CaseFactory
 
-
-@pytest.mark.django_db
-def test_submission_list(authenticated_client, submission):
-    """GET submissions list returns 200 with paginated data."""
-    url = reverse("case_list")
-    response = authenticated_client.get(url)
-
-    assert response.status_code == 200
-    assert "results" in response.data
-    assert "count" in response.data
-    assert response.data["count"] >= 1
+pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.django_db
-def test_submission_create_draft(authenticated_client, police_officer):
-    """POST to submissions endpoint creates a new submission."""
-    url = reverse("case_list")
-    data = {
-        "case_number": "NEW-CASE-001",
-        "received": timezone.now().isoformat(),
-        "security_movement_envelope": "ENV-NEW-001",
-        "requesting_officer": police_officer.pk,
-    }
-    response = authenticated_client.post(url, data, format="json")
+class TestCaseList:
+    def test_requires_app_access(self, roleless_client):
+        resp = roleless_client.get(reverse("case_list"))
+        assert resp.status_code == 403
 
-    assert response.status_code == 201
-    assert Submission.objects.filter(case_number="NEW-CASE-001").exists()
+    def test_lists_cases_paginated(self, finance_client):
+        CaseFactory.create_batch(3)
+        resp = finance_client.get(reverse("case_list"))
+        assert resp.status_code == 200
+        assert resp.data["count"] >= 3
+        assert "results" in resp.data
 
-
-@pytest.mark.django_db
-def test_submission_detail(authenticated_client, submission):
-    """GET submission by ID returns 200 with all fields."""
-    url = reverse("case_detail", kwargs={"pk": submission.pk})
-    response = authenticated_client.get(url)
-
-    assert response.status_code == 200
-    assert response.data["case_number"] == submission.case_number
+    def test_filter_by_phase(self, finance_client):
+        CaseFactory(phase="assessment")
+        CaseFactory(phase="batching")
+        resp = finance_client.get(reverse("case_list"), {"phase": "batching"})
+        assert resp.status_code == 200
+        assert all(c["phase"] == "batching" for c in resp.data["results"])
 
 
-@pytest.mark.django_db
-def test_submission_update(authenticated_client, submission):
-    """PATCH submission updates fields."""
-    url = reverse("case_detail", kwargs={"pk": submission.pk})
-    data = {"internal_comments": "Updated comment"}
-    response = authenticated_client.patch(url, data, format="json")
+class TestCaseCreate:
+    def test_create_case(self, finance_client):
+        payload = {
+            "case_number": "CANN-NEW-1",
+            "received": "2026-01-01T09:00:00Z",
+            "security_movement_envelope": "SME-1",
+        }
+        resp = finance_client.post(reverse("case_list"), payload, format="json")
+        assert resp.status_code == 201
+        assert resp.data["case_number"] == "CANN-NEW-1"
 
-    assert response.status_code == 200
-    submission.refresh_from_db()
-    assert submission.internal_comments == "Updated comment"
+    def test_requires_case_number(self, finance_client):
+        payload = {
+            "received": "2026-01-01T09:00:00Z",
+            "security_movement_envelope": "SME-1",
+        }
+        resp = finance_client.post(reverse("case_list"), payload, format="json")
+        assert resp.status_code == 400
+
+    def test_rejects_duplicate_case_number(self, finance_client):
+        CaseFactory(case_number="CANN-DUP")
+        payload = {
+            "case_number": "CANN-DUP",
+            "received": "2026-01-01T09:00:00Z",
+            "security_movement_envelope": "SME-2",
+        }
+        resp = finance_client.post(reverse("case_list"), payload, format="json")
+        assert resp.status_code == 400
 
 
-@pytest.mark.django_db
-def test_submission_search_case_number(authenticated_client, submission):
-    """GET with search param filters results by case number."""
-    url = reverse("case_list")
-    response = authenticated_client.get(url, {"search": "TEST-001"})
+class TestCaseDetail:
+    def test_retrieve(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.get(reverse("case_detail", kwargs={"pk": case.pk}))
+        assert resp.status_code == 200
+        assert resp.data["id"] == case.pk
 
-    assert response.status_code == 200
-    assert response.data["count"] >= 1
-    results = response.data["results"]
-    assert any(r["case_number"] == "TEST-001" for r in results)
+    def test_update(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.patch(
+            reverse("case_detail", kwargs={"pk": case.pk}),
+            {"internal_comments": "a note"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        case.refresh_from_db()
+        assert case.internal_comments == "a note"
+
+    def test_delete(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.delete(reverse("case_detail", kwargs={"pk": case.pk}))
+        assert resp.status_code == 204
+
+    def test_complete_case_readonly_for_non_admin(self, finance_client):
+        case = CaseFactory(phase="complete")
+        resp = finance_client.patch(
+            reverse("case_detail", kwargs={"pk": case.pk}),
+            {"internal_comments": "edit"},
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_complete_case_editable_by_admin(self, admin_client):
+        case = CaseFactory(phase="complete")
+        resp = admin_client.patch(
+            reverse("case_detail", kwargs={"pk": case.pk}),
+            {"internal_comments": "admin edit"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        case.refresh_from_db()
+        assert case.internal_comments == "admin edit"
 
 
-@pytest.mark.django_db
-def test_submission_ordering(authenticated_client, police_officer):
-    """GET with ordering param returns sorted results."""
-    # Create submissions with different case numbers
-    Submission.objects.create(
-        case_number="AAA-001",
-        received=timezone.now(),
-        security_movement_envelope="ENV-A",
-        requesting_officer=police_officer,
-        phase=Submission.PhaseChoices.CASE_CREATION,
-    )
-    Submission.objects.create(
-        case_number="ZZZ-001",
-        received=timezone.now(),
-        security_movement_envelope="ENV-Z",
-        requesting_officer=police_officer,
-        phase=Submission.PhaseChoices.CASE_CREATION,
-    )
+class TestCaseNumberCheck:
+    def test_existing_number(self, finance_client):
+        CaseFactory(case_number="CANN-CHK")
+        resp = finance_client.get(
+            reverse("case_number_check"), {"case_number": "CANN-CHK"}
+        )
+        assert resp.status_code == 200
+        assert resp.data["exists"] is True
 
-    url = reverse("case_list")
-    response = authenticated_client.get(url, {"ordering": "case_number"})
-
-    assert response.status_code == 200
-    results = response.data["results"]
-    case_numbers = [r["case_number"] for r in results]
-    assert case_numbers == sorted(case_numbers)
+    def test_unused_number(self, finance_client):
+        resp = finance_client.get(
+            reverse("case_number_check"), {"case_number": "CANN-FREE"}
+        )
+        assert resp.status_code == 200
+        assert resp.data["exists"] is False

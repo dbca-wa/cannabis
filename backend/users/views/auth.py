@@ -25,7 +25,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from ..error_handlers import (
     ErrorCodes,
     ErrorResponseBuilder,
-    InvitationErrorHandler,
     PasswordErrorHandler,
     SecurityEventLogger,
     UserFriendlyMessages,
@@ -106,7 +105,7 @@ class WhoAmI(APIView):
                 {
                     "id": None,
                     "email": None,
-                    "first_name": None,
+                    "given_names": None,
                     "last_name": None,
                     "full_name": None,
                     "initials": "?",
@@ -173,9 +172,7 @@ class ForgotPasswordView(APIView):
     @handle_network_errors
     def post(self, request):
         """Send password reset code to user"""
-        from django.core.mail import send_mail
-        from django.template.loader import render_to_string
-        from django.utils.html import strip_tags
+        from common.services import EmailService
 
         from ..services import PasswordResetCodeService
         from ..throttles import PasswordResetEmailThrottle
@@ -222,22 +219,22 @@ class ForgotPasswordView(APIView):
                     status_code=HTTP_400_BAD_REQUEST,
                 )
 
+            # Build the reset-page link from configuration (absolute, scheme-safe)
+            from common.utils import get_frontend_url
+
+            reset_page_url = get_frontend_url("/auth/reset-code")
+
             # Prepare email context
             context = {
                 "user": user,
                 "reset_code": plain_code,
-                "frontend_url": "http://127.0.0.1:3000/auth/reset-code",
+                "frontend_url": reset_page_url,
                 "site_name": "Cannabis Management System",
                 "expires_at": reset_code.expires_at,
                 "max_attempts": reset_code.max_attempts,
             }
 
-            # Render email templates
-            subject = f'Password Reset Code - {context["site_name"]}'
-            html_message = render_to_string("users/password_reset_email.html", context)
-            plain_message = strip_tags(html_message)
-
-            # Determine recipient based on system settings
+            # Determine recipient based on system settings (send-to-self toggle)
             from common.models import SystemSettings
 
             system_settings = SystemSettings.load()
@@ -245,20 +242,20 @@ class ForgotPasswordView(APIView):
             if system_settings.send_emails_to_self:
                 recipient_list = [system_settings.forward_certificate_emails_to]
                 logger.info(
-                    f"Sending password reset code to admin ({system_settings.forward_certificate_emails_to}) instead of {email}"
+                    f"Sending password reset code to admin "
+                    f"({system_settings.forward_certificate_emails_to}) instead of {email}"
                 )
             else:
                 recipient_list = [email]
                 logger.info(f"Sending password reset code to actual recipient: {email}")
 
-            # Send password reset email
-            send_mail(
-                subject=subject,
-                message=plain_message,
-                html_message=html_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipient_list,
-                fail_silently=False,
+            # Send via the centralised email service (renders the shared
+            # emails/ template, attaches the inline logo, applies test mode).
+            EmailService.send_template_email(
+                template_name="emails/password_reset_email.html",
+                recipient_email=recipient_list,
+                subject=f'Password Reset Code - {context["site_name"]}',
+                context=context,
             )
 
             # Log the password reset request
@@ -449,86 +446,6 @@ class VerifyResetCodeView(APIView):
 
         except Exception as e:
             logger.error(f"Failed to verify reset code for {email}: {str(e)}")
-            return ErrorResponseBuilder.build_internal_error_response()
-
-
-class PasswordResetView(APIView):
-    """
-    GET: Validate reset token and redirect to password update form
-    Handles password reset link validation (DEPRECATED - use VerifyResetCodeView)
-    """
-
-    permission_classes = [AllowAny]
-
-    def get(self, request, token):
-        """Validate reset token and provide reset context"""
-        from django.utils import timezone
-
-        from ..models import RefreshToken
-
-        token_prefix = token[:8] + "..." if len(token) > 8 else token
-
-        try:
-            # Find and validate reset token
-            reset_record = RefreshToken.objects.get(
-                token=token, is_blacklisted=False, expires_at__gt=timezone.now()
-            )
-
-            user = reset_record.user
-
-            # Check if user is still active
-            if not user.is_active:
-                SecurityEventLogger.log_password_reset_failed(
-                    email=user.email,
-                    reason="user_inactive",
-                    token_prefix=token_prefix,
-                )
-                return ErrorResponseBuilder.build_error_response(
-                    error_code=ErrorCodes.AUTHENTICATION_FAILED,
-                    message="User account is not active",
-                    status_code=HTTP_400_BAD_REQUEST,
-                )
-
-            # Return user info for password reset form
-            return Response(
-                {
-                    "success": True,
-                    "message": "Reset token is valid",
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "full_name": user.full_name,
-                    },
-                    "reset_token": token,
-                    "expires_at": reset_record.expires_at.isoformat(),
-                },
-                status=HTTP_200_OK,
-            )
-
-        except RefreshToken.DoesNotExist:
-            # Check if token exists but is expired or blacklisted
-            try:
-                expired_record = RefreshToken.objects.get(token=token)
-                if expired_record.expires_at <= timezone.now():
-                    return InvitationErrorHandler.handle_invalid_token(
-                        token_prefix, "expired"
-                    )
-                elif expired_record.is_blacklisted:
-                    return InvitationErrorHandler.handle_invalid_token(
-                        token_prefix, "already_used"
-                    )
-            except RefreshToken.DoesNotExist:
-                pass
-
-            # Token doesn't exist at all
-            return InvitationErrorHandler.handle_invalid_token(
-                token_prefix, "not_found"
-            )
-
-        except Exception as e:
-            logger.error(
-                f"Failed to validate password reset token {token_prefix}: {str(e)}"
-            )
             return ErrorResponseBuilder.build_internal_error_response()
 
 

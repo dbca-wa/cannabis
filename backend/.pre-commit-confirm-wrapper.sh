@@ -45,7 +45,7 @@ run_check() {
 
 # Run flake8 (linting)
 if command -v poetry &> /dev/null; then
-    run_check "Flake8 (linting)" "poetry run flake8 --max-line-length=88 --extend-ignore=E203,W503,E501 --exclude=migrations,__pycache__,.venv,venv,build,dist,.pytest_cache,htmlcov,staticfiles,etl ."
+    run_check "Flake8 (linting)" "poetry run flake8 --max-line-length=88 --extend-ignore=E203,W503,E501 --exclude=migrations,__pycache__,.venv,venv,build,dist,.pytest_cache,htmlcov,staticfiles,etl,_run_etl.py,_etl_ ."
 else
     echo -e "${YELLOW}⚠ Poetry not found, skipping flake8${NC}"
     echo ""
@@ -53,7 +53,7 @@ fi
 
 # Run bandit (security)
 if command -v poetry &> /dev/null; then
-    run_check "Bandit (security)" "poetry run bandit -c pyproject.toml -r . --exclude tests,migrations,venv -q"
+    run_check "Bandit (security)" "poetry run bandit -c pyproject.toml -r . --exclude tests,migrations,venv,_run_etl.py -q"
 else
     echo -e "${YELLOW}⚠ Poetry not found, skipping bandit${NC}"
     echo ""

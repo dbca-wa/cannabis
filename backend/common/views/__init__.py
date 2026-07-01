@@ -8,10 +8,11 @@ from .security import (  # noqa: F401
     ResetRateLimitsView,
     SecurityMonitoringView,
 )
-from .settings import SystemSettingsView  # noqa: F401
+from .settings import SystemFeatureFlagsView, SystemSettingsView  # noqa: F401
 
 __all__ = [
     "SystemSettingsView",
+    "SystemFeatureFlagsView",
     "SecurityMonitoringView",
     "ResetRateLimitsView",
 ]

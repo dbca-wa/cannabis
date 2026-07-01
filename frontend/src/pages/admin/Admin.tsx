@@ -41,7 +41,7 @@ const Admin = () => {
 		<>
 			<PageHeader
 				title="Testing"
-				subtitle="Generate test documents and send test emails."
+				subtitle="Developer tools and email routing configuration."
 			/>
 			<DevelopmentContent />
 		</>

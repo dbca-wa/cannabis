@@ -1,7 +1,8 @@
 """Defendant CRUD views — list, create, retrieve, update, delete."""
 
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
+
+from users.permissions import HasAppAccess
 
 from ..serializers import DefendantSerializer, DefendantTinySerializer
 from ..services import DefendantService
@@ -10,7 +11,7 @@ from ..services import DefendantService
 class DefendantListCreateView(ListCreateAPIView):
     """List all defendants with search/pagination/sorting, or create a new one."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -31,7 +32,7 @@ class DefendantListCreateView(ListCreateAPIView):
 class DefendantRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a defendant."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
     serializer_class = DefendantSerializer
 
     def get_queryset(self):

@@ -78,8 +78,7 @@ class DrugBagService:
         assessment = BotanicalAssessment.objects.create(drug_bag=drug_bag, **data)
 
         settings.LOGGER.info(
-            f"Botanist {user} created assessment for bag "
-            f"{drug_bag.seal_tag_numbers}"
+            f"User {user} created assessment for bag " f"{drug_bag.seal_tag_numbers}"
         )
 
         return assessment
@@ -120,6 +119,9 @@ class DrugBagService:
     def batch_create(submission, bags_data, user):
         """Create multiple bags with assessments in a single transaction.
 
+        Tag-uniqueness validation (within the batch and against existing bags)
+        is handled by DrugBagBatchCreateSerializer before this runs.
+
         Args:
             submission: The Case instance.
             bags_data: List of dicts with keys: seal_tag_numbers, new_seal_tag_numbers,
@@ -128,45 +130,7 @@ class DrugBagService:
 
         Returns:
             List of created DrugBag instances (with nested assessment).
-
-        Raises:
-            ValidationError: If any tag number is duplicate within the batch or case.
         """
-        # Collect all seal_tag_numbers from the batch for uniqueness validation
-        batch_tags = [entry["seal_tag_numbers"] for entry in bags_data]
-
-        # Check for duplicates within the batch itself
-        seen = set()
-        duplicates_in_batch = set()
-        for tag in batch_tags:
-            if tag in seen:
-                duplicates_in_batch.add(tag)
-            seen.add(tag)
-
-        if duplicates_in_batch:
-            raise ValidationError(
-                {
-                    "bags": f"Duplicate tag numbers within batch: "
-                    f"{', '.join(sorted(duplicates_in_batch))}"
-                }
-            )
-
-        # Check for conflicts with existing bags globally (any case)
-        global_conflicts = DrugBag.objects.filter(
-            seal_tag_numbers__in=batch_tags
-        ).select_related("submission")
-        if global_conflicts.exists():
-            conflict_details = [
-                f"'{bag.seal_tag_numbers}' on case {bag.submission.case_number} (id: {bag.submission.pk})"
-                for bag in global_conflicts[:5]
-            ]
-            raise ValidationError(
-                {
-                    "bags": f"Tag numbers already exist: "
-                    f"{', '.join(conflict_details)}"
-                }
-            )
-
         # Create all bags and assessments
         created_bags = []
         for entry in bags_data:

@@ -36,7 +36,7 @@ export const CreateOfficerModal = ({
 			const tinyOfficer: PoliceOfficerTiny = {
 				id: newOfficer.id,
 				badge_number: newOfficer.badge_number,
-				first_name: newOfficer.first_name,
+				given_names: newOfficer.given_names,
 				last_name: newOfficer.last_name,
 				full_name: newOfficer.full_name,
 				rank: newOfficer.rank,

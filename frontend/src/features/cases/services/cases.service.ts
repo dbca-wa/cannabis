@@ -9,8 +9,6 @@ import {
 	type CaseUpdateRequest,
 	type WorkflowActionRequest,
 	type WorkflowActionResponse,
-	type SendBackRequest,
-	type SendBackResponse,
 	type PhaseHistoryEntry,
 } from "@/shared/types/backend-api.types";
 
@@ -87,6 +85,24 @@ export const deleteCase = async (id: number): Promise<void> => {
 };
 
 /**
+ * Check whether a police reference (case number) already exists on another case.
+ * Pass excludeId when editing an existing case so it doesn't match itself.
+ */
+export const checkCaseNumberExists = async (
+	caseNumber: string,
+	excludeId?: number | null
+): Promise<boolean> => {
+	const params = new URLSearchParams({ case_number: caseNumber });
+	if (excludeId != null) {
+		params.append("exclude_id", String(excludeId));
+	}
+	const response = await apiClient.get<{ exists: boolean }>(
+		`${ENDPOINTS.CASES.CHECK_NUMBER}?${params.toString()}`
+	);
+	return response.exists;
+};
+
+/**
  * Execute workflow action on case
  */
 export const executeWorkflowAction = async (
@@ -96,19 +112,6 @@ export const executeWorkflowAction = async (
 	return apiClient.post<WorkflowActionResponse>(
 		ENDPOINTS.CASES.WORKFLOW(id),
 		action
-	);
-};
-
-/**
- * Send case back to an earlier phase
- */
-export const sendBack = async (
-	id: number,
-	request: SendBackRequest
-): Promise<SendBackResponse> => {
-	return apiClient.post<SendBackResponse>(
-		ENDPOINTS.CASES.SEND_BACK(id),
-		request
 	);
 };
 

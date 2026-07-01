@@ -58,10 +58,11 @@ class ErrorRecord:
     traceback: Optional[str] = None
     retry_count: int = 0
     resolved: bool = False
+    source_data: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert error record to dictionary for reporting"""
-        return {
+        result = {
             "record_id": self.record_id,
             "error_type": self.error_type,
             "category": self.category.value,
@@ -73,6 +74,9 @@ class ErrorRecord:
             "retry_count": self.retry_count,
             "resolved": self.resolved,
         }
+        if self.source_data:
+            result["source_data"] = self.source_data
+        return result
 
 
 @dataclass
@@ -153,6 +157,7 @@ class ErrorHandler:
                 message=message,
                 details=details,
                 traceback=traceback.format_exc(),
+                source_data=context.get("source_data") if context else None,
             )
 
             # Log the error

@@ -36,12 +36,12 @@ class PoliceOfficer(AuditModel):
         null=True,
         help_text="Officer's badge number",
     )
-    first_name = models.CharField(
+    given_names = models.CharField(
         max_length=100,
         null=True,  # have to because bad data
         blank=True,
-        verbose_name=("First Name"),
-        help_text=("First name or given names."),
+        verbose_name="Given Names",
+        help_text="Given names (first name / middle names).",
     )
     last_name = models.CharField(
         max_length=100,
@@ -105,9 +105,9 @@ class PoliceOfficer(AuditModel):
     @property
     def full_name(self):
         """Return officer's full name"""
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
-        return self.first_name or self.last_name or "Unknown Officer"
+        if self.given_names and self.last_name:
+            return f"{self.given_names} {self.last_name}"
+        return self.given_names or self.last_name or "Unknown Officer"
 
     @property
     def is_sworn(self):

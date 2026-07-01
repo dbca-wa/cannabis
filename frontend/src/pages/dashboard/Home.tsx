@@ -19,23 +19,10 @@ import { useRevenueStats } from "@/features/dash/hooks/useRevenueStats";
 import { useMonthlyThroughput } from "@/features/dash/hooks/useMonthlyThroughput";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { QuicklinkCards } from "@/features/dash/components/QuicklinkCards";
+import { AwaitingRoleNotice } from "@/features/dash/components/AwaitingRoleNotice";
 import { NewCaseButton } from "@/shared/components/NewCaseButton";
 
 /* Financial year runs July to June (Australian FY) */
-const CALENDAR_MONTHS = [
-	"Jan",
-	"Feb",
-	"Mar",
-	"Apr",
-	"May",
-	"Jun",
-	"Jul",
-	"Aug",
-	"Sep",
-	"Oct",
-	"Nov",
-	"Dec",
-];
 const FY_MONTHS = [
 	"Jul",
 	"Aug",
@@ -60,6 +47,7 @@ const PLACEHOLDER_CHART_DATA = FY_MONTHS.map((month) => ({
 	month,
 	cases: null,
 	certs: null,
+	bags: null,
 	revenue: null,
 	forecastCases: null,
 	forecastCerts: null,
@@ -76,6 +64,7 @@ const ChartTooltipContent = ({
 	const NAMES: Record<string, string> = {
 		cases: "Cases",
 		certs: "Certificates",
+		bags: "Bags",
 		revenue: "Revenue",
 	};
 	const visible = payload.filter(
@@ -111,7 +100,7 @@ const ChartTooltipContent = ({
 	);
 };
 
-const Home = () => {
+const DashboardContent = () => {
 	const { user } = useAuth();
 	const {
 		data: revenueStats,
@@ -134,19 +123,15 @@ const Home = () => {
 	const isLoading = isLoadingRevenue;
 	const isError = isRevenueError;
 
-	/* Revenue card — current month vs same month last year */
-	const currentMonthRevenue = revenueStats?.current_month?.total ?? 0;
-	const previousYearSameMonth =
-		revenueStats?.previous_year_same_month?.total ?? 0;
-	const revenueTarget = previousYearSameMonth;
+	/* Revenue card — financial-year revenue from completed (invoiced) batches */
+	const fyRevenue = revenueStats?.financial_year?.total ?? 0;
+	const previousYearTotal = revenueStats?.previous_year?.total ?? 0;
+	const revenueTarget = previousYearTotal;
 	const revenueProgress =
-		revenueTarget > 0
-			? Math.round((currentMonthRevenue / revenueTarget) * 100)
-			: 0;
-	const yoyChange =
-		revenueStats?.previous_year_same_month?.change_percentage ?? null;
+		revenueTarget > 0 ? Math.round((fyRevenue / revenueTarget) * 100) : 0;
+	const yoyChange = revenueStats?.previous_year?.change_percentage ?? null;
 
-	const userName = user?.first_name || user?.full_name || "there";
+	const userName = user?.given_names || user?.full_name || "there";
 
 	useDocumentTitle("Dashboard");
 
@@ -206,12 +191,16 @@ const Home = () => {
 						<div className="mb-4">
 							<h3>Monthly Throughput</h3>
 							<p className="text-[13px] text-muted-foreground">
-								{fyLabel} — cases received, certificates issued, and revenue
-								generated each month.
+								{fyLabel} — cases received, certificates issued, bags examined,
+								and revenue generated each month.
 							</p>
 						</div>
 						{chartData.some(
-							(d) => d.cases !== null || d.certs !== null || d.revenue !== null
+							(d) =>
+								d.cases !== null ||
+								d.certs !== null ||
+								d.bags !== null ||
+								d.revenue !== null
 						) ? (
 							<>
 								<ResponsiveContainer width="100%" height={380}>
@@ -241,6 +230,18 @@ const Home = () => {
 												<stop
 													offset="100%"
 													stopColor="#3b82f6"
+													stopOpacity={0}
+												/>
+											</linearGradient>
+											<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+												<stop
+													offset="0%"
+													stopColor="#8b5cf6"
+													stopOpacity={0.25}
+												/>
+												<stop
+													offset="100%"
+													stopColor="#8b5cf6"
 													stopOpacity={0}
 												/>
 											</linearGradient>
@@ -319,6 +320,15 @@ const Home = () => {
 											connectNulls={false}
 										/>
 										<Area
+											yAxisId="left"
+											type="monotone"
+											dataKey="bags"
+											stroke="#8b5cf6"
+											strokeWidth={2}
+											fill="url(#bg)"
+											connectNulls={false}
+										/>
+										<Area
 											yAxisId="right"
 											type="monotone"
 											dataKey="revenue"
@@ -388,6 +398,9 @@ const Home = () => {
 										Certificates
 									</span>
 									<span className="flex items-center gap-1.5">
+										<span className="w-2 h-2 rounded-full bg-violet-500" /> Bags
+									</span>
+									<span className="flex items-center gap-1.5">
 										<span className="w-2 h-2 rounded-full bg-amber-500" />{" "}
 										Revenue
 									</span>
@@ -441,11 +454,10 @@ const Home = () => {
 								<div>
 									<div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full mb-3">
 										<DollarSign className="w-3 h-3" />
-										Monthly Revenue
+										Financial Year Revenue
 									</div>
 									<div className="text-[13px] text-muted-foreground">
-										{CALENDAR_MONTHS[currentCalendarMonth]} {currentYear} ·{" "}
-										{fyLabel}
+										{fyLabel} · completed batches
 									</div>
 								</div>
 								<div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
@@ -456,7 +468,7 @@ const Home = () => {
 							<div className="flex-1 flex flex-col justify-center">
 								<div className="text-[52px] tracking-tight leading-none text-foreground">
 									<CountUp
-										to={currentMonthRevenue}
+										to={fyRevenue}
 										prefix="$"
 										decimals={0}
 										duration={1.6}
@@ -477,9 +489,7 @@ const Home = () => {
 								{revenueTarget > 0 ? (
 									<>
 										<div className="flex items-center justify-between text-[12px] text-muted-foreground mb-2">
-											<span>
-												vs. {CALENDAR_MONTHS[currentCalendarMonth]} last year
-											</span>
+											<span>vs. last financial year</span>
 											<span>
 												<CountUp to={revenueProgress} suffix="%" /> of $
 												{revenueTarget.toLocaleString()}
@@ -498,8 +508,7 @@ const Home = () => {
 									</>
 								) : (
 									<div className="text-[12px] text-muted-foreground">
-										No comparison data available for{" "}
-										{CALENDAR_MONTHS[currentCalendarMonth]} last year
+										No revenue recorded for the previous financial year
 									</div>
 								)}
 							</div>
@@ -509,6 +518,16 @@ const Home = () => {
 			)}
 		</>
 	);
+};
+
+const Home = () => {
+	const { hasAppAccess } = useAuth();
+	useDocumentTitle("Dashboard");
+
+	// Roleless, non-admin users see only this notice — no dashboard data.
+	if (!hasAppAccess) return <AwaitingRoleNotice />;
+
+	return <DashboardContent />;
 };
 
 export default Home;

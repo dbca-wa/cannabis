@@ -33,28 +33,13 @@ interface DrugBagFormItemProps {
 	validationErrors: ValidationErrors;
 }
 
-// Content type options
+// Simplified content type options for data entry. The backend retains the full
+// set of choices so legacy/imported values remain valid; only the input form is
+// shortened. "Other" maps to the backend's catch-all "unknown".
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
-	{ value: "plant", label: "Plant Material" },
-	{ value: "plant_material", label: "Plant Material (Generic)" },
-	{ value: "cutting", label: "Cutting" },
-	{ value: "stalk", label: "Stalk" },
-	{ value: "stem", label: "Stem" },
+	{ value: "plant", label: "Plant" },
 	{ value: "seed", label: "Seed" },
-	{ value: "seed_material", label: "Seed Material" },
-	{ value: "unknown_seed", label: "Unknown Seed" },
-	{ value: "seedling", label: "Seedling" },
-	{ value: "head", label: "Head" },
-	{ value: "rootball", label: "Rootball" },
-	{ value: "poppy", label: "Poppy" },
-	{ value: "poppy_plant", label: "Poppy Plant" },
-	{ value: "poppy_capsule", label: "Poppy Capsule" },
-	{ value: "poppy_head", label: "Poppy Head" },
-	{ value: "poppy_seed", label: "Poppy Seed" },
-	{ value: "mushroom", label: "Mushroom" },
-	{ value: "tablet", label: "Tablet" },
-	{ value: "unknown", label: "Unknown" },
-	{ value: "unsure", label: "Unsure" },
+	{ value: "unknown", label: "Other" },
 ];
 
 export const DrugBagFormItem: React.FC<DrugBagFormItemProps> = ({
@@ -192,12 +177,9 @@ export const DrugBagFormItem: React.FC<DrugBagFormItemProps> = ({
 						<SelectContent>
 							<SelectItem value="pending">Pending Assessment</SelectItem>
 							<SelectItem value="cannabis_sativa">Cannabis sativa</SelectItem>
-							<SelectItem value="cannabis_indica">Cannabis indica</SelectItem>
-							<SelectItem value="cannabis_hybrid">Cannabis (hybrid)</SelectItem>
-							<SelectItem value="not_cannabis">Not Cannabis</SelectItem>
 							<SelectItem value="degraded">Degraded</SelectItem>
-							<SelectItem value="unidentifiable">Unidentifiable</SelectItem>
 							<SelectItem value="inconclusive">Inconclusive</SelectItem>
+							<SelectItem value="not_cannabis">Not Cannabis</SelectItem>
 						</SelectContent>
 					</Select>
 					<p className="text-xs text-muted-foreground">

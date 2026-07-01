@@ -7,6 +7,11 @@ urlpatterns = [
     path("drafts", views.CaseDraftView.as_view(), name="case_draft"),
     # Case endpoints
     path("list", views.CaseListView.as_view(), name="case_list"),
+    path(
+        "check-number",
+        views.CaseNumberCheckView.as_view(),
+        name="case_number_check",
+    ),
     path("<int:pk>", views.CaseDetailView.as_view(), name="case_detail"),
     path(
         "<int:pk>/workflow",
@@ -14,19 +19,23 @@ urlpatterns = [
         name="case_workflow",
     ),
     path(
-        "<int:pk>/send-back",
-        views.CaseSendBackView.as_view(),
-        name="case_send_back",
-    ),
-    path(
-        "<int:pk>/send-documents",
-        views.SendDocumentsView.as_view(),
-        name="send_documents",
-    ),
-    path(
         "<int:pk>/phase-history",
         views.CasePhaseHistoryView.as_view(),
         name="case_phase_history",
+    ),
+    # Batch endpoints
+    path("batches", views.BatchListCreateView.as_view(), name="batch_list_create"),
+    path("batches/export", views.BatchExportView.as_view(), name="batch_export"),
+    path("batches/<int:pk>", views.BatchDetailView.as_view(), name="batch_detail"),
+    path(
+        "batches/<int:pk>/invoice-raised",
+        views.BatchInvoiceRaisedView.as_view(),
+        name="batch_invoice_raised",
+    ),
+    path(
+        "batches/<int:pk>/download",
+        views.BatchDownloadView.as_view(),
+        name="batch_download",
     ),
     # Drug bag endpoints
     path(
@@ -93,64 +102,6 @@ urlpatterns = [
         views.GenerateTestCertificateView.as_view(),
         name="test_certificate",
     ),
-    path(
-        "invoices/test/generate",
-        views.GenerateTestInvoiceView.as_view(),
-        name="test_invoice",
-    ),
-    path(
-        "<int:pk>/certificates/<int:certificate_id>/sign",
-        views.SignCertificateView.as_view(),
-        name="sign_certificate",
-    ),
-    path(
-        "<int:pk>/certificates/<int:certificate_id>/unlock",
-        views.UnlockCertificateView.as_view(),
-        name="unlock_certificate",
-    ),
-    # Invoice endpoints (flat list — all invoices across cases)
-    path(
-        "invoices",
-        views.AllInvoicesListView.as_view(),
-        name="all_invoices_list",
-    ),
-    # Invoice endpoints (scoped to a case)
-    path(
-        "<int:pk>/invoices",
-        views.InvoiceListView.as_view(),
-        name="invoice_list",
-    ),
-    path(
-        "<int:pk>/invoices/generate",
-        views.InvoiceGenerateView.as_view(),
-        name="invoice_generate",
-    ),
-    path(
-        "<int:pk>/invoices/<int:invoice_id>/pdf",
-        views.InvoicePdfView.as_view(),
-        name="invoice_pdf",
-    ),
-    path(
-        "<int:pk>/invoices/<int:invoice_id>/regenerate",
-        views.InvoiceRegenerateView.as_view(),
-        name="invoice_regenerate",
-    ),
-    path(
-        "invoices/<int:pk>",
-        views.InvoiceDetailView.as_view(),
-        name="invoice_detail",
-    ),
-    path(
-        "invoices/<int:pk>/download",
-        views.InvoiceDownloadView.as_view(),
-        name="invoice_download",
-    ),
-    # Additional fees endpoints
-    path(
-        "<int:pk>/fees",
-        views.AdditionalInvoiceFeeListView.as_view(),
-        name="additional_fee_list",
-    ),
     # Dashboard endpoints
     path(
         "my",
@@ -187,5 +138,11 @@ urlpatterns = [
         "ocr-upload",
         views.OcrUploadView.as_view(),
         name="ocr_upload",
+    ),
+    # Police Priority 3 form storage (optional, per case)
+    path(
+        "<int:pk>/police-form",
+        views.PoliceFormUploadView.as_view(),
+        name="police_form_upload",
     ),
 ]

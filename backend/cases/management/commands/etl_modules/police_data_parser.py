@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ParsedOfficerData:
     """Structured data for parsed police officer information"""
 
-    first_name: Optional[str] = None
+    given_names: Optional[str] = None
     last_name: Optional[str] = None
     rank: str = "unknown"
     badge_number: Optional[str] = None
@@ -140,7 +140,7 @@ class PoliceDataParser:
             badge_id = officer_json.get("badge_id", "").strip()
 
             # Parse name into first and last name
-            first_name, last_name = self._parse_officer_name(name)
+            given_names, last_name = self._parse_officer_name(name)
 
             # Map rank to seniority choice
             rank = self._map_rank_to_seniority(rank_str)
@@ -158,7 +158,7 @@ class PoliceDataParser:
                 parsing_notes = "Missing officer name"
 
             return ParsedOfficerData(
-                first_name=first_name,
+                given_names=given_names,
                 last_name=last_name,
                 rank=rank,
                 badge_number=badge_number,
@@ -175,7 +175,7 @@ class PoliceDataParser:
 
     def _parse_officer_name(self, name: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Parse officer name into first_name and last_name fields.
+        Parse officer name into given_names and last_name fields.
 
         Handles various name formats including prefixes, suffixes, and single names.
 
@@ -183,7 +183,7 @@ class PoliceDataParser:
             name: Full name string
 
         Returns:
-            Tuple[Optional[str], Optional[str]]: (first_name, last_name)
+            Tuple[Optional[str], Optional[str]]: (given_names, last_name)
         """
         if not name:
             return None, None
@@ -342,7 +342,7 @@ class PoliceDataParser:
         if not officer_data.is_valid:
             issues.append("Officer data marked as invalid")
 
-        if not officer_data.first_name and not officer_data.last_name:
+        if not officer_data.given_names and not officer_data.last_name:
             issues.append("Missing both first and last name")
 
         if (

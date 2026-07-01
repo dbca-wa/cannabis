@@ -97,23 +97,25 @@ export const InviteUserComboBox = React.forwardRef<
 						role="combobox"
 						aria-expanded={open}
 						className={cn(
-							"w-full justify-between font-normal",
+							"w-full justify-between font-normal h-auto min-h-10 py-2",
 							!displayValue && "text-muted-foreground",
 							error && "border-red-500 focus:border-red-500",
 							className
 						)}
 						disabled={disabled}
 					>
-						<div className="flex items-center gap-2 flex-1 min-w-0">
+						<div className="flex items-center gap-2.5 flex-1 min-w-0">
 							{displayValue ? (
 								<>
-									<UserPlus className="h-4 w-4 text-muted-foreground" />
-									<div className="flex-1 min-w-0 py-1">
-										<div className="truncate font-medium">{displayValue}</div>
+									<UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
+									<div className="flex flex-col flex-1 min-w-0 text-left">
+										<span className="truncate font-medium leading-snug">
+											{displayValue}
+										</span>
 										{selectedUserData && (
-											<div className="-mt-1.5 text-xs text-slate-700 dark:text-slate-700 truncate">
+											<span className="truncate text-xs text-muted-foreground leading-snug mt-0.5">
 												{selectedUserData.email}
-											</div>
+											</span>
 										)}
 									</div>
 								</>

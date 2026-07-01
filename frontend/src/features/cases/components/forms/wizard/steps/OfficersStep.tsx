@@ -28,21 +28,19 @@ export const OfficersStep = ({
 		(caseData?.submitting_officer_id as number | null) ?? null;
 	const station = (caseData?.station_id as number | null) ?? null;
 
-	// Compute validation errors (only displayed when isTouched)
+	// Compute validation errors (only displayed when isTouched). The submitting
+	// officer is required; the requesting officer ("on behalf of") and the
+	// police station are optional — Priority 3 forms only list a station when an
+	// "on behalf of" officer is present.
 	const errors = {
-		requesting_officer: !requestingOfficer
-			? "Requesting officer is required"
-			: undefined,
 		submitting_officer: !submittingOfficer
 			? "Submitting officer is required"
 			: undefined,
-		station: !station ? "Police station is required" : undefined,
 	};
 
-	// Determine section completion and invalid state
-	const isComplete = !!requestingOfficer && !!submittingOfficer && !!station;
-	const isInvalid =
-		isTouched && (!requestingOfficer || !submittingOfficer || !station);
+	// Determine section completion and invalid state (station is optional)
+	const isComplete = !!submittingOfficer;
+	const isInvalid = isTouched && !submittingOfficer;
 
 	const handleRequestingOfficerChange = (officerId: number | null) => {
 		onFieldChange("requesting_officer_id", officerId);
@@ -64,33 +62,7 @@ export const OfficersStep = ({
 				isInvalid={isInvalid}
 			>
 				<div className="space-y-4">
-					{/* Requesting Officer */}
-					<div className="space-y-2">
-						<Label htmlFor="requesting_officer" className="required">
-							Requesting Officer
-						</Label>
-						<OfficerSearchComboBox
-							value={requestingOfficer}
-							onValueChange={handleRequestingOfficerChange}
-							placeholder="Search for requesting officer..."
-							error={isTouched && !!errors.requesting_officer}
-							showExternalAddButton
-						/>
-						{isTouched && errors.requesting_officer && (
-							<p
-								id="requesting_officer-error"
-								className="text-sm text-red-600"
-								role="alert"
-							>
-								{errors.requesting_officer}
-							</p>
-						)}
-						<p className="text-xs text-muted-foreground">
-							Officer who requested the botanical identification
-						</p>
-					</div>
-
-					{/* Submitting Officer */}
+					{/* Submitting Officer (required) */}
 					<div className="space-y-2">
 						<Label htmlFor="submitting_officer" className="required">
 							Submitting Officer
@@ -112,33 +84,41 @@ export const OfficersStep = ({
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">
-							Officer who submitted the samples for identification
+							The officer who delivered or submitted the samples to the
+							laboratory.
 						</p>
 					</div>
 
-					{/* Police Station */}
+					{/* Requesting Officer — "on behalf of" (optional) */}
 					<div className="space-y-2">
-						<Label htmlFor="station" className="required">
-							Police Station
+						<Label htmlFor="requesting_officer">
+							Requesting Officer (on behalf of)
 						</Label>
+						<OfficerSearchComboBox
+							value={requestingOfficer}
+							onValueChange={handleRequestingOfficerChange}
+							placeholder="Search for requesting officer..."
+							showExternalAddButton
+						/>
+						<p className="text-xs text-muted-foreground">
+							Optional. If the submitting officer dropped the samples off for
+							another officer, select who they submitted on behalf of. Leave
+							blank if the submitting officer is also the requesting officer.
+						</p>
+					</div>
+
+					{/* Police Station (optional) */}
+					<div className="space-y-2">
+						<Label htmlFor="station">Police Station</Label>
 						<StationSearchComboBox
 							value={station}
 							onValueChange={handleStationChange}
 							placeholder="Search for police station..."
-							error={isTouched && !!errors.station}
 							showExternalAddButton
 						/>
-						{isTouched && errors.station && (
-							<p
-								id="station-error"
-								className="text-sm text-red-600"
-								role="alert"
-							>
-								{errors.station}
-							</p>
-						)}
 						<p className="text-xs text-muted-foreground">
-							Station where the samples originated
+							Optional. Station where the samples originated — usually only
+							recorded when an "on behalf of" officer is present.
 						</p>
 					</div>
 				</div>

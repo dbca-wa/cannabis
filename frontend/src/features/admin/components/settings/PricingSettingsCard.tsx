@@ -36,9 +36,6 @@ import type { SystemSettings } from "@/shared/types/backend-api.types";
 const pricingSchema = z.object({
 	cost_per_certificate: z.string().min(1, "Certificate cost is required"),
 	cost_per_bag: z.string().min(1, "Bag cost is required"),
-	call_out_fee: z.string().min(1, "Call out fee is required"),
-	cost_per_forensic_hour: z.string().min(1, "Forensic hour cost is required"),
-	cost_per_kilometer_fuel: z.string().min(1, "Fuel cost is required"),
 	tax_percentage: z.string().min(1, "Tax percentage is required"),
 });
 
@@ -69,30 +66,6 @@ const fieldConfig = {
 		prefix: "$",
 		suffix: undefined,
 	},
-	call_out_fee: {
-		label: "Call Out Fee",
-		description: "Fixed fee for call outs",
-		helpText: "One-time fee charged for call out.",
-		placeholder: "200.00",
-		prefix: "$",
-		suffix: undefined,
-	},
-	cost_per_forensic_hour: {
-		label: "Forensic Hour Cost",
-		description: "Cost charged per hour of forensic analysis",
-		helpText: "Hourly rate for detailed forensic analysis work.",
-		placeholder: "150.00",
-		prefix: "$",
-		suffix: undefined,
-	},
-	cost_per_kilometer_fuel: {
-		label: "Fuel Cost per Kilometer",
-		description: "Cost charged per kilometer for travel",
-		helpText: "Rate per kilometer for travel expenses.",
-		placeholder: "1.750",
-		prefix: "$",
-		suffix: undefined,
-	},
 	tax_percentage: {
 		label: "Tax Percentage",
 		description: "Tax rate applied to all charges",
@@ -115,9 +88,6 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 		defaultValues: {
 			cost_per_certificate: settings.cost_per_certificate,
 			cost_per_bag: settings.cost_per_bag,
-			call_out_fee: settings.call_out_fee,
-			cost_per_forensic_hour: settings.cost_per_forensic_hour,
-			cost_per_kilometer_fuel: settings.cost_per_kilometer_fuel,
 			tax_percentage: settings.tax_percentage,
 		},
 	});
@@ -128,9 +98,6 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 		form.reset({
 			cost_per_certificate: settings.cost_per_certificate,
 			cost_per_bag: settings.cost_per_bag,
-			call_out_fee: settings.call_out_fee,
-			cost_per_forensic_hour: settings.cost_per_forensic_hour,
-			cost_per_kilometer_fuel: settings.cost_per_kilometer_fuel,
 			tax_percentage: settings.tax_percentage,
 		});
 	};
@@ -238,9 +205,7 @@ export const PricingSettingsCard: React.FC<PricingSettingsCardProps> = ({
 								const displayValue =
 									config.suffix === "%"
 										? `${value}%`
-										: `$${parseFloat(value as string).toFixed(
-												fieldName === "cost_per_kilometer_fuel" ? 3 : 2
-											)}`;
+										: `$${parseFloat(value as string).toFixed(2)}`;
 
 								return (
 									<div

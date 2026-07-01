@@ -65,7 +65,14 @@ export const PoliceOfficersTable = observer(
 						: undefined,
 				ordering,
 			}),
-			[pagination.pageSize, ordering]
+			[
+				officersSearchStore.state.currentPage,
+				officersSearchStore.state.searchTerm,
+				officersSearchStore.state.filters.station,
+				officersSearchStore.state.filters.rank,
+				pagination.pageSize,
+				ordering,
+			]
 		);
 
 		// Fetch data

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import Calendar22 from "@/shared/components/ui/calendar-22";
 import {
 	Card,
@@ -9,30 +9,14 @@ import {
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Alert, AlertDescription } from "@/shared/components/ui/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
-import { Button } from "@/shared/components/ui/button";
-import { AlertCircle, AlertTriangle } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useCaseFormStore } from "../../../hooks/useCaseFormStore";
 import { ocrResultStore } from "../../../stores/ocrResult.store";
-import { OcrUploadZone } from "../ocr/OcrUploadZone";
-import { OcrResultsSummary } from "../ocr/OcrResultsSummary";
+import { OcrCaseDetailsPanel } from "../ocr/OcrCaseDetailsPanel";
 
 export const CaseDetailsSection = observer(() => {
 	const formStore = useCaseFormStore();
 	const store = ocrResultStore;
-
-	const [showReuploadConfirm, setShowReuploadConfirm] = useState(false);
 
 	const handleFieldChange = useCallback(
 		(field: string, value: string) => {
@@ -46,103 +30,10 @@ export const CaseDetailsSection = observer(() => {
 		return formStore.validationErrors[field] as string | undefined;
 	};
 
-	const handleExtracted = useCallback(() => {
-		// Extraction complete — results summary will appear automatically
-	}, []);
-
-	const handleClear = useCallback(() => {
-		store.clearAll();
-	}, [store]);
-
-	const handleDismissAll = useCallback(() => {
-		store.clearAll();
-		formStore.resetForm();
-	}, [store, formStore]);
-
-	const handleDismissError = useCallback(() => {
-		store.clearAll();
-	}, [store]);
-
-	const isComplete = !!store.extractionResponse && !store.isProcessing;
-	const hasError = !!store.error;
-	const isHttp413 =
-		store.error?.includes("413") ||
-		store.error?.toLowerCase().includes("file size");
-
 	return (
 		<div className="space-y-4">
-			{/* OCR Upload Zone — optional, above the form */}
-			<OcrUploadZone
-				onExtracted={handleExtracted}
-				onClear={handleClear}
-				onReuploadRequest={
-					isComplete ? () => setShowReuploadConfirm(true) : undefined
-				}
-			/>
-
-			{/* Unreliable extraction warning */}
-			{isComplete && store.isUnreliableExtraction && (
-				<Alert className="border-amber-500/50">
-					<AlertTriangle className="h-4 w-4 text-amber-500" />
-					<AlertDescription className="text-amber-700">
-						The form could not be reliably read. We recommend entering data
-						manually.
-					</AlertDescription>
-				</Alert>
-			)}
-
-			{/* Error banners */}
-			{hasError && (
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription className="flex items-center justify-between">
-						<span>
-							{isHttp413
-								? "The file exceeds the server's maximum upload size."
-								: store.error}
-						</span>
-						<Button
-							variant="ghost"
-							size="sm"
-							className="ml-2 h-auto p-1"
-							onClick={handleDismissError}
-						>
-							Dismiss
-						</Button>
-					</AlertDescription>
-				</Alert>
-			)}
-
-			{/* Extraction results summary */}
-			{isComplete && <OcrResultsSummary onDismissAll={handleDismissAll} />}
-
-			{/* Re-upload confirmation dialog */}
-			<AlertDialog
-				open={showReuploadConfirm}
-				onOpenChange={setShowReuploadConfirm}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Replace extracted data?</AlertDialogTitle>
-						<AlertDialogDescription>
-							Uploading a new file will overwrite the current prefilled data.
-							Any manual changes you have made will be lost.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								setShowReuploadConfirm(false);
-								store.clearAll();
-								formStore.resetForm();
-							}}
-						>
-							Continue
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			{/* OCR upload + review (only when the OCR feature flag is enabled) */}
+			<OcrCaseDetailsPanel />
 
 			<Card>
 				<CardHeader>

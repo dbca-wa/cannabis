@@ -24,11 +24,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/users/", include("users.urls")),
     path("api/v1/police/", include("police.urls")),
-    path("api/v1/communications/", include("communications.urls")),
     path("api/v1/cases/", include("cases.urls")),
     path("api/v1/defendants/", include("defendants.urls")),
     path("api/v1/system/", include("common.urls")),
-    path("api/v1/signatures/", include("signatures.urls")),
     re_path(r"^files/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
 ] + static(
     settings.MEDIA_URL,
@@ -36,20 +34,12 @@ urlpatterns = [
 )
 
 # Preview endpoints for PDF templates (views enforce DEBUG check at request time)
-from cases.views.previews import (  # noqa: E402
-    CertificatePreviewView,
-    InvoicePreviewView,
-)
+from cases.views.previews import CertificatePreviewView  # noqa: E402
 
 urlpatterns += [
     path(
         "api/v1/test/certificate-preview/<int:pk>",
         CertificatePreviewView.as_view(),
         name="certificate_preview",
-    ),
-    path(
-        "api/v1/test/invoice-preview/<int:pk>",
-        InvoicePreviewView.as_view(),
-        name="invoice_preview",
     ),
 ]

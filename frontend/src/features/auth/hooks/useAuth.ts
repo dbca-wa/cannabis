@@ -61,6 +61,8 @@ export const useAuth = () => {
 	const loginMutation = useMutation({
 		mutationFn: (credentials: LoginCredentials) => loginService(credentials),
 		onSuccess: (authResponse) => {
+			// Drop any cached data from a prior session before seeding the new user
+			queryClient.clear();
 			queryClient.setQueryData([AUTH_QUERY_KEY, "user"], authResponse.user);
 
 			toast.success("Login successful!");
@@ -80,13 +82,14 @@ export const useAuth = () => {
 	const logoutMutation = useMutation({
 		mutationFn: () => logoutService(),
 		onSuccess: () => {
-			queryClient.removeQueries({ queryKey: [AUTH_QUERY_KEY] });
+			// Clear all cached data so the next user never sees stale results
+			queryClient.clear();
 			toast.success("Logged out successfully");
 			logger.info("User logged out successfully");
 			authStore.navigateAfterLogout();
 		},
 		onError: (error: unknown) => {
-			queryClient.removeQueries({ queryKey: [AUTH_QUERY_KEY] });
+			queryClient.clear();
 			const errorMessage = getErrorMessage(error);
 			logger.warn("Logout had errors but redirecting anyway", {
 				error: errorMessage,
@@ -106,10 +109,26 @@ export const useAuth = () => {
 	const user = userQuery.data;
 	const isAuthenticated = !!user;
 
+	// Effective role — admins (superuser/staff) take precedence over the role field.
+	const isAdmin = !!(user?.is_superuser || user?.is_staff);
+	const hasRole = user?.role === "botanist" || user?.role === "finance";
+	const hasAppAccess = isAdmin || hasRole;
+	const effectiveRole: "admin" | "botanist" | "finance" | "none" = isAdmin
+		? "admin"
+		: hasRole
+			? (user!.role as "botanist" | "finance")
+			: "none";
+
 	return {
 		user,
 		isAuthenticated,
 		isLoading: userQuery.isLoading,
+
+		// Role / access helpers
+		isAdmin,
+		hasRole,
+		hasAppAccess,
+		effectiveRole,
 
 		login,
 		logout,

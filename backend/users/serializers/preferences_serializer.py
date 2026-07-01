@@ -20,7 +20,6 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
         data["is_dark_mode"] = instance.is_dark_mode()
         data["css_theme_class"] = instance.get_css_theme_class()
         data["display_preferences"] = instance.get_display_preferences()
-        data["notification_settings"] = instance.get_notification_settings()
 
         return data
 

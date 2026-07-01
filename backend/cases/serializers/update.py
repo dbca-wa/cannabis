@@ -18,8 +18,6 @@ class CaseUpdateSerializer(serializers.ModelSerializer):
             "security_movement_envelope",
             "internal_comments",
             "additional_notes",
-            "forensic_hours",
-            "fuel_distance_km",
             "approved_botanist",
             "finance_officer",
             "requesting_officer",

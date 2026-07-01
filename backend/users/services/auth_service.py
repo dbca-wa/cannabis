@@ -189,7 +189,7 @@ class AuthService:
         Args:
             sso_data: dict containing at minimum:
                 - email: str
-                - first_name: str (optional)
+                - given_names: str (optional)
                 - last_name: str (optional)
                 - groups: list[str] (optional, for role mapping)
 
@@ -203,13 +203,13 @@ class AuthService:
         if not email:
             raise ValidationError({"email": "SSO data must include an email address."})
 
-        first_name = sso_data.get("first_name", "")
+        given_names = sso_data.get("given_names", "")
         last_name = sso_data.get("last_name", "")
 
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
-                "first_name": first_name,
+                "given_names": given_names,
                 "last_name": last_name,
                 "is_active": True,
             },
@@ -218,14 +218,14 @@ class AuthService:
         if not created:
             # Update user details from SSO if they've changed
             updated = False
-            if first_name and user.first_name != first_name:
-                user.first_name = first_name
+            if given_names and user.given_names != given_names:
+                user.given_names = given_names
                 updated = True
             if last_name and user.last_name != last_name:
                 user.last_name = last_name
                 updated = True
             if updated:
-                user.save(update_fields=["first_name", "last_name"])
+                user.save(update_fields=["given_names", "last_name"])
 
         if created:
             logger.info(f"Created new user from SSO: {email}")

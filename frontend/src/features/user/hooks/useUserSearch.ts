@@ -1,5 +1,5 @@
 import { searchUsers } from "../services/users.service";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce } from "@/shared/hooks/core";
 import { cacheConfig, debounceConfig } from "@/shared/hooks/core";
@@ -106,6 +106,8 @@ export const useUserSearch = (
 		},
 		enabled: enabled && isSearchQuery,
 		...cacheConfig.search,
+		// Keep previous results visible during the next search to avoid flashing
+		placeholderData: keepPreviousData,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
@@ -150,7 +152,8 @@ export const useUserSearch = (
 	const hasInitialData = !!initialDataQuery.data?.results?.length;
 	const isInitialLoading =
 		isInitialDataRequest && initialDataQuery.isLoading && !hasInitialData;
-	const isSearching = isSearchQuery && searchQuery.isLoading;
+	// isFetching keeps the input spinner active during a keepPreviousData refetch
+	const isSearching = isSearchQuery && searchQuery.isFetching;
 
 	// Error handling functions
 	const retry = () => {

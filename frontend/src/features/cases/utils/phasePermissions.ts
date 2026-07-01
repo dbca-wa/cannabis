@@ -34,27 +34,24 @@ export type WorkflowUserRole = "botanist" | "finance" | "none";
  * Maps each phase to the roles that can advance from that phase
  */
 const ADVANCE_PERMISSIONS: Record<CasePhase, WorkflowUserRole[]> = {
-	case_creation: ["botanist", "finance"],
-	assessment: ["botanist"],
+	assessment: ["botanist", "finance"],
 	unsigned_generation: ["botanist", "finance"],
-	botanist_signoff: ["botanist"],
-	invoicing: ["finance"],
-	send_emails: ["botanist", "finance"],
+	batching: ["finance"],
+	in_batch: [], // Advancing to complete is driven by recording the batch invoice
 	complete: [], // No one can advance from complete
 };
 
 /**
- * Send-back permissions configuration
- * Maps each phase to the roles that can send back from that phase
+ * Send-back permissions configuration.
+ * Send-back has been removed from the workflow; retained as an always-empty
+ * map so legacy callers resolve to "not allowed".
  */
 const SEND_BACK_PERMISSIONS: Record<CasePhase, WorkflowUserRole[]> = {
-	case_creation: [], // Cannot send back from case creation (first phase)
-	assessment: ["botanist", "finance"],
-	unsigned_generation: ["botanist", "finance"],
-	botanist_signoff: ["botanist"],
-	invoicing: ["finance"],
-	send_emails: ["botanist", "finance"],
-	complete: [], // Cannot send back from complete
+	assessment: [],
+	unsigned_generation: [],
+	batching: [],
+	in_batch: [],
+	complete: [],
 };
 
 /**
@@ -62,12 +59,10 @@ const SEND_BACK_PERMISSIONS: Record<CasePhase, WorkflowUserRole[]> = {
  * Maps each phase to the roles that can edit content in that phase
  */
 const EDIT_PERMISSIONS: Record<CasePhase, WorkflowUserRole[]> = {
-	case_creation: ["botanist", "finance"],
-	assessment: ["botanist"],
+	assessment: ["botanist", "finance"],
 	unsigned_generation: ["botanist", "finance"],
-	botanist_signoff: ["botanist"],
-	invoicing: ["finance"],
-	send_emails: ["botanist", "finance"],
+	batching: ["finance"],
+	in_batch: [], // Locked once batched, awaiting the invoice-raised number
 	complete: [], // Complete phase is read-only
 };
 
@@ -84,9 +79,9 @@ const EDIT_PERMISSIONS: Record<CasePhase, WorkflowUserRole[]> = {
  * @returns true if user can advance from this phase
  *
  * @example
- * canAdvancePhase("case_creation", "finance", false) // true
- * canAdvancePhase("assessment", "finance", false) // false
- * canAdvancePhase("invoicing", "none", true) // true (admin override)
+ * canAdvancePhase("assessment", "finance", false) // true
+ * canAdvancePhase("batching", "botanist", false) // false
+ * canAdvancePhase("unsigned_generation", "none", true) // true (admin override)
  */
 export function canAdvancePhase(
 	phase: CasePhase,
@@ -107,9 +102,8 @@ export function canAdvancePhase(
  * @returns true if user can send back from this phase
  *
  * @example
- * canSendBack("assessment", "finance", false) // true
- * canSendBack("case_creation", "finance", false) // false (first phase)
- * canSendBack("botanist_signoff", "none", true) // true (admin override)
+ * canSendBack("assessment", "finance", false) // false (send-back removed)
+ * canSendBack("unsigned_generation", "none", true) // true (admin override)
  */
 export function canSendBack(
 	phase: CasePhase,
@@ -131,9 +125,9 @@ export function canSendBack(
  * @returns true if user can edit content in this phase
  *
  * @example
- * canEditPhase("case_creation", true, "finance", false) // true
- * canEditPhase("case_creation", false, "finance", false) // false (not current)
- * canEditPhase("assessment", true, "none", true) // true (admin override)
+ * canEditPhase("assessment", true, "finance", false) // true
+ * canEditPhase("assessment", false, "finance", false) // false (not current)
+ * canEditPhase("unsigned_generation", true, "none", true) // true (admin override)
  */
 export function canEditPhase(
 	phase: CasePhase,
@@ -166,9 +160,9 @@ export function toWorkflowRole(role: UserRole): WorkflowUserRole {
  * @returns true if the phase can be clicked to view
  *
  * @example
- * isPhaseClickable("case_creation", "assessment") // true (completed)
+ * isPhaseClickable("assessment", "unsigned_generation") // true (completed)
  * isPhaseClickable("assessment", "assessment") // true (current)
- * isPhaseClickable("unsigned_generation", "assessment") // false (future)
+ * isPhaseClickable("batching", "assessment") // false (future)
  */
 export function isPhaseClickable(
 	phase: CasePhase,
@@ -182,8 +176,8 @@ export function isPhaseClickable(
  * Get available send-back target phases (all completed phases before current)
  *
  * @example
- * getSendBackTargets("assessment") // ["case_creation"]
- * getSendBackTargets("case_creation") // []
+ * getSendBackTargets("unsigned_generation") // ["assessment"]
+ * getSendBackTargets("assessment") // []
  */
 export function getSendBackTargets(currentPhase: CasePhase): CasePhase[] {
 	return getCompletedPhases(currentPhase);

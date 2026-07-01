@@ -5,10 +5,11 @@ from rest_framework.exceptions import (
     ValidationError,
 )
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..models import BotanicalAssessment, Case, DrugBag
 from ..serializers import (
@@ -26,7 +27,7 @@ class DrugBagListView(ListCreateAPIView):
     POST: Create new drug bag
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -61,7 +62,7 @@ class DrugBagDetailView(RetrieveUpdateDestroyAPIView):
         .prefetch_related("assessment")
     )
     serializer_class = DrugBagSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
@@ -81,7 +82,7 @@ class BotanicalAssessmentCreateView(APIView):
     POST: Create botanical assessment for a drug bag
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request, drug_bag_id):
         try:
@@ -94,13 +95,13 @@ class BotanicalAssessmentCreateView(APIView):
             raise ValidationError("Assessment already exists for this drug bag.")
 
         # Any authenticated user can create assessments during case processing
-        # (The view already requires IsAuthenticated)
+        # (The view already requires app access via HasAppAccess)
 
         serializer = BotanicalAssessmentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(drug_bag=drug_bag)
             settings.LOGGER.info(
-                f"Botanist {request.user} created assessment for bag {drug_bag.seal_tag_numbers}"
+                f"User {request.user} created assessment for bag {drug_bag.seal_tag_numbers}"
             )
             return Response(serializer.data, status=HTTP_201_CREATED)
 
@@ -116,7 +117,7 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
 
     queryset = BotanicalAssessment.objects.all().select_related("drug_bag__submission")
     serializer_class = BotanicalAssessmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def check_object_permissions(self, request, obj):
         """Check permissions for assessment access"""
@@ -134,14 +135,14 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
             serializer.save()
 
         settings.LOGGER.info(
-            f"Botanist {self.request.user} updated assessment: {serializer.instance}"
+            f"User {self.request.user} updated assessment: {serializer.instance}"
         )
 
 
 class DrugBagBatchCreateView(APIView):
     """Batch-create multiple drug bags (with optional assessments) in one request."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request, pk):
         try:

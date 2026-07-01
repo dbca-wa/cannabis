@@ -5,18 +5,20 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Case as CaseExpr, Count, IntegerField, Q, When
+from django.db.models import Case as CaseExpr
+from django.db.models import Count, IntegerField, Q, When
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
     HTTP_413_REQUEST_ENTITY_TOO_LARGE,
 )
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ class PoliceOfficerListView(ListCreateAPIView):
     """
 
     queryset = PoliceOfficer.objects.all().select_related("station")
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -69,7 +71,7 @@ class PoliceOfficerListView(ListCreateAPIView):
             search_terms = search.strip().split()
             for term in search_terms:
                 queryset = queryset.filter(
-                    Q(first_name__icontains=term)
+                    Q(given_names__icontains=term)
                     | Q(last_name__icontains=term)
                     | Q(badge_number__icontains=term)
                     | Q(station__name__icontains=term)
@@ -157,8 +159,8 @@ class PoliceOfficerListView(ListCreateAPIView):
         valid_orderings = {
             "last_name": "last_name",
             "-last_name": "-last_name",
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "station": "station__name",
             "-station": "-station__name",
             "rank": "rank_seniority",  # Special handling needed
@@ -185,32 +187,32 @@ class PoliceOfficerListView(ListCreateAPIView):
                 if ordering == "rank":
                     # Ascending: lowest rank first, then by name
                     queryset = queryset.order_by(
-                        "rank_seniority", "last_name", "first_name"
+                        "rank_seniority", "last_name", "given_names"
                     )
                 else:  # -rank
                     # Descending: highest rank first, then by name
                     queryset = queryset.order_by(
-                        "-rank_seniority", "last_name", "first_name"
+                        "-rank_seniority", "last_name", "given_names"
                     )
             elif "case_count" in ordering:
                 # For case count ordering, add secondary sort by name
                 queryset = queryset.order_by(
-                    valid_orderings[ordering], "last_name", "first_name"
+                    valid_orderings[ordering], "last_name", "given_names"
                 )
             else:
                 # Standard field ordering with secondary sort by name
                 primary_order = valid_orderings[ordering]
                 if ordering.startswith("-"):
                     queryset = queryset.order_by(
-                        primary_order, "last_name", "first_name"
+                        primary_order, "last_name", "given_names"
                     )
                 else:
                     queryset = queryset.order_by(
-                        primary_order, "last_name", "first_name"
+                        primary_order, "last_name", "given_names"
                     )
         else:
             # Default ordering
-            queryset = queryset.order_by("last_name", "first_name")
+            queryset = queryset.order_by("last_name", "given_names")
 
         return queryset
 
@@ -230,7 +232,7 @@ class PoliceOfficerDetailView(RetrieveUpdateDestroyAPIView):
 
     queryset = PoliceOfficer.objects.all().select_related("station")
     serializer_class = PoliceOfficerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
@@ -251,12 +253,12 @@ class PoliceOfficerExportView(APIView):
     Supports filtering and bypasses pagination for full dataset exports
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         """Get filtered queryset for export"""
         queryset = PoliceOfficer.objects.select_related("station").order_by(
-            "last_name", "first_name"
+            "last_name", "given_names"
         )
 
         # Search functionality — supports multi-word queries
@@ -265,7 +267,7 @@ class PoliceOfficerExportView(APIView):
             search_terms = search.strip().split()
             for term in search_terms:
                 queryset = queryset.filter(
-                    Q(first_name__icontains=term)
+                    Q(given_names__icontains=term)
                     | Q(last_name__icontains=term)
                     | Q(badge_number__icontains=term)
                 )
@@ -338,8 +340,8 @@ class PoliceOfficerExportView(APIView):
         valid_orderings = {
             "last_name": "last_name",
             "-last_name": "-last_name",
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "station": "station__name",
             "-station": "-station__name",
             "rank": "rank_seniority",  # Special handling needed
@@ -363,27 +365,27 @@ class PoliceOfficerExportView(APIView):
                 if ordering == "rank":
                     # Ascending: lowest rank first, then by name
                     queryset = queryset.order_by(
-                        "rank_seniority", "last_name", "first_name"
+                        "rank_seniority", "last_name", "given_names"
                     )
                 else:  # -rank
                     # Descending: highest rank first, then by name
                     queryset = queryset.order_by(
-                        "-rank_seniority", "last_name", "first_name"
+                        "-rank_seniority", "last_name", "given_names"
                     )
             else:
                 # Standard field ordering with secondary sort by name
                 primary_order = valid_orderings[ordering]
                 if ordering.startswith("-"):
                     queryset = queryset.order_by(
-                        primary_order, "last_name", "first_name"
+                        primary_order, "last_name", "given_names"
                     )
                 else:
                     queryset = queryset.order_by(
-                        primary_order, "last_name", "first_name"
+                        primary_order, "last_name", "given_names"
                     )
         else:
             # Default ordering
-            queryset = queryset.order_by("last_name", "first_name")
+            queryset = queryset.order_by("last_name", "given_names")
 
         return queryset
 
@@ -471,7 +473,7 @@ class PoliceOfficerExportView(APIView):
                 [
                     officer.id,
                     officer.badge_number or "",
-                    officer.first_name or "",
+                    officer.given_names or "",
                     officer.last_name or "",
                     officer.full_name,
                     officer.rank,
@@ -546,7 +548,7 @@ class PoliceOfficerExportView(APIView):
                         [
                             officer.id,
                             officer.badge_number or "",
-                            officer.first_name or "",
+                            officer.given_names or "",
                             officer.last_name or "",
                             officer.full_name,
                             officer.rank,
@@ -628,7 +630,7 @@ class OfficerMergeView(APIView):
     Body: {"source_officer_id": int, "target_officer_id": int}
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request):
         source_id = request.data.get("source_officer_id")

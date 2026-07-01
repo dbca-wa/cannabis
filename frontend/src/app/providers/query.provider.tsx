@@ -1,5 +1,4 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { type ReactNode } from "react";
 import { logger } from "@/shared/services/logger.service";
 import { getErrorMessage, isApiError } from "@/shared/utils/error.utils";
@@ -148,8 +147,9 @@ export const QueryProvider = ({ children }: QueryProviderProps) => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			{children}
-			{/* Only show devtools in development */}
-			{import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+			{/* React Query Devtools disabled. To re-enable in development, add back
+			    `import { ReactQueryDevtools } from "@tanstack/react-query-devtools";`
+			    and render {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />} */}
 		</QueryClientProvider>
 	);
 };

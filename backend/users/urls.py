@@ -6,9 +6,6 @@ from . import views
 urlpatterns = [
     # CRITICAL: Export endpoints FIRST to avoid conflicts
     path("export", views.UserExportView.as_view(), name="user_export"),
-    path("test-export", views.UserExportView.as_view(), name="user_test_export"),
-    path("debug-export", views.UserExportView.as_view(), name="user_debug_export"),
-    path("simple-csv", views.SimpleCSVTestView.as_view(), name="simple_csv_test"),
     # Authentication endpoints
     path("auth/login", views.CustomTokenObtainPairView.as_view(), name="login"),
     path("auth/refresh", TokenRefreshView.as_view(), name="token_refresh"),
@@ -40,11 +37,6 @@ urlpatterns = [
         views.VerifyResetCodeView.as_view(),
         name="verify_reset_code",
     ),
-    path(
-        "auth/reset-password/<str:token>",
-        views.PasswordResetView.as_view(),
-        name="reset_password_deprecated",
-    ),
     # Password update
     path(
         "auth/update-password",
@@ -56,6 +48,12 @@ urlpatterns = [
         "invite",
         views.InviteUserView.as_view(),
         name="invite_user",
+    ),
+    # Test invitation email (renders + sends a live invite without records)
+    path(
+        "auth/test-invite-email",
+        views.TestInviteEmailView.as_view(),
+        name="test_invite_email",
     ),
     # Invitation activation
     path(

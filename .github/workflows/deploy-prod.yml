@@ -282,6 +282,9 @@ jobs:
           echo "=== Updating Kustomize image tags to ${VERSION} ==="
 
           # Update production kustomization.yaml (both frontend and backend)
+          # NOTE: The test overlay is intentionally left untouched — it tracks
+          # the moving ":test" tag built from the staging branch for fast UAT
+          # iteration, so it must not be pinned to a release version here (testing out Rancher tracking of SHA)
           if [ -f "kustomize/overlays/prod/kustomization.yaml" ]; then
             sed -i "s|newTag: .*|newTag: ${VERSION}|g" kustomize/overlays/prod/kustomization.yaml
             echo "✅ Updated production kustomization.yaml"
@@ -293,18 +296,6 @@ jobs:
             exit 1
           fi
 
-          # Update test kustomization.yaml (both frontend and backend)
-          if [ -f "kustomize/overlays/test/kustomization.yaml" ]; then
-            sed -i "s|newTag: .*|newTag: ${VERSION}|g" kustomize/overlays/test/kustomization.yaml
-            echo "✅ Updated test kustomization.yaml"
-            echo ""
-            echo "=== Changes to test ==="
-            git diff kustomize/overlays/test/kustomization.yaml
-          else
-            echo "❌ Warning: kustomize/overlays/test/kustomization.yaml not found"
-            exit 1
-          fi
-
       - name: Commit and push kustomize updates
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
@@ -313,9 +304,8 @@ jobs:
           if git diff --quiet kustomize/; then
             echo "✅ No changes to commit (versions already up to date)"
           else
-            # Commit and push
+            # Commit and push (prod overlay only — test tracks the moving :test tag)
             git add kustomize/overlays/prod/kustomization.yaml
-            git add kustomize/overlays/test/kustomization.yaml
             git commit -m "chore: update kustomize to ${VERSION} [skip ci]"
             git push origin HEAD:main
             echo "✅ Kustomize versions updated to ${VERSION}"

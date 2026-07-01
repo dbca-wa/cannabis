@@ -88,3 +88,6 @@ etl/data/raw/*.csv
 
 # Pre-commit cache
 .pre-commit-cache/
+_run_etl.py
+_etl_*
+cannabis_loader_errors_*.csv

@@ -6,8 +6,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.template.loader import render_to_string
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
@@ -24,6 +23,7 @@ from ..error_handlers import (
     UserFriendlyMessages,
     handle_network_errors,
 )
+from ..permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class ExternalUserSearchView(APIView):
     Used for user invitations
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get(self, request):
         """Search external users by query parameter"""
@@ -137,7 +137,7 @@ class InviteUserView(APIView):
     Creates invitation record and sends invitation email with activation link
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     @handle_network_errors
     def post(self, request):
@@ -145,9 +145,9 @@ class InviteUserView(APIView):
         import secrets
         from datetime import timedelta
 
-        from django.core.mail import send_mail
         from django.utils import timezone
-        from django.utils.html import strip_tags
+
+        from common.services import EmailService
 
         from ..models import InviteRecord
 
@@ -214,23 +214,26 @@ class InviteUserView(APIView):
                 external_user_data=external_user_data,
             )
 
-            # Prepare email context
+            # Build the activation link from configuration; no trailing slash so
+            # it matches the SPA route /auth/activate-invite/:token.
+            from common.utils import get_frontend_url
+
+            activation_link = get_frontend_url(f"/auth/activate-invite/{token}")
+            role_display = dict(User.RoleChoices.choices).get(role, "None")
+
+            # Prepare email context (matches emails/invitation_email.html)
             context = {
-                "invite_record": invite_record,
-                "inviter": request.user,
-                "external_user_data": external_user_data,
-                "activation_url": f"{request.scheme}://{request.get_host()}/auth/activate-invite/{token}/",
-                "site_name": "Cannabis Management System",
-                "role_display": dict(User.RoleChoices.choices).get(role, "None"),
+                "recipient_given_names": external_user_data.get("given_name")
+                or "there",
+                "inviter_given_names": request.user.given_names,
+                "inviter_last_name": request.user.last_name,
+                "inviter_email": request.user.email,
+                "invitee_proposed_role": role_display,
+                "invitation_link": activation_link,
                 "expires_at": expires_at,
             }
 
-            # Render email templates
-            subject = f'Invitation to {context["site_name"]}'
-            html_message = render_to_string("users/invitation_email.html", context)
-            plain_message = strip_tags(html_message)
-
-            # Determine recipient based on system settings
+            # Determine recipient based on system settings (send-to-self toggle)
             from common.models import SystemSettings
 
             system_settings = SystemSettings.load()
@@ -238,20 +241,20 @@ class InviteUserView(APIView):
             if system_settings.send_emails_to_self:
                 recipient_list = [system_settings.forward_certificate_emails_to]
                 logger.info(
-                    f"Sending invitation email to admin ({system_settings.forward_certificate_emails_to}) instead of {email}"
+                    f"Sending invitation email to admin "
+                    f"({system_settings.forward_certificate_emails_to}) instead of {email}"
                 )
             else:
                 recipient_list = [email]
                 logger.info(f"Sending invitation email to actual recipient: {email}")
 
-            # Send invitation email
-            send_mail(
-                subject=subject,
-                message=plain_message,
-                html_message=html_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipient_list,
-                fail_silently=False,
+            # Send via the centralised email service (shared emails/ template,
+            # inline logo, test-mode redirection).
+            EmailService.send_template_email(
+                template_name="emails/invitation_email.html",
+                recipient_email=recipient_list,
+                subject="Invitation to Cannabis Management System",
+                context=context,
             )
 
             # Log the invitation
@@ -284,6 +287,83 @@ class InviteUserView(APIView):
                 invite_record.delete()
 
             return InvitationErrorHandler.handle_email_send_failed(email, e)
+
+
+class TestInviteEmailView(APIView):
+    """
+    POST: Send a live invitation email for testing/preview purposes.
+
+    Renders and sends the real invitation email to a chosen address with a
+    chosen role, WITHOUT creating an InviteRecord or User. Staff/superuser only.
+    Sends directly to the provided address so the tester controls the recipient.
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def post(self, request):
+        import secrets
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from rest_framework.exceptions import PermissionDenied
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        from common.services import EmailService
+        from common.utils import get_frontend_url
+
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied(
+                "Only staff or admin users can send test invitation emails."
+            )
+
+        email = (request.data.get("email") or request.user.email or "").strip()
+        role = request.data.get("role", "none")
+
+        if not email:
+            raise DRFValidationError({"email": ["An email address is required."]})
+
+        valid_roles = [choice[0] for choice in User.RoleChoices.choices]
+        if role not in valid_roles:
+            raise DRFValidationError(
+                {"role": [f"Role must be one of: {', '.join(valid_roles)}"]}
+            )
+
+        # A sample (non-functional) activation link so the email renders exactly
+        # as a real invite would, without persisting a token.
+        sample_token = f"sample-{secrets.token_urlsafe(16)}"
+        activation_link = get_frontend_url(f"/auth/activate-invite/{sample_token}")
+        role_display = dict(User.RoleChoices.choices).get(role, "None")
+        expires_at = timezone.now() + timedelta(hours=24)
+
+        context = {
+            "recipient_given_names": "there",
+            "inviter_given_names": request.user.given_names,
+            "inviter_last_name": request.user.last_name,
+            "inviter_email": request.user.email,
+            "invitee_proposed_role": role_display,
+            "invitation_link": activation_link,
+            "expires_at": expires_at,
+        }
+
+        EmailService.send_template_email(
+            template_name="emails/invitation_email.html",
+            recipient_email=[email],
+            subject="[TEST] Invitation to Cannabis Management System",
+            context=context,
+        )
+
+        logger.info(
+            f"Test invitation email sent to {email} (role={role}) by "
+            f"{request.user.email}"
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": f"Test invitation email sent to {email}.",
+            },
+            status=HTTP_200_OK,
+        )
 
 
 class InviteActivationView(APIView):
@@ -337,9 +417,21 @@ class InviteActivationView(APIView):
                     invite_record.email
                 )
 
-            # Generate temporary password meeting security requirements
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+            # Generate a temporary password guaranteed to satisfy the password
+            # policy (>=1 letter, >=1 digit, >=1 special, length >= MIN_LENGTH).
+            # Building from each required class avoids a rare random password
+            # that lacks a digit/special and would otherwise fail validation.
+            specials = "!@#$%^&*"
+            required = [
+                secrets.choice(string.ascii_letters),
+                secrets.choice(string.digits),
+                secrets.choice(specials),
+            ]
+            pool = string.ascii_letters + string.digits + specials
+            remaining = [secrets.choice(pool) for _ in range(11)]  # total length 14
+            password_chars = required + remaining
+            secrets.SystemRandom().shuffle(password_chars)
+            temp_password = "".join(password_chars)
 
             # Validate the generated password meets requirements
             is_valid, errors = PasswordValidator.validate_password(temp_password)
@@ -356,7 +448,7 @@ class InviteActivationView(APIView):
             external_data = invite_record.external_user_data
             user = User.objects.create_user(
                 email=invite_record.email,
-                first_name=external_data.get("given_name", ""),
+                given_names=external_data.get("given_name", ""),
                 last_name=external_data.get("surname", ""),
                 role=invite_record.role,
                 password=temp_password,

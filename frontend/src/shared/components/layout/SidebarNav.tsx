@@ -9,6 +9,7 @@ import {
 	UserSquare2,
 	DollarSign,
 	Settings,
+	Boxes,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
@@ -48,6 +49,7 @@ export const navGroups: NavGroup[] = [
 		label: "Casework",
 		items: [
 			{ to: "/cases", label: "Cases", icon: FileStack },
+			{ to: "/batches", label: "Batches", icon: Boxes },
 			{ to: "/financials", label: "Financials", icon: DollarSign },
 		],
 	},
@@ -77,13 +79,15 @@ export const SidebarNav = ({
 	onNavigate,
 }: SidebarNavProps) => {
 	const location = useLocation();
-	const { user } = useAuth();
+	const { user, hasAppAccess } = useAuth();
 
 	return (
 		<nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
 			{navGroups.map((group, groupIdx) => {
 				const visibleItems = group.items.filter(
 					(item) =>
+						// Roleless, non-admin users only ever see the Dashboard
+						(hasAppAccess || item.to === "/") &&
 						(!item.adminOnly || user?.is_superuser) &&
 						(!item.devOnly || SHOW_DEV_PAGES)
 				);

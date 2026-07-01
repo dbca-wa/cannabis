@@ -7,10 +7,6 @@ export const downloadCertificatePdf = async (
 	return apiClient.getBlob(ENDPOINTS.CERTIFICATES.DOWNLOAD(certificateId));
 };
 
-export const downloadInvoicePdf = async (invoiceId: number): Promise<Blob> => {
-	return apiClient.getBlob(ENDPOINTS.INVOICES.DOWNLOAD(invoiceId));
-};
-
 export const openBlobInNewTab = (blob: Blob): void => {
 	const pdfBlob = new Blob([blob], { type: "application/pdf" });
 	const url = window.URL.createObjectURL(pdfBlob);

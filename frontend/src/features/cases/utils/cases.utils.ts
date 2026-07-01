@@ -7,10 +7,10 @@ import {
 } from "@/shared/constants/phases.config";
 
 /**
- * Check if a case can be deleted (no associated certificates/invoices)
+ * Check if a case can be deleted (no associated certificates)
  */
 export const canDeleteCase = (caseObj: Case): boolean => {
-	return caseObj.certificates.length === 0 && caseObj.invoices.length === 0;
+	return caseObj.certificates.length === 0;
 };
 
 /**
@@ -19,9 +19,6 @@ export const canDeleteCase = (caseObj: Case): boolean => {
 export const getDeletionWarningMessage = (caseObj: Case): string => {
 	if (caseObj.certificates.length > 0) {
 		return `Cannot delete case ${caseObj.case_number} because it has ${caseObj.certificates.length} associated certificate(s).`;
-	}
-	if (caseObj.invoices.length > 0) {
-		return `Cannot delete case ${caseObj.case_number} because it has ${caseObj.invoices.length} associated invoice(s).`;
 	}
 	return "";
 };
@@ -41,12 +38,9 @@ export const getPhaseColorClass = (
 	isDark: boolean = false
 ): string => {
 	const colorMap: Record<string, { light: string; dark: string }> = {
-		case_creation: { light: "text-amber-600", dark: "text-amber-400" },
 		assessment: { light: "text-teal-600", dark: "text-teal-400" },
 		unsigned_generation: { light: "text-blue-600", dark: "text-blue-400" },
-		botanist_signoff: { light: "text-violet-600", dark: "text-violet-400" },
-		invoicing: { light: "text-rose-600", dark: "text-rose-400" },
-		send_emails: { light: "text-sky-600", dark: "text-sky-400" },
+		batching: { light: "text-violet-600", dark: "text-violet-400" },
 		complete: { light: "text-emerald-600", dark: "text-emerald-400" },
 	};
 
@@ -95,18 +89,12 @@ export const getAdvancementDescription = (
 	nextPhase: UICasePhase
 ): string => {
 	const descriptions: Record<string, string> = {
-		"case_creation->assessment":
-			" Case creation is complete. Moving to assessment phase.",
 		"assessment->unsigned_generation":
 			" Assessment is complete. Moving to certificate generation.",
-		"unsigned_generation->botanist_signoff":
-			" Certificate generated. Moving to botanist sign-off.",
-		"botanist_signoff->invoicing":
-			" Certificate signed. Moving to invoice generation.",
-		"invoicing->send_emails":
-			" Invoice generated. Moving to email distribution.",
-		"send_emails->complete":
-			" Documents sent. Case will be marked as complete.",
+		"unsigned_generation->batching":
+			" Certificate(s) generated. The case is now ready for batching.",
+		"batching->complete":
+			" Recorded against a batch invoice. Case will be marked as complete.",
 	};
 
 	const key = `${currentPhase}->${nextPhase}`;

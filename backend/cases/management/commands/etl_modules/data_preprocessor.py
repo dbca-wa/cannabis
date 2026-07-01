@@ -89,14 +89,14 @@ class DataPreprocessor:
         botanists = {}
         for name in botanist_names:
             # Try to find existing user by name
-            # Note: This assumes botanist names are stored in first_name + last_name
+            # Note: This assumes botanist names are stored in given_names + last_name
             name_parts = name.split(" ", 1)
-            first_name = name_parts[0] if name_parts else name
+            given_names = name_parts[0] if name_parts else name
             last_name = name_parts[1] if len(name_parts) > 1 else ""
 
             # Look for existing user
             existing_user = User.objects.filter(
-                first_name__iexact=first_name,
+                given_names__iexact=given_names,
                 last_name__iexact=last_name,
                 role="botanist",
             ).first()
@@ -120,7 +120,7 @@ class DataPreprocessor:
 
                 user = User.objects.create(
                     email=email,
-                    first_name=first_name,
+                    given_names=given_names,
                     last_name=last_name,
                     role="botanist",
                     is_active=True,
@@ -236,11 +236,11 @@ class DataPreprocessor:
         officers = {}
         for officer_key, officer_data in officers_data.items():
             # Parse name
-            first_name, last_name = self._parse_officer_name(officer_data["name"])
+            given_names, last_name = self._parse_officer_name(officer_data["name"])
 
             # Try to find existing officer
             existing_officer = self._find_existing_officer(
-                first_name, last_name, officer_data["badge_id"]
+                given_names, last_name, officer_data["badge_id"]
             )
 
             if existing_officer:
@@ -250,7 +250,7 @@ class DataPreprocessor:
             else:
                 # Create new officer
                 officer = PoliceOfficer.objects.create(
-                    first_name=first_name,
+                    given_names=given_names,
                     last_name=last_name,
                     rank=self._map_rank_to_seniority(officer_data["rank"]),
                     badge_number=officer_data["badge_id"] or None,
@@ -303,7 +303,7 @@ class DataPreprocessor:
         for defendant_key, defendant_data in defendants_data.items():
             # Try to find existing defendant
             existing_defendant = Defendant.objects.filter(
-                first_name__iexact=defendant_data["given_names"],
+                given_names__iexact=defendant_data["given_names"],
                 last_name__iexact=defendant_data["last_name"],
             ).first()
 
@@ -316,7 +316,7 @@ class DataPreprocessor:
             else:
                 # Create new defendant
                 defendant = Defendant.objects.create(
-                    first_name=defendant_data["given_names"] or None,
+                    given_names=defendant_data["given_names"] or None,
                     last_name=defendant_data["last_name"] or None,
                 )
                 defendants[defendant_key] = defendant
@@ -348,20 +348,20 @@ class DataPreprocessor:
         if "," in full_name:
             parts = full_name.split(",", 1)
             last_name = parts[0].strip()
-            first_name = parts[1].strip() if len(parts) > 1 else ""
+            given_names = parts[1].strip() if len(parts) > 1 else ""
         else:
             parts = full_name.strip().split()
             if len(parts) == 1:
-                first_name = ""
+                given_names = ""
                 last_name = parts[0]
             else:
-                first_name = " ".join(parts[:-1])
+                given_names = " ".join(parts[:-1])
                 last_name = parts[-1]
 
-        return first_name, last_name
+        return given_names, last_name
 
     def _find_existing_officer(
-        self, first_name: str, last_name: str, badge_id: str
+        self, given_names: str, last_name: str, badge_id: str
     ) -> Optional[PoliceOfficer]:
         """Find existing officer by badge ID or name."""
         # Try badge ID first if available
@@ -371,9 +371,9 @@ class DataPreprocessor:
                 return officer
 
         # Try name match
-        if first_name or last_name:
+        if given_names or last_name:
             officer = PoliceOfficer.objects.filter(
-                first_name__iexact=first_name, last_name__iexact=last_name
+                given_names__iexact=given_names, last_name__iexact=last_name
             ).first()
             if officer:
                 return officer

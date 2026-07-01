@@ -75,16 +75,6 @@ export interface UserPreferences {
 	// Pagination preferences
 	items_per_page: ItemsPerPageChoice;
 
-	// Notification preferences
-	email_notifications: boolean;
-	comment_notifications: boolean;
-	reaction_notifications: boolean;
-	notify_submission_assigned: boolean;
-	notify_phase_changes: boolean;
-	notify_certificate_generated: boolean;
-	notify_invoices_generated: boolean;
-	notify_pdfs_mailed: boolean;
-
 	// Accessibility preferences
 	reduce_motion: boolean;
 
@@ -103,16 +93,6 @@ export interface UserPreferences {
 		cases: DisplayModeChoice;
 		certificates: DisplayModeChoice;
 	};
-	notification_settings: {
-		email: boolean;
-		comments: boolean;
-		reactions: boolean;
-		assigned: boolean;
-		phase_changes: boolean;
-		certificates: boolean;
-		invoices: boolean;
-		sent: boolean;
-	};
 }
 
 // Complete user object (matches UserJWTObjectSerializer)
@@ -120,7 +100,7 @@ export interface User {
 	// Core user fields
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string; // Computed field
 	initials: string; // Computed field
@@ -166,7 +146,7 @@ export interface AuthResponse {
 export interface UserBasic {
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string;
 	initials: string;
@@ -179,7 +159,7 @@ export interface UserBasic {
 export interface UserTiny {
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string;
 	initials: string;
@@ -197,7 +177,7 @@ export interface UserTiny {
 // User creation request (matches UserCreateSerializer)
 export interface UserCreateRequest {
 	email: string;
-	first_name: string;
+	given_names: string;
 	last_name: string;
 	role: UserRole;
 	password: string;
@@ -211,7 +191,7 @@ export interface UserCreateRequest {
 // User update request (partial update)
 export interface UserUpdateRequest {
 	email?: string;
-	first_name?: string;
+	given_names?: string;
 	last_name?: string;
 	role?: UserRole;
 	is_staff?: boolean;
@@ -525,15 +505,6 @@ export type {
 	CertificateSearchParams,
 } from "@/features/certificates/types/certificates.types";
 
-export type {
-	InvoiceFeeType,
-	AdditionalInvoiceFee,
-	Invoice,
-	InvoiceCreateRequest,
-	PaginatedInvoicesResponse,
-	InvoiceSearchParams,
-} from "@/features/invoices/types/invoices.types";
-
 // ============================================================================
 // DEFENDANTS TYPES (re-exported from feature module)
 // ============================================================================
@@ -585,8 +556,6 @@ export interface RequestConfig {
 export type {
 	CasePhase,
 	PhaseHistoryEntry,
-	SendBackRequest,
-	SendBackResponse,
 	Case,
 	CaseTiny,
 	CaseCreateRequest,
@@ -662,9 +631,8 @@ export interface CertificateStatisticsResponse {
 
 // Revenue statistics response (matches GET /cases/stats/revenue/)
 export interface RevenueStatisticsResponse {
-	current_month: StatisticsPeriodData;
-	previous_month: StatisticsComparisonData | null;
-	previous_year_same_month: StatisticsComparisonData | null;
+	financial_year: { total: number; label: string };
+	previous_year: { total: number; change_percentage: number | null } | null;
 }
 
 // ============================================================================
@@ -702,22 +670,24 @@ export interface TableFilterMap {
 export interface SystemSettings {
 	cost_per_certificate: string; // DecimalField as string
 	cost_per_bag: string;
-	call_out_fee: string;
-	cost_per_forensic_hour: string;
-	cost_per_kilometer_fuel: string;
 	tax_percentage: string;
+	ocr_enabled: boolean;
 	forward_certificate_emails_to: string;
-	document_email_address: string | null;
 	send_emails_to_self: boolean;
 	environment: string;
 	send_emails_to_self_editable: boolean;
 	last_modified_by?: {
 		id: number;
 		email: string;
-		first_name: string;
+		given_names: string;
 		last_name: string;
 	} | null;
 	last_modified_at?: string | null; // ISO datetime string
+}
+
+// Lightweight feature flags readable by any app user (GET /system/feature-flags)
+export interface FeatureFlags {
+	ocr_enabled: boolean;
 }
 // ============================================================================
 // DASHBOARD TYPES (for dashboard-specific API responses)

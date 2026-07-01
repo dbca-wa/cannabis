@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
-from ..models import Case, Certificate, Invoice
+from ..models import Batch, Case, Certificate, DrugBag
 
 
 class DashboardService:
@@ -105,56 +105,76 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_revenue_stats():
-        """Compute revenue stats with month-over-month and YoY comparisons.
+    def _financial_year_bounds(reference=None):
+        """Return (start, end) datetimes for the Australian FY (Jul–Jun)
+        containing the reference date, plus a display label."""
+        now = reference or timezone.now()
+        if now.month >= 7:
+            fy_start = now.replace(
+                month=7, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+        else:
+            fy_start = now.replace(
+                year=now.year - 1,
+                month=7,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+        fy_end = fy_start + relativedelta(years=1)
+        label = f"FY {fy_start.year}/{str(fy_start.year + 1)[2:]}"
+        return fy_start, fy_end, label
 
-        Returns:
-            A dictionary with current_month, previous_month, and
-            previous_year_same_month revenue statistics.
+    @staticmethod
+    def get_revenue_stats():
+        """Compute financial-year revenue from completed batches.
+
+        Revenue is recognised when a batch records its invoice-raised number
+        (i.e. its cases are complete). Returns the current FY total and a
+        comparison against the previous FY for the same elapsed period.
         """
         now = timezone.now()
-        current_month_start = now.replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
+        fy_start, fy_end, label = DashboardService._financial_year_bounds(now)
 
         current_total = (
-            Invoice.objects.filter(created_at__gte=current_month_start).aggregate(
-                total=Sum("total")
-            )["total"]
-            or 0
-        )
-
-        prev_month_start = current_month_start - relativedelta(months=1)
-        prev_month_total = (
-            Invoice.objects.filter(
-                created_at__gte=prev_month_start,
-                created_at__lt=current_month_start,
+            Batch.objects.filter(
+                invoice_raised_at__gte=fy_start,
+                invoice_raised_at__lt=fy_end,
             ).aggregate(total=Sum("total"))["total"]
             or 0
         )
 
-        prev_year_month_start = current_month_start - relativedelta(years=1)
-        prev_year_month_end = prev_year_month_start + relativedelta(months=1)
-        prev_year_total = (
-            Invoice.objects.filter(
-                created_at__gte=prev_year_month_start,
-                created_at__lt=prev_year_month_end,
+        # Previous FY, same elapsed window (start of prev FY → same offset as now)
+        prev_fy_start = fy_start - relativedelta(years=1)
+        prev_fy_cutoff = now - relativedelta(years=1)
+        prev_total = (
+            Batch.objects.filter(
+                invoice_raised_at__gte=prev_fy_start,
+                invoice_raised_at__lt=prev_fy_cutoff,
             ).aggregate(total=Sum("total"))["total"]
             or 0
         )
+
+        change = None
+        if prev_total > 0:
+            change = round(
+                ((float(current_total) - float(prev_total)) / float(prev_total)) * 100,
+                1,
+            )
+        elif current_total > 0:
+            change = 100.0
 
         return {
-            "current_month": {
+            "financial_year": {
                 "total": float(current_total),
-                "month": current_month_start.strftime("%B"),
-                "year": current_month_start.year,
+                "label": label,
             },
-            "previous_month": DashboardService._build_revenue_comparison(
-                current_total, prev_month_total
-            ),
-            "previous_year_same_month": DashboardService._build_revenue_comparison(
-                current_total, prev_year_total
-            ),
+            "previous_year": {
+                "total": float(prev_total),
+                "change_percentage": change,
+            },
         }
 
     @staticmethod
@@ -171,12 +191,10 @@ class DashboardService:
         )
 
         active_phases = [
-            "case_creation",
             "assessment",
             "unsigned_generation",
-            "botanist_signoff",
-            "invoicing",
-            "send_emails",
+            "batching",
+            "in_batch",
         ]
         result = {phase: 0 for phase in active_phases}
         for entry in counts:
@@ -199,23 +217,6 @@ class DashboardService:
 
         return {
             "count": prev_count,
-            "change_percentage": round(change, 1) if change is not None else None,
-        }
-
-    @staticmethod
-    def _build_revenue_comparison(current_total, prev_total):
-        """Build a revenue comparison dict with percentage change."""
-        if prev_total == 0 and current_total == 0:
-            return None
-
-        change = None
-        if prev_total > 0:
-            change = ((current_total - prev_total) / prev_total) * 100
-        elif current_total > 0:
-            change = 100
-
-        return {
-            "total": float(prev_total),
             "change_percentage": round(change, 1) if change is not None else None,
         }
 
@@ -257,14 +258,15 @@ class DashboardService:
                         "month": month_start.strftime("%b"),
                         "cases": None,
                         "certs": None,
+                        "bags": None,
                         "revenue": None,
                     }
                 )
                 continue
 
             cases_count = Case.objects.filter(
-                received__gte=month_start.date(),
-                received__lt=month_end.date(),
+                received__gte=month_start,
+                received__lt=month_end,
             ).count()
 
             certs_count = Certificate.objects.filter(
@@ -272,10 +274,16 @@ class DashboardService:
                 created_at__lt=month_end,
             ).count()
 
+            bags_count = DrugBag.objects.filter(
+                submission__received__gte=month_start,
+                submission__received__lt=month_end,
+            ).count()
+
+            # Revenue is recognised when a batch's invoice-raised number is set
             revenue_total = (
-                Invoice.objects.filter(
-                    created_at__gte=month_start,
-                    created_at__lt=month_end,
+                Batch.objects.filter(
+                    invoice_raised_at__gte=month_start,
+                    invoice_raised_at__lt=month_end,
                 ).aggregate(total=Sum("total"))["total"]
                 or 0
             )
@@ -285,6 +293,7 @@ class DashboardService:
                     "month": month_start.strftime("%b"),
                     "cases": cases_count,
                     "certs": certs_count,
+                    "bags": bags_count,
                     "revenue": float(revenue_total),
                 }
             )
@@ -301,15 +310,13 @@ class DashboardService:
         if user.role == "finance":
             role_filter = Q(
                 phase__in=[
-                    "case_creation",
                     "unsigned_generation",
-                    "invoicing",
-                    "send_emails",
+                    "batching",
                 ]
             )
         elif user.role == "botanist":
             role_filter = Q(
-                phase__in=["assessment", "botanist_signoff"],
+                phase__in=["assessment"],
                 approved_botanist=user,
             )
         elif user.is_superuser:

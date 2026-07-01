@@ -19,6 +19,10 @@ export class OcrResultStore {
 	/** Name of the file that was uploaded for OCR. */
 	uploadedFileName: string | null = null;
 
+	/** The uploaded file itself, retained so it can be stored against the case
+	 * after creation (the police-form slot). Cleared on reset. */
+	uploadedFile: File | null = null;
+
 	/** Error message from the most recent OCR operation. */
 	error: string | null = null;
 
@@ -129,6 +133,7 @@ export class OcrResultStore {
 		this.extractionResponse = null;
 		this.isProcessing = false;
 		this.uploadedFileName = null;
+		this.uploadedFile = null;
 		this.error = null;
 		this.fieldConfidence.clear();
 		this.matchCandidates = null;

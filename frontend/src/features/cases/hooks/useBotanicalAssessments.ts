@@ -7,12 +7,8 @@ import {
 	updateAssessment,
 	deleteAssessment,
 } from "../services/assessments.service";
-import {
-	type BotanicalAssessmentRequest,
-	type DrugBag,
-} from "@/shared/types/backend-api.types";
-import { drugBagsQueryKeys } from "./useDrugBags";
-import { casesQueryKeys } from "./useCases";
+import { type BotanicalAssessmentRequest } from "@/shared/types/backend-api.types";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 export const botanicalAssessmentsQueryKeys = {
 	all: ["botanical-assessments"] as const,
@@ -44,27 +40,12 @@ export const useBotanicalAssessmentMutations = () => {
 			const assessment = await createAssessment(drugBagId, data);
 			return { assessment, drugBagId };
 		},
-		onSuccess: async ({ assessment, drugBagId }) => {
+		onSuccess: async ({ assessment }) => {
 			queryClient.setQueryData(
 				botanicalAssessmentsQueryKeys.detail(assessment.id),
 				assessment
 			);
-			queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.detail(drugBagId),
-			});
-
-			const drugBagData = queryClient.getQueryData(
-				drugBagsQueryKeys.detail(drugBagId)
-			) as DrugBag | undefined;
-			if (drugBagData?.case) {
-				queryClient.invalidateQueries({
-					queryKey: drugBagsQueryKeys.list(drugBagData.case),
-				});
-				queryClient.invalidateQueries({
-					queryKey: casesQueryKeys.detail(drugBagData.case),
-				});
-			}
-
+			await invalidateRelatedQueries(queryClient, "botanicalAssessments");
 			toast.success("Botanical assessment created successfully!");
 		},
 		onError: (error: unknown) => {
@@ -87,12 +68,7 @@ export const useBotanicalAssessmentMutations = () => {
 				botanicalAssessmentsQueryKeys.detail(updatedAssessment.id),
 				updatedAssessment
 			);
-			queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.all,
-			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "botanicalAssessments");
 			toast.success("Botanical assessment updated successfully!");
 		},
 		onError: (error: unknown) => {
@@ -111,12 +87,7 @@ export const useBotanicalAssessmentMutations = () => {
 			queryClient.removeQueries({
 				queryKey: botanicalAssessmentsQueryKeys.detail(assessmentId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.all,
-			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "botanicalAssessments");
 			toast.success("Botanical assessment deleted successfully!");
 		},
 		onError: (error: unknown) => {

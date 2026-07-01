@@ -78,27 +78,6 @@ class SystemSettings(models.Model):
         validators=[MinValueValidator(Decimal("0.01"))],
         help_text="Cost per bag identification in dollars",
     )
-    call_out_fee = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=Decimal("200.00"),
-        validators=[MinValueValidator(Decimal("0.01"))],
-        help_text="Fixed call out fee in dollars",
-    )
-    cost_per_forensic_hour = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=Decimal("150.00"),
-        validators=[MinValueValidator(Decimal("0.01"))],
-        help_text="Cost per hour of forensic work in dollars",
-    )
-    cost_per_kilometer_fuel = models.DecimalField(
-        max_digits=6,
-        decimal_places=3,
-        default=Decimal("1.750"),
-        validators=[MinValueValidator(Decimal("0.001"))],
-        help_text="Cost per kilometer for fuel in dollars",
-    )
     tax_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -118,12 +97,7 @@ class SystemSettings(models.Model):
             and settings.ENVELOPE_EMAIL_RECIPIENTS
             else "jarid.prince@dbca.wa.gov.au"
         ),
-        help_text="Email address to forward certificate notifications to",
-    )
-    document_email_address = models.EmailField(
-        blank=True,
-        null=True,
-        help_text="Email address to send completed documents to. Falls back to forward_certificate_emails_to.",
+        help_text="Fallback recipient for system emails (invites, password reset)",
     )
 
     # Development/Testing email settings
@@ -144,14 +118,23 @@ class SystemSettings(models.Model):
         help_text="User who receives all emails when testing mode is enabled",
     )
 
+    # Feature flags
+    ocr_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "When enabled, the Priority 3 form OCR upload appears on case "
+            "creation and processing to optionally prefill case data."
+        ),
+    )
+
     # Auto-incrementing counters
     certificate_counter = models.PositiveIntegerField(
         default=1,
         help_text="Next certificate number to assign",
     )
-    invoice_counter = models.PositiveIntegerField(
+    batch_counter = models.PositiveIntegerField(
         default=1,
-        help_text="Next invoice number to assign",
+        help_text="Next batch number to assign",
     )
 
     # Audit fields
@@ -217,13 +200,13 @@ class SystemSettings(models.Model):
         self.save(update_fields=["certificate_counter"])
         return cert_num
 
-    def get_next_invoice_number(self):
-        """Generate and return next invoice number"""
+    def get_next_batch_number(self):
+        """Generate and return next batch number"""
         year = datetime.now().year
-        inv_num = f"INV{year}-{self.invoice_counter:03d}"
-        self.invoice_counter += 1
-        self.save(update_fields=["invoice_counter"])
-        return inv_num
+        batch_num = f"BATCH{year}-{self.batch_counter:03d}"
+        self.batch_counter += 1
+        self.save(update_fields=["batch_counter"])
+        return batch_num
 
     def __str__(self):
         return "System Settings"

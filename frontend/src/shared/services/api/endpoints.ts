@@ -12,6 +12,7 @@ export const ENDPOINTS = {
 
 		ACTIVATE_INVITE: (token: string) => `/users/auth/activate-invite/${token}`,
 		VALIDATE_PASSWORD: "/users/validate-password",
+		TEST_INVITE_EMAIL: "/users/auth/test-invite-email",
 	},
 
 	// User endpoints
@@ -68,13 +69,14 @@ export const ENDPOINTS = {
 	CASES: {
 		LIST: "/cases/list",
 		CREATE: "/cases/list",
+		CHECK_NUMBER: "/cases/check-number",
 		DETAIL: (id: string | number) => `/cases/${id}`,
 		UPDATE: (id: string | number) => `/cases/${id}`,
 		DELETE: (id: string | number) => `/cases/${id}`,
 		WORKFLOW: (id: string | number) => `/cases/${id}/workflow`,
-		SEND_BACK: (id: string | number) => `/cases/${id}/send-back`,
 		PHASE_HISTORY: (id: string | number) => `/cases/${id}/phase-history`,
 		OCR_UPLOAD: "/cases/ocr-upload",
+		POLICE_FORM: (id: string | number) => `/cases/${id}/police-form`,
 		BAGS: {
 			LIST: (caseId: string | number) => `/cases/${caseId}/bags`,
 			CREATE: (caseId: string | number) => `/cases/${caseId}/bags`,
@@ -97,17 +99,21 @@ export const ENDPOINTS = {
 				caseId: string | number,
 				certId: string | number
 			) => `/cases/${caseId}/certificates/${certId}/regenerate`,
-			GENERATE_INVOICE: (caseId: string | number) =>
-				`/cases/${caseId}/invoices/generate`,
-			REGENERATE_INVOICE: (
-				caseId: string | number,
-				invoiceId: string | number
-			) => `/cases/${caseId}/invoices/${invoiceId}/regenerate`,
 			CERTIFICATE_PDF: (caseId: string | number, certId: string | number) =>
 				`/cases/${caseId}/certificates/${certId}/pdf`,
-			INVOICE_PDF: (caseId: string | number, invoiceId: string | number) =>
-				`/cases/${caseId}/invoices/${invoiceId}/pdf`,
 		},
+	},
+
+	// Batch endpoints
+	BATCHES: {
+		LIST: "/cases/batches",
+		CREATE: "/cases/batches",
+		EXPORT: "/cases/batches/export",
+		DETAIL: (id: string | number) => `/cases/batches/${id}`,
+		DELETE: (id: string | number) => `/cases/batches/${id}`,
+		INVOICE_RAISED: (id: string | number) =>
+			`/cases/batches/${id}/invoice-raised`,
+		DOWNLOAD: (id: string | number) => `/cases/batches/${id}/download`,
 	},
 
 	// Certificates endpoints
@@ -119,17 +125,6 @@ export const ENDPOINTS = {
 		UPDATE: (id: string | number) => `/cases/certificates/${id}`,
 		DELETE: (id: string | number) => `/cases/certificates/${id}`,
 		DOWNLOAD: (id: string | number) => `/cases/certificates/${id}/download`,
-	},
-
-	// Invoices endpoints
-	INVOICES: {
-		LIST: "/cases/invoices",
-		CREATE: "/cases/invoices",
-		EXPORT: "/cases/invoices/export",
-		DETAIL: (id: string | number) => `/cases/invoices/${id}`,
-		UPDATE: (id: string | number) => `/cases/invoices/${id}`,
-		DELETE: (id: string | number) => `/cases/invoices/${id}`,
-		DOWNLOAD: (id: string | number) => `/cases/invoices/${id}/download`,
 	},
 
 	// Dashboard endpoints (aggregation views over cases data)
@@ -144,5 +139,6 @@ export const ENDPOINTS = {
 	// System endpoints
 	SYSTEM: {
 		SETTINGS: "/system/settings",
+		FEATURE_FLAGS: "/system/feature-flags",
 	},
 } as const;

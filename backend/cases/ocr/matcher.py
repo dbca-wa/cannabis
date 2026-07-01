@@ -60,7 +60,7 @@ class EntityMatcher:
 
             officers = (
                 PoliceOfficer.objects.annotate(
-                    full=Concat("last_name", Value(" "), "first_name"),
+                    full=Concat("last_name", Value(" "), "given_names"),
                     similarity=TrigramSimilarity("full", search_name),
                 )
                 .filter(similarity__gte=MIN_SIMILARITY)
@@ -139,7 +139,7 @@ class EntityMatcher:
 
         defendants = (
             Defendant.objects.annotate(
-                full=Concat("first_name", Value(" "), "last_name"),
+                full=Concat("given_names", Value(" "), "last_name"),
                 similarity=TrigramSimilarity("full", search_name),
             )
             .filter(similarity__gte=MIN_SIMILARITY)
@@ -151,7 +151,7 @@ class EntityMatcher:
                 id=d.id,
                 similarity=round(d.similarity, 3),
                 display_data={
-                    "first_name": d.first_name,
+                    "given_names": d.given_names,
                     "last_name": d.last_name,
                     "full_name": d.full_name,
                 },

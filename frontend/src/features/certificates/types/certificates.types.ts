@@ -6,26 +6,20 @@ import type { PaginatedResponse } from "@/shared/types/backend-api.types";
 export interface Certificate {
 	id: number;
 	certificate_number: string;
-	case?: number;
+	submission?: number;
+	submission_case_number?: string;
+	defendant_names?: string | null;
+	// The drug bags this certificate covers (max 5)
+	bag_ids: number[];
+	certified_date: string | null;
+	/** Section C notes specific to this certificate */
+	additional_notes: string | null;
 	pdf_generating: boolean;
-	unsigned_pdf_file: string | null;
+	pdf_file: string | null;
 	pdf_url: string | null;
-	unsigned_pdf_size: number;
-	signed_pdf_file?: string | null;
-	signed_pdf_url?: string | null;
-	signed_pdf_size?: number;
-	is_locked?: boolean;
-	locked_at?: string | null;
+	pdf_size: number;
 	created_at: string;
 	updated_at: string;
-	// Signing metadata
-	signature_used_id?: number | null;
-	signed_by?: number | null;
-	signature_embedded_at?: string | null;
-	file_hash_at_signing?: string | null;
-	// Additional context data (optional)
-	submission_case_number?: string;
-	defendant_names?: string;
 }
 
 // Certificate creation request

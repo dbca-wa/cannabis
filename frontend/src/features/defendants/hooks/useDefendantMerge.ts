@@ -4,7 +4,7 @@ import {
 	mergeDefendants,
 	type DefendantMergeRequest,
 } from "../services/defendants.service";
-import { defendantsQueryKeys } from "./useDefendants";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 /**
  * Hook to merge secondary defendants into a primary defendant.
@@ -16,14 +16,7 @@ export const useDefendantMerge = () => {
 	return useMutation({
 		mutationFn: (data: DefendantMergeRequest) => mergeDefendants(data),
 		onSuccess: async (response) => {
-			await Promise.all([
-				queryClient.invalidateQueries({
-					queryKey: defendantsQueryKeys.all,
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ["cases"],
-				}),
-			]);
+			await invalidateRelatedQueries(queryClient, "defendants");
 
 			toast.success(
 				`Merge complete. ${response.cases_reassigned} case(s) reassigned.`

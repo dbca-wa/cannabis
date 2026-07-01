@@ -1,18 +1,19 @@
 """
 Cannabis Data Mapper
 
-This module provides mapping functions to convert JSON data from cannabis_final.json
-to Django model field data structures. It handles data type conversions, field
-exclusions, and data validation.
+Maps JSON data from cannabis_clean.json to Django model field data structures.
+Handles JSON-unwrapping of nested string fields, data type conversions, field
+exclusions, and provides structured data objects for model creation.
 """
 
+import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
-# Import models for choice validation
 from cases.models import BotanicalAssessment
 
 from .content_type_mapper import ContentTypeMapper
@@ -20,25 +21,29 @@ from .police_data_parser import PoliceDataParser
 
 logger = logging.getLogger(__name__)
 
+# Historical data originates from Perth, WA
+PERTH_TZ = ZoneInfo("Australia/Perth")
 
-# Data classes for structured mapping results
+
 @dataclass
 class SubmissionData:
-    """Structured data for Submission model creation"""
+    """Structured data for Case (Submission) model creation."""
 
     legacy_id: str
     case_number: str
     received: datetime
     approved_botanist: Optional[str] = None
     internal_comments: Optional[str] = None
+    additional_notes: Optional[str] = None
     security_movement_envelope: Optional[str] = None
+    station_name: Optional[str] = None
 
 
 @dataclass
 class PoliceOfficerData:
-    """Structured data for PoliceOfficer model creation"""
+    """Structured data for PoliceOfficer model creation."""
 
-    first_name: Optional[str] = None
+    given_names: Optional[str] = None
     last_name: Optional[str] = None
     rank: str = "unknown"
     badge_number: Optional[str] = None
@@ -47,15 +52,15 @@ class PoliceOfficerData:
 
 @dataclass
 class DefendantData:
-    """Structured data for Defendant model creation"""
+    """Structured data for Defendant model creation."""
 
-    first_name: Optional[str] = None
+    given_names: Optional[str] = None
     last_name: Optional[str] = None
 
 
 @dataclass
 class DrugBagData:
-    """Structured data for DrugBag model creation"""
+    """Structured data for DrugBag model creation."""
 
     content_type: str
     seal_tag_numbers: str
@@ -67,7 +72,7 @@ class DrugBagData:
 
 @dataclass
 class BotanicalAssessmentData:
-    """Structured data for BotanicalAssessment model creation"""
+    """Structured data for BotanicalAssessment model creation."""
 
     determination: Optional[str] = None
     assessment_date: Optional[datetime] = None
@@ -76,13 +81,12 @@ class BotanicalAssessmentData:
 
 class CannabisDataMapper:
     """
-    Maps JSON data from cannabis_final.json to Django model field structures.
+    Maps JSON data from cannabis_clean.json to Django model field structures.
 
-    Handles data type conversions, field exclusions for debugging fields,
-    and provides structured data objects for model creation.
+    The source JSON has several fields stored as JSON-encoded strings (not plain
+    values or dicts). This mapper unwraps them before mapping.
     """
 
-    # Fields to exclude from processing (debugging/processing artifacts)
     EXCLUDED_FIELDS = {
         "complex_case_details",
         "standardization_applied",
@@ -94,55 +98,97 @@ class CannabisDataMapper:
     }
 
     def __init__(self):
-        """Initialize the data mapper"""
         self.content_type_mapper = ContentTypeMapper()
         self.police_parser = PoliceDataParser()
 
+    # ------------------------------------------------------------------
+    # JSON unwrapping helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _unwrap_json_field(value: Any, key: str) -> Any:
+        """Parse a JSON-encoded string and extract the inner value by key.
+
+        Many source fields arrive as '{"key": "actual value"}' or '{"key": null}'.
+        This extracts the inner value, returning None for null or missing.
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith("{"):
+                try:
+                    parsed = json.loads(stripped)
+                    inner = parsed.get(key)
+                    # Treat empty strings as None
+                    if isinstance(inner, str) and not inner.strip():
+                        return None
+                    return inner
+                except (json.JSONDecodeError, AttributeError):
+                    # Not valid JSON — treat as plain text
+                    return value if value.strip() else None
+            # Plain string (not JSON-wrapped)
+            return value.strip() if value.strip() else None
+        # Already a native type (dict, list, etc.)
+        return value
+
+    @staticmethod
+    def _parse_json_string(value: Any) -> Any:
+        """Parse a JSON-encoded string into its native Python type."""
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith("{") or stripped.startswith("["):
+                try:
+                    return json.loads(stripped)
+                except json.JSONDecodeError:
+                    return value
+        return value
+
+    # ------------------------------------------------------------------
+    # Main mapping methods
+    # ------------------------------------------------------------------
+
     def map_submission_data(self, json_record: Dict[str, Any]) -> SubmissionData:
-        """
-        Map JSON record to Submission model data structure.
-
-        Args:
-            json_record: Complete JSON record from cannabis_final.json
-
-        Returns:
-            SubmissionData: Structured data for Submission model creation
-
-        Raises:
-            ValueError: If required fields are missing or invalid
-        """
+        """Map a JSON record to SubmissionData."""
         try:
-            # Extract required fields
             legacy_id = str(json_record.get("row_id", ""))
             if not legacy_id:
                 raise ValueError("Missing required field: row_id")
 
-            # Get cert_number for security movement envelope
             cert_number = json_record.get("cert_number")
             if not cert_number:
                 raise ValueError("Missing required field: cert_number")
 
-            # Use police reference number as case number
+            # Case number from police reference (with cert fallback)
             case_number = json_record.get("police_reference_number", "")
             if not case_number:
-                # Fallback to cert_number if police_reference_number is missing
                 case_number = f"CRT-{cert_number}"
 
-            # Parse received date from receipt_date (now a string)
-            received_str = json_record.get("receipt_date")
-            if not received_str:
+            # Unwrap receipt_date (JSON string → standardized_date)
+            receipt_raw = json_record.get("receipt_date")
+            if not receipt_raw:
                 raise ValueError("Missing required field: receipt_date")
+            standardized_date = self._unwrap_json_field(
+                receipt_raw, "standardized_date"
+            )
+            if not standardized_date:
+                raise ValueError(
+                    f"Could not extract standardized_date from receipt_date: {receipt_raw[:100]}"
+                )
+            received = self._parse_date(standardized_date)
 
-            received = self._parse_date(received_str)
-
-            # Optional fields
+            # Optional botanist
             approved_botanist = json_record.get("approved_botanist")
 
-            # Generate security movement envelope from cert_number
+            # Security movement envelope
             security_movement_envelope = f"SME-{cert_number}"
 
-            # Get internal comments (now simplified)
+            # Unwrap comments into their correct slots
+            additional_notes = self._get_additional_notes(json_record)
             internal_comments = self._get_internal_comments(json_record)
+
+            # Extract station from police_officer organisation
+            station_name = self._get_station_name(json_record)
 
             return SubmissionData(
                 legacy_id=legacy_id,
@@ -150,36 +196,31 @@ class CannabisDataMapper:
                 received=received,
                 approved_botanist=approved_botanist,
                 internal_comments=internal_comments,
+                additional_notes=additional_notes,
                 security_movement_envelope=security_movement_envelope,
+                station_name=station_name,
             )
-
         except Exception as e:
             logger.error(
                 f"Error mapping submission data for row_id {json_record.get('row_id')}: {e}"
             )
             raise
 
-    def map_police_officer_data(
-        self, police_officer_json: Dict[str, Any]
-    ) -> tuple[PoliceOfficerData, PoliceOfficerData]:
-        """
-        Map JSON police officer data to PoliceOfficer model data structures.
-
-        Args:
-            police_officer_json: Complete police_officer section from JSON record
-
-        Returns:
-            tuple[PoliceOfficerData, PoliceOfficerData]: (submitting_officer, requesting_officer)
-        """
+    def map_police_officer_data(self, police_officer_json: Any) -> tuple:
+        """Map police officer data (may be a JSON string) to officer dataclasses."""
         try:
-            # Parse both officers using the police data parser
+            # Unwrap if it's a JSON string
+            if isinstance(police_officer_json, str):
+                police_officer_json = self._parse_json_string(police_officer_json)
+            if not isinstance(police_officer_json, dict):
+                police_officer_json = {}
+
             submitting_parsed, requesting_parsed = (
                 self.police_parser.parse_police_officer_data(police_officer_json)
             )
 
-            # Convert to PoliceOfficerData structures
             submitting_officer = PoliceOfficerData(
-                first_name=submitting_parsed.first_name,
+                given_names=submitting_parsed.given_names,
                 last_name=submitting_parsed.last_name,
                 rank=submitting_parsed.rank,
                 badge_number=submitting_parsed.badge_number,
@@ -187,7 +228,7 @@ class CannabisDataMapper:
             )
 
             requesting_officer = PoliceOfficerData(
-                first_name=requesting_parsed.first_name,
+                given_names=requesting_parsed.given_names,
                 last_name=requesting_parsed.last_name,
                 rank=requesting_parsed.rank,
                 badge_number=requesting_parsed.badge_number,
@@ -195,202 +236,207 @@ class CannabisDataMapper:
             )
 
             return submitting_officer, requesting_officer
-
         except Exception as e:
             logger.error(f"Error mapping police officer data: {e}")
             raise
 
-    def map_defendant_data(
-        self, defendants_json: List[Dict[str, Any]]
-    ) -> List[DefendantData]:
-        """
-        Map JSON defendants array to list of Defendant model data structures.
+    def map_defendant_data(self, defendants_json: Any) -> List[DefendantData]:
+        """Map defendants array to DefendantData list.
 
-        Args:
-            defendants_json: List of defendant JSON objects
-
-        Returns:
-            List[DefendantData]: List of structured data for Defendant model creation
+        The source field may be a native list or a JSON-encoded string.
         """
+        # Unwrap if the defendants field is a JSON string
+        if isinstance(defendants_json, str):
+            try:
+                defendants_json = json.loads(defendants_json)
+            except json.JSONDecodeError:
+                logger.warning(
+                    f"Could not parse defendants string: {defendants_json[:100]}"
+                )
+                return []
+
+        if not isinstance(defendants_json, list):
+            return []
+
         defendants = []
-
         for defendant_json in defendants_json:
             try:
-                given_names = defendant_json.get("given_names", "").strip()
-                last_name = defendant_json.get("last_name", "").strip()
+                # Handle case where individual entries might be strings
+                if isinstance(defendant_json, str):
+                    try:
+                        defendant_json = json.loads(defendant_json)
+                    except json.JSONDecodeError:
+                        continue
 
-                # Skip empty defendants
-                if not given_names and not last_name:
+                if not isinstance(defendant_json, dict):
                     continue
 
+                given_names = defendant_json.get("given_names", "").strip()
+                last_name = defendant_json.get("last_name", "").strip()
+                if not given_names and not last_name:
+                    continue
                 defendants.append(
                     DefendantData(
-                        first_name=given_names if given_names else None,
+                        given_names=given_names if given_names else None,
                         last_name=last_name if last_name else None,
                     )
                 )
-
             except Exception as e:
                 logger.warning(f"Error mapping defendant data: {e}")
                 continue
-
         return defendants
 
-    def map_drug_bag_data(self, json_record: Dict[str, Any]) -> DrugBagData:
-        """
-        Map JSON record to single DrugBag model data structure.
+    def map_drug_bags_data(self, json_record: Dict[str, Any]) -> List[DrugBagData]:
+        """Map JSON record to a list of DrugBagData (one per physical bag).
 
-        Creates one DrugBag per submission with comma-separated tag numbers and descriptions.
-        This approach treats all tags and descriptions as belonging to one submission bag.
-
-        Args:
-            json_record: Complete JSON record from cannabis_final.json
-
-        Returns:
-            DrugBagData: Single structured data for DrugBag model creation
+        Creates one DrugBag per tag number entry rather than one per case.
         """
         try:
-            # Get array data
             tag_numbers = json_record.get("tag_numbers", [])
             descriptions = json_record.get("description", [])
             property_reference = json_record.get("police_reference_number", "")
 
-            # Get new tag numbers from result section
             result_section = json_record.get("result", {})
             new_tag_numbers = result_section.get("new_tag_numbers", [])
 
-            # Combine all tag numbers into comma-separated string
-            seal_tag_numbers = ", ".join(tag_numbers) if tag_numbers else "UNKNOWN"
+            if not tag_numbers:
+                # Fallback: create one bag with UNKNOWN tag
+                content_type = "plant"
+                if descriptions:
+                    content_type = (
+                        self.content_type_mapper.map_description_to_content_type(
+                            descriptions[0]
+                        )
+                    )
+                return [
+                    DrugBagData(
+                        content_type=content_type,
+                        seal_tag_numbers="UNKNOWN",
+                        property_reference=property_reference,
+                    )
+                ]
 
-            # Combine all new tag numbers into comma-separated string
-            new_seal_tag_numbers = (
-                ", ".join(new_tag_numbers) if new_tag_numbers else None
-            )
+            bags = []
+            for i, tag in enumerate(tag_numbers):
+                # Map content type — cycle through descriptions if shorter
+                if descriptions:
+                    desc_index = i % len(descriptions)
+                    content_type = (
+                        self.content_type_mapper.map_description_to_content_type(
+                            descriptions[desc_index]
+                        )
+                    )
+                else:
+                    content_type = "plant"
 
-            # Determine primary content type from first description, or use default
-            if descriptions:
-                primary_description = descriptions[0]
-                content_type = self.content_type_mapper.map_description_to_content_type(
-                    primary_description
+                # Map new seal tag from the parallel result array
+                new_tag = None
+                if i < len(new_tag_numbers):
+                    new_tag = new_tag_numbers[i]
+
+                bags.append(
+                    DrugBagData(
+                        content_type=content_type,
+                        seal_tag_numbers=tag,
+                        new_seal_tag_numbers=new_tag,
+                        property_reference=property_reference,
+                    )
                 )
-            else:
-                content_type = "plant"  # Default fallback
 
-            logger.debug(
-                f"Mapped single drug bag: tags={seal_tag_numbers}, "
-                f"new_tags={new_seal_tag_numbers}, content_type={content_type}, "
-                f"descriptions={descriptions}"
-            )
-
-            return DrugBagData(
-                content_type=content_type,
-                seal_tag_numbers=seal_tag_numbers,
-                new_seal_tag_numbers=new_seal_tag_numbers,
-                property_reference=property_reference,
-            )
-
+            return bags
         except Exception as e:
             logger.error(
-                f"Error mapping drug bag data for row_id {json_record.get('row_id')}: {e}"
+                f"Error mapping drug bags for row_id {json_record.get('row_id')}: {e}"
             )
             raise
 
     def map_botanical_assessment_data(
-        self, result_json: Dict[str, Any], cert_date_str: str
+        self, result_json: Dict[str, Any], cert_date_raw: Any
     ) -> BotanicalAssessmentData:
-        """
-        Map JSON result data to BotanicalAssessment model data structure.
-
-        Maps result.identified_as to determination field, extracts botanist_notes
-        from result.botanist_notes, parses assessment_date from cert_date string.
-
-        Args:
-            result_json: Result section from JSON record
-            cert_date_str: Cert_date string from JSON record
-
-        Returns:
-            BotanicalAssessmentData: Structured data for BotanicalAssessment model creation
-        """
+        """Map result data to BotanicalAssessmentData."""
         try:
-            # Map result.identified_as to determination field
             identified_as = result_json.get("identified_as", "").strip()
             determination = self._map_identification_to_determination(identified_as)
 
-            # Parse assessment_date from cert_date string
+            # Unwrap cert_date (JSON string → standardized_date)
             assessment_date = None
+            cert_date_str = self._unwrap_json_field(cert_date_raw, "standardized_date")
             if cert_date_str:
                 assessment_date = self._parse_date(cert_date_str)
 
-            # Extract botanist_notes (now directly available)
-            botanist_notes = result_json.get("botanist_notes")
-            if botanist_notes:
-                botanist_notes = (
-                    botanist_notes.strip() if botanist_notes.strip() else None
-                )
-
-            logger.debug(
-                f"Mapped botanical assessment: determination={determination}, "
-                f"assessment_date={assessment_date}, "
-                f"botanist_notes={'present' if botanist_notes else 'none'}"
-            )
+            # Botanist notes from the original result text
+            processing_notes = result_json.get("processing_notes", {})
+            botanist_notes = None
+            if isinstance(processing_notes, dict):
+                original_text = processing_notes.get("original_text", "")
+                if original_text and original_text.strip():
+                    botanist_notes = original_text.strip()
 
             return BotanicalAssessmentData(
                 determination=determination,
                 assessment_date=assessment_date,
                 botanist_notes=botanist_notes,
             )
-
         except Exception as e:
             logger.error(f"Error mapping botanical assessment data: {e}")
             raise
 
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _get_additional_notes(self, json_record: Dict[str, Any]) -> Optional[str]:
+        """Extract Section C 'other matters' content → Case.additional_notes."""
+        raw = json_record.get("other_matters")
+        value = self._unwrap_json_field(raw, "other_matters")
+        if value and isinstance(value, str) and value.strip():
+            return value.strip()
+        return None
+
+    def _get_internal_comments(self, json_record: Dict[str, Any]) -> Optional[str]:
+        """Extract private internal comments → Case.internal_comments."""
+        raw = json_record.get("internal_comments")
+        value = self._unwrap_json_field(raw, "internal_comments")
+        if value and isinstance(value, str) and value.strip():
+            return value.strip()
+        return None
+
+    def _get_station_name(self, json_record: Dict[str, Any]) -> Optional[str]:
+        """Extract organisation/station from the police_officer JSON."""
+        raw = json_record.get("police_officer")
+        parsed = self._parse_json_string(raw) if isinstance(raw, str) else raw
+        if isinstance(parsed, dict):
+            org = parsed.get("organisation", "")
+            if org and org.strip():
+                return org.strip()
+        return None
+
     def _parse_date(self, date_str: str) -> datetime:
-        """
-        Parse standardized date string to datetime object.
-
-        Args:
-            date_str: Date string in YYYY-MM-DD format
-
-        Returns:
-            datetime: Parsed datetime object
-
-        Raises:
-            ValueError: If date string is invalid
-        """
+        """Parse YYYY-MM-DD date string and localise to Perth, WA timezone."""
         try:
-            return datetime.strptime(date_str, "%Y-%m-%d")
+            naive = datetime.strptime(date_str, "%Y-%m-%d")
+            return naive.replace(tzinfo=PERTH_TZ)
         except ValueError as e:
             raise ValueError(f"Invalid date format '{date_str}': {e}")
 
     def _map_identification_to_determination(self, identified_as: str) -> Optional[str]:
-        """
-        Map identification string to BotanicalAssessment.DeterminationChoices value.
-
-        Maps result.identified_as to determination field with comprehensive mapping logic.
-        Updated to handle specific botanical identifications found in cannabis data.
-
-        Args:
-            identified_as: Identification string from result data
-
-        Returns:
-            str: Mapped determination choice value or None
-        """
+        """Map identification string to BotanicalAssessment.DeterminationChoices."""
         if not identified_as:
             return BotanicalAssessment.DeterminationChoices.PENDING
 
         identified_lower = identified_as.lower().strip()
 
-        # Exact matches for specific identifications found in data
-        if identified_as == "Cannabis sativa":
-            return BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA
-        elif identified_as == "Mixed":
-            return BotanicalAssessment.DeterminationChoices.MIXED
-        elif identified_as == "Papaver somniferum":
-            return BotanicalAssessment.DeterminationChoices.PAPAVER_SOMNIFERUM
-        elif identified_as == "Unidentifiable":
-            return BotanicalAssessment.DeterminationChoices.UNIDENTIFIABLE
+        # Exact matches
+        exact = {
+            "cannabis sativa": BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA,
+            "mixed": BotanicalAssessment.DeterminationChoices.MIXED,
+            "papaver somniferum": BotanicalAssessment.DeterminationChoices.PAPAVER_SOMNIFERUM,
+            "unidentifiable": BotanicalAssessment.DeterminationChoices.UNIDENTIFIABLE,
+        }
+        if identified_lower in exact:
+            return exact[identified_lower]
 
-        # Fallback pattern matching for variations
+        # Pattern matching
         if "cannabis sativa" in identified_lower:
             return BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA
         elif "cannabis indica" in identified_lower:
@@ -402,77 +448,37 @@ class CannabisDataMapper:
         elif "mixed" in identified_lower:
             return BotanicalAssessment.DeterminationChoices.MIXED
         elif "cannabis" in identified_lower:
-            return (
-                BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA
-            )  # Default cannabis type
-        elif "papaver somniferum" in identified_lower or "papaver" in identified_lower:
+            return BotanicalAssessment.DeterminationChoices.CANNABIS_SATIVA
+        elif "papaver" in identified_lower:
             return BotanicalAssessment.DeterminationChoices.PAPAVER_SOMNIFERUM
         elif "unidentifiable" in identified_lower:
             return BotanicalAssessment.DeterminationChoices.UNIDENTIFIABLE
         elif "degraded" in identified_lower:
             return BotanicalAssessment.DeterminationChoices.DEGRADED
         elif any(
-            word in identified_lower
-            for word in ["not cannabis", "non-cannabis", "poppy"]
+            w in identified_lower for w in ["not cannabis", "non-cannabis", "poppy"]
         ):
             return BotanicalAssessment.DeterminationChoices.NOT_CANNABIS
         elif any(
-            word in identified_lower for word in ["inconclusive", "unsure", "uncertain"]
+            w in identified_lower for w in ["inconclusive", "unsure", "uncertain"]
         ):
             return BotanicalAssessment.DeterminationChoices.INCONCLUSIVE
         else:
-            # Log unknown identification for future reference
             logger.warning(
                 f"Unknown identification '{identified_as}', mapping to 'inconclusive'"
             )
             return BotanicalAssessment.DeterminationChoices.INCONCLUSIVE
 
-    def _get_internal_comments(self, json_record: Dict[str, Any]) -> Optional[str]:
-        """
-        Get internal comments from simplified JSON structure.
-
-        Args:
-            json_record: Complete JSON record from cannabis_clean.json
-
-        Returns:
-            str: Combined internal comments or None if no comments found
-        """
-        comments = []
-
-        # Get other_matters (now a string)
-        other_matters = json_record.get("other_matters")
-        if other_matters and other_matters.strip():
-            comments.append(f"Other Matters: {other_matters.strip()}")
-
-        # Get internal_comments (now a string)
-        internal_comments = json_record.get("internal_comments")
-        if internal_comments and internal_comments.strip():
-            comments.append(f"Internal Comments: {internal_comments.strip()}")
-
-        return "\n\n".join(comments) if comments else None
-
     def exclude_debugging_fields(self, json_record: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Remove debugging and processing fields from JSON record.
-
-        Args:
-            json_record: Original JSON record
-
-        Returns:
-            Dict: Cleaned JSON record with debugging fields removed
-        """
-        cleaned_record = {}
-
+        """Remove debugging/processing fields from JSON record."""
+        cleaned = {}
         for key, value in json_record.items():
             if key not in self.EXCLUDED_FIELDS:
                 if isinstance(value, dict):
-                    # Recursively clean nested dictionaries
-                    cleaned_value = {}
-                    for nested_key, nested_value in value.items():
-                        if nested_key not in self.EXCLUDED_FIELDS:
-                            cleaned_value[nested_key] = nested_value
-                    cleaned_record[key] = cleaned_value
+                    cleaned_value = {
+                        k: v for k, v in value.items() if k not in self.EXCLUDED_FIELDS
+                    }
+                    cleaned[key] = cleaned_value
                 else:
-                    cleaned_record[key] = value
-
-        return cleaned_record
+                    cleaned[key] = value
+        return cleaned

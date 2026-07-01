@@ -13,7 +13,6 @@ from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
 
 CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
-INVOICE_TEMPLATE = "pdf/invoice_template.html"
 
 
 class PDFService:
@@ -98,21 +97,6 @@ class PDFService:
         return PDFService._html_to_pdf(html)
 
     @staticmethod
-    def generate_invoice_pdf(case, invoice) -> bytes:
-        """Build invoice context, render template, and return PDF bytes.
-
-        Args:
-            case: Case model instance.
-            invoice: Invoice model instance.
-
-        Returns:
-            Raw PDF bytes of the rendered invoice.
-        """
-        context = PDFService._build_invoice_context(case, invoice)
-        html = render_to_string(INVOICE_TEMPLATE, context)
-        return PDFService._html_to_pdf(html)
-
-    @staticmethod
     def _build_certificate_context(case) -> dict:
         """Assemble template variables for certificate PDF rendering.
 
@@ -135,36 +119,5 @@ class PDFService:
             "file://"
         ):
             context["logo_path"] = f"file://{context['logo_path']}"
-
-        return context
-
-    @staticmethod
-    def _build_invoice_context(case, invoice) -> dict:
-        """Assemble template variables for invoice PDF rendering.
-
-        Delegates to InvoiceService.build_invoice_context for the actual
-        context construction, then applies file:// prefix to image paths.
-
-        Args:
-            case: Case model instance.
-            invoice: Invoice model instance.
-
-        Returns:
-            Dictionary of template context variables.
-        """
-        from .invoice_service import InvoiceService
-
-        context = InvoiceService.build_invoice_context(case, invoice)
-
-        # Apply file:// prefix for PrinceXML image resolution
-        if context.get("logo_path") and not str(context["logo_path"]).startswith(
-            "file://"
-        ):
-            context["logo_path"] = f"file://{context['logo_path']}"
-
-        if context.get("logo_square") and not str(context["logo_square"]).startswith(
-            "file://"
-        ):
-            context["logo_square"] = f"file://{context['logo_square']}"
 
         return context

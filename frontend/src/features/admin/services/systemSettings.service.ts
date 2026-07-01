@@ -316,12 +316,7 @@ class SystemSettingsService {
 		const fieldErrors: Record<string, string> = {};
 
 		// Validate pricing fields
-		const pricingFields = [
-			"cost_per_certificate",
-			"cost_per_bag",
-			"call_out_fee",
-			"cost_per_forensic_hour",
-		];
+		const pricingFields = ["cost_per_certificate", "cost_per_bag"];
 
 		pricingFields.forEach((field) => {
 			if (field in settings) {
@@ -333,17 +328,6 @@ class SystemSettingsService {
 				}
 			}
 		});
-
-		// Validate fuel cost (3 decimal places)
-		if ("cost_per_kilometer_fuel" in settings) {
-			const validation = this.validateFuelCost(
-				settings.cost_per_kilometer_fuel as string
-			);
-			if (!validation.isValid) {
-				errors.push(validation.error);
-				fieldErrors.cost_per_kilometer_fuel = validation.error;
-			}
-		}
 
 		// Validate tax percentage
 		if ("tax_percentage" in settings) {
@@ -623,9 +607,6 @@ class SystemSettingsService {
 		const fields: (keyof SystemSettings)[] = [
 			"cost_per_certificate",
 			"cost_per_bag",
-			"call_out_fee",
-			"cost_per_forensic_hour",
-			"cost_per_kilometer_fuel",
 			"tax_percentage",
 			"forward_certificate_emails_to",
 			"send_emails_to_self",
@@ -641,7 +622,7 @@ class SystemSettingsService {
 					user: newSettings.last_modified_by || {
 						id: 0,
 						email: "unknown",
-						first_name: null,
+						given_names: null,
 						last_name: null,
 					},
 				});
@@ -707,36 +688,6 @@ class SystemSettingsService {
 		return { isValid: true, error: "" };
 	}
 
-	private validateFuelCost(value: string): { isValid: boolean; error: string } {
-		if (!value || value.trim() === "") {
-			return { isValid: false, error: "Fuel cost is required" };
-		}
-
-		const numValue = parseFloat(value);
-		if (isNaN(numValue)) {
-			return { isValid: false, error: "Fuel cost must be a valid number" };
-		}
-
-		if (numValue < 0) {
-			return { isValid: false, error: "Fuel cost cannot be negative" };
-		}
-
-		if (numValue > 9999.999) {
-			return { isValid: false, error: "Fuel cost must not exceed $9,999.999" };
-		}
-
-		// Check decimal places (3 for fuel cost)
-		const decimalPlaces = (value.split(".")[1] || "").length;
-		if (decimalPlaces > 3) {
-			return {
-				isValid: false,
-				error: "Fuel cost can have at most 3 decimal places",
-			};
-		}
-
-		return { isValid: true, error: "" };
-	}
-
 	private validateTaxPercentage(value: string): {
 		isValid: boolean;
 		error: string;
@@ -794,9 +745,6 @@ class SystemSettingsService {
 		const displayNames: Record<string, string> = {
 			cost_per_certificate: "Certificate cost",
 			cost_per_bag: "Bag identification cost",
-			call_out_fee: "Call out fee",
-			cost_per_forensic_hour: "Forensic hour cost",
-			cost_per_kilometer_fuel: "Fuel cost per kilometer",
 			tax_percentage: "Tax percentage",
 			forward_certificate_emails_to: "Admin email address",
 			send_emails_to_self: "Email routing mode",

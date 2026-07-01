@@ -9,15 +9,14 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Q
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAdminUser
 from rest_framework.views import APIView
 
-from signatures.models import Signature
-
+from ..permissions import HasAppAccess
 from ..serializers import (
     UserCreateSerializer,
     UserJWTObjectSerializer,
@@ -42,14 +41,14 @@ class UserListView(ListCreateAPIView):
 
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserTinySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_permissions(self):
         """Different permissions for different actions"""
         if self.request.method == "POST":
             return [IsAdminUser()]
         else:
-            return [IsAuthenticated()]
+            return [HasAppAccess()]
 
     def get_serializer_class(self):
         """Use different serializers for different actions"""
@@ -60,11 +59,6 @@ class UserListView(ListCreateAPIView):
     def get_queryset(self):
         """Add filtering and search capabilities"""
         queryset = super().get_queryset()
-
-        # Annotate with signature existence for botanist users
-        queryset = queryset.annotate(
-            _has_signature=Exists(Signature.objects.filter(user=OuterRef("pk")))
-        )
 
         # Annotate with total cases count (botanist + finance)
         queryset = queryset.annotate(
@@ -97,7 +91,7 @@ class UserListView(ListCreateAPIView):
         if search and search.strip():
             search = search.strip()
             queryset = queryset.filter(
-                Q(first_name__icontains=search)
+                Q(given_names__icontains=search)
                 | Q(last_name__icontains=search)
                 | Q(email__icontains=search)
             )
@@ -114,15 +108,15 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
 
     queryset = User.objects.all()
     serializer_class = UserJWTObjectSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
     lookup_field = "pk"
 
     def get_permissions(self):
         """Different permissions for different actions"""
         if self.request.method in ["PUT", "PATCH", "DELETE"]:
-            return [IsAuthenticated()]
+            return [HasAppAccess()]
         else:
-            return [IsAuthenticated()]
+            return [HasAppAccess()]
 
     def check_object_permissions(self, request, obj):
         """Custom permission logic"""
@@ -140,6 +134,15 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         """Custom update logic"""
+        # Only users with app access (roled or admin) may change a role. This
+        # blocks a roleless user from escalating their own role via self-update.
+        new_role = serializer.validated_data.get("role")
+        if new_role is not None and new_role != serializer.instance.role:
+            if not self.request.user.has_app_access:
+                self.permission_denied(
+                    self.request,
+                    "You do not have permission to change a user's role.",
+                )
         settings.LOGGER.info(
             f"User {self.request.user} updated user {serializer.instance}"
         )
@@ -160,7 +163,7 @@ class UserExportView(APIView):
     Supports filtering and bypasses pagination for full dataset exports
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         """Get filtered queryset for export"""
@@ -181,7 +184,7 @@ class UserExportView(APIView):
         if search and search.strip():
             search = search.strip()
             queryset = queryset.filter(
-                Q(first_name__icontains=search)
+                Q(given_names__icontains=search)
                 | Q(last_name__icontains=search)
                 | Q(email__icontains=search)
             )
@@ -191,8 +194,8 @@ class UserExportView(APIView):
         valid_orderings = {
             "id": "id",
             "-id": "-id",
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "last_name": "last_name",
             "-last_name": "-last_name",
             "email": "email",
@@ -241,7 +244,7 @@ class UserExportView(APIView):
                 writer.writerow(["ID", "First Name", "Last Name", "Email"])
                 for user in queryset[:10]:
                     writer.writerow(
-                        [user.id, user.first_name, user.last_name, user.email]
+                        [user.id, user.given_names, user.last_name, user.email]
                     )
 
                 response = HttpResponse(output.getvalue(), content_type="text/csv")
@@ -319,7 +322,7 @@ class UserExportView(APIView):
             writer.writerow(
                 [
                     user.id,
-                    user.first_name,
+                    user.given_names,
                     user.last_name,
                     user.email,
                     user.role,
@@ -388,7 +391,7 @@ class UserExportView(APIView):
                     writer.writerow(
                         [
                             user.id,
-                            user.first_name,
+                            user.given_names,
                             user.last_name,
                             user.email,
                             user.role,
@@ -449,7 +452,7 @@ class UserCSVExportView(APIView):
     CSV-only export view to bypass routing issues
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         """Get filtered queryset for export"""
@@ -470,7 +473,7 @@ class UserCSVExportView(APIView):
         search = self.request.query_params.get("search")
         if search:
             queryset = queryset.filter(
-                Q(first_name__icontains=search)
+                Q(given_names__icontains=search)
                 | Q(last_name__icontains=search)
                 | Q(email__icontains=search)
                 | Q(employee_id__icontains=search)
@@ -479,8 +482,8 @@ class UserCSVExportView(APIView):
         # Dynamic ordering
         ordering = self.request.query_params.get("ordering", "-date_joined")
         valid_orderings = {
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "last_name": "last_name",
             "-last_name": "-last_name",
             "email": "email",
@@ -531,7 +534,7 @@ class UserCSVExportView(APIView):
                 writer.writerow(
                     [
                         user.id,
-                        user.first_name,
+                        user.given_names,
                         user.last_name,
                         user.email,
                         user.role,
@@ -553,26 +556,6 @@ class UserCSVExportView(APIView):
         except Exception as e:
             settings.LOGGER.error(f"CSV export failed: {str(e)}")
             raise
-
-
-class SimpleCSVTestView(APIView):
-    """
-    Ultra-simple CSV test view to isolate the issue
-    """
-
-    permission_classes = []
-
-    def get(self, request):
-        """Simple CSV test"""
-        settings.LOGGER.error("SIMPLE CSV TEST VIEW CALLED")
-        settings.LOGGER.error(f"Query params: {dict(request.query_params)}")
-
-        csv_content = "ID,Name\n1,Test User\n2,Another User"
-        response = HttpResponse(csv_content, content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="test.csv"'
-
-        settings.LOGGER.error("SIMPLE CSV RESPONSE CREATED")
-        return response
 
 
 # endregion

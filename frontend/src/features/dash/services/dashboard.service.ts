@@ -51,6 +51,7 @@ export interface MonthlyThroughputEntry {
 	month: string;
 	cases: number | null;
 	certs: number | null;
+	bags: number | null;
 	revenue: number | null;
 }
 

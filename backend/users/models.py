@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.db.models.signals import post_save
@@ -45,19 +44,22 @@ class User(AbstractUser):
     # Remove the inherited username field completely
     username = None
 
+    # Suppress Django's inherited first_name — we use given_names instead.
+    first_name = None
+
     email = models.EmailField(
         ("email address"),
         unique=True,
         max_length=254,
     )
 
-    # Base details (also pulled from it assets when invited if not admin)
-    first_name = models.CharField(
+    # Base details (also pulled from IT assets when invited if not admin)
+    given_names = models.CharField(
         max_length=100,
         null=True,
         blank=True,
-        verbose_name=("First Name"),
-        help_text=("First name or given name."),
+        verbose_name="Given Names",
+        help_text="Given names (first name / middle names).",
     )
     last_name = models.CharField(
         max_length=100,
@@ -121,14 +123,40 @@ class User(AbstractUser):
     @property
     def full_name(self):
         """Get user's full name"""
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
-        elif self.first_name:
-            return self.first_name
+        if self.given_names and self.last_name:
+            return f"{self.given_names} {self.last_name}"
+        elif self.given_names:
+            return self.given_names
         elif self.last_name:
             return self.last_name
         else:
             return self.email.split("@")[0]
+
+    @property
+    def is_admin(self):
+        """Admins are staff members or superusers (preferred over role)."""
+        return bool(self.is_staff or self.is_superuser)
+
+    @property
+    def is_botanist(self):
+        """Whether this user holds the Approved Botanist role."""
+        return self.role == self.RoleChoices.BOTANIST
+
+    @property
+    def is_finance(self):
+        """Whether this user holds the Finance Officer role."""
+        return self.role == self.RoleChoices.FINANCE
+
+    @property
+    def has_app_access(self):
+        """Only botanists, finance officers, and admins may use the app.
+
+        A user with no role who is not an admin can only see the dashboard.
+        """
+        return self.is_admin or self.role in (
+            self.RoleChoices.BOTANIST,
+            self.RoleChoices.FINANCE,
+        )
 
     class Meta:
         verbose_name = "User"
@@ -194,47 +222,6 @@ class UserPreferences(models.Model):
         default=ItemsPerPageChoices.TWENTY_FIVE,
         help_text="Number of items to show per page",
     )
-
-    # Notification preferences
-    email_notifications = models.BooleanField(
-        default=True,
-        help_text="Receive email notifications",
-    )
-
-    comment_notifications = models.BooleanField(
-        default=True,
-        help_text="Notify when a submission you are involved in receives a comment",
-    )
-
-    reaction_notifications = models.BooleanField(
-        default=True, help_text="Notify when a comment you made is reacted to"
-    )
-
-    notify_submission_assigned = models.BooleanField(
-        default=True,
-        help_text="Notify when a submission is assigned to you",
-    )
-
-    notify_phase_changes = models.BooleanField(
-        default=True,
-        help_text="Notify when submission phase changes",
-    )
-
-    notify_certificate_generated = models.BooleanField(
-        default=True,
-        help_text="Notify when certificates are generated",
-    )
-
-    notify_invoices_generated = models.BooleanField(
-        default=True,
-        help_text="Notify when invoices are generated",
-    )
-
-    notify_pdfs_mailed = models.BooleanField(
-        default=True,
-        help_text="Notify when pdfs sent to client",
-    )
-    # test email functionality - sends to self to see how client would see
 
     # Accessibility preferences (additional, down the line)
 
@@ -332,19 +319,6 @@ class UserPreferences(models.Model):
         return {
             "submissions": self.submissions_display_mode,
             "certificates": self.certificates_display_mode,
-        }
-
-    def get_notification_settings(self):
-        """Get notification preferences as a dict"""
-        return {
-            "email": self.email_notifications,
-            "comments": self.comment_notifications,
-            "reactions": self.reaction_notifications,
-            "assigned": self.notify_submission_assigned,
-            "phase_changes": self.notify_phase_changes,
-            "certificates": self.notify_certificate_generated,
-            "invoices": self.notify_invoices_generated,
-            "sent": self.notify_pdfs_mailed,
         }
 
     def __str__(self):
@@ -507,19 +481,3 @@ class PasswordResetCode(models.Model):
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(hours=24)
         super().save(*args, **kwargs)
-
-
-# JWT stuff
-class RefreshToken(models.Model):
-    """Track refresh tokens for additional security"""
-
-    user = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, related_name="refresh_tokens"
-    )
-    token = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    is_blacklisted = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ["-created_at"]

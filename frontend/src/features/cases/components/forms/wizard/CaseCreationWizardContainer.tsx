@@ -8,6 +8,7 @@ import { WizardNavigation } from "./WizardNavigation";
 import { CaseDetailsStep } from "./steps/CaseDetailsStep";
 import { DefendantsStep } from "./steps/DefendantsStep";
 import { OfficersStep } from "./steps/OfficersStep";
+import { useCaseNumberAvailability } from "@/features/cases/hooks/useCaseNumberAvailability";
 
 interface CaseCreationWizardContainerProps {
 	/** Case data from TanStack Query */
@@ -42,24 +43,31 @@ export const CaseCreationWizardContainer = observer(
 		// Step Validation (computed from caseData)
 		// ============================================================================
 
-		const isStep0Valid = !!(
-			caseData &&
-			(caseData.case_number as string)?.trim() &&
-			(caseData.received as string)?.trim()
-		);
+		// Debounced uniqueness check for the police reference number — shared (and
+		// deduped) with the check rendered inside CaseDetailsStep.
+		const { isChecking: isCheckingCaseNumber, alreadyExists: caseNumberTaken } =
+			useCaseNumberAvailability(
+				(caseData?.case_number as string) ?? "",
+				(caseData?.id as number | undefined) ?? null
+			);
 
-		const isStep1Valid = !!(
-			caseData &&
-			Array.isArray(caseData.defendants) &&
-			(caseData.defendants as unknown[]).length > 0
-		);
+		const isStep0Valid =
+			!!(
+				caseData &&
+				(caseData.case_number as string)?.trim() &&
+				(caseData.received as string)?.trim()
+			) &&
+			!caseNumberTaken &&
+			!isCheckingCaseNumber;
 
-		const isStep2Valid = !!(
-			caseData &&
-			caseData.requesting_officer_id &&
-			caseData.submitting_officer_id &&
-			caseData.station_id
-		);
+		const isStep1Valid =
+			!!(
+				caseData &&
+				Array.isArray(caseData.defendants) &&
+				(caseData.defendants as unknown[]).length > 0
+			) || store.state.defendantUnknownAcknowledged;
+
+		const isStep2Valid = !!(caseData && caseData.submitting_officer_id);
 
 		const stepValidities = useMemo(
 			() => [isStep0Valid, isStep1Valid, isStep2Valid],
@@ -181,6 +189,8 @@ export const CaseCreationWizardContainer = observer(
 							caseData={caseData}
 							isTouched={isTouched}
 							onFieldChange={onFieldChange}
+							defendantUnknown={store.state.defendantUnknownAcknowledged}
+							onDefendantUnknownChange={store.setDefendantUnknownAcknowledged}
 						/>
 					);
 				case 2:
@@ -224,6 +234,9 @@ export const CaseCreationWizardContainer = observer(
 					currentStep={store.state.currentStep}
 					isLastStep={store.isLastStep}
 					isSubmitting={store.state.isSubmitting}
+					canContinue={
+						store.isLastStep || stepValidities[store.state.currentStep]
+					}
 					onBack={handleBack}
 					onContinue={handleContinueOrFinalise}
 					onDiscard={onDiscard}

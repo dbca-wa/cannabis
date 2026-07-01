@@ -37,7 +37,7 @@ class UserProfileView(APIView):
         user = request.user
 
         # Separate user fields from preference fields
-        user_fields = ["first_name", "last_name"]
+        user_fields = ["given_names", "last_name"]
         user_data = {k: v for k, v in request.data.items() if k in user_fields}
         preference_data = request.data.get("preferences", {})
 

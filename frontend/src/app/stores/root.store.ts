@@ -7,6 +7,7 @@ import { UIStore } from "./ui.store";
 import { CaseProcessingWizardStore } from "./derived/case-processing-wizard.store";
 import { CaseCreationWizardStore } from "./derived/case-creation-wizard.store";
 import { DrugBagWranglerStore } from "./derived/drug-bag-wrangler.store";
+import { CertificateGroupingStore } from "./derived/certificate-grouping.store";
 
 export class RootStore {
 	authStore: AuthStore;
@@ -16,6 +17,7 @@ export class RootStore {
 	caseWizardStore: CaseProcessingWizardStore;
 	caseCreationWizardStore: CaseCreationWizardStore;
 	drugBagWranglerStore: DrugBagWranglerStore;
+	certificateGroupingStore: CertificateGroupingStore;
 
 	// System state
 	isInitialised = false;
@@ -29,6 +31,7 @@ export class RootStore {
 		this.caseWizardStore = this.caseProcessingWizardStore;
 		this.caseCreationWizardStore = new CaseCreationWizardStore();
 		this.drugBagWranglerStore = new DrugBagWranglerStore();
+		this.certificateGroupingStore = new CertificateGroupingStore();
 
 		// isInitialised observable
 		makeObservable(this, {

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { policeOfficersService } from "../services/policeOfficers.service";
 import { logger } from "@/shared/services/logger.service";
 import { getErrorMessage } from "@/shared/utils/error.utils";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 import type {
 	PoliceOfficerCreateRequest,
@@ -35,7 +36,7 @@ export const usePoliceOfficers = (params: PoliceOfficerSearchParams = {}) => {
 					response.results?.map((officer) => ({
 						id: officer.id,
 						badge_number: officer.badge_number,
-						first_name: officer.first_name,
+						given_names: officer.given_names,
 						last_name: officer.last_name,
 						full_name: officer.full_name,
 						rank: officer.rank,
@@ -81,10 +82,7 @@ export const useCreatePoliceOfficer = () => {
 				newOfficer
 			);
 
-			// Invalidate all officers queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
 			toast.success("Officer created successfully!");
 		},
@@ -116,10 +114,7 @@ export const useUpdatePoliceOfficer = () => {
 				updatedOfficer
 			);
 
-			// Invalidate all officers queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
 			toast.success("Officer updated successfully!");
 		},
@@ -144,10 +139,7 @@ export const useDeletePoliceOfficer = () => {
 				queryKey: policeOfficersQueryKeys.detail(deletedId),
 			});
 
-			// Invalidate all officers queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: policeOfficersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
 			toast.success("Officer deleted successfully!");
 		},

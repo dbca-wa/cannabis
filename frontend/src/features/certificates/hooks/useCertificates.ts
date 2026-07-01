@@ -17,6 +17,7 @@ import type {
 
 import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 // Query keys for certificates
 export const certificateQueryKeys = {
@@ -90,12 +91,7 @@ export const useCreateCertificate = () => {
 				certificateQueryKeys.detail(newCertificate.id),
 				newCertificate
 			);
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.searches(),
-			});
+			await invalidateRelatedQueries(queryClient, "certificates");
 			toast.success("Certificate created successfully");
 		},
 		onError: (error: Error) => {
@@ -122,12 +118,7 @@ export const useUpdateCertificate = () => {
 				certificateQueryKeys.detail(updatedCertificate.id),
 				updatedCertificate
 			);
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.searches(),
-			});
+			await invalidateRelatedQueries(queryClient, "certificates");
 			toast.success("Certificate updated successfully");
 		},
 		onError: (error: Error) => {
@@ -147,12 +138,7 @@ export const useDeleteCertificate = () => {
 			queryClient.removeQueries({
 				queryKey: certificateQueryKeys.detail(deletedId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: certificateQueryKeys.searches(),
-			});
+			await invalidateRelatedQueries(queryClient, "certificates");
 			toast.success("Certificate deleted successfully");
 		},
 		onError: (error: Error) => {

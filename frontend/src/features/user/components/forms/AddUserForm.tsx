@@ -55,7 +55,7 @@ const AddUserForm = ({
 		resolver: zodResolver(addUserSchema),
 		mode: "onChange", // Enable real-time validation
 		defaultValues: {
-			first_name: "",
+			given_names: "",
 			last_name: "",
 			email: "",
 			role: "none",
@@ -95,17 +95,17 @@ const AddUserForm = ({
 			{/* Base Details Group */}
 			<ModalSection title="User Details" isFirst>
 				<div className="grid grid-cols-2 gap-3">
-					{/* First Name */}
+					{/* Given Names */}
 					<div>
 						<Input
-							{...register("first_name")}
+							{...register("given_names")}
 							type="text"
-							placeholder="First Name"
-							className={errors.first_name ? "border-red-500" : ""}
+							placeholder="Given Names"
+							className={errors.given_names ? "border-red-500" : ""}
 						/>
-						{errors.first_name && (
+						{errors.given_names && (
 							<p className="text-red-500 text-xs mt-1">
-								{errors.first_name.message}
+								{errors.given_names.message}
 							</p>
 						)}
 					</div>

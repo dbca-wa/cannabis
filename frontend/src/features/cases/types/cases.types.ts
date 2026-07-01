@@ -8,22 +8,12 @@ import type {
 } from "@/features/police/types/police.types";
 import type { DefendantTiny } from "@/features/defendants/types/defendants.types";
 import type { Certificate } from "@/features/certificates/types/certificates.types";
-import type {
-	Invoice,
-	AdditionalInvoiceFee,
-} from "@/features/invoices/types/invoices.types";
 import type { DrugBag } from "./drugBags.types";
 
 // Case phase choices (matches Case.PhaseChoices in Django)
-// 7-phase workflow
+// 5-phase workflow
 export type CasePhase =
-	| "case_creation"
-	| "assessment"
-	| "unsigned_generation"
-	| "botanist_signoff"
-	| "invoicing"
-	| "send_emails"
-	| "complete";
+	"assessment" | "unsigned_generation" | "batching" | "in_batch" | "complete";
 
 // Phase history entry (matches CasePhaseHistorySerializer)
 export interface PhaseHistoryEntry {
@@ -32,28 +22,12 @@ export interface PhaseHistoryEntry {
 	from_phase_display: string;
 	to_phase: CasePhase;
 	to_phase_display: string;
-	action: "advance" | "send_back";
+	action: "advance";
 	action_display: string;
 	user: number | null;
 	user_details: UserTiny | null;
-	reason: string | null;
 	timestamp: string;
 	created_at: string;
-}
-
-// Send-back request (for POST /cases/{id}/send-back/)
-export interface SendBackRequest {
-	target_phase: CasePhase;
-	reason: string;
-}
-
-// Send-back response
-export interface SendBackResponse {
-	message: string;
-	new_phase: CasePhase;
-	sent_back_by: string;
-	sent_back_at: string;
-	reason: string;
 }
 
 // Complete Case (matches CaseSerializer)
@@ -65,10 +39,6 @@ export interface Case {
 	phase_display: string;
 	security_movement_envelope: string;
 	internal_comments: string | null;
-
-	// Finance fields (for invoice calculation)
-	forensic_hours: string | null;
-	fuel_distance_km: string | null;
 
 	// Staff assignments (foreign key IDs)
 	approved_botanist: number | null;
@@ -91,8 +61,12 @@ export interface Case {
 	// Related objects
 	bags: DrugBag[];
 	certificates: Certificate[];
-	invoices: Invoice[];
-	additional_fees: AdditionalInvoiceFee[];
+
+	// Batching
+	batch_id: number | null;
+	batch_number: string | null;
+	batch_invoice_raised_number: string | null;
+	is_batch_eligible: boolean;
 
 	// Phase history (audit trail of all phase transitions)
 	phase_history: PhaseHistoryEntry[];
@@ -103,12 +77,7 @@ export interface Case {
 	total_plants: number;
 
 	// Workflow timestamps
-	finance_approved_at: string | null;
-	botanist_approved_at: string | null;
-	documents_generated_at: string | null;
 	certificates_generated_at: string | null;
-	invoices_generated_at: string | null;
-	emails_sent_at: string | null;
 	completed_at: string | null;
 
 	// Audit fields
@@ -123,14 +92,17 @@ export interface CaseTiny {
 	phase: CasePhase;
 	phase_display: string;
 	received: string;
-	approved_botanist_name: string | null;
-	finance_officer_name: string | null;
 	requesting_officer_name: string | null;
+	submitting_officer_name: string | null;
 	bags_count: number;
+	certificates_count: number;
 	defendants_count: number;
 	cannabis_present: boolean;
 	certificate_id: number | null;
-	invoice_id: number | null;
+	batch_id: number | null;
+	batch_number: string | null;
+	batch_invoice_raised_number: string | null;
+	is_batch_eligible: boolean;
 	created_at: string;
 }
 
@@ -159,8 +131,6 @@ export interface CaseUpdateRequest {
 	received?: string;
 	security_movement_envelope?: string;
 	internal_comments?: string | null;
-	forensic_hours?: string | null;
-	fuel_distance_km?: string | null;
 	approved_botanist?: number | null;
 	finance_officer?: number | null;
 	requesting_officer?: number | null;
@@ -210,22 +180,18 @@ export interface CasesSearchParams {
 }
 
 // Workflow action request
-export type WorkflowAction =
-	| "advance_phase"
-	| "generate_certificate"
-	| "generate_invoice"
-	| "send_documents";
+export type WorkflowAction = "advance_phase" | "generate_certificate";
 
 export interface WorkflowActionRequest {
 	action: WorkflowAction;
-	customer_number?: string;
+	groups?: number[][];
+	/** Per-certificate Section C notes, aligned by index with groups */
+	group_notes?: string[];
 }
 
 // Workflow action response
 export interface WorkflowActionResponse {
 	message: string;
 	new_phase?: CasePhase;
-	certificate_number?: string;
-	invoice_number?: string;
-	total?: string;
+	certificate_numbers?: string[];
 }

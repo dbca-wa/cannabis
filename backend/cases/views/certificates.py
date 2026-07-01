@@ -3,16 +3,13 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.exceptions import (
-    NotFound,
-    PermissionDenied,
-    ValidationError,
-)
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..models import Case, Certificate
 from ..serializers import CertificateSerializer
@@ -22,12 +19,12 @@ from ..services.pdf_test_service import TestPDFService
 
 class AllCertificatesListView(ListCreateAPIView):
     """
-    GET: List all certificates across all submissions.
+    GET: List all certificates across all cases.
     POST: Create a new certificate (requires submission ID in request body).
     """
 
     serializer_class = CertificateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         queryset = Certificate.objects.select_related("submission").order_by(
@@ -47,12 +44,12 @@ class AllCertificatesListView(ListCreateAPIView):
 
 class CertificateListView(ListCreateAPIView):
     """
-    GET: List certificates for a submission
+    GET: List certificates for a case
     POST: Create new certificate
     """
 
     serializer_class = CertificateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         pk = self.kwargs.get("pk")
@@ -63,11 +60,12 @@ class CertificateListView(ListCreateAPIView):
         try:
             submission = Case.objects.get(pk=pk)
         except Case.DoesNotExist:
-            raise ValidationError("Submission not found")
+            raise ValidationError("Case not found")
 
         certificate = serializer.save(submission=submission)
         settings.LOGGER.info(
-            f"User {self.request.user} created certificate {certificate.certificate_number}"
+            f"User {self.request.user} created certificate "
+            f"{certificate.certificate_number}"
         )
 
 
@@ -79,39 +77,40 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
     """
 
     serializer_class = CertificateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
     queryset = Certificate.objects.all()
 
     def perform_update(self, serializer):
         certificate = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} updated certificate {certificate.certificate_number}"
+            f"User {self.request.user} updated certificate "
+            f"{certificate.certificate_number}"
         )
 
     def perform_destroy(self, instance):
         settings.LOGGER.info(
-            f"User {self.request.user} deleted certificate {instance.certificate_number}"
+            f"User {self.request.user} deleted certificate "
+            f"{instance.certificate_number}"
         )
         instance.delete()
 
 
-class CertificateDownloadView(APIView):
-    """Download a certificate PDF file (signed if available, otherwise unsigned)."""
+def _certificate_pdf(certificate):
+    """Return (file, filename) for the certificate PDF or raise NotFound."""
+    pdf = certificate.pdf_file
+    if not pdf:
+        raise NotFound("Certificate PDF has not been generated yet.")
+    return pdf, f"{certificate.certificate_number}.pdf"
 
-    permission_classes = [IsAuthenticated]
+
+class CertificateDownloadView(APIView):
+    """Download a certificate PDF file."""
+
+    permission_classes = [HasAppAccess]
 
     def get(self, request, pk):
         certificate = get_object_or_404(Certificate, pk=pk)
-
-        if certificate.signed_pdf_file:
-            pdf_file = certificate.signed_pdf_file
-            filename = f"signed_{certificate.certificate_number}.pdf"
-        elif certificate.unsigned_pdf_file:
-            pdf_file = certificate.unsigned_pdf_file
-            filename = f"{certificate.certificate_number}.pdf"
-        else:
-            raise NotFound("Certificate PDF has not been generated yet.")
-
+        pdf_file, filename = _certificate_pdf(certificate)
         response = HttpResponse(pdf_file.read(), content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
@@ -120,15 +119,18 @@ class CertificateDownloadView(APIView):
 class GenerateTestCertificateView(APIView):
     """POST: Generate a test certificate PDF with mock data. Returns raw PDF bytes."""
 
-    permission_classes = [IsAuthenticated]
-    VALID_VARIANTS = {"base", "aptos", "semi_aptos"}
+    permission_classes = [HasAppAccess]
+    VALID_VARIANTS = {"base"}
 
     def post(self, request):
         variant = request.query_params.get("variant", "base")
         if variant not in self.VALID_VARIANTS:
             return Response(
                 {
-                    "detail": f"Invalid variant. Choose from: {', '.join(sorted(self.VALID_VARIANTS))}"
+                    "detail": (
+                        "Invalid variant. Choose from: "
+                        f"{', '.join(sorted(self.VALID_VARIANTS))}"
+                    )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -143,142 +145,63 @@ class GenerateTestCertificateView(APIView):
 
 
 class CertificateGenerateView(APIView):
-    """Generate an unsigned certificate PDF for a submission.
+    """Generate certificate PDFs for a case (one per bag group, max 5 bags each).
 
-    POST /submissions/{submission_id}/certificates/generate/
+    POST /cases/{pk}/certificates/generate
 
-    Validates the submission, creates the certificate record, renders the PDF,
-    and returns the certificate data including the PDF URL.
+    Optional body: {"groups": [[bagId, ...], ...]} to control grouping.
+    Without groups, bags are auto-grouped into chunks of five.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request, pk):
-        from ..services import generate_unsigned_certificate
-
         submission = get_object_or_404(Case, pk=pk)
+        groups = request.data.get("groups")
+        group_notes = request.data.get("group_notes")
 
-        try:
-            certificate = generate_unsigned_certificate(submission, request.user)
-        except ValidationError:
-            raise
+        certificates = CertificateService.generate_certificates(
+            submission, request.user, groups=groups, group_notes=group_notes
+        )
 
-        serializer = CertificateSerializer(certificate, context={"request": request})
+        serializer = CertificateSerializer(
+            certificates, many=True, context={"request": request}
+        )
         return Response(serializer.data, status=HTTP_201_CREATED)
 
 
 class CertificatePdfView(APIView):
-    """Download a certificate PDF scoped to a submission.
+    """Download a certificate PDF scoped to a case.
 
-    GET /cases/{submission_id}/certificates/{certificate_id}/pdf
-    GET /cases/{submission_id}/certificates/{certificate_id}/pdf?version=unsigned
-
-    Without query param: returns signed PDF if available, otherwise unsigned.
-    With ?version=unsigned: always returns the unsigned PDF.
+    GET /cases/{pk}/certificates/{certificate_id}/pdf
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get(self, request, pk, certificate_id):
         submission = get_object_or_404(Case, pk=pk)
         certificate = get_object_or_404(
             Certificate, pk=certificate_id, submission=submission
         )
-
-        version = request.query_params.get("version")
-
-        if version == "unsigned":
-            # Explicitly requested the unsigned version
-            if not certificate.unsigned_pdf_file:
-                raise NotFound("Unsigned certificate PDF has not been generated yet.")
-            pdf_file = certificate.unsigned_pdf_file
-            filename = f"{certificate.certificate_number}.pdf"
-        elif certificate.signed_pdf_file:
-            # Default: serve signed if available
-            pdf_file = certificate.signed_pdf_file
-            filename = f"signed_{certificate.certificate_number}.pdf"
-        elif certificate.unsigned_pdf_file:
-            pdf_file = certificate.unsigned_pdf_file
-            filename = f"{certificate.certificate_number}.pdf"
-        else:
-            raise NotFound("Certificate PDF has not been generated yet.")
-
+        pdf_file, filename = _certificate_pdf(certificate)
         response = HttpResponse(pdf_file.read(), content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
 
 class CertificateRegenerateView(APIView):
-    """Regenerate the PDF for an existing certificate.
+    """Regenerate the PDF for an existing certificate (only before batching).
 
     POST /cases/{pk}/certificates/{certificate_id}/regenerate
-
-    Re-renders the PDF from current submission data. Returns 403 if the
-    certificate is locked (signed).
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request, pk, certificate_id):
-        from ..services import regenerate_certificate_pdf
-
         submission = get_object_or_404(Case, pk=pk)
         certificate = get_object_or_404(
             Certificate, pk=certificate_id, submission=submission
         )
-
-        if certificate.is_locked:
-            raise PermissionDenied(
-                "Certificate is locked after signing. "
-                "The assigned botanist must unlock it before regenerating."
-            )
-
-        try:
-            certificate = regenerate_certificate_pdf(certificate)
-        except ValidationError:
-            raise
-
+        certificate = CertificateService.regenerate_certificate_pdf(certificate)
         serializer = CertificateSerializer(certificate, context={"request": request})
-        return Response(serializer.data, status=HTTP_200_OK)
-
-
-class UnlockCertificateView(APIView):
-    """Unlock a certificate for unsigned PDF regeneration.
-
-    POST /api/v1/cases/{pk}/certificates/{certificate_id}/unlock
-
-    Only the assigned botanist or admin/staff users may unlock.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk, certificate_id):
-        submission = get_object_or_404(Case, pk=pk)
-        certificate = get_object_or_404(
-            Certificate, pk=certificate_id, submission=submission
-        )
-        certificate = CertificateService.unlock_certificate(certificate, request.user)
-        serializer = CertificateSerializer(certificate)
-        return Response(serializer.data, status=HTTP_200_OK)
-
-
-class SignCertificateView(APIView):
-    """Sign an unsigned certificate by embedding the botanist's digital signature.
-
-    POST /api/v1/cases/{pk}/certificates/{certificate_id}/sign
-
-    Only the assigned botanist for the submission may invoke this endpoint.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk, certificate_id):
-        submission = get_object_or_404(Case, pk=pk)
-        certificate = get_object_or_404(
-            Certificate, pk=certificate_id, submission=submission
-        )
-        certificate = CertificateService.sign_certificate(
-            submission, certificate, request.user
-        )
-        serializer = CertificateSerializer(certificate)
         return Response(serializer.data, status=HTTP_200_OK)

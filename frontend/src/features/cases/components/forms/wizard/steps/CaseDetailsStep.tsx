@@ -1,7 +1,11 @@
 import Calendar22 from "@/shared/components/ui/calendar-22";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/shared/utils";
 import { SectionCard } from "../SectionCard";
+import { OcrCaseDetailsPanel } from "../../ocr/OcrCaseDetailsPanel";
+import { useCaseNumberAvailability } from "../../../../hooks/useCaseNumberAvailability";
 
 interface CaseDetailsStepProps {
 	/** Server-authoritative case data from TanStack Query */
@@ -27,6 +31,11 @@ export const CaseDetailsStep = ({
 	const received = (caseData?.received as string) ?? "";
 	const securityEnvelope =
 		(caseData?.security_movement_envelope as string) ?? "";
+	const caseId = (caseData?.id as number | undefined) ?? null;
+
+	// Debounced uniqueness check for the police reference number
+	const { isChecking: isCheckingCaseNumber, alreadyExists: caseNumberTaken } =
+		useCaseNumberAvailability(caseNumber, caseId);
 
 	// Compute validation errors (only shown when isTouched)
 	const errors = {
@@ -36,6 +45,13 @@ export const CaseDetailsStep = ({
 		received: !received ? "Received date is required" : undefined,
 	};
 
+	// Duplicate error surfaces immediately (not gated behind touched)
+	const caseNumberError =
+		(isTouched && errors.case_number) ||
+		(caseNumberTaken
+			? "This police reference number already exists on another case"
+			: undefined);
+
 	// Determine section completion state
 	const isCaseDetailsComplete =
 		!!caseNumber.trim() && !!received && !!securityEnvelope.trim();
@@ -43,6 +59,9 @@ export const CaseDetailsStep = ({
 
 	return (
 		<div className="space-y-6">
+			{/* OCR upload + review (only when the OCR feature flag is enabled) */}
+			<OcrCaseDetailsPanel />
+
 			<SectionCard
 				title="Case Details"
 				isComplete={isCaseDetailsComplete}
@@ -54,25 +73,37 @@ export const CaseDetailsStep = ({
 						<Label htmlFor="case_number" className="required">
 							Police Reference No.
 						</Label>
-						<Input
-							id="case_number"
-							value={caseNumber}
-							onChange={(e) => onFieldChange("case_number", e.target.value)}
-							placeholder="Enter police reference number"
-							aria-invalid={isTouched && !!errors.case_number}
-							aria-describedby={
-								isTouched && errors.case_number
-									? "case_number-error"
-									: undefined
-							}
-						/>
-						{isTouched && errors.case_number && (
+						<div className="relative">
+							<Input
+								id="case_number"
+								value={caseNumber}
+								onChange={(e) => onFieldChange("case_number", e.target.value)}
+								placeholder="Enter police reference number"
+								className={cn(
+									caseNumberTaken && "border-red-500 focus-visible:ring-red-500"
+								)}
+								aria-invalid={
+									(isTouched && !!errors.case_number) || caseNumberTaken
+								}
+								aria-describedby={
+									caseNumberError ? "case_number-error" : undefined
+								}
+							/>
+							{isCheckingCaseNumber && (
+								<Loader2
+									className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground"
+									aria-label="Checking police reference number"
+								/>
+							)}
+						</div>
+						{caseNumberError && (
 							<p
 								id="case_number-error"
 								className="text-sm text-red-600"
 								role="alert"
+								aria-live="polite"
 							>
-								{errors.case_number}
+								{caseNumberError}
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">

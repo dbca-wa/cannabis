@@ -1,4 +1,5 @@
 {% extends "emails/base_email.html" %}
+{% load grammar_filters %}
 
 {% block title %}Cannabis System Invitation{% endblock %}
 
@@ -51,7 +52,7 @@
     .invitation-text {
         font-size: 15px;
     }
-    
+
     .join-button {
         padding: 12px 28px;
         font-size: 15px;
@@ -65,10 +66,10 @@
 </div>
 
 <div class="invitation-text">
-    <span class="inviter-info">{{ inviter_first_name }} {{ inviter_last_name }}</span> 
-    ({{ inviter_email }}) has invited you to join Cannabis as 
-    {{ invitee_proposed_role|article }} 
-    <span class="role-highlight">{{ invitee_proposed_role }}</span>. 
+    <span class="inviter-info">{{ inviter_first_name }} {{ inviter_last_name }}</span>
+    ({{ inviter_email }}) has invited you to join Cannabis as
+    {{ invitee_proposed_role|article }}
+    <span class="role-highlight">{{ invitee_proposed_role }}</span>.
     To accept, click the link below and set a password. For security reasons, this invitation link can only be used once and will expire in 24 hours.
 </div>
 

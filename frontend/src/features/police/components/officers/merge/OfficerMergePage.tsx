@@ -23,6 +23,7 @@ import { usePoliceOfficers } from "../../../hooks/usePoliceOfficers";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import { apiClient } from "@/shared/services/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import { toast } from "sonner";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
 
@@ -43,10 +44,7 @@ export const OfficerMergePage = () => {
 				cases_reassigned: number;
 			}>("/police/officers/merge/", data),
 		onSuccess: async (response) => {
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["police-officers"] }),
-				queryClient.invalidateQueries({ queryKey: ["cases"] }),
-			]);
+			await invalidateRelatedQueries(queryClient, "policeOfficers");
 			toast.success(
 				`Merge complete. ${response.cases_reassigned} case(s) reassigned.`
 			);

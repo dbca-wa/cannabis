@@ -70,15 +70,15 @@ class PoliceOfficerAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    search_fields = ("first_name", "last_name", "badge_number", "station__name")
-    ordering = ("last_name", "first_name")
+    search_fields = ("given_names", "last_name", "badge_number", "station__name")
+    ordering = ("last_name", "given_names")
 
     fieldsets = (
         (
             "Officer Information",
             {
                 "fields": (
-                    ("first_name", "last_name"),
+                    ("given_names", "last_name"),
                     "badge_number",
                     "rank",
                 ),

@@ -1,7 +1,11 @@
 import { observer } from "mobx-react-lite";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { useCaseProcessingWizardStore } from "@/app/providers/store.provider";
+import {
+	useCaseProcessingWizardStore,
+	useCertificateGroupingStore,
+	useDrugBagWranglerStore,
+} from "@/app/providers/store.provider";
 import { CaseStoresProvider } from "@/features/cases/components/providers/CaseStoresProvider";
 import { useCaseById, useCases } from "@/features/cases/hooks/useCases";
 import { useDrugBags } from "@/features/cases/hooks/useDrugBags";
@@ -13,7 +17,10 @@ import { Button } from "@/shared/components/ui/button";
 import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
-import type { WorkflowAction } from "@/shared/types/backend-api.types";
+import type {
+	WorkflowAction,
+	WorkflowActionRequest,
+} from "@/shared/types/backend-api.types";
 
 /**
  * Bridges the TanStack Query case object into the Record<string, unknown>
@@ -54,9 +61,9 @@ const buildCaseData = (
 		badge_number:
 			(caseObj.requesting_officer_details as Record<string, unknown>)
 				?.badge_number ?? null,
-		first_name:
+		given_names:
 			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.first_name ?? null,
+				?.given_names ?? null,
 		last_name:
 			(caseObj.requesting_officer_details as Record<string, unknown>)
 				?.last_name ?? null,
@@ -71,9 +78,9 @@ const buildCaseData = (
 		badge_number:
 			(caseObj.submitting_officer_details as Record<string, unknown>)
 				?.badge_number ?? null,
-		first_name:
+		given_names:
 			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.first_name ?? null,
+				?.given_names ?? null,
 		last_name:
 			(caseObj.submitting_officer_details as Record<string, unknown>)
 				?.last_name ?? null,
@@ -98,25 +105,73 @@ const buildCaseData = (
 	documents_sent: caseObj.documents_sent ?? false,
 	invoices: caseObj.invoices ?? [],
 	customer_number: caseObj.customer_number ?? "",
-	phase: caseObj.phase ?? "case_creation",
+	phase: caseObj.phase ?? "assessment",
+	batch_invoice_raised_number: caseObj.batch_invoice_raised_number ?? null,
+	police_form_url: caseObj.police_form_url ?? null,
 });
 
 const ProcessCaseContent = observer(() => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const wizardStore = useCaseProcessingWizardStore();
+	const groupingStore = useCertificateGroupingStore();
+	const wranglerStore = useDrugBagWranglerStore();
 	const parsedId = id ? parseInt(id, 10) : null;
 
 	const { data: caseObj, isLoading, isError } = useCaseById(parsedId);
 	const { updateCase, executeWorkflowAction, deleteCase } = useCases();
 	const { createDrugBag } = useDrugBags(parsedId);
 
-	// Reset the processing wizard store on unmount
+	// Reset the processing wizard + certificate grouping stores on unmount.
+	// The drug-bag wrangler holds unsaved in-memory bags and is a shared
+	// singleton, so it is also cleared here to stop unsaved bags persisting
+	// after leaving the page.
 	useEffect(() => {
 		return () => {
 			wizardStore.reset();
+			groupingStore.reset();
+			wranglerStore.reset();
 		};
-	}, [wizardStore]);
+	}, [wizardStore, groupingStore, wranglerStore]);
+
+	// Clear any leftover unsaved bags whenever the case changes (and on first
+	// mount), so in-memory bags from one case never leak into another.
+	useEffect(() => {
+		wranglerStore.reset();
+	}, [parsedId, wranglerStore]);
+
+	// Seed the certificate grouping once per case (from existing certificates or
+	// auto-chunked by five), then reconcile as bags are added or removed.
+	const seededCaseRef = useRef<number | null>(null);
+	useEffect(() => {
+		if (!caseObj || !parsedId) return;
+		const bags = (caseObj.bags as Array<{ id: number }> | undefined) ?? [];
+		const savedBagIds = bags.map((b) => b.id);
+		const certs =
+			(caseObj.certificates as
+				| Array<{ bag_ids?: number[]; additional_notes?: string | null }>
+				| undefined) ?? [];
+		const certGroups: number[][] = [];
+		const certNotes: string[] = [];
+		for (const c of certs) {
+			const ids = c.bag_ids ?? [];
+			if (ids.length > 0) {
+				certGroups.push(ids);
+				certNotes.push(c.additional_notes ?? "");
+			}
+		}
+
+		if (seededCaseRef.current !== parsedId) {
+			seededCaseRef.current = parsedId;
+			groupingStore.seed(
+				savedBagIds,
+				certGroups.length ? certGroups : undefined,
+				certGroups.length ? certNotes : undefined
+			);
+		} else {
+			groupingStore.reconcile(savedBagIds);
+		}
+	}, [caseObj, parsedId, groupingStore]);
 
 	const caseData = caseObj
 		? buildCaseData(caseObj as unknown as Record<string, unknown>)
@@ -188,34 +243,75 @@ const ProcessCaseContent = observer(() => {
 	const handleAction = useCallback(
 		(action: string) => {
 			if (!parsedId) return;
-			executeWorkflowAction({
-				id: parsedId,
-				action: { action: action as WorkflowAction },
-			});
+			const payload: WorkflowActionRequest = {
+				action: action as WorkflowAction,
+			};
+			// Send the chosen bag grouping + per-certificate notes so the backend
+			// creates one certificate per group (falls back to auto-chunking by
+			// five when unset).
+			if (
+				action === "generate_certificate" &&
+				groupingStore.state.groups.length > 0
+			) {
+				payload.groups = groupingStore.state.groups.map((g) => g.bagIds);
+				payload.group_notes = groupingStore.state.groups.map((g) => g.notes);
+			}
+			executeWorkflowAction({ id: parsedId, action: payload });
 		},
-		[parsedId, executeWorkflowAction]
+		[parsedId, executeWorkflowAction, groupingStore]
 	);
 
 	/**
-	 * Submit handler — finalises the case processing.
+	 * Submit handler — finalises certificate generation. If the case is still in
+	 * the unsigned_generation phase, advance it to batching, then return to the
+	 * cases list. Batching itself happens from the Cases page.
 	 */
 	const handleSubmit = useCallback(() => {
 		if (!parsedId) return;
 		wizardStore.setSubmitting(true);
-		executeWorkflowAction(
-			{ id: parsedId, action: { action: "send_documents" } },
-			{
-				onSuccess: () => {
-					wizardStore.setSubmitting(false);
-					toast.success("Case completed successfully!");
-					navigate("/cases");
-				},
-				onError: () => {
-					wizardStore.setSubmitting(false);
-				},
-			}
-		);
-	}, [parsedId, wizardStore, executeWorkflowAction, navigate]);
+
+		const finish = () => {
+			wizardStore.setSubmitting(false);
+			toast.success("Case ready for batching");
+			navigate("/cases");
+		};
+
+		const phase = caseObj?.phase;
+		// Already at/after batching (or unknown) — nothing to advance.
+		if (
+			!phase ||
+			phase === "batching" ||
+			phase === "in_batch" ||
+			phase === "complete"
+		) {
+			finish();
+			return;
+		}
+
+		// Advance forward until the case reaches batching, driven by the phase the
+		// server reports after each step. This stays correct regardless of the
+		// starting phase and never overshoots past batching.
+		const advanceUntilBatching = () => {
+			executeWorkflowAction(
+				{ id: parsedId, action: { action: "advance_phase" } },
+				{
+					onSuccess: (response) => {
+						const newPhase = response?.new_phase;
+						if (
+							newPhase === "assessment" ||
+							newPhase === "unsigned_generation"
+						) {
+							advanceUntilBatching();
+						} else {
+							finish();
+						}
+					},
+					onError: () => wizardStore.setSubmitting(false),
+				}
+			);
+		};
+		advanceUntilBatching();
+	}, [parsedId, wizardStore, executeWorkflowAction, navigate, caseObj]);
 
 	/**
 	 * Delete handler — deletes the case and navigates back to cases list.

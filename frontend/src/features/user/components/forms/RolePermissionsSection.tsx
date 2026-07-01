@@ -37,7 +37,7 @@ export const RolePermissionsSection = <T extends RoleFormFields>({
 	selectedRole,
 	lockedRole = null,
 }: RolePermissionsSectionProps<T>) => {
-	const { user } = useAuth();
+	const { hasAppAccess } = useAuth();
 
 	return (
 		<div className="space-y-4">
@@ -63,14 +63,14 @@ export const RolePermissionsSection = <T extends RoleFormFields>({
 									{!lockedRole && <SelectItem value="none">No Role</SelectItem>}
 
 									{(!lockedRole || lockedRole === "botanist") &&
-										(user?.is_superuser || user?.role === "botanist") && (
+										hasAppAccess && (
 											<SelectItem value="botanist">
 												Approved Botanist
 											</SelectItem>
 										)}
 
 									{(!lockedRole || lockedRole === "finance") &&
-										user?.is_superuser && (
+										hasAppAccess && (
 											<SelectItem value="finance">Finance Officer</SelectItem>
 										)}
 								</SelectGroup>

@@ -166,8 +166,8 @@ class PoliceFormParser:
                 raw_badge = match.group(1).strip()
                 badge = self._clean_badge(raw_badge)
                 surname = match.group(2).strip()
-                first_name = match.group(3).strip()
-                full_name = f"{surname}, {first_name}"
+                given_names = match.group(3).strip()
+                full_name = f"{surname}, {given_names}"
                 return ExtractedOfficer(
                     name=self._make_field(full_name, word_confidences),
                     badge_number=self._make_field(badge, word_confidences),
@@ -195,8 +195,8 @@ class PoliceFormParser:
                 raw_badge = match.group(1).strip()
                 badge = self._clean_badge(raw_badge)
                 surname = match.group(2).strip()
-                first_name = match.group(3).strip()
-                full_name = f"{surname}, {first_name}"
+                given_names = match.group(3).strip()
+                full_name = f"{surname}, {given_names}"
                 return ExtractedOfficer(
                     name=self._make_field(full_name, word_confidences),
                     badge_number=self._make_field(badge, word_confidences),

@@ -4,6 +4,7 @@ import {
 	policeStationsService,
 	type StationMergeRequest,
 } from "../services/policeStations.service";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 /**
  * Hook to merge secondary stations into a primary station.
@@ -16,17 +17,7 @@ export function useStationMerge() {
 		mutationFn: (data: StationMergeRequest) =>
 			policeStationsService.mergeStations(data),
 		onSuccess: async (response) => {
-			await Promise.all([
-				queryClient.invalidateQueries({
-					queryKey: ["police-stations"],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ["police-officers"],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ["cases"],
-				}),
-			]);
+			await invalidateRelatedQueries(queryClient, "policeStations");
 
 			toast.success(
 				`Merge complete. ${response.officers_reassigned} officer(s) and ${response.cases_reassigned} case(s) reassigned.`

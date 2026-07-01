@@ -1,8 +1,9 @@
 """Defendant export view — CSV and JSON data exports."""
 
 from django.conf import settings
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..services import DefendantService
 
@@ -10,7 +11,7 @@ from ..services import DefendantService
 class DefendantExportView(APIView):
     """Export defendants data in CSV or JSON format."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get(self, request):
         search = request.query_params.get("search")

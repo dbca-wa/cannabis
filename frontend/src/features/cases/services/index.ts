@@ -6,7 +6,6 @@ export {
 	updateCase,
 	deleteCase,
 	executeWorkflowAction,
-	sendBack,
 	getPhaseHistory,
 } from "./cases.service";
 export {
@@ -24,10 +23,7 @@ export {
 	deleteAssessment,
 } from "./assessments.service";
 export {
-	generateCertificate,
+	generateCertificates,
 	regenerateCertificate,
-	generateInvoice,
-	regenerateInvoice,
 	getCertificatePdfUrl,
-	getInvoicePdfUrl,
 } from "./documents.service";

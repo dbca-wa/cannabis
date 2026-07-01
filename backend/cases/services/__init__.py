@@ -1,11 +1,11 @@
 """Cases services — business logic extracted from views."""
 
+from .batch_service import BatchService
 from .certificate_service import (
     CertificateService,
     build_certificate_context,
-    generate_unsigned_certificate,
+    generate_certificates,
     regenerate_certificate_pdf,
-    validate_certificate_generation,
 )
 from .dashboard_service import DashboardService
 from .draft_service import (
@@ -14,13 +14,6 @@ from .draft_service import (
     upsert_user_draft,
 )
 from .drug_bag_service import DrugBagService
-from .email_service import EmailService
-from .invoice_service import (
-    InvoiceService,
-    build_invoice_context,
-    generate_invoice,
-    regenerate_invoice_pdf,
-)
 from .ocr_service import OcrService, ServiceUnavailable
 from .pdf_service import PDFService
 from .pdf_test_service import TestPDFService
@@ -29,18 +22,15 @@ from .workflow_service import (
     advance_submission_phase,
     get_phase_order,
     get_phase_transitions,
-    send_back_submission,
-    validate_send_back,
     validate_transition,
 )
 
 __all__ = [
     # Service classes
+    "BatchService",
     "CertificateService",
     "DashboardService",
-    "EmailService",
     "DrugBagService",
-    "InvoiceService",
     "OcrService",
     "PDFService",
     "ServiceUnavailable",
@@ -51,17 +41,10 @@ __all__ = [
     "get_phase_transitions",
     "get_phase_order",
     "validate_transition",
-    "validate_send_back",
-    "send_back_submission",
     # Certificates (backward-compatible functions)
     "build_certificate_context",
-    "generate_unsigned_certificate",
+    "generate_certificates",
     "regenerate_certificate_pdf",
-    "validate_certificate_generation",
-    # Invoices (backward-compatible functions)
-    "build_invoice_context",
-    "generate_invoice",
-    "regenerate_invoice_pdf",
     # Drafts
     "get_user_draft",
     "upsert_user_draft",

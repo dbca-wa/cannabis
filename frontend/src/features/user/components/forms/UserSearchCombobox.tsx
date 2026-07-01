@@ -22,9 +22,11 @@ import {
 	CommandGroup,
 	CommandItem,
 	CommandList,
+	CommandSeparator,
 } from "@/shared/components/ui/command";
 import { CommandInputWithLoading } from "@/shared/components/ui/custom/command-input-with-loading";
 
+import { useLocalStorage } from "@/shared/hooks/core";
 import { useUserSearch } from "../../hooks/useUserSearch";
 import { useUserById } from "../../hooks/useUserById";
 import { InviteUserModal } from "./InviteUserModal";
@@ -46,6 +48,12 @@ interface UserSearchComboboxProps {
 	allowCreate?: boolean; // Whether to show the "Invite User" button
 	showExternalInviteButton?: boolean; // Whether to show external "Invite" button to the right
 	roleFilter?: "botanist" | "finance" | "all"; // Filter users by role (admin always visible)
+	/**
+	 * When set, the most recently selected user is remembered (per key) and
+	 * pinned in a "Last used" group at the top of the list so the user does not
+	 * have to search for a frequently-used selection.
+	 */
+	lastUsedKey?: string;
 }
 
 export const UserSearchCombobox = React.forwardRef<
@@ -65,6 +73,7 @@ export const UserSearchCombobox = React.forwardRef<
 			allowCreate = true,
 			showExternalInviteButton = false,
 			roleFilter = "all",
+			lastUsedKey,
 		},
 		ref
 	) => {
@@ -97,6 +106,14 @@ export const UserSearchCombobox = React.forwardRef<
 		const { data: selectedUser, isLoading: isLoadingSelectedUser } =
 			useUserById(value ?? null);
 
+		// Remember the most recently selected user (per key) for the "Last used"
+		// shortcut. No-op when lastUsedKey is not provided.
+		const { value: lastUsedUser, setValue: setLastUsedUser } =
+			useLocalStorage<IUser | null>(
+				`cannabis_last_used_user_${lastUsedKey ?? "none"}`,
+				null
+			);
+
 		// Reset search when closing
 		useEffect(() => {
 			if (!open) {
@@ -104,8 +121,11 @@ export const UserSearchCombobox = React.forwardRef<
 			}
 		}, [open]);
 
-		const handleSelect = (userId: number) => {
-			onValueChange(userId);
+		const handleSelect = (user: IUser) => {
+			onValueChange(user.id);
+			if (lastUsedKey) {
+				setLastUsedUser(user);
+			}
 			setOpen(false);
 		};
 
@@ -138,9 +158,49 @@ export const UserSearchCombobox = React.forwardRef<
 			setOpen(false);
 		};
 
+		const renderUserItem = (user: IUser) => (
+			<CommandItem
+				key={user.id}
+				value={user.id.toString()}
+				onSelect={() => handleSelect(user)}
+				className="flex items-center gap-2"
+			>
+				<Check
+					className={cn(
+						"h-4 w-4",
+						value === user.id ? "opacity-100" : "opacity-0"
+					)}
+				/>
+				<User className="h-4 w-4 text-muted-foreground" />
+				<div className="flex-1 min-w-0">
+					<div className="truncate">{formatUserDisplayName(user)}</div>
+					<div className="text-xs text-muted-foreground truncate">
+						{user.email}
+					</div>
+				</div>
+				<Badge
+					variant="secondary"
+					className={cn("text-xs", getUserRoleColorClass(user, isDark))}
+				>
+					{getUserRoleBadge(user)}
+				</Badge>
+			</CommandItem>
+		);
+
 		const displayValue = selectedUser
 			? formatUserDisplayName(selectedUser)
 			: null;
+
+		// "Last used" shortcut: shown only in the default (non-search) state. The
+		// pinned user is filtered out of the main list to avoid duplication.
+		const rawResults = searchResults?.results ?? [];
+		const showLastUsed =
+			!!lastUsedKey && !!lastUsedUser && !searchQuery.trim() && !searchError;
+		const mainResults = (
+			showLastUsed && lastUsedUser
+				? rawResults.filter((u) => u.id !== lastUsedUser.id)
+				: rawResults
+		).slice(0, 6);
 
 		const comboboxElement = (
 			<Popover open={open} onOpenChange={setOpen}>
@@ -228,39 +288,7 @@ export const UserSearchCombobox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{initialData?.slice(0, 6).map((user: IUser) => (
-												<CommandItem
-													key={user.id}
-													value={user.id.toString()}
-													onSelect={() => handleSelect(user.id)}
-													className="flex items-center gap-2"
-												>
-													<Check
-														className={cn(
-															"h-4 w-4",
-															value === user.id ? "opacity-100" : "opacity-0"
-														)}
-													/>
-													<User className="h-4 w-4 text-muted-foreground" />
-													<div className="flex-1 min-w-0">
-														<div className="truncate">
-															{formatUserDisplayName(user)}
-														</div>
-														<div className="text-xs text-muted-foreground truncate">
-															{user.email}
-														</div>
-													</div>
-													<Badge
-														variant="secondary"
-														className={cn(
-															"text-xs",
-															getUserRoleColorClass(user, isDark)
-														)}
-													>
-														{getUserRoleBadge(user)}
-													</Badge>
-												</CommandItem>
-											))}
+											{initialData?.slice(0, 6).map(renderUserItem)}
 										</CommandGroup>
 									</>
 								) : !searchResults?.results?.length ? (
@@ -280,41 +308,21 @@ export const UserSearchCombobox = React.forwardRef<
 										)}
 									</div>
 								) : (
-									<CommandGroup>
-										{searchResults.results.slice(0, 6).map((user: IUser) => (
-											<CommandItem
-												key={user.id}
-												value={user.id.toString()}
-												onSelect={() => handleSelect(user.id)}
-												className="flex items-center gap-2"
-											>
-												<Check
-													className={cn(
-														"h-4 w-4",
-														value === user.id ? "opacity-100" : "opacity-0"
-													)}
-												/>
-												<User className="h-4 w-4 text-muted-foreground" />
-												<div className="flex-1 min-w-0">
-													<div className="truncate">
-														{formatUserDisplayName(user)}
-													</div>
-													<div className="text-xs text-muted-foreground truncate">
-														{user.email}
-													</div>
-												</div>
-												<Badge
-													variant="secondary"
-													className={cn(
-														"text-xs",
-														getUserRoleColorClass(user, isDark)
-													)}
-												>
-													{getUserRoleBadge(user)}
-												</Badge>
-											</CommandItem>
-										))}
-									</CommandGroup>
+									<>
+										{showLastUsed && lastUsedUser && (
+											<>
+												<CommandGroup heading="Last used">
+													{renderUserItem(lastUsedUser)}
+												</CommandGroup>
+												<CommandSeparator />
+											</>
+										)}
+										{mainResults.length > 0 && (
+											<CommandGroup>
+												{mainResults.map(renderUserItem)}
+											</CommandGroup>
+										)}
+									</>
 								)}
 							</SmoothLoadingOverlay>
 						</CommandList>
