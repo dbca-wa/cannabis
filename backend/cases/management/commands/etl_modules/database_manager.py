@@ -126,10 +126,10 @@ class DatabaseManager:
 
             # Check if required tables exist
             required_tables = [
-                "submissions_submission",
+                "submissions_case",
                 "submissions_drugbag",
                 "submissions_botanicalassessment",
-                "submissions_defendant",
+                "defendants_defendant",
                 "police_policeofficer",
                 "police_policestation",
             ]
@@ -247,9 +247,9 @@ class DatabaseManager:
             with connection.cursor() as cursor:
                 # Check if we can perform basic operations
                 cursor.execute("""
-                    SELECT has_table_privilege(current_user, 'submissions_submission', 'INSERT'),
-                           has_table_privilege(current_user, 'submissions_submission', 'UPDATE'),
-                           has_table_privilege(current_user, 'submissions_submission', 'SELECT')
+                    SELECT has_table_privilege(current_user, 'submissions_case', 'INSERT'),
+                           has_table_privilege(current_user, 'submissions_case', 'UPDATE'),
+                           has_table_privilege(current_user, 'submissions_case', 'SELECT')
                 """)
                 permissions = cursor.fetchone()
 

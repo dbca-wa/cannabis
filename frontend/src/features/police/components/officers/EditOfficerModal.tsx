@@ -44,7 +44,7 @@ export const EditOfficerModal = ({
 				<DialogHeader>
 					<DialogTitle>Edit Officer</DialogTitle>
 					<DialogDescription>
-						Update the officer's information. Last name is required, first name
+						Update the officer's information. Last name is required, given names
 						is optional.
 					</DialogDescription>
 				</DialogHeader>

@@ -27,6 +27,8 @@ export interface CaseCreationWizardStoreState extends BaseStoreState {
 	touchedSteps: Set<number>;
 	/** Final submission in progress */
 	isSubmitting: boolean;
+	/** User has explicitly acknowledged the case has no known defendant */
+	defendantUnknownAcknowledged: boolean;
 }
 
 const INITIAL_STATE: CaseCreationWizardStoreState = {
@@ -37,6 +39,7 @@ const INITIAL_STATE: CaseCreationWizardStoreState = {
 	completedSteps: new Set<number>(),
 	touchedSteps: new Set<number>(),
 	isSubmitting: false,
+	defendantUnknownAcknowledged: false,
 };
 
 /**
@@ -72,6 +75,7 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 			markStepCompleted: action,
 			setSubmitting: action,
 			setStepValidationFn: action,
+			setDefendantUnknownAcknowledged: action,
 
 			// Reset
 			reset: action,
@@ -187,6 +191,15 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 		this.state.isSubmitting = isSubmitting;
 	};
 
+	/**
+	 * Record whether the user has explicitly acknowledged that the case has no
+	 * known defendant. When true, the defendants step is considered valid with
+	 * zero defendants and the certificate renders "Unknown".
+	 */
+	setDefendantUnknownAcknowledged = (acknowledged: boolean) => {
+		this.state.defendantUnknownAcknowledged = acknowledged;
+	};
+
 	// ============================================================================
 	// Computed Properties
 	// ============================================================================
@@ -261,6 +274,7 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 		this.state.completedSteps.clear();
 		this.state.touchedSteps.clear();
 		this.state.isSubmitting = false;
+		this.state.defendantUnknownAcknowledged = false;
 		this.state.loading = false;
 		this.state.error = null;
 		this.state.initialised = false;

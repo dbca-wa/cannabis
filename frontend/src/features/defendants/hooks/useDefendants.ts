@@ -10,6 +10,7 @@ import {
 } from "../services/defendants.service";
 
 import { cacheConfig } from "@/shared/hooks/core/queryKeys";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import type {
 	DefendantCreateRequest,
 	DefendantUpdateRequest,
@@ -59,9 +60,7 @@ export const useCreateDefendant = () => {
 				defendantsQueryKeys.detail(newDefendant.id),
 				newDefendant
 			);
-			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "defendants");
 			toast.success("Defendant created successfully!");
 		},
 		onError: (error: unknown) => {
@@ -83,9 +82,7 @@ export const useUpdateDefendant = () => {
 				defendantsQueryKeys.detail(updatedDefendant.id),
 				updatedDefendant
 			);
-			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "defendants");
 			toast.success("Defendant updated successfully!");
 		},
 		onError: (error: unknown) => {
@@ -105,9 +102,7 @@ export const useDeleteDefendant = () => {
 			queryClient.removeQueries({
 				queryKey: defendantsQueryKeys.detail(deletedId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: defendantsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "defendants");
 			toast.success("Defendant deleted successfully!");
 		},
 		onError: (error: unknown) => {

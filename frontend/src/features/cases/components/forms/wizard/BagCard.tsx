@@ -17,26 +17,50 @@ import type {
 	DrugBagContentType,
 } from "../../../types/drugBags.types";
 
+// Full label maps — used only to resolve human-readable labels for display of
+// legacy/imported values. The backend's *_display fields take precedence.
+const CONTENT_TYPE_LABELS: Record<string, string> = {
+	plant: "Plant",
+	plant_material: "Plant Material",
+	cutting: "Cutting",
+	stalk: "Stalk",
+	stem: "Stem",
+	seed: "Seed",
+	seed_material: "Seed Material",
+	unknown_seed: "Unknown Seed",
+	seedling: "Seedling",
+	head: "Head",
+	rootball: "Rootball",
+	poppy: "Poppy",
+	poppy_plant: "Poppy Plant",
+	poppy_capsule: "Poppy Capsule",
+	poppy_head: "Poppy Head",
+	poppy_seed: "Poppy Seed",
+	mushroom: "Mushroom",
+	tablet: "Tablet",
+	unknown: "Other",
+	unsure: "Unsure",
+};
+
+const DETERMINATION_LABELS: Record<string, string> = {
+	pending: "Pending Assessment",
+	cannabis_sativa: "Cannabis sativa",
+	cannabis_indica: "Cannabis indica",
+	cannabis_hybrid: "Cannabis hybrid",
+	mixed: "Mixed",
+	papaver_somniferum: "Papaver somniferum",
+	degraded: "Degraded",
+	not_cannabis: "Not Cannabis",
+	unidentifiable: "Unidentifiable",
+	inconclusive: "Inconclusive",
+};
+
+// Simplified options shown when adding/editing a bag. The backend keeps the full
+// set of choices, so legacy values remain valid.
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "plant", label: "Plant" },
-	{ value: "plant_material", label: "Plant Material" },
-	{ value: "cutting", label: "Cutting" },
-	{ value: "stalk", label: "Stalk" },
-	{ value: "stem", label: "Stem" },
 	{ value: "seed", label: "Seed" },
-	{ value: "seed_material", label: "Seed Material" },
-	{ value: "unknown_seed", label: "Unknown Seed" },
-	{ value: "seedling", label: "Seedling" },
-	{ value: "head", label: "Head" },
-	{ value: "rootball", label: "Rootball" },
-	{ value: "poppy", label: "Poppy" },
-	{ value: "poppy_plant", label: "Poppy Plant" },
-	{ value: "poppy_capsule", label: "Poppy Capsule" },
-	{ value: "poppy_head", label: "Poppy Head" },
-	{ value: "poppy_seed", label: "Poppy Seed" },
-	{ value: "mushroom", label: "Mushroom" },
-	{ value: "tablet", label: "Tablet" },
-	{ value: "unknown", label: "Unknown" },
+	{ value: "unknown", label: "Other" },
 ];
 
 const DETERMINATION_OPTIONS: {
@@ -45,23 +69,29 @@ const DETERMINATION_OPTIONS: {
 }[] = [
 	{ value: "pending", label: "Pending Assessment" },
 	{ value: "cannabis_sativa", label: "Cannabis sativa" },
-	{ value: "cannabis_indica", label: "Cannabis indica" },
-	{ value: "cannabis_hybrid", label: "Cannabis hybrid" },
-	{ value: "mixed", label: "Mixed" },
-	{ value: "papaver_somniferum", label: "Papaver somniferum" },
 	{ value: "degraded", label: "Degraded" },
-	{ value: "not_cannabis", label: "Not Cannabis" },
-	{ value: "unidentifiable", label: "Unidentifiable" },
 	{ value: "inconclusive", label: "Inconclusive" },
+	{ value: "not_cannabis", label: "Not Cannabis" },
 ];
 
 const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
 
-const getContentTypeLabel = (value: DrugBagContentType): string =>
-	CONTENT_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+const getContentTypeLabel = (value: string): string =>
+	CONTENT_TYPE_LABELS[value] ?? value;
 
 const getDeterminationLabel = (value: string): string =>
-	DETERMINATION_OPTIONS.find((o) => o.value === value)?.label ?? value;
+	DETERMINATION_LABELS[value] ?? value;
+
+/** Build select options, appending the current value if it's a legacy one not
+ * in the simplified list, so editing never silently drops it. */
+const withCurrent = <T extends string>(
+	options: { value: T; label: string }[],
+	current: T,
+	labelFor: (v: string) => string
+): { value: T; label: string }[] =>
+	options.some((o) => o.value === current)
+		? options
+		: [...options, { value: current, label: labelFor(current) }];
 
 interface BagCardProps {
 	bag: DrugBag;
@@ -138,6 +168,8 @@ export const BagCard = ({
 		const err = validateTagFormat(value, "Original tag");
 		if (err) setTagError(err);
 		else setTagError(null);
+		// Keep the in-memory store in sync so "Add All" sees the typed value.
+		if (isUnsaved) onUpdateBag(bag.id, { seal_tag_numbers: value });
 	};
 
 	const handleNewTagChange = (value: string) => {
@@ -145,13 +177,14 @@ export const BagCard = ({
 		const err = validateTagFormat(value, "New tag");
 		if (err) {
 			setNewTagError(err);
-		} else if (value && allTags.includes(value)) {
+		} else if (value && value !== originalTag && allTags.includes(value)) {
+			// A new tag equal to this bag's own original is allowed (same physical
+			// tag); only a value belonging to a different bag is a conflict.
 			setNewTagError("This tag number is already in use");
-		} else if (value && value === originalTag) {
-			setNewTagError("New tag must differ from original tag");
 		} else {
 			setNewTagError(null);
 		}
+		if (isUnsaved) onUpdateBag(bag.id, { new_seal_tag_numbers: value });
 	};
 
 	const handleOriginalTagBlur = () => {
@@ -244,7 +277,7 @@ export const BagCard = ({
 								</Badge>
 								<Badge
 									variant="outline"
-									className={`text-xs ${bag.assessment?.determination && bag.assessment.determination !== "pending" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
+									className={`text-xs ${bag.assessment?.determination && bag.assessment.determination !== "pending" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"}`}
 								>
 									{bag.assessment?.determination_display ||
 										getDeterminationLabel(
@@ -345,13 +378,23 @@ export const BagCard = ({
 				</label>
 				<Select
 					value={contentType}
-					onValueChange={(value) => setContentType(value as DrugBagContentType)}
+					onValueChange={(value) => {
+						setContentType(value as DrugBagContentType);
+						if (isUnsaved)
+							onUpdateBag(bag.id, {
+								content_type: value as DrugBagContentType,
+							});
+					}}
 				>
 					<SelectTrigger id={contentTypeId}>
 						<SelectValue placeholder="Select content type" />
 					</SelectTrigger>
 					<SelectContent>
-						{CONTENT_TYPE_OPTIONS.map((option) => (
+						{withCurrent(
+							CONTENT_TYPE_OPTIONS,
+							contentType,
+							getContentTypeLabel
+						).map((option) => (
 							<SelectItem key={option.value} value={option.value}>
 								{option.label}
 							</SelectItem>
@@ -367,15 +410,21 @@ export const BagCard = ({
 				</label>
 				<Select
 					value={determination}
-					onValueChange={(value) =>
-						setDetermination(value as BotanicalDetermination)
-					}
+					onValueChange={(value) => {
+						setDetermination(value as BotanicalDetermination);
+						if (isUnsaved)
+							onCreateAssessment(bag.id, value as BotanicalDetermination);
+					}}
 				>
 					<SelectTrigger id={determinationId}>
 						<SelectValue placeholder="Select determination" />
 					</SelectTrigger>
 					<SelectContent>
-						{DETERMINATION_OPTIONS.map((option) => (
+						{withCurrent(
+							DETERMINATION_OPTIONS,
+							determination,
+							getDeterminationLabel
+						).map((option) => (
 							<SelectItem key={option.value} value={option.value}>
 								{option.label}
 							</SelectItem>

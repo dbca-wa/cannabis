@@ -2,7 +2,10 @@ from django.conf import settings
 from django.db.models import F, Q
 from django.utils import timezone
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..models import Case
 from ..serializers import (
@@ -78,9 +81,9 @@ def _apply_filters(queryset, params):
     if search:
         search_q = (
             Q(case_number__icontains=search)
-            | Q(requesting_officer__first_name__icontains=search)
+            | Q(requesting_officer__given_names__icontains=search)
             | Q(requesting_officer__last_name__icontains=search)
-            | Q(submitting_officer__first_name__icontains=search)
+            | Q(submitting_officer__given_names__icontains=search)
             | Q(submitting_officer__last_name__icontains=search)
             | Q(defendants__given_names__icontains=search)
             | Q(defendants__last_name__icontains=search)
@@ -100,13 +103,44 @@ def _apply_filters(queryset, params):
     return queryset
 
 
+class CaseNumberCheckView(APIView):
+    """
+    GET: Check whether a police reference (case number) already exists.
+
+    Query params:
+      - case_number (required): the value to check
+      - exclude_id (optional): a case pk to ignore (for editing an existing case)
+
+    Returns: {"exists": bool}
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request):
+        case_number = (request.query_params.get("case_number") or "").strip()
+
+        if not case_number:
+            return Response({"exists": False})
+
+        queryset = Case.objects.filter(case_number__iexact=case_number)
+
+        exclude_id = request.query_params.get("exclude_id")
+        if exclude_id:
+            try:
+                queryset = queryset.exclude(pk=int(exclude_id))
+            except (ValueError, TypeError):
+                pass
+
+        return Response({"exists": queryset.exists()})
+
+
 class CaseListView(ListCreateAPIView):
     """
     GET: List cases with filtering and search
     POST: Create new case
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -124,7 +158,7 @@ class CaseListView(ListCreateAPIView):
             "submitting_officer",
             "submitting_officer__station",
             "station",
-        ).prefetch_related("defendants", "bags", "certificates", "invoices")
+        ).prefetch_related("defendants", "bags", "certificates")
 
         queryset = _apply_filters(queryset, self.request.query_params)
         ordering = self.request.query_params.get("ordering", "-received")
@@ -145,7 +179,7 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
     """
 
     serializer_class = CaseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         return Case.objects.select_related(
@@ -157,8 +191,6 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
             "defendants",
             "bags__assessment",
             "certificates",
-            "invoices",
-            "additional_fees",
         )
 
     def get_serializer_class(self):
@@ -167,7 +199,13 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
         return CaseSerializer
 
     def perform_update(self, serializer):
-        old_phase = self.get_object().phase
+        case_obj = self.get_object()
+        # Complete cases are read-only for non-admins (server-side guard).
+        from ..permissions import ensure_case_editable
+
+        ensure_case_editable(case_obj, self.request.user)
+
+        old_phase = case_obj.phase
         case = serializer.save()
         new_phase = case.phase
 
@@ -179,14 +217,14 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
 
             # Update workflow timestamps based on new phase
             now = timezone.now()
-            if new_phase == Case.PhaseChoices.BOTANIST_SIGNOFF:
-                case.botanist_approved_at = now
+            if new_phase == Case.PhaseChoices.UNSIGNED_GENERATION:
+                case.certificates_generated_at = case.certificates_generated_at or now
             elif new_phase == Case.PhaseChoices.COMPLETE:
                 case.completed_at = now
 
             case.save(
                 update_fields=[
-                    "botanist_approved_at",
+                    "certificates_generated_at",
                     "completed_at",
                 ]
             )

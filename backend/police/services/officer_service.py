@@ -83,7 +83,7 @@ class OfficerService:
             search_terms = search.strip().split()
             for term in search_terms:
                 queryset = queryset.filter(
-                    Q(first_name__icontains=term)
+                    Q(given_names__icontains=term)
                     | Q(last_name__icontains=term)
                     | Q(badge_number__icontains=term)
                     | Q(station__name__icontains=term)
@@ -150,7 +150,7 @@ class OfficerService:
             QuerySet: Filtered and ordered queryset for export.
         """
         queryset = PoliceOfficer.objects.select_related("station").order_by(
-            "last_name", "first_name"
+            "last_name", "given_names"
         )
 
         # Search
@@ -159,7 +159,7 @@ class OfficerService:
             search_terms = search.strip().split()
             for term in search_terms:
                 queryset = queryset.filter(
-                    Q(first_name__icontains=term)
+                    Q(given_names__icontains=term)
                     | Q(last_name__icontains=term)
                     | Q(badge_number__icontains=term)
                 )
@@ -279,8 +279,8 @@ class OfficerService:
         valid_orderings = {
             "last_name": "last_name",
             "-last_name": "-last_name",
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "station": "station__name",
             "-station": "-station__name",
             "rank": "rank_seniority",
@@ -302,21 +302,21 @@ class OfficerService:
                 )
                 if ordering == "rank":
                     queryset = queryset.order_by(
-                        "rank_seniority", "last_name", "first_name"
+                        "rank_seniority", "last_name", "given_names"
                     )
                 else:
                     queryset = queryset.order_by(
-                        "-rank_seniority", "last_name", "first_name"
+                        "-rank_seniority", "last_name", "given_names"
                     )
             elif "case_count" in ordering:
                 queryset = queryset.order_by(
-                    valid_orderings[ordering], "last_name", "first_name"
+                    valid_orderings[ordering], "last_name", "given_names"
                 )
             else:
                 primary_order = valid_orderings[ordering]
-                queryset = queryset.order_by(primary_order, "last_name", "first_name")
+                queryset = queryset.order_by(primary_order, "last_name", "given_names")
         else:
-            queryset = queryset.order_by("last_name", "first_name")
+            queryset = queryset.order_by("last_name", "given_names")
 
         return queryset
 
@@ -328,8 +328,8 @@ class OfficerService:
         valid_orderings = {
             "last_name": "last_name",
             "-last_name": "-last_name",
-            "first_name": "first_name",
-            "-first_name": "-first_name",
+            "given_names": "given_names",
+            "-given_names": "-given_names",
             "station": "station__name",
             "-station": "-station__name",
             "rank": "rank_seniority",
@@ -349,16 +349,16 @@ class OfficerService:
                 )
                 if ordering == "rank":
                     queryset = queryset.order_by(
-                        "rank_seniority", "last_name", "first_name"
+                        "rank_seniority", "last_name", "given_names"
                     )
                 else:
                     queryset = queryset.order_by(
-                        "-rank_seniority", "last_name", "first_name"
+                        "-rank_seniority", "last_name", "given_names"
                     )
             else:
                 primary_order = valid_orderings[ordering]
-                queryset = queryset.order_by(primary_order, "last_name", "first_name")
+                queryset = queryset.order_by(primary_order, "last_name", "given_names")
         else:
-            queryset = queryset.order_by("last_name", "first_name")
+            queryset = queryset.order_by("last_name", "given_names")
 
         return queryset

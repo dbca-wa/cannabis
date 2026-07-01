@@ -72,8 +72,8 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 				<DialogHeader>
 					<DialogTitle>Create New Defendant</DialogTitle>
 					<DialogDescription>
-						Add a new defendant to the system. Last name is required, first name
-						is optional.
+						Add a new defendant to the system. Last name is required, given
+						names is optional.
 					</DialogDescription>
 				</DialogHeader>
 				<CreateDefendantForm

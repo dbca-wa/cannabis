@@ -5,3 +5,4 @@ export { generateUUID, generateRequestId } from "./uuid";
 export { buildQueryParams } from "./queryParams.utils";
 export * from "./defendant-display.utils";
 export * from "./number.utils";
+export * from "./version.utils";

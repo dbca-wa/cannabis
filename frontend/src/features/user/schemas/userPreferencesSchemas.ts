@@ -42,16 +42,6 @@ export const userPreferencesSchema = z.object({
 	// Pagination preferences
 	items_per_page: itemsPerPageChoiceEnum,
 
-	// Notification preferences
-	email_notifications: z.boolean(),
-	comment_notifications: z.boolean(),
-	reaction_notifications: z.boolean(),
-	notify_submission_assigned: z.boolean(),
-	notify_phase_changes: z.boolean(),
-	notify_certificate_generated: z.boolean(),
-	notify_invoices_generated: z.boolean(),
-	notify_pdfs_mailed: z.boolean(),
-
 	// Accessibility preferences
 	reduce_motion: z.boolean(),
 
@@ -66,18 +56,6 @@ export const userPreferencesSchema = z.object({
 		.object({
 			cases: displayModeChoiceEnum,
 			certificates: displayModeChoiceEnum,
-		})
-		.optional(),
-	notification_settings: z
-		.object({
-			email: z.boolean(),
-			comments: z.boolean(),
-			reactions: z.boolean(),
-			assigned: z.boolean(),
-			phase_changes: z.boolean(),
-			certificates: z.boolean(),
-			invoices: z.boolean(),
-			sent: z.boolean(),
 		})
 		.optional(),
 });

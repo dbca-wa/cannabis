@@ -9,14 +9,12 @@ from .auth import (
     CustomTokenObtainPairView,
     ForgotPasswordView,
     JWTLogoutView,
-    PasswordResetView,
     PasswordUpdateView,
     PasswordValidationView,
     VerifyResetCodeView,
     WhoAmI,
 )
 from .crud import (
-    SimpleCSVTestView,
     UserCSVExportView,
     UserDetailView,
     UserExportView,
@@ -26,6 +24,7 @@ from .invitations import (
     ExternalUserSearchView,
     InviteActivationView,
     InviteUserView,
+    TestInviteEmailView,
 )
 from .preferences import (
     UserPreferencesView,
@@ -41,18 +40,17 @@ __all__ = [
     "PasswordValidationView",
     "ForgotPasswordView",
     "VerifyResetCodeView",
-    "PasswordResetView",
     "PasswordUpdateView",
     # CRUD
     "UserListView",
     "UserDetailView",
     "UserExportView",
     "UserCSVExportView",
-    "SimpleCSVTestView",
     # Invitations
     "ExternalUserSearchView",
     "InviteUserView",
     "InviteActivationView",
+    "TestInviteEmailView",
     # Preferences
     "UserProfileView",
     "UserPreferencesView",

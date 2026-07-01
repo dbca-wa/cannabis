@@ -1,26 +1,22 @@
-"""Certificate service — certificate CRUD and signing business logic.
+"""Certificate service — certificate generation business logic.
 
-Handles certificate generation, regeneration, signing validation,
-and unlock operations.
+Handles grouping drug bags into certificates (max 5 bags each), generating one
+final certificate PDF per group (with the certification date, no digital
+signature), and regenerating certificate PDFs in place before batching.
 """
-
-import base64
-import hashlib
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 
-from signatures.models import Signature, SignatureAuditLog
-
-from ..models import Case, Certificate
+from ..models import Case, CasePhaseHistory, Certificate
 from .pdf_service import PDFService
 
 CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
+MAX_BAGS_PER_CERTIFICATE = 5
 
 
 class CertificateService:
@@ -84,46 +80,120 @@ class CertificateService:
         try:
             return Certificate.objects.select_related("submission").get(pk=pk)
         except Certificate.DoesNotExist:
-            raise NotFound(f"Certificate with pk {pk} not found.")
+            raise NotFound("Certificate not found.")
 
     @staticmethod
-    def get_submission_certificate(submission_id, certificate_id):
-        """Retrieve a certificate scoped to a submission.
-
-        Raises:
-            NotFound: If the submission or certificate does not exist.
-        """
-        try:
-            submission = Case.objects.get(pk=submission_id)
-        except Case.DoesNotExist:
-            raise NotFound("Case not found.")
-
+    def get_certificate_for_case(submission, certificate_id):
+        """Retrieve a certificate scoped to a case."""
         try:
             return submission.certificates.get(pk=certificate_id)
         except Certificate.DoesNotExist:
             raise NotFound("Certificate not found for this case.")
 
     @staticmethod
-    def build_certificate_context(submission, certificate):
-        """Build template context for certificate rendering.
+    def group_bags_for_certificates(submission, groups=None):
+        """Resolve and validate the bag grouping for certificate generation.
 
-        Maps Submission, DrugBag, BotanicalAssessment, and related model data
-        to the variables expected by the certificate HTML template.
+        Args:
+            submission: The Case instance.
+            groups: Optional list of lists of drug-bag ids. When provided, each
+                group must have 1–5 bags, every bag must belong to exactly one
+                group, and the union must equal the case's bag set.
+
+        Returns:
+            A list of lists of DrugBag instances.
 
         Raises:
-            ValidationError: If the submission has no bags or no assessments.
+            ValidationError: If the case has no bags or the grouping is invalid.
         """
-        bags = submission.bags.select_related("assessment").all()
-
-        if not bags.exists():
+        bag_qs = list(submission.bags.all().order_by("id"))
+        if not bag_qs:
             raise ValidationError(
-                "Cannot generate certificate: submission has no bags."
+                "Cannot generate certificates: case has no drug bags."
             )
 
+        bags_by_id = {bag.id: bag for bag in bag_qs}
+
+        if groups is None:
+            # Auto-group into sequential chunks of up to five bags
+            return [
+                bag_qs[i : i + MAX_BAGS_PER_CERTIFICATE]
+                for i in range(0, len(bag_qs), MAX_BAGS_PER_CERTIFICATE)
+            ]
+
+        if not isinstance(groups, list) or not groups:
+            raise ValidationError("groups must be a non-empty list of bag id lists.")
+
+        seen = set()
+        resolved = []
+        for index, group in enumerate(groups):
+            if not isinstance(group, list) or not (
+                1 <= len(group) <= MAX_BAGS_PER_CERTIFICATE
+            ):
+                raise ValidationError(
+                    f"Group {index + 1} must contain between 1 and "
+                    f"{MAX_BAGS_PER_CERTIFICATE} bags."
+                )
+            resolved_group = []
+            for bag_id in group:
+                if bag_id in seen:
+                    raise ValidationError(
+                        f"Bag {bag_id} appears in more than one group."
+                    )
+                if bag_id not in bags_by_id:
+                    raise ValidationError(f"Bag {bag_id} does not belong to this case.")
+                seen.add(bag_id)
+                resolved_group.append(bags_by_id[bag_id])
+            resolved.append(resolved_group)
+
+        if seen != set(bags_by_id.keys()):
+            raise ValidationError(
+                "Every drug bag on the case must belong to exactly one group."
+            )
+
+        return resolved
+
+    @staticmethod
+    def _format_officer_legal(officer):
+        """Format officer as: Rank BadgeNumber SURNAME, FirstName of Organisation."""
+        if not officer:
+            return "[Pending]"
+        parts = []
+        rank = (
+            officer.get_rank_display() if hasattr(officer, "get_rank_display") else ""
+        )
+        if rank and rank.lower() != "unknown":
+            parts.append(rank)
+        if officer.badge_number:
+            parts.append(officer.badge_number)
+        if officer.last_name:
+            parts.append(officer.last_name.upper())
+        result = " ".join(parts)
+        if officer.given_names:
+            result += f", {officer.given_names}"
+        if hasattr(officer, "station") and officer.station:
+            result += f" of {officer.station.name}"
+        return result.strip() or officer.full_name or "[Pending]"
+
+    @staticmethod
+    def build_certificate_context(submission, certificate):
+        """Build template context for a certificate, using its own bag group.
+
+        Raises:
+            ValidationError: If the certificate's bags have no assessments.
+        """
+        bags = list(certificate.bags.select_related("assessment").all())
+
+        if not bags:
+            # Legacy certificates may not have an explicit group — fall back to
+            # all bags on the case so historic data still renders.
+            bags = list(submission.bags.select_related("assessment").all())
+
+        if not bags:
+            raise ValidationError("Cannot generate certificate: no bags associated.")
+
         bags_with_assessments = [
-            bag
-            for bag in bags
-            if hasattr(bag, "assessment") and bag.assessment is not None
+            bag for bag in bags if getattr(bag, "assessment", None) is not None
         ]
         if not bags_with_assessments:
             raise ValidationError(
@@ -134,44 +204,21 @@ class CertificateService:
 
         tag_numbers = ", ".join(bag.seal_tag_numbers for bag in bags)
         descriptions = ", ".join(bag.get_content_type_display() for bag in bags)
-
         primary_assessment = bags_with_assessments[0].assessment
-
-        if primary_assessment.assessment_date:
-            primary_assessment.assessment_date.strftime("%d %B %Y")
 
         receipt_date = ""
         if submission.received:
             receipt_date = submission.received.strftime("%d %B %Y")
+
+        certification_date = ""
+        if certificate.certified_date:
+            certification_date = certificate.certified_date.strftime("%d %B %Y")
 
         defendant_display = (
             "; ".join(d.pdf_name for d in defendants)
             if defendants.exists()
             else "UNKNOWN"
         )
-
-        def format_officer_legal(officer):
-            """Format officer in legal certificate format: Rank BadgeNumber SURNAME, FirstName of Organisation"""
-            if not officer:
-                return "[Pending]"
-            parts = []
-            rank = (
-                officer.get_rank_display()
-                if hasattr(officer, "get_rank_display")
-                else ""
-            )
-            if rank and rank.lower() != "unknown":
-                parts.append(rank)
-            if officer.badge_number:
-                parts.append(officer.badge_number)
-            if officer.last_name:
-                parts.append(officer.last_name.upper())
-            result = " ".join(parts)
-            if officer.first_name:
-                result += f", {officer.first_name}"
-            if hasattr(officer, "station") and officer.station:
-                result += f" of {officer.station.name}"
-            return result.strip() or officer.full_name or "[Pending]"
 
         return {
             "certificate_number": certificate.certificate_number,
@@ -181,8 +228,8 @@ class CertificateService:
                 if submission.approved_botanist
                 else ""
             ),
-            "quantity_of_bags": bags.count(),
-            "quantity_of_bags_words": CertificateService._number_to_words(bags.count()),
+            "quantity_of_bags": len(bags),
+            "quantity_of_bags_words": CertificateService._number_to_words(len(bags)),
             "tag_numbers": tag_numbers,
             "new_tag_numbers": ", ".join(
                 bag.new_seal_tag_numbers for bag in bags if bag.new_seal_tag_numbers
@@ -190,16 +237,22 @@ class CertificateService:
             or "[Pending]",
             "description": descriptions,
             "defendant": defendant_display,
-            "police_officer": format_officer_legal(submission.submitting_officer),
-            "receiving_officer": format_officer_legal(submission.requesting_officer),
+            "police_officer": CertificateService._format_officer_legal(
+                submission.submitting_officer
+            ),
+            "receiving_officer": CertificateService._format_officer_legal(
+                submission.requesting_officer or submission.submitting_officer
+            ),
             "receipt_date": receipt_date,
             "species_name": (
                 primary_assessment.get_determination_display()
                 if primary_assessment.determination
                 else "Unknown"
             ),
-            "other_matters": submission.additional_notes or "None",
-            "certification_date": "",  # Empty for unsigned — set during signing
+            "other_matters": certificate.additional_notes
+            or submission.additional_notes
+            or "None",
+            "certification_date": certification_date,
             "logo_path": str(
                 settings.BASE_DIR / "staticfiles" / "images" / "BCSTransparent.png"
             ),
@@ -212,349 +265,111 @@ class CertificateService:
         }
 
     @staticmethod
-    def validate_certificate_generation(submission):
-        """Validate that a certificate can be generated for the given submission.
-
-        Checks:
-        - No locked certificate already exists.
-        - No certificate already exists at all.
-
-        Note: Signature check is NOT done here — that's for the signing step only.
-
-        Raises:
-            ValidationError: If generation is not permitted.
-        """
-        existing_cert = submission.certificates.first()
-        if existing_cert and existing_cert.is_locked:
-            raise ValidationError(
-                "Certificate is locked after signing. The assigned botanist "
-                "must unlock it before regenerating."
-            )
-
-        if submission.certificates.exists():
-            raise ValidationError("Certificate already exists for this submission.")
+    def _render_pdf(submission, certificate):
+        context = CertificateService.build_certificate_context(submission, certificate)
+        html = render_to_string(CERTIFICATE_TEMPLATE, context)
+        return PDFService._html_to_pdf(html)
 
     @staticmethod
     @transaction.atomic
-    def generate_unsigned_certificate(submission, user):
-        """Create an unsigned certificate record and render the PDF.
+    def generate_certificates(submission, user, groups=None, group_notes=None):
+        """Generate one certificate (and PDF) per bag group for the case.
 
-        Validates the submission, creates the Certificate record, builds the
-        template context, renders the PDF, and stores it on the certificate.
+        Removes any existing (un-batched) certificates first so regeneration
+        with new groupings is clean. When ``group_notes`` is provided it is
+        aligned by index with the groups and stored as each certificate's
+        Section C notes.
 
         Returns:
-            The newly created Certificate instance (with unsigned_pdf_file populated).
+            A list of created Certificate instances.
 
         Raises:
-            ValidationError: If validation fails or data is incomplete.
+            ValidationError: If grouping is invalid or assessments are missing.
         """
-        CertificateService.validate_certificate_generation(submission)
+        if submission.batch_id is not None:
+            raise ValidationError(
+                "Cannot regenerate certificates for a case that is already batched."
+            )
 
-        certificate = Certificate.objects.create(submission=submission)
+        resolved_groups = CertificateService.group_bags_for_certificates(
+            submission, groups
+        )
 
-        context = CertificateService.build_certificate_context(submission, certificate)
-        html = render_to_string(CERTIFICATE_TEMPLATE, context)
-        pdf_bytes = PDFService._html_to_pdf(html)
+        # Clear out previous certificates (they have no signed/locked state now)
+        for existing in submission.certificates.all():
+            if existing.pdf_file:
+                existing.pdf_file.delete(save=False)
+            existing.delete()
 
-        filename = f"certificate_{certificate.certificate_number}.pdf"
-        certificate.unsigned_pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
-        certificate.unsigned_pdf_size = len(pdf_bytes)
-        certificate.save(update_fields=["unsigned_pdf_file", "unsigned_pdf_size"])
+        today = timezone.now().date()
+        created = []
+        for index, group in enumerate(resolved_groups):
+            note = ""
+            if isinstance(group_notes, list) and index < len(group_notes):
+                note = (group_notes[index] or "").strip()
+            certificate = Certificate.objects.create(
+                submission=submission,
+                certified_date=today,
+                additional_notes=note or None,
+            )
+            certificate.bags.set(group)
+
+            pdf_bytes = CertificateService._render_pdf(submission, certificate)
+            filename = f"certificate_{certificate.certificate_number}.pdf"
+            certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
+            certificate.pdf_size = len(pdf_bytes)
+            certificate.save(update_fields=["pdf_file", "pdf_size"])
+            created.append(certificate)
 
         submission.certificates_generated_at = timezone.now()
         submission.save(update_fields=["certificates_generated_at"])
 
+        # Generating certificates completes the assessment stage — move the case
+        # into unsigned_generation so the workflow reflects that certificates now
+        # exist (the wizard may have skipped the assessment "Continue" step).
+        if submission.phase == Case.PhaseChoices.ASSESSMENT:
+            old_phase = submission.phase
+            submission.phase = Case.PhaseChoices.UNSIGNED_GENERATION
+            submission.save(update_fields=["phase"])
+            CasePhaseHistory.objects.create(
+                submission=submission,
+                from_phase=old_phase,
+                to_phase=submission.phase,
+                action="advance",
+                user=user,
+            )
+
         settings.LOGGER.info(
-            f"User {user} generated unsigned certificate "
-            f"{certificate.certificate_number}"
+            f"User {user} generated {len(created)} certificate(s) "
+            f"for case {submission.case_number}"
         )
 
-        return certificate
+        return created
 
     @staticmethod
     def regenerate_certificate_pdf(certificate):
         """Re-render and replace the stored PDF for an existing certificate.
 
-        Returns:
-            The updated Certificate instance.
-
         Raises:
-            ValidationError: If the certificate is locked or data is incomplete.
+            ValidationError: If the case is already batched.
         """
-        if certificate.is_locked:
+        submission = certificate.submission
+        if submission.batch_id is not None:
             raise ValidationError(
-                "Certificate is locked after signing. "
-                "The assigned botanist must unlock it before regenerating."
+                "Cannot regenerate a certificate for a case that is already batched."
             )
 
-        submission = certificate.submission
+        pdf_bytes = CertificateService._render_pdf(submission, certificate)
 
-        context = CertificateService.build_certificate_context(submission, certificate)
-        html = render_to_string(CERTIFICATE_TEMPLATE, context)
-        pdf_bytes = PDFService._html_to_pdf(html)
-
-        if certificate.unsigned_pdf_file:
-            certificate.unsigned_pdf_file.delete(save=False)
+        if certificate.pdf_file:
+            certificate.pdf_file.delete(save=False)
 
         filename = f"certificate_{certificate.certificate_number}.pdf"
-        certificate.unsigned_pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
-        certificate.unsigned_pdf_size = len(pdf_bytes)
-        certificate.save(update_fields=["unsigned_pdf_file", "unsigned_pdf_size"])
+        certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
+        certificate.pdf_size = len(pdf_bytes)
+        certificate.save(update_fields=["pdf_file", "pdf_size"])
 
         return certificate
-
-    @staticmethod
-    @transaction.atomic
-    def unlock_certificate(certificate, user):
-        """Unlock a certificate for unsigned PDF regeneration.
-
-        Only the assigned botanist or admin/staff users may unlock.
-        Clears signed PDF and resets signature tracking fields.
-
-        Raises:
-            PermissionDenied: If the user is not permitted to unlock.
-            ValidationError: If the certificate is not locked.
-        """
-        submission = certificate.submission
-
-        is_assigned_botanist = submission.approved_botanist_id == user.id
-        is_staff_or_admin = user.is_staff or user.is_superuser
-        if not (is_assigned_botanist or is_staff_or_admin):
-            raise PermissionDenied(
-                "Only the assigned botanist or staff may unlock this certificate."
-            )
-
-        if not certificate.is_locked:
-            raise ValidationError("Certificate is not locked.")
-
-        # Delete the signed PDF file from storage
-        if certificate.signed_pdf_file:
-            try:
-                old_path = certificate.signed_pdf_file.path
-                if default_storage.exists(old_path):
-                    default_storage.delete(old_path)
-            except Exception as e:
-                settings.LOGGER.warning(f"Could not delete signed PDF file: {e}")
-
-        # Reset lock and signature tracking fields
-        certificate.is_locked = False
-        certificate.signed_pdf_file = None
-        certificate.signed_pdf_size = 0
-        certificate.signature_embedded_at = None
-        certificate.signed_by = None
-        certificate.file_hash_at_signing = None
-        certificate.signature_used_id = None
-        certificate.unlocked_by = user
-        certificate.save()
-
-        SignatureAuditLog.objects.create(
-            user=user,
-            actor=user,
-            action="unlock",
-        )
-
-        settings.LOGGER.info(
-            f"User {user.email} unlocked certificate "
-            f"{certificate.certificate_number} for case {submission.case_number}"
-        )
-
-        return certificate
-
-    @staticmethod
-    def validate_signing_permission(submission, user):
-        """Validate that the user has permission to sign the certificate.
-
-        The assigned botanist or admin/staff users may sign.
-
-        Raises:
-            PermissionDenied: If the user is not the assigned botanist or staff.
-        """
-        is_assigned_botanist = submission.approved_botanist_id == user.id
-        is_staff_or_admin = user.is_staff or user.is_superuser
-        if not (is_assigned_botanist or is_staff_or_admin):
-            raise PermissionDenied(
-                "Only the assigned botanist or staff may sign this certificate."
-            )
-
-    @staticmethod
-    def get_verified_signature(user):
-        """Retrieve and verify the integrity of a user's signature.
-
-        Returns:
-            A tuple of (Signature instance, base64 data URI string).
-
-        Raises:
-            ValidationError: If no signature exists or integrity check fails.
-        """
-        try:
-            signature = Signature.objects.get(user=user)
-        except Signature.DoesNotExist:
-            raise ValidationError(
-                "You must upload a signature before signing a certificate."
-            )
-
-        # Verify SHA-256 hash integrity of the stored signature file
-        signature.image.open("rb")
-        sha256 = hashlib.sha256()
-        for chunk in signature.image.chunks():
-            sha256.update(chunk)
-        computed_hash = sha256.hexdigest()
-        signature.image.seek(0)
-
-        if computed_hash != signature.file_hash:
-            SignatureAuditLog.objects.create(
-                user=user,
-                actor=user,
-                action="integrity_failure",
-                content_type=signature.content_type,
-                file_size=signature.file_size,
-                file_hash=signature.file_hash,
-            )
-            settings.LOGGER.error(
-                f"Signature integrity failure for user {user.email}: "
-                f"expected {signature.file_hash}, got {computed_hash}"
-            )
-            raise ValidationError("Signature file integrity check failed.")
-
-        # Read and base64-encode the signature image
-        image_bytes = signature.image.read()
-        signature.image.seek(0)
-        encoded = base64.b64encode(image_bytes).decode("utf-8")
-        signature_data_uri = f"data:{signature.content_type};base64,{encoded}"
-
-        return signature, signature_data_uri, computed_hash
-
-    @staticmethod
-    @transaction.atomic
-    def record_signing(certificate, signature, computed_hash, pdf_output, user):
-        """Record the signing of a certificate after PDF generation.
-
-        Saves the signed PDF, updates signature tracking fields, locks the
-        certificate, creates an audit log, and optionally advances the phase.
-
-        Args:
-            certificate: The Certificate instance.
-            signature: The Signature record used.
-            computed_hash: SHA-256 hash of the signature file.
-            pdf_output: The signed PDF bytes.
-            user: The user who signed.
-
-        Returns:
-            The updated Certificate instance.
-        """
-
-        submission = certificate.submission
-
-        pdf_filename = f"signed_{certificate.certificate_number}.pdf"
-        certificate.signed_pdf_file = ContentFile(pdf_output, name=pdf_filename)
-        certificate.signed_pdf_size = len(pdf_output)
-        certificate.signature_used_id = signature.id
-        certificate.signature_embedded_at = timezone.now()
-        certificate.signed_by = user
-        certificate.file_hash_at_signing = computed_hash
-        certificate.is_locked = True
-        certificate.locked_at = timezone.now()
-        certificate.save()
-
-        SignatureAuditLog.objects.create(
-            user=user,
-            actor=user,
-            action="sign",
-            content_type=signature.content_type,
-            file_size=signature.file_size,
-            file_hash=computed_hash,
-        )
-
-        # Advance phase from Botanist Sign-Off to Invoice Generation
-        if submission.phase == Case.PhaseChoices.BOTANIST_SIGNOFF:
-            submission.phase = Case.PhaseChoices.INVOICING
-            submission.save(update_fields=["phase"])
-
-            settings.LOGGER.info(
-                f"Case {submission.case_number} advanced from "
-                f"botanist_signoff to invoicing after signing"
-            )
-
-            # Notify the assigned finance officer
-            if submission.finance_officer_id:
-                CertificateService._notify_finance_officer(submission, user)
-
-        settings.LOGGER.info(
-            f"User {user.email} signed certificate "
-            f"{certificate.certificate_number} for case {submission.case_number}"
-        )
-
-        return certificate
-
-    @staticmethod
-    def _notify_finance_officer(submission, signing_user):
-        """Send a notification to the assigned finance officer after signing."""
-        from communications.models import Notification, NotificationTypes
-
-        finance_officer = submission.finance_officer
-        if not finance_officer:
-            return
-
-        try:
-            prefs = finance_officer.preferences
-            if not prefs.notify_phase_changes:
-                return
-        except Exception:
-            return
-
-        Notification.objects.create(
-            recipient=finance_officer,
-            actor=signing_user,
-            notification_type=NotificationTypes.SUBMISSION_PHASE_CHANGED,
-            title="Certificate Signed — Ready for Invoicing",
-            message=(
-                f"{signing_user.get_full_name()} has signed the certificate for "
-                f"submission {submission.case_number}. "
-                f"The submission has advanced to Invoice Generation."
-            ),
-            priority=Notification.PriorityLevels.NORMAL,
-        )
-
-    @staticmethod
-    def sign_certificate(submission, certificate, user):
-        """Full signing flow: validate, verify signature, render PDF, record.
-
-        Orchestrates the complete certificate signing process by delegating
-        to validate_signing_permission, get_verified_signature, rendering
-        the signed template, and record_signing.
-
-        Returns:
-            The signed Certificate instance.
-        """
-        import os
-
-        from django.template.loader import get_template
-
-        CertificateService.validate_signing_permission(submission, user)
-        signature, signature_data_uri, computed_hash = (
-            CertificateService.get_verified_signature(user)
-        )
-
-        certificate_css_path = os.path.join(
-            settings.BASE_DIR, "templates/pdf/styles/certificate_styles.css"
-        )
-
-        context = CertificateService.build_certificate_context(submission, certificate)
-        context["certification_date"] = timezone.now().strftime("%d %B %Y")
-        context["signature_image_data"] = signature_data_uri
-
-        try:
-            html_content = get_template(CERTIFICATE_TEMPLATE).render(context)
-        except Exception as e:
-            settings.LOGGER.error(f"Template rendering failed during signing: {e}")
-            raise ValidationError("Failed to render certificate template.")
-
-        extra_args = [f"--style={certificate_css_path}", "--javascript"]
-        pdf_output = PDFService._html_to_pdf(html_content, extra_args=extra_args)
-
-        return CertificateService.record_signing(
-            certificate, signature, computed_hash, pdf_output, user
-        )
 
 
 # Backward-compatible function aliases for existing consumers
@@ -563,14 +378,11 @@ def build_certificate_context(submission, certificate):
     return CertificateService.build_certificate_context(submission, certificate)
 
 
-def validate_certificate_generation(submission):
+def generate_certificates(submission, user, groups=None, group_notes=None):
     """Backward-compatible alias."""
-    return CertificateService.validate_certificate_generation(submission)
-
-
-def generate_unsigned_certificate(submission, user):
-    """Backward-compatible alias."""
-    return CertificateService.generate_unsigned_certificate(submission, user)
+    return CertificateService.generate_certificates(
+        submission, user, groups, group_notes
+    )
 
 
 def regenerate_certificate_pdf(certificate):

@@ -45,7 +45,7 @@ export const EditOfficerForm = ({
 		mode: "onChange",
 		defaultValues: {
 			badge_number: officer.badge_number || "",
-			first_name: officer.first_name || "",
+			given_names: officer.given_names || "",
 			last_name: officer.last_name || "",
 			rank: officer.rank || "unknown",
 			station: officer.station ? officer.station.toString() : "none",
@@ -56,7 +56,7 @@ export const EditOfficerForm = ({
 		try {
 			const transformedData = {
 				badge_number: data.badge_number || null,
-				first_name: data.first_name || null,
+				given_names: data.given_names || null,
 				last_name: data.last_name,
 				rank: data.rank,
 				station:
@@ -111,16 +111,16 @@ export const EditOfficerForm = ({
 					)}
 				/>
 
-				{/* First Name */}
+				{/* Given Names */}
 				<FormField
 					control={form.control}
-					name="first_name"
+					name="given_names"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>First Name</FormLabel>
+							<FormLabel>Given Names</FormLabel>
 							<FormControl>
 								<Input
-									placeholder="Enter officer's first name (optional)"
+									placeholder="Enter officer's given names (optional)"
 									{...field}
 									value={field.value || ""}
 									disabled={isLoading}

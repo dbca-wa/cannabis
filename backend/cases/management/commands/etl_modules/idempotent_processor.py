@@ -197,7 +197,7 @@ class IdempotentProcessor:
             json_botanist = json_record.get("approved_botanist", "")
             existing_botanist_name = ""
             if existing_submission.approved_botanist:
-                existing_botanist_name = f"{existing_submission.approved_botanist.first_name} {existing_submission.approved_botanist.last_name}".strip()
+                existing_botanist_name = f"{existing_submission.approved_botanist.given_names} {existing_submission.approved_botanist.last_name}".strip()
 
             # Only consider it a change if both have values and they're different
             # Don't update just because one is missing and the other isn't (botanist might not exist in DB)
@@ -317,7 +317,7 @@ class IdempotentProcessor:
                     User = get_user_model()
                     try:
                         botanist = User.objects.get(
-                            first_name__icontains=submission_data.approved_botanist.split()[
+                            given_names__icontains=submission_data.approved_botanist.split()[
                                 0
                             ],
                             role="botanist",

@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import { Loader2, Undo2 } from "lucide-react";
+import { Loader2, Undo2, ArrowRight } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import {
 	Dialog,
@@ -10,19 +10,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/shared/components/ui/dialog";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/shared/components/ui/select";
+import { Badge } from "@/shared/components/ui/badge";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Label } from "@/shared/components/ui/label";
 import type { CasePhase } from "@/features/cases/types/cases.types";
 import {
 	PHASE_KEYS,
 	PHASE_DISPLAY_NAMES,
+	PHASE_BADGE_COLOURS,
 } from "@/shared/constants/phases.config";
 
 interface SendBackDialogProps {
@@ -34,8 +29,11 @@ interface SendBackDialogProps {
 }
 
 /**
- * Dialog for sending a case back to an earlier phase.
- * Collects a target phase and a required reason before submitting.
+ * Dialog for sending a case back one phase.
+ *
+ * The target is always the phase immediately before the case's current phase —
+ * it is derived automatically (no selection needed) and shown to the user.
+ * A reason is required for the audit trail.
  */
 export const SendBackDialog = ({
 	open,
@@ -44,29 +42,24 @@ export const SendBackDialog = ({
 	onSubmit,
 	isPending,
 }: SendBackDialogProps) => {
-	const [selectedPhase, setSelectedPhase] = useState<CasePhase | "">("");
 	const [reason, setReason] = useState("");
 
-	// Reset form state when dialog opens — auto-select the previous phase
+	// Target is always the previous phase relative to the case's current phase
 	const currentPhaseIndex = PHASE_KEYS.indexOf(currentPhase);
 	const previousPhase =
 		currentPhaseIndex > 0 ? PHASE_KEYS[currentPhaseIndex - 1] : null;
 
 	useEffect(() => {
 		if (open) {
-			setSelectedPhase(previousPhase ?? "");
 			setReason("");
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
-	const availablePhases = previousPhase ? [previousPhase] : [];
-
-	const canSubmit = !!selectedPhase && reason.trim().length > 0 && !isPending;
+	const canSubmit = !!previousPhase && reason.trim().length > 0 && !isPending;
 
 	const handleSubmit = async () => {
-		if (!canSubmit || !selectedPhase) return;
-		await onSubmit(selectedPhase as CasePhase, reason.trim());
+		if (!canSubmit || !previousPhase) return;
+		await onSubmit(previousPhase, reason.trim());
 	};
 
 	return (
@@ -86,30 +79,36 @@ export const SendBackDialog = ({
 						Send Case Back
 					</DialogTitle>
 					<DialogDescription>
-						Return this case to an earlier phase. A reason is required for the
+						Return this case to the previous phase. A reason is required for the
 						audit trail.
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 py-4">
-					{/* Phase selector */}
+					{/* Target phase (auto-derived, read-only) */}
 					<div className="space-y-2">
-						<Label htmlFor="send-back-phase">Target Phase</Label>
-						<Select
-							value={selectedPhase}
-							onValueChange={(value) => setSelectedPhase(value as CasePhase)}
-						>
-							<SelectTrigger id="send-back-phase">
-								<SelectValue placeholder="Select a phase to send back to..." />
-							</SelectTrigger>
-							<SelectContent>
-								{availablePhases.map((phase) => (
-									<SelectItem key={phase} value={phase}>
-										{PHASE_DISPLAY_NAMES[phase]}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+						<Label>Sending back to</Label>
+						<div className="flex items-center gap-3 rounded-md border p-3 bg-muted/50">
+							<Badge
+								variant="secondary"
+								className={PHASE_BADGE_COLOURS[currentPhase]}
+							>
+								{PHASE_DISPLAY_NAMES[currentPhase]}
+							</Badge>
+							<ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+							{previousPhase ? (
+								<Badge
+									variant="secondary"
+									className={PHASE_BADGE_COLOURS[previousPhase]}
+								>
+									{PHASE_DISPLAY_NAMES[previousPhase]}
+								</Badge>
+							) : (
+								<span className="text-sm text-muted-foreground">
+									No earlier phase available
+								</span>
+							)}
+						</div>
 					</div>
 
 					{/* Reason textarea */}

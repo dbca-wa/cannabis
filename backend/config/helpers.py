@@ -44,7 +44,7 @@ def send_email_with_embedded_image(
             is_test_mode = True
             test_email = system_settings.email_test_user.email
             test_mode_user = (
-                f"{system_settings.email_test_user.first_name} "
+                f"{system_settings.email_test_user.given_names} "
                 f"{system_settings.email_test_user.last_name} "
                 f"({test_email})"
             )

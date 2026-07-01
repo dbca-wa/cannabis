@@ -16,6 +16,7 @@ export const useOcrUpload = () => {
 		mutationFn: (file: File) => {
 			ocrResultStore.setProcessing(true);
 			ocrResultStore.uploadedFileName = file.name;
+			ocrResultStore.uploadedFile = file;
 			return uploadAndExtract(file);
 		},
 		onSuccess: (data) => {

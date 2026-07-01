@@ -7,7 +7,7 @@ export type { SystemSettings } from "@/shared/types/backend-api.types";
 export interface SettingsAuditUser {
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 }
 
@@ -15,12 +15,8 @@ export interface SettingsAuditUser {
 export interface SystemSettingsUpdateRequest {
 	cost_per_certificate?: string;
 	cost_per_bag?: string;
-	call_out_fee?: string;
-	cost_per_forensic_hour?: string;
-	cost_per_kilometer_fuel?: string;
 	tax_percentage?: string;
 	forward_certificate_emails_to?: string;
-	document_email_address?: string | null;
 	send_emails_to_self?: boolean;
 }
 

@@ -42,7 +42,7 @@ export const CreateOfficerForm = ({
 		resolver: zodResolver(createOfficerSchema),
 		defaultValues: {
 			badge_number: "",
-			first_name: "",
+			given_names: "",
 			last_name: "",
 			rank: "constable",
 			station: "none",
@@ -54,7 +54,7 @@ export const CreateOfficerForm = ({
 			// Transform data to match backend expectations
 			const transformedData = {
 				badge_number: data.badge_number || null,
-				first_name: data.first_name || null,
+				given_names: data.given_names || null,
 				last_name: data.last_name,
 				rank: data.rank,
 				station:
@@ -93,16 +93,16 @@ export const CreateOfficerForm = ({
 					)}
 				/>
 
-				{/* First Name */}
+				{/* Given Names */}
 				<FormField
 					control={form.control}
-					name="first_name"
+					name="given_names"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>First Name</FormLabel>
+							<FormLabel>Given Names</FormLabel>
 							<FormControl>
 								<Input
-									placeholder="Enter officer's first name (optional)"
+									placeholder="Enter officer's given names (optional)"
 									{...field}
 									value={field.value || ""}
 									disabled={isLoading}

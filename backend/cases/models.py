@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator
 from django.db import models
 
 from common.models import AuditModel, SystemSettings
@@ -87,20 +86,18 @@ class Case(AuditModel):
         help_text="Defendants involved in this case",
     )
 
-    # Workflow phase - 7-phase state machine
+    # Workflow phase - 5-phase state machine
     class PhaseChoices(models.TextChoices):
-        CASE_CREATION = "case_creation", "Case Creation"
         ASSESSMENT = "assessment", "Assessment"
         UNSIGNED_GENERATION = "unsigned_generation", "Unsigned Certificate"
-        BOTANIST_SIGNOFF = "botanist_signoff", "Botanist Sign-Off"
-        INVOICING = "invoicing", "Invoicing"
-        SEND_EMAILS = "send_emails", "Email"
+        BATCHING = "batching", "Batching"
+        IN_BATCH = "in_batch", "In Batch"
         COMPLETE = "complete", "Complete"
 
     phase = models.CharField(
         max_length=30,
         choices=PhaseChoices.choices,
-        default=PhaseChoices.CASE_CREATION,
+        default=PhaseChoices.ASSESSMENT,
         help_text="Current phase of the case workflow",
     )
 
@@ -125,31 +122,53 @@ class Case(AuditModel):
         help_text="Section C certificate content (additional notes for the examining botanist)",
     )
 
-    # Finance-related fields (for invoice calculation)
-    forensic_hours = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        null=True,
+    # Optional scanned Priority 3 police form this case was created from.
+    # Stored in Azure Blob in production; never required (kept for reference).
+    police_form = models.FileField(
+        upload_to="police_forms/",
         blank=True,
-        validators=[MinValueValidator(Decimal("0.00"))],
-        help_text="Number of forensic hours (e.g., 2.5 for 2 hours 30 minutes)",
+        null=True,
+        verbose_name="Police Priority 3 Form",
+        help_text="Optional scanned Priority 3 form used to create this case",
     )
-    fuel_distance_km = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(Decimal("0.00"))],
-        help_text="Distance traveled in kilometers for fuel cost calculation",
+
+    # Legacy flag — ETL-imported historical cases that predate the current
+    # workflow. These are in the Complete phase and have no certificates or
+    # batches; they exist for reference and reporting only.
+    is_legacy = models.BooleanField(
+        default=False,
+        help_text="True for ETL-imported historical cases that predate the current workflow.",
     )
 
     # Workflow timestamps
-    finance_approved_at = models.DateTimeField(blank=True, null=True)
-    botanist_approved_at = models.DateTimeField(blank=True, null=True)
     certificates_generated_at = models.DateTimeField(blank=True, null=True)
-    invoices_generated_at = models.DateTimeField(blank=True, null=True)
-    emails_sent_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
+
+    # Batching — a case belongs to at most one batch
+    batch = models.ForeignKey(
+        "submissions.Batch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cases",
+        help_text="The batch this case has been included in, if any",
+    )
+
+    # Tracks the user who last actioned (moved/edited) the case
+    last_actioned_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="last_actioned_cases",
+        help_text="User who last performed a workflow action on this case",
+    )
+
+    @property
+    def is_batch_eligible(self):
+        """A case is eligible for batching when it has reached the Batching
+        phase and is not already attached to a batch."""
+        return self.phase == self.PhaseChoices.BATCHING and self.batch_id is None
 
     @property
     def cannabis_present(self):
@@ -204,7 +223,6 @@ class CasePhaseHistory(AuditModel):
         max_length=20,
         choices=[
             ("advance", "Advanced"),
-            ("send_back", "Sent Back"),
         ],
         help_text="Type of action that caused this transition",
     )
@@ -217,21 +235,14 @@ class CasePhaseHistory(AuditModel):
         help_text="User who performed this action",
     )
 
-    reason = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Reason for send-back actions",
-    )
-
     timestamp = models.DateTimeField(
         auto_now_add=True,
         help_text="When this transition occurred",
     )
 
     def __str__(self):
-        action_text = "sent back" if self.action == "send_back" else "advanced"
         user_text = self.user.get_full_name() if self.user else "System"
-        return f"{self.submission.case_number}: {user_text} {action_text} from {self.get_from_phase_display()} to {self.get_to_phase_display()}"
+        return f"{self.submission.case_number}: {user_text} advanced from {self.get_from_phase_display()} to {self.get_to_phase_display()}"
 
     class Meta:
         verbose_name = "Phase History Entry"
@@ -427,6 +438,14 @@ class Certificate(AuditModel):
         related_name="certificates",
     )
 
+    # The specific drug bags this certificate covers (max 5 enforced in service)
+    bags = models.ManyToManyField(
+        "submissions.DrugBag",
+        related_name="certificates",
+        blank=True,
+        help_text="The drug bags covered by this certificate (up to 5)",
+    )
+
     certificate_number = models.CharField(
         max_length=50,
         unique=True,
@@ -434,76 +453,35 @@ class Certificate(AuditModel):
         help_text="Auto-generated certificate number (e.g., CRT2024-001)",
     )
 
+    # Date the certificate was certified (rendered on the PDF)
+    certified_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the certificate was certified, shown on the PDF",
+    )
+
+    # Section C content for this specific certificate (per-certificate notes)
+    additional_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Section C 'other matters' notes shown on this certificate",
+    )
+
     pdf_generating = models.BooleanField(
         default=False,
         help_text="Whether PDF is currently being generated",
     )
-    unsigned_pdf_file = models.FileField(
+
+    # Final certificate PDF (single deliverable — no separate signed version)
+    pdf_file = models.FileField(
         upload_to="certificates/",
         blank=True,
         null=True,
-        help_text="Unsigned PDF certificate",
+        help_text="Generated certificate PDF",
     )
-    unsigned_pdf_size = models.PositiveIntegerField(
+    pdf_size = models.PositiveIntegerField(
         default=0,
-        help_text="Size of the unsigned PDF in bytes",
-    )
-
-    # Signed PDF slot — holds the signed version, never overwrites the unsigned PDF
-    signed_pdf_file = models.FileField(
-        upload_to="certificates/signed/",
-        blank=True,
-        null=True,
-        help_text="Signed PDF certificate with embedded signature",
-    )
-    signed_pdf_size = models.PositiveIntegerField(
-        default=0,
-        help_text="Size of the signed PDF in bytes",
-    )
-
-    # Lock mechanism — prevents unsigned PDF regeneration after signing
-    is_locked = models.BooleanField(
-        default=False,
-        help_text="When True, the unsigned PDF cannot be regenerated",
-    )
-    locked_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp when the certificate was locked after signing",
-    )
-    unlocked_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="unlocked_certificates",
-        help_text="User who last unlocked this certificate (audit trail)",
-    )
-
-    # Signature tracking fields
-    signature_used_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="ID of the Signature record used when signing this certificate",
-    )
-    signature_embedded_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Timestamp when the signature was embedded in the PDF",
-    )
-    signed_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="signed_certificates",
-        help_text="The user who signed this certificate",
-    )
-    file_hash_at_signing = models.CharField(
-        max_length=64,
-        null=True,
-        blank=True,
-        help_text="SHA-256 hash of the signature image at signing time",
+        help_text="Size of the certificate PDF in bytes",
     )
 
     def save(self, *args, **kwargs):
@@ -526,174 +504,126 @@ class Certificate(AuditModel):
         ]
 
 
-class Invoice(AuditModel):
-    """Generated invoices for submissions"""
+class Batch(AuditModel):
+    """A batch groups one or more completed-unsigned cases for cost tallying
+    and document packaging. Replaces the per-case invoice workflow."""
 
-    submission = models.ForeignKey(
-        "submissions.Case",
-        on_delete=models.CASCADE,
-        related_name="invoices",
-    )
-
-    invoice_number = models.CharField(
+    batch_number = models.CharField(
         max_length=50,
         unique=True,
-        blank=True,  # Will be auto-generated
-        help_text="Auto-generated invoice number (e.g., INV2024-001)",
+        blank=True,  # Auto-generated on creation
+        help_text="Auto-generated batch number (e.g., BATCH2025-001)",
     )
 
-    customer_number = models.CharField(
-        max_length=20,
-        help_text="Customer reference number",
-    )
-
-    # Calculated totals
-    subtotal = models.DecimalField(
-        max_digits=10,
+    # Snapshot of the rates current at batch creation time
+    cert_rate = models.DecimalField(
+        max_digits=8,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text="Subtotal before tax",
+        help_text="Certificate rate captured at batch time",
+    )
+    bag_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Bag identification rate captured at batch time",
+    )
+    tax_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Tax percentage captured at batch time",
+    )
+
+    # Denormalised tallies for fast sorting/listing
+    certificate_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Total certificates across all cases in the batch",
+    )
+    bag_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Total drug bags across all cases in the batch",
+    )
+
+    # Computed money (using the snapshot rates)
+    cert_cost = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    bag_cost = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    subtotal = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
     tax_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0.00"),
-        help_text="Tax amount",
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
     total = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0.00"),
-        help_text="Total amount including tax",
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
 
-    pdf_generating = models.BooleanField(
-        default=False,
-        help_text="Whether PDF is currently being generated",
+    certificate_number_range = models.TextField(
+        blank=True,
+        help_text="Comma-separated certificate numbers for the batch",
     )
-    pdf_file = models.FileField(
-        upload_to="invoices/",  # Fixed: was pointing to certificates/
+
+    # Invoice raised on Oracle — entered later on the Batches page; unique.
+    # When set, the batch's cases are marked complete.
+    invoice_raised_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Unique Oracle invoice-raised number; completing the cases",
+    )
+    invoice_raised_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the invoice-raised number was recorded",
+    )
+
+    # Downloadable package (certificates + cost summary)
+    zip_file = models.FileField(
+        upload_to="batches/",
         blank=True,
         null=True,
-        help_text="Generated PDF invoice",
+        help_text="Generated ZIP package of certificates and cost summary",
     )
-    pdf_size = models.PositiveIntegerField(
-        default=0,
-        help_text="Size of the PDF in bytes",
+    zip_size = models.PositiveIntegerField(default=0)
+
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_batches",
+        help_text="User who created the batch",
     )
 
     def save(self, *args, **kwargs):
-        """Auto-generate invoice number and calculate totals"""
-        if not self.invoice_number:
+        """Auto-generate batch number on creation."""
+        if not self.batch_number:
             settings_obj = SystemSettings.load()
-            self.invoice_number = settings_obj.get_next_invoice_number()
-
-        # Calculate totals if not set
-        if self.subtotal == 0:
-            self.calculate_totals()
-
+            self.batch_number = settings_obj.get_next_batch_number()
         super().save(*args, **kwargs)
 
-    def calculate_totals(self):
-        """Calculate invoice totals based on certificates and additional fees"""
-        settings_obj = SystemSettings.load()
-
-        # Base cost: certificates + bag identification
-        bag_count = self.submission.bags.count()
-        bag_cost = bag_count * settings_obj.cost_per_bag
-        cert_count = self.submission.certificates.count()
-        certificate_cost = cert_count * settings_obj.cost_per_certificate
-
-        # Additional fees
-        additional_cost = Decimal("0.00")
-        for fee in self.submission.additional_fees.all():
-            if fee.claim_kind == AdditionalInvoiceFee.FeeChoices.FUEL:
-                additional_cost += fee.units * settings_obj.cost_per_kilometer_fuel
-            elif fee.claim_kind == AdditionalInvoiceFee.FeeChoices.FORENSIC:
-                additional_cost += fee.units * settings_obj.cost_per_forensic_hour
-            elif fee.claim_kind == AdditionalInvoiceFee.FeeChoices.CALL_OUT:
-                # You might want to add a call_out_fee to SystemSettings
-                additional_cost += fee.units * Decimal("50.00")  # Default call out fee
-
-        self.subtotal = certificate_cost + bag_cost + additional_cost
-        self.tax_amount = self.subtotal * (settings_obj.tax_percentage / 100)
-        self.total = self.subtotal + self.tax_amount
-
-    def __str__(self):
-        return f"Invoice {self.invoice_number} - {self.submission.case_number}"
-
-    class Meta:
-        verbose_name = "Invoice"
-        verbose_name_plural = "Invoices"
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["submission", "-created_at"]),
-            models.Index(fields=["invoice_number"]),
-        ]
-
-
-class AdditionalInvoiceFee(AuditModel):
-    """Additional fees that can be added to invoices"""
-
-    submission = models.ForeignKey(
-        "submissions.Case",
-        on_delete=models.CASCADE,
-        related_name="additional_fees",
-        help_text="The case this fee relates to",
-    )
-
-    class FeeChoices(models.TextChoices):
-        FUEL = "fuel", "Fuel/Travel"
-        CALL_OUT = "call_out", "Call Out"
-        FORENSIC = "forensic", "Forensic Work"
-
-    claim_kind = models.CharField(
-        max_length=20,
-        choices=FeeChoices.choices,
-        help_text="Type of additional fee",
-    )
-
-    units = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("1.00"),
-        help_text="Number of units (km for fuel, hours for forensic, times for call out)",
-    )
-
-    description = models.CharField(
-        max_length=200,
-        blank=True,
-        null=True,
-        help_text="Optional description of the fee",
-    )
-
     @property
-    def calculated_cost(self):
-        """Calculate the cost of this fee based on current system settings"""
-        settings_obj = SystemSettings.load()
-
-        if self.claim_kind == self.FeeChoices.FUEL:
-            return self.units * settings_obj.cost_per_kilometer_fuel
-        elif self.claim_kind == self.FeeChoices.FORENSIC:
-            return self.units * settings_obj.cost_per_forensic_hour
-        elif self.claim_kind == self.FeeChoices.CALL_OUT:
-            # You might want to add this to SystemSettings
-            return self.units * Decimal("50.00")  # Default call out fee
-
-        return Decimal("0.00")
+    def is_invoiced(self):
+        """Whether an invoice-raised number has been recorded."""
+        return bool(self.invoice_raised_number)
 
     def __str__(self):
-        unit_text = {
-            self.FeeChoices.FUEL: "km",
-            self.FeeChoices.FORENSIC: "hours",
-            self.FeeChoices.CALL_OUT: "times",
-        }.get(self.claim_kind, "units")
-
-        return f"{self.get_claim_kind_display()}: {self.units} {unit_text}"
+        return f"Batch {self.batch_number} ({self.certificate_count} certs)"
 
     class Meta:
-        verbose_name = "Additional Invoice Fee"
-        verbose_name_plural = "Additional Invoice Fees"
+        verbose_name = "Batch"
+        verbose_name_plural = "Batches"
+        ordering = ["-created_at"]
+        db_table = "submissions_batch"
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["batch_number"]),
+        ]
 
 
 class CaseDraft(AuditModel):

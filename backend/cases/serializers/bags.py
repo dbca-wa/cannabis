@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import serializers
 
 from ..models import BotanicalAssessment, DrugBag
@@ -176,3 +177,73 @@ class DrugBagBatchCreateSerializer(serializers.Serializer):
     """Serializer for batch creation of multiple drug bags."""
 
     bags = DrugBagBatchItemSerializer(many=True, min_length=1, max_length=50)
+
+    def validate(self, attrs):
+        """Reject duplicate or conflicting tag numbers, returning per-bag,
+        per-field errors aligned by index so the client can highlight the exact
+        offending fields.
+
+        Every non-blank tag value (original or new) shares one unique namespace:
+        it must be unique within the batch and must not already exist on any case
+        (as either an original or a new tag). A new tag must also differ from its
+        own original.
+        """
+        bags = attrs["bags"]
+        errors = [{} for _ in bags]
+
+        def add_error(index, field, message):
+            errors[index].setdefault(field, []).append(message)
+
+        # Map each claimed tag value to the (index, field) positions using it.
+        positions = {}
+
+        def claim(index, field, value):
+            value = (value or "").strip()
+            if value:
+                positions.setdefault(value, []).append((index, field))
+
+        for index, bag in enumerate(bags):
+            original = (bag.get("seal_tag_numbers") or "").strip()
+            new_tag = (bag.get("new_seal_tag_numbers") or "").strip()
+            claim(index, "seal_tag_numbers", original)
+            # A bag may legitimately carry the same value for its original and
+            # new tag — the Priority 3 form sometimes repeats it when a bag was
+            # not re-sealed. Treat that as a single claim for this entry rather
+            # than a duplicate. The new tag is only claimed separately when it
+            # differs, so reusing another bag's tag is still caught below.
+            if new_tag and new_tag != original:
+                claim(index, "new_seal_tag_numbers", new_tag)
+
+        # Duplicates within the batch (a value claimed by more than one field).
+        for value, occurrences in positions.items():
+            if len(occurrences) > 1:
+                for index, field in occurrences:
+                    add_error(
+                        index, field, f"Duplicate tag '{value}' within this batch."
+                    )
+
+        # Conflicts with bags that already exist on any case.
+        claimed_values = list(positions.keys())
+        if claimed_values:
+            existing = DrugBag.objects.filter(
+                Q(seal_tag_numbers__in=claimed_values)
+                | Q(new_seal_tag_numbers__in=claimed_values)
+            ).select_related("submission")
+            taken = {}
+            for bag in existing:
+                case_number = bag.submission.case_number
+                if bag.seal_tag_numbers in positions:
+                    taken.setdefault(bag.seal_tag_numbers, case_number)
+                if bag.new_seal_tag_numbers and bag.new_seal_tag_numbers in positions:
+                    taken.setdefault(bag.new_seal_tag_numbers, case_number)
+            for value, case_number in taken.items():
+                for index, field in positions[value]:
+                    add_error(
+                        index,
+                        field,
+                        f"Tag '{value}' already exists on case {case_number}.",
+                    )
+
+        if any(errors):
+            raise serializers.ValidationError({"bags": errors})
+        return attrs

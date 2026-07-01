@@ -14,7 +14,7 @@ import {
 	type DrugBagUpdateRequest,
 } from "@/shared/types/backend-api.types";
 import type { DrugBagBatchCreateRequest } from "../types/drugBags.types";
-import { casesQueryKeys } from "./useCases";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 export const drugBagsQueryKeys = {
 	all: ["drugbags"] as const,
@@ -43,13 +43,7 @@ export const useDrugBags = (submissionId: number | null) => {
 				drugBagsQueryKeys.detail(newDrugBag.id),
 				newDrugBag
 			);
-			queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.list(newDrugBag.case),
-			});
-			// Invalidate all case detail queries to ensure bags array is refreshed
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
+			await invalidateRelatedQueries(queryClient, "drugBags");
 			toast.success(
 				`Drug bag "${newDrugBag.seal_tag_numbers}" created successfully!`
 			);
@@ -67,12 +61,7 @@ export const useDrugBags = (submissionId: number | null) => {
 				drugBagsQueryKeys.detail(updatedDrugBag.id),
 				updatedDrugBag
 			);
-			await queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.list(updatedDrugBag.case),
-			});
-			await queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(updatedDrugBag.case),
-			});
+			await invalidateRelatedQueries(queryClient, "drugBags");
 			toast.success(
 				`Drug bag "${updatedDrugBag.seal_tag_numbers}" updated successfully!`
 			);
@@ -93,16 +82,11 @@ export const useDrugBags = (submissionId: number | null) => {
 			await deleteDrugBag(id);
 			return { id, submissionId };
 		},
-		onSuccess: async ({ id, submissionId }) => {
+		onSuccess: async ({ id }) => {
 			queryClient.removeQueries({
 				queryKey: drugBagsQueryKeys.detail(id),
 			});
-			await queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.list(submissionId),
-			});
-			await queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(submissionId),
-			});
+			await invalidateRelatedQueries(queryClient, "drugBags");
 			toast.success("Drug bag deleted successfully!");
 		},
 		onError: (error: unknown) => {
@@ -119,15 +103,11 @@ export const useDrugBags = (submissionId: number | null) => {
 			data: DrugBagBatchCreateRequest;
 		}) => batchCreateDrugBags(caseId, data),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: drugBagsQueryKeys.lists(),
-			});
-			await queryClient.invalidateQueries({ queryKey: ["cases"] });
+			await invalidateRelatedQueries(queryClient, "drugBags");
 			toast.success("Bags created successfully!");
 		},
-		onError: (error: unknown) => {
-			toast.error(`Failed to create bags: ${getErrorMessage(error)}`);
-		},
+		// Errors are surfaced by the caller (AssessmentStep maps per-bag tag
+		// conflicts back to the highlighted bag sections), so no toast here.
 	});
 
 	return {

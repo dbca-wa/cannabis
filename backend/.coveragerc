@@ -10,22 +10,18 @@ omit =
     */__pycache__/*
     */venv/*
     */virtualenv/*
+    */.venv/*
     manage.py
     config/wsgi.py
     config/asgi.py
-    */.venv/*
     */node_modules/*
     */staticfiles/*
     */files/*
+    */admin.py
     etl/*
     */management/commands/*
-    users/logging_config.py
-    users/throttles.py
-    signatures/tests.py
-    config/helpers.py
-    submissions/ocr/*
-    common/tests.py
-    common/templatetags/*
+    config/settings.py
+    config/cache_settings.py
 
 [report]
 exclude_lines =

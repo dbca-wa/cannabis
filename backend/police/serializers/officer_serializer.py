@@ -22,7 +22,7 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "badge_number",
-            "first_name",
+            "given_names",
             "last_name",
             "full_name",
             "rank",
@@ -44,7 +44,7 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
             "case_count",
         ]
 
-    def validate_first_name(self, value):
+    def validate_given_names(self, value):
         """Normalise first name to title case on save.
 
         NOTE: .title() doesn't handle compound prefixes like "Mc" or "Mac"
@@ -79,10 +79,10 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Ensure officer name is unique within the same station."""
-        first_name = (
-            attrs.get("first_name")
-            if "first_name" in attrs
-            else (self.instance.first_name if self.instance else None)
+        given_names = (
+            attrs.get("given_names")
+            if "given_names" in attrs
+            else (self.instance.given_names if self.instance else None)
         )
         last_name = (
             attrs.get("last_name")
@@ -102,11 +102,11 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
             last_name__iexact=last_name,
         )
 
-        # Handle first_name matching: NULL and "" should be treated as equivalent
-        if first_name:
-            qs = qs.filter(first_name__iexact=first_name)
+        # Handle given_names matching: NULL and "" should be treated as equivalent
+        if given_names:
+            qs = qs.filter(given_names__iexact=given_names)
         else:
-            qs = qs.filter(Q(first_name__isnull=True) | Q(first_name=""))
+            qs = qs.filter(Q(given_names__isnull=True) | Q(given_names=""))
 
         if station:
             qs = qs.filter(station=station)
@@ -118,7 +118,9 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
 
         if qs.exists():
             station_name = station.name if station else "no station"
-            full_name = f"{first_name} {last_name}".strip() if first_name else last_name
+            full_name = (
+                f"{given_names} {last_name}".strip() if given_names else last_name
+            )
             raise serializers.ValidationError(
                 {
                     "last_name": f"An officer named '{full_name}' already exists at {station_name}."
@@ -140,7 +142,7 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "badge_number",
-            "first_name",
+            "given_names",
             "last_name",
             "full_name",
             "rank",
@@ -160,7 +162,7 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "badge_number",
-            "first_name",
+            "given_names",
             "last_name",
             "rank",
             "station",
@@ -169,12 +171,12 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Ensure at least first or last name is provided, and unique within station."""
-        if not attrs.get("first_name") and not attrs.get("last_name"):
+        if not attrs.get("given_names") and not attrs.get("last_name"):
             raise serializers.ValidationError(
                 "At least first name or last name must be provided."
             )
 
-        first_name = attrs.get("first_name") or ""
+        given_names = attrs.get("given_names") or ""
         last_name = attrs.get("last_name") or ""
         station = attrs.get("station")
 
@@ -183,11 +185,11 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
                 last_name__iexact=last_name,
             )
 
-            # Handle first_name matching: NULL and "" are equivalent
-            if first_name:
-                qs = qs.filter(first_name__iexact=first_name)
+            # Handle given_names matching: NULL and "" are equivalent
+            if given_names:
+                qs = qs.filter(given_names__iexact=given_names)
             else:
-                qs = qs.filter(Q(first_name__isnull=True) | Q(first_name=""))
+                qs = qs.filter(Q(given_names__isnull=True) | Q(given_names=""))
 
             if station:
                 qs = qs.filter(station=station)
@@ -197,7 +199,7 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
             if qs.exists():
                 station_name = station.name if station else "no station"
                 full_name = (
-                    f"{first_name} {last_name}".strip() if first_name else last_name
+                    f"{given_names} {last_name}".strip() if given_names else last_name
                 )
                 raise serializers.ValidationError(
                     {
@@ -206,7 +208,7 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
                 )
         return attrs
 
-    def validate_first_name(self, value):
+    def validate_given_names(self, value):
         """Normalise first name to title case on save.
 
         NOTE: .title() doesn't handle compound prefixes like "Mc" or "Mac"

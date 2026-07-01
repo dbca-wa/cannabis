@@ -6,8 +6,6 @@ import {
 	ChevronsUpDown,
 	ChevronUp,
 	ChevronDown,
-	ScrollText,
-	BadgeDollarSign,
 	FileText,
 	AlertCircle,
 } from "lucide-react";
@@ -21,12 +19,8 @@ import {
 	TableRow,
 } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import {
-	Tooltip,
-	TooltipTrigger,
-	TooltipContent,
-} from "@/shared/components/ui/tooltip";
 import { KeyboardShortcutsHelp } from "@/shared/components/ui/custom/keyboard-shortcuts-help";
 import { TablePagination } from "@/shared/components/ui/custom/table-pagination";
 import { useBreakpoint } from "@/shared/hooks/ui/useResponsive";
@@ -38,28 +32,23 @@ import { useServerPagination } from "@/shared/hooks/data/useServerPagination";
 import { casesSearchStore } from "@/app/stores/derived/cases-search.store";
 import { useCases } from "../hooks/useCases";
 import { getPhaseBadgeClass } from "../utils/cases.utils";
-import {
-	exportToCSV,
-	commonExportColumns,
-	generateFilename,
-} from "@/shared/utils/export.utils";
-import { toast } from "sonner";
 import { formatDate } from "@/shared/utils/date.utils";
-import {
-	downloadCertificatePdf,
-	downloadInvoicePdf,
-	openBlobInNewTab,
-} from "@/shared/services/pdf";
 
 import type { CaseTiny, CasePhase } from "@/shared/types/backend-api.types";
 
 export const CasesTable = observer(
 	({
 		onCountChange,
-		onCasesChange,
+		selectedIds,
+		onToggleSelect,
+		onToggleSelectAll,
 	}: {
 		onCountChange?: (count: number) => void;
-		onCasesChange?: (cases: CaseTiny[]) => void;
+		/** When provided, an eligibility-gated selection checkbox column is shown. */
+		selectedIds?: Set<number>;
+		onToggleSelect?: (caseObj: CaseTiny) => void;
+		/** Toggle selection of every batching-eligible case currently shown. */
+		onToggleSelectAll?: (eligible: CaseTiny[]) => void;
 	}) => {
 		const navigate = useNavigate();
 		const searchInputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +95,17 @@ export const CasesTable = observer(
 			refetch: refetchCases,
 		} = useCases(searchParams);
 
+		// Batching selection: which of the shown cases can be batched, and whether
+		// they are all currently selected (drives the header select-all checkbox).
+		const eligibleCases = useMemo(
+			() => cases.filter((c) => c.is_batch_eligible),
+			[cases]
+		);
+		const allEligibleSelected =
+			!!selectedIds &&
+			eligibleCases.length > 0 &&
+			eligibleCases.every((c) => selectedIds.has(c.id));
+
 		useEffect(() => {
 			if (totalCount !== undefined) {
 				pagination.updateTotalItems(totalCount);
@@ -117,22 +117,9 @@ export const CasesTable = observer(
 			}
 		}, [totalCount, pagination, onCountChange]);
 
-		useEffect(() => {
-			onCasesChange?.(cases);
-		}, [cases, onCasesChange]);
-
 		const handleResetFilters = useCallback(() => {
 			casesSearchStore.clearSearchAndFilters();
 		}, []);
-
-		// Export all data (for keyboard shortcut)
-		const handleExportAllCSV = useCallback(() => {
-			const filename = generateFilename("submissions_all", "csv");
-			exportToCSV(cases, commonExportColumns.caseObj, {
-				filename,
-			});
-			toast.success(`Exported ${cases.length} cases to CSV`);
-		}, [cases]);
 
 		// Sorting functionality
 		const handleSort = (field: string) => {
@@ -166,7 +153,6 @@ export const CasesTable = observer(
 		const shortcuts = useMemo(
 			() => [
 				commonShortcuts.table.search(() => searchInputRef.current?.focus()),
-				commonShortcuts.table.export(() => handleExportAllCSV()),
 				commonShortcuts.general.help(() => setShowShortcutsHelp(true)),
 				{
 					key: "n",
@@ -181,7 +167,7 @@ export const CasesTable = observer(
 					description: "Reset filters",
 				},
 			],
-			[handleExportAllCSV, navigate, handleResetFilters]
+			[navigate, handleResetFilters]
 		);
 
 		useKeyboardShortcuts({ shortcuts });
@@ -198,6 +184,25 @@ export const CasesTable = observer(
 					<Table>
 						<TableHeader>
 							<TableRow>
+								{/* Selection checkbox column (only when selecting for batch) */}
+								{selectedIds && (
+									<TableHead
+										className="w-16 text-center"
+										title="Select all batchable cases (in the Batching state, not yet batched)"
+									>
+										<div className="flex items-center justify-center">
+											<Checkbox
+												checked={allEligibleSelected}
+												disabled={eligibleCases.length === 0}
+												onCheckedChange={() =>
+													onToggleSelectAll?.(eligibleCases)
+												}
+												aria-label="Select all batchable cases"
+												className="cursor-pointer disabled:cursor-not-allowed"
+											/>
+										</div>
+									</TableHead>
+								)}
 								{/* Case Number Column */}
 								<TableHead title="Unique case reference number">
 									<button
@@ -269,6 +274,23 @@ export const CasesTable = observer(
 									</TableHead>
 								)}
 
+								{/* Certificates Column - hide on mobile */}
+								{!isMobile && (
+									<TableHead
+										className="text-center"
+										title="Number of certificates generated for this case"
+									>
+										<button
+											type="button"
+											onClick={() => handleSort("certificates_count")}
+											className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
+										>
+											<span>Certificates</span>
+											{getSortIcon("certificates_count")}
+										</button>
+									</TableHead>
+								)}
+
 								{/* State Column */}
 								<TableHead
 									className="text-center"
@@ -283,24 +305,19 @@ export const CasesTable = observer(
 										{getSortIcon("phase")}
 									</button>
 								</TableHead>
-
-								{/* Docs Column - hide on mobile (last) */}
-								{!isMobile && (
-									<TableHead title="Certificate and invoice documents">
-										<button
-											type="button"
-											className="inline-flex items-center gap-1"
-										>
-											<span>Docs</span>
-										</button>
-									</TableHead>
-								)}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{isLoading ? (
 								Array.from({ length: 5 }).map((_, i) => (
 									<TableRow key={i}>
+										{selectedIds && (
+											<TableCell className="text-center">
+												<div className="flex items-center justify-center">
+													<Skeleton className="h-4 w-4 rounded" />
+												</div>
+											</TableCell>
+										)}
 										<TableCell>
 											<div className="space-y-1">
 												<Skeleton className="h-4 w-24" />
@@ -331,20 +348,20 @@ export const CasesTable = observer(
 												<Skeleton className="h-6 w-8 rounded-full mx-auto" />
 											</TableCell>
 										)}
+										{!isMobile && (
+											<TableCell>
+												<Skeleton className="h-6 w-8 rounded-full mx-auto" />
+											</TableCell>
+										)}
 										<TableCell>
 											<Skeleton className="h-5 w-20 rounded-full mx-auto" />
 										</TableCell>
-										{!isMobile && (
-											<TableCell>
-												<Skeleton className="h-7 w-16 rounded-lg" />
-											</TableCell>
-										)}
 									</TableRow>
 								))
 							) : error ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 3 : 7}
+										colSpan={(isMobile ? 3 : 7) + (selectedIds ? 1 : 0)}
 										className="h-48 text-center"
 									>
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
@@ -369,7 +386,7 @@ export const CasesTable = observer(
 							) : cases.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 3 : 7}
+										colSpan={(isMobile ? 3 : 7) + (selectedIds ? 1 : 0)}
 										className="h-48 text-center"
 									>
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
@@ -413,12 +430,6 @@ export const CasesTable = observer(
 									const requestingOfficerStation = (
 										caseObj as unknown as Record<string, unknown>
 									).requesting_officer_station as string | null;
-									const certificateId = (
-										caseObj as unknown as Record<string, unknown>
-									).certificate_id as number | null;
-									const invoiceId = (
-										caseObj as unknown as Record<string, unknown>
-									).invoice_id as number | null;
 
 									return (
 										<TableRow
@@ -432,6 +443,29 @@ export const CasesTable = observer(
 												}
 											}}
 										>
+											{/* Selection checkbox — only for eligible cases */}
+											{selectedIds && (
+												<TableCell
+													className="text-center"
+													onClick={(e) => e.stopPropagation()}
+												>
+													{caseObj.is_batch_eligible ? (
+														<div className="flex items-center justify-center">
+															<Checkbox
+																checked={selectedIds.has(caseObj.id)}
+																onCheckedChange={() =>
+																	onToggleSelect?.(caseObj)
+																}
+																aria-label={`Select case ${caseObj.case_number} for batching`}
+																className="cursor-pointer"
+															/>
+														</div>
+													) : (
+														<span className="inline-block w-4" />
+													)}
+												</TableCell>
+											)}
+
 											{/* Reference — link + ID (reference design) */}
 											<TableCell>
 												<div className="flex items-center gap-2">
@@ -561,98 +595,31 @@ export const CasesTable = observer(
 												</TableCell>
 											)}
 
-											{/* State */}
-											<TableCell className="text-center">
-												<Badge
-													className={`${getPhaseBadgeClass(caseObj.phase)} pointer-events-none`}
-												>
-													{caseObj.phase_display}
-												</Badge>
-											</TableCell>
-
-											{/* Docs — bordered icon group (reference design) */}
+											{/* Certificates */}
 											{!isMobile && (
-												<TableCell onClick={(e) => e.stopPropagation()}>
-													<div className="inline-flex items-center rounded-lg border border-border/60 bg-muted/20 dark:bg-muted/10 divide-x divide-border/60 overflow-hidden">
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<button
-																	type="button"
-																	disabled={!certificateId}
-																	onClick={async () => {
-																		if (certificateId) {
-																			try {
-																				const blob =
-																					await downloadCertificatePdf(
-																						certificateId
-																					);
-																				openBlobInNewTab(blob);
-																			} catch {
-																				toast.error(
-																					"Failed to download certificate PDF"
-																				);
-																			}
-																		}
-																	}}
-																	className={`relative inline-flex items-center justify-center w-8 h-7 transition-colors ${
-																		certificateId
-																			? "text-foreground/80 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/40 cursor-pointer"
-																			: "text-muted-foreground/30 cursor-default"
-																	}`}
-																	aria-label={
-																		certificateId
-																			? "View certificate"
-																			: "No certificate"
-																	}
-																>
-																	<ScrollText className="h-[15px] w-[15px]" />
-																</button>
-															</TooltipTrigger>
-															<TooltipContent>
-																{certificateId
-																	? "Open certificate PDF"
-																	: "Certificate not yet generated"}
-															</TooltipContent>
-														</Tooltip>
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<button
-																	type="button"
-																	disabled={!invoiceId}
-																	onClick={async () => {
-																		if (invoiceId) {
-																			try {
-																				const blob =
-																					await downloadInvoicePdf(invoiceId);
-																				openBlobInNewTab(blob);
-																			} catch {
-																				toast.error(
-																					"Failed to download invoice PDF"
-																				);
-																			}
-																		}
-																	}}
-																	className={`relative inline-flex items-center justify-center w-8 h-7 transition-colors ${
-																		invoiceId
-																			? "text-foreground/80 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/40 cursor-pointer"
-																			: "text-muted-foreground/30 cursor-default"
-																	}`}
-																	aria-label={
-																		invoiceId ? "View invoice" : "No invoice"
-																	}
-																>
-																	<BadgeDollarSign className="h-[15px] w-[15px]" />
-																</button>
-															</TooltipTrigger>
-															<TooltipContent>
-																{invoiceId
-																	? "Open invoice PDF"
-																	: "Invoice not yet generated"}
-															</TooltipContent>
-														</Tooltip>
-													</div>
+												<TableCell className="text-center">
+													<span className="inline-flex items-center justify-center w-8 h-6 text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 rounded-full tabular-nums">
+														{caseObj.certificates_count}
+													</span>
 												</TableCell>
 											)}
+
+											{/* State */}
+											<TableCell className="text-center">
+												<div className="flex flex-col items-center gap-1">
+													<Badge
+														className={`${getPhaseBadgeClass(caseObj.phase)} pointer-events-none`}
+													>
+														{caseObj.phase_display}
+													</Badge>
+													{caseObj.phase === "complete" &&
+														caseObj.batch_invoice_raised_number && (
+															<span className="text-[11px] tabular-nums text-muted-foreground">
+																Invoice {caseObj.batch_invoice_raised_number}
+															</span>
+														)}
+												</div>
+											</TableCell>
 										</TableRow>
 									);
 								})

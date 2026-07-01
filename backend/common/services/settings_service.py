@@ -26,24 +26,6 @@ PRICING_FIELD_RULES = {
         "decimal_places": 2,
         "field_name": "Bag identification cost",
     },
-    "call_out_fee": {
-        "min": Decimal("0.00"),
-        "max": Decimal("999999.99"),
-        "decimal_places": 2,
-        "field_name": "Call out fee",
-    },
-    "cost_per_forensic_hour": {
-        "min": Decimal("0.00"),
-        "max": Decimal("999999.99"),
-        "decimal_places": 2,
-        "field_name": "Forensic hour cost",
-    },
-    "cost_per_kilometer_fuel": {
-        "min": Decimal("0.000"),
-        "max": Decimal("9999.999"),
-        "decimal_places": 3,
-        "field_name": "Fuel cost per kilometer",
-    },
     "tax_percentage": {
         "min": Decimal("0.00"),
         "max": Decimal("100.00"),
@@ -81,13 +63,11 @@ class SettingsService:
         response_data = {
             "cost_per_certificate": str(settings_obj.cost_per_certificate),
             "cost_per_bag": str(settings_obj.cost_per_bag),
-            "call_out_fee": str(settings_obj.call_out_fee),
-            "cost_per_forensic_hour": str(settings_obj.cost_per_forensic_hour),
-            "cost_per_kilometer_fuel": str(settings_obj.cost_per_kilometer_fuel),
             "tax_percentage": str(settings_obj.tax_percentage),
             "forward_certificate_emails_to": settings_obj.forward_certificate_emails_to,
             "send_emails_to_self": settings_obj.send_emails_to_self,
             "email_testing_mode": settings_obj.email_testing_mode,
+            "ocr_enabled": settings_obj.ocr_enabled,
             "email_test_user": None,
             "environment": environment,
             "send_emails_to_self_editable": SystemSettings.is_send_emails_to_self_editable(),
@@ -97,7 +77,7 @@ class SettingsService:
             response_data["email_test_user"] = {
                 "id": settings_obj.email_test_user.id,
                 "email": settings_obj.email_test_user.email,
-                "first_name": settings_obj.email_test_user.first_name,
+                "given_names": settings_obj.email_test_user.given_names,
                 "last_name": settings_obj.email_test_user.last_name,
             }
 
@@ -105,7 +85,7 @@ class SettingsService:
             response_data["last_modified_by"] = {
                 "id": settings_obj.last_modified_by.id,
                 "email": settings_obj.last_modified_by.email,
-                "first_name": settings_obj.last_modified_by.first_name,
+                "given_names": settings_obj.last_modified_by.given_names,
                 "last_name": settings_obj.last_modified_by.last_name,
             }
         else:
@@ -275,6 +255,13 @@ class SettingsService:
                 validation_errors["email_testing_mode"] = (
                     "Email testing mode must be true or false"
                 )
+
+        # Validate ocr_enabled feature flag
+        if "ocr_enabled" in data:
+            bool_value = SettingsService._parse_boolean(data["ocr_enabled"])
+            old_values["ocr_enabled"] = settings_obj.ocr_enabled
+            settings_obj.ocr_enabled = bool_value
+            updated_fields.append("ocr_enabled")
 
         # Validate email_test_user
         if "email_test_user" in data:

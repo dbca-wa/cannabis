@@ -9,7 +9,6 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
@@ -17,6 +16,8 @@ from rest_framework.status import (
     HTTP_413_REQUEST_ENTITY_TOO_LARGE,
 )
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class PoliceStationListView(ListCreateAPIView):
     """
 
     queryset = PoliceStation.objects.all().order_by("name")
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -123,7 +124,7 @@ class PoliceStationDetailView(RetrieveUpdateDestroyAPIView):
 
     queryset = PoliceStation.objects.all()
     serializer_class = PoliceStationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
@@ -144,7 +145,7 @@ class PoliceStationExportView(APIView):
     Supports filtering and bypasses pagination for full dataset exports
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         """Get filtered queryset for export"""
@@ -388,7 +389,7 @@ class PoliceStationExportView(APIView):
 class StationMergeView(APIView):
     """Merge multiple police stations into a single primary station."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request):
         primary_id = request.data.get("primary_id")

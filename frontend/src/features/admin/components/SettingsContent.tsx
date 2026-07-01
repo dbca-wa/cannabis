@@ -1,26 +1,8 @@
 import { useState, useCallback } from "react";
 import { motion } from "motion/react";
 import { PageTransition } from "@/shared/components/PageTransition";
-import {
-	FlaskConical,
-	Package,
-	Phone,
-	DollarSign,
-	Fuel,
-	Percent,
-	Mail,
-} from "lucide-react";
+import { FlaskConical, Package, Percent } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/shared/components/ui/dialog";
 import { BaseFeeModal } from "@/shared/components/BaseFeeModal";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -65,33 +47,6 @@ const RATE_TYPES: RateType[] = [
 		color: "from-blue-500 to-indigo-500",
 	},
 	{
-		key: "call_out_fee",
-		label: "Call-Out Fee",
-		description: "Fixed fee per assessment appointment",
-		prefix: "$",
-		decimals: 2,
-		icon: Phone,
-		color: "from-violet-500 to-purple-500",
-	},
-	{
-		key: "cost_per_forensic_hour",
-		label: "Forensic Hour",
-		description: "Hourly rate for botanist work",
-		prefix: "$",
-		decimals: 2,
-		icon: DollarSign,
-		color: "from-amber-500 to-orange-500",
-	},
-	{
-		key: "cost_per_kilometer_fuel",
-		label: "Fuel per KM",
-		description: "Travel reimbursement rate",
-		prefix: "$",
-		decimals: 2,
-		icon: Fuel,
-		color: "from-rose-500 to-red-500",
-	},
-	{
 		key: "tax_percentage",
 		label: "Tax Percentage",
 		description: "GST applied to invoices",
@@ -132,10 +87,6 @@ const SettingsContent = () => {
 
 	// Edit dialog state
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-	// Email edit state
-	const [isEditingEmail, setIsEditingEmail] = useState(false);
-	const [emailValue, setEmailValue] = useState("");
 
 	// Confirmation dialog state
 	const [pendingChanges, setPendingChanges] = useState<Record<string, string>>(
@@ -248,18 +199,6 @@ const SettingsContent = () => {
 		setEditingIndex(null);
 	};
 
-	const openEmailEdit = () => {
-		if (!settings) return;
-		setEmailValue(settings.document_email_address ?? "");
-		setIsEditingEmail(true);
-	};
-
-	const saveEmailEdit = () => {
-		if (!settings) return;
-		handleSettingsUpdate("document_email_address", emailValue || "");
-		setIsEditingEmail(false);
-	};
-
 	if (!settings)
 		return (
 			<div className="p-6 text-muted-foreground text-sm">
@@ -348,45 +287,6 @@ const SettingsContent = () => {
 						})}
 					</div>
 				</Card>
-
-				{/* Email configuration */}
-				<Card className="p-6">
-					<div className="flex items-center justify-between mb-5">
-						<div>
-							<h3>Document email</h3>
-							<p className="text-[13px] text-muted-foreground">
-								Email address where completed case documents are sent.
-							</p>
-						</div>
-					</div>
-
-					<div
-						onClick={openEmailEdit}
-						className="p-4 rounded-xl border border-border/70 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer group relative overflow-hidden"
-					>
-						<div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 opacity-[0.08] blur-xl group-hover:opacity-[0.15] transition-opacity" />
-						<div className="flex items-start gap-3 relative">
-							<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
-								<Mail className="w-5 h-5" />
-							</div>
-							<div className="flex-1 min-w-0">
-								<div className="text-[13px]">Document Email Address</div>
-								<div className="text-[11px] text-muted-foreground truncate">
-									{settings.document_email_address
-										? "Configured"
-										: "Falls back to certificate forwarding address"}
-								</div>
-								<div className="mt-2 text-[16px] font-medium truncate">
-									{settings.document_email_address || (
-										<span className="text-muted-foreground italic">
-											Not set
-										</span>
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
-				</Card>
 			</div>
 
 			{/* Edit pricing modal (shared component) */}
@@ -421,48 +321,6 @@ const SettingsContent = () => {
 				isLoading={isUpdating}
 				changes={confirmationChanges}
 			/>
-
-			{/* Edit document email dialog */}
-			<Dialog
-				open={isEditingEmail}
-				onOpenChange={(open) => !open && setIsEditingEmail(false)}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Update Document Email Address</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-2">
-						<Label htmlFor="document_email">Email Address</Label>
-						<Input
-							id="document_email"
-							type="email"
-							className="mt-1.5"
-							value={emailValue}
-							onChange={(e) => setEmailValue(e.target.value)}
-							placeholder="e.g. documents@example.com"
-						/>
-						<p className="text-xs text-muted-foreground">
-							Leave empty to fall back to the certificate forwarding address.
-						</p>
-					</div>
-					<DialogFooter>
-						<Button
-							variant="ghost"
-							className="cursor-pointer"
-							onClick={() => setIsEditingEmail(false)}
-						>
-							Cancel
-						</Button>
-						<Button
-							className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
-							onClick={saveEmailEdit}
-							disabled={isUpdating}
-						>
-							{isUpdating ? "Saving…" : "Save"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 		</PageTransition>
 	);
 };

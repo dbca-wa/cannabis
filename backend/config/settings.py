@@ -295,6 +295,8 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
     "rest_framework_simplejwt",
+    # Enables refresh-token blacklisting on rotation (BLACKLIST_AFTER_ROTATION).
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 CUSTOM_APPS = [
@@ -303,8 +305,6 @@ CUSTOM_APPS = [
     "police.apps.PoliceConfig",
     "defendants.apps.DefendantsConfig",
     "cases.apps.CasesConfig",
-    "communications.apps.CommunicationsConfig",
-    "signatures.apps.SignaturesConfig",
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + THIRD_PARTY_APPS + CUSTOM_APPS
@@ -386,9 +386,14 @@ REST_FRAMEWORK = {
         "reset_code_verification": "20/hour",  # Limit reset code verification attempts per IP
     },
 }
+# Access tokens are short-lived and silently refreshed by the frontend.
+# The refresh token lifetime defines how long a user can stay away before
+# being forced to log in again. With rotation enabled, each refresh issues a
+# fresh 30-day refresh token, so an active user stays signed in indefinitely
+# while an inactive user is logged out after one month.
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,

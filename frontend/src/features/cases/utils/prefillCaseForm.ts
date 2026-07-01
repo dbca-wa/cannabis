@@ -127,7 +127,7 @@ const selectTopOfficerCandidate = (
 	const officer: PoliceOfficerTiny = {
 		id: top.id,
 		badge_number: String(top.display_data.badge_number ?? ""),
-		first_name: null,
+		given_names: null,
 		last_name: null,
 		full_name: String(top.display_data.full_name ?? ""),
 		rank: "unknown",

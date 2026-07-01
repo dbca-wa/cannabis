@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: Times, 'Times New Roman', serif;
+            font-family: 'Aptos', 'Calibri', 'Segoe UI', sans-serif;
             margin: 0;
             padding: 30px; /* Reduced from 48px */
             color: #000;
@@ -38,6 +38,8 @@
         .header-section {
             position: relative;
             margin-bottom: 15px; /* Reduced from 20px */
+            /* Header and title remain serif; everything below renders in Aptos */
+            font-family: Times, 'Times New Roman', serif;
         }
 
         .form-reference-right {
@@ -386,12 +388,12 @@
                 <div class="section-content blue-border">
                     {% if quantity_of_bags == 1 %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bag, tag number {{ tag_numbers }}, containing
+                    movement bag, tag number {{ tag_numbers }} containing
                     {{ description }} marked <strong>{{ defendant }}</strong> from
                     {{ police_officer }} on {{ receipt_date }}.
                     {% else %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bags, tag numbers {{ tag_numbers }}, containing
+                    movement bags, tag numbers {{ tag_numbers }} containing
                     {{ description }} marked <strong>{{ defendant }}</strong> from
                     {{ police_officer }} on {{ receipt_date }}.
                     {% endif %}
@@ -437,18 +439,12 @@
                 </div>
             </div>
         </div>
-                <!-- Certification Statement — only shown when certification_date is set (signed version) -->
+                <!-- Certification Statement — the certificate is the final deliverable -->
         {% if certification_date %}
         <div class="certification-box">
             <div class="cert-date">
                 Certified on <span class="cert-highlight">{{ certification_date }}</span>
                 at the<span class="cert-highlight"> WA Herbarium, Kensington</span>
-            </div>
-        </div>
-        {% else %}
-        <div class="certification-box" style="background-color: #fffbeb; border: 2px dashed #d97706;">
-            <div class="cert-date" style="color: #92400e; font-weight: normal; font-size: 12px;">
-                Certification date will be added on botanist signature
             </div>
         </div>
         {% endif %}
@@ -460,17 +456,10 @@
 
         <!-- Footer Section -->
         <div class="footer-section">
-            <!-- Signature section moved to left -->
+            <!-- Approved botanist (no digital signature) -->
             <div class="signature-section">
                 <div class="signature-box">
-                    {% if signature_image_data %}
-                    <div style="margin-bottom: -10px; text-align: center;">
-                        <img src="{{ signature_image_data }}" alt="Botanist Signature" style="max-height: 48px; max-width: 240px; object-fit: contain; display: inline-block;">
-                    </div>
-                    <div class="signature-line" style="height: 10px;"></div>
-                    {% else %}
                     <div class="signature-line"></div>
-                    {% endif %}
                     <div class="signature-label">
                         Signature of Approved Botanist
                     </div>

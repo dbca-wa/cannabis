@@ -41,3 +41,30 @@ class IsBotanistOrStaff(BasePermission):
         return request.user.is_authenticated and (
             request.user.role == "botanist" or request.user.is_staff
         )
+
+
+def is_admin(user) -> bool:
+    """True for staff members or superusers."""
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and (user.is_staff or user.is_superuser)
+    )
+
+
+def ensure_case_editable(case, user) -> None:
+    """Guard against edits to a completed case.
+
+    A case in the Complete phase is read-only for everyone except admins
+    (staff/superuser). This enforces the rule server-side, matching the
+    client-side guard.
+
+    Raises:
+        PermissionDenied: If the case is complete and the user is not an admin.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    # Imported here to avoid a circular import at module load.
+    from ..models import Case
+
+    if case.phase == Case.PhaseChoices.COMPLETE and not is_admin(user):
+        raise PermissionDenied("This case is complete and can no longer be edited.")

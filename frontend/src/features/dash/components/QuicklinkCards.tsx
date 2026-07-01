@@ -1,12 +1,5 @@
 import { Link } from "react-router";
-import {
-	FlaskConical,
-	ClipboardPen,
-	FileText,
-	PenLine,
-	Receipt,
-	Mail,
-} from "lucide-react";
+import { FlaskConical, FileText, Boxes, PackageCheck } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { CountUp } from "@/shared/components/CountUp";
@@ -25,13 +18,6 @@ interface QuicklinkPhase {
 
 const QUICKLINK_PHASES: QuicklinkPhase[] = [
 	{
-		key: "case_creation",
-		label: "Case Creation",
-		description: "Awaiting Case Creation",
-		icon: ClipboardPen,
-		accent: "from-amber-500 to-orange-500",
-	},
-	{
 		key: "assessment",
 		label: "Assessment",
 		description: "Awaiting Assessment",
@@ -41,30 +27,23 @@ const QUICKLINK_PHASES: QuicklinkPhase[] = [
 	{
 		key: "unsigned_generation",
 		label: "Unsigned Certificate",
-		description: "Awaiting Unsigned Cert",
+		description: "Awaiting Certificate",
 		icon: FileText,
 		accent: "from-blue-500 to-indigo-500",
 	},
 	{
-		key: "botanist_signoff",
-		label: "Botanist Sign-Off",
-		description: "Awaiting Signature",
-		icon: PenLine,
+		key: "batching",
+		label: "Batching",
+		description: "Ready for Batching",
+		icon: Boxes,
 		accent: "from-violet-500 to-purple-500",
 	},
 	{
-		key: "invoicing",
-		label: "Invoicing",
+		key: "in_batch",
+		label: "In Batch",
 		description: "Awaiting Invoice",
-		icon: Receipt,
-		accent: "from-rose-500 to-pink-500",
-	},
-	{
-		key: "send_emails",
-		label: "Email",
-		description: "Awaiting Email",
-		icon: Mail,
-		accent: "from-sky-500 to-cyan-500",
+		icon: PackageCheck,
+		accent: "from-amber-500 to-orange-500",
 	},
 ];
 
@@ -73,8 +52,8 @@ export const QuicklinkCards = () => {
 
 	if (isLoading) {
 		return (
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				{Array.from({ length: 6 }).map((_, i) => (
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+				{Array.from({ length: 4 }).map((_, i) => (
 					<Skeleton key={i} className="h-[100px] w-full rounded-xl" />
 				))}
 			</div>
@@ -93,7 +72,7 @@ export const QuicklinkCards = () => {
 	}
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 			{QUICKLINK_PHASES.map((phase, index) => {
 				const count = data[phase.key as keyof typeof data] ?? 0;
 				const Icon = phase.icon;

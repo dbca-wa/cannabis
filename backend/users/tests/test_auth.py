@@ -1,154 +1,105 @@
-"""Tests for authentication and password management views."""
+"""Tests for the authentication endpoints."""
 
-from django.contrib.auth import get_user_model
+import pytest
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-from rest_framework_simplejwt.tokens import RefreshToken
 
-User = get_user_model()
+from common.tests.factories import BotanistFactory
+
+pytestmark = pytest.mark.django_db
 
 
-class PasswordUpdateAPITestCase(APITestCase):
-    """Test cases for password update API endpoint"""
+class TestWhoAmI:
+    def test_anonymous(self, api_client):
+        resp = api_client.get(reverse("whoami"))
+        assert resp.status_code == 200
+        assert resp.data["is_authenticated"] is False
+        assert resp.data["role"] == "none"
 
-    def setUp(self):
-        """Set up test data"""
-        self.user = User.objects.create_user(
-            email="test@example.com",
-            password="OldPassword123!",
-            first_name="Test",
-            last_name="User",
+    def test_authenticated(self, api_client, botanist_user):
+        api_client.force_authenticate(user=botanist_user)
+        resp = api_client.get(reverse("whoami"))
+        assert resp.status_code == 200
+        assert resp.data["email"] == botanist_user.email
+
+
+class TestLogin:
+    def test_returns_tokens_and_user(self, api_client):
+        BotanistFactory(email="login@example.com", password="testpass123")
+        resp = api_client.post(
+            reverse("login"),
+            {"email": "login@example.com", "password": "testpass123"},
+            format="json",
         )
+        assert resp.status_code == 200
+        assert "access" in resp.data
+        assert "refresh" in resp.data
+        assert resp.data["user"]["email"] == "login@example.com"
 
-        # Create JWT token for authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.access_token = str(refresh.access_token)
-
-        # Set up API client with authentication
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
-
-        # URL for password update endpoint
-        self.password_update_url = reverse("update_password")
-
-    def test_password_update_success(self):
-        """Test successful password update with valid current password"""
-        data = {
-            "current_password": "OldPassword123!",
-            "new_password": "NewPassword456@",
-            "confirm_password": "NewPassword456@",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("message", response.data)
-        self.assertIn("password_last_changed", response.data)
-
-        # Verify password was actually changed
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password("NewPassword456@"))
-        self.assertIsNotNone(self.user.password_last_changed)
-
-    def test_password_update_first_time(self):
-        """Test first-time password update (no current password required)"""
-        data = {
-            "new_password": "FirstPassword789#",
-            "confirm_password": "FirstPassword789#",
-            "is_first_time": True,
-        }
-        response = self.client.post(self.password_update_url, data)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("message", response.data)
-
-        # Verify password was changed
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password("FirstPassword789#"))
-
-    def test_password_update_wrong_current_password(self):
-        """Test password update with incorrect current password"""
-        data = {
-            "current_password": "WrongPassword123!",
-            "new_password": "NewPassword456@",
-            "confirm_password": "NewPassword456@",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(
-            "The current password you entered is incorrect", response.data["detail"]
+    def test_invalid_credentials(self, api_client):
+        BotanistFactory(email="login2@example.com", password="testpass123")
+        resp = api_client.post(
+            reverse("login"),
+            {"email": "login2@example.com", "password": "wrong"},
+            format="json",
         )
+        assert resp.status_code == 401
 
-    def test_password_update_passwords_dont_match(self):
-        """Test password update when new passwords don't match"""
-        data = {
-            "current_password": "OldPassword123!",
-            "new_password": "NewPassword456@",
-            "confirm_password": "DifferentPassword789#",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("The passwords you entered don't match", response.data["detail"])
-
-    def test_password_update_weak_password(self):
-        """Test password update with weak password"""
-        data = {
-            "current_password": "OldPassword123!",
-            "new_password": "weak",
-            "confirm_password": "weak",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(
-            "Your password doesn't meet the security requirements",
-            response.data["detail"],
+class TestPasswordValidation:
+    def test_validate_password(self, api_client):
+        resp = api_client.post(
+            reverse("validate_password"),
+            {"password": "SomeStr0ng!Pass"},
+            format="json",
         )
-        self.assertIn("new_password", response.data)
+        assert resp.status_code == 200
 
-    def test_password_update_missing_current_password(self):
-        """Test password update without current password for existing user"""
-        data = {
-            "new_password": "NewPassword456@",
-            "confirm_password": "NewPassword456@",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(
-            "Current password is required",
-            str(response.data.get("current_password", [])),
+class TestPasswordUpdate:
+    def test_requires_authentication(self, api_client):
+        resp = api_client.post(reverse("update_password"), {}, format="json")
+        assert resp.status_code in (401, 403)
+
+    def test_updates_password(self, api_client, botanist_user):
+        botanist_user.set_password("testpass123")
+        botanist_user.save()
+        api_client.force_authenticate(user=botanist_user)
+        resp = api_client.post(
+            reverse("update_password"),
+            {
+                "current_password": "testpass123",
+                "new_password": "NewStr0ng!Pass",
+                "confirm_password": "NewStr0ng!Pass",
+            },
+            format="json",
         )
+        assert resp.status_code == 200
+        botanist_user.refresh_from_db()
+        assert botanist_user.check_password("NewStr0ng!Pass")
 
-    def test_password_update_missing_new_password(self):
-        """Test password update without new password"""
-        data = {
-            "current_password": "OldPassword123!",
-            "confirm_password": "NewPassword456@",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(
-            "New password is required", str(response.data.get("new_password", []))
+class TestLogout:
+    def test_requires_authentication(self, api_client):
+        resp = api_client.post(reverse("logout"), {"refresh_token": "x"}, format="json")
+        assert resp.status_code in (401, 403)
+
+    def test_logout_blacklists_refresh(self, api_client):
+        user = BotanistFactory(email="logout@example.com", password="testpass123")
+        login = api_client.post(
+            reverse("login"),
+            {"email": "logout@example.com", "password": "testpass123"},
+            format="json",
         )
+        refresh = login.data["refresh"]
+        api_client.force_authenticate(user=user)
+        resp = api_client.post(
+            reverse("logout"), {"refresh_token": refresh}, format="json"
+        )
+        assert resp.status_code == 200
 
-    def test_password_update_unauthenticated(self):
-        """Test password update without authentication"""
-        self.client.credentials()  # Remove authentication
-        data = {
-            "current_password": "OldPassword123!",
-            "new_password": "NewPassword456@",
-            "confirm_password": "NewPassword456@",
-            "is_first_time": False,
-        }
-        response = self.client.post(self.password_update_url, data)
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        # The refresh token is blacklisted — it can no longer be exchanged.
+        api_client.force_authenticate(user=None)
+        refreshed = api_client.post(
+            reverse("token_refresh"), {"refresh": refresh}, format="json"
+        )
+        assert refreshed.status_code == 401

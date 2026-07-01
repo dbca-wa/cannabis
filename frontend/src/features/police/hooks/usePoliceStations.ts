@@ -7,6 +7,7 @@ import {
 } from "../services/policeStations.service";
 
 import { cacheConfig } from "@/shared/hooks/core/queryKeys";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import type {
 	PoliceStationCreateRequest,
 	PoliceStationUpdateRequest,
@@ -61,10 +62,7 @@ export function useCreateStation() {
 				newStation
 			);
 
-			// Invalidate all stations queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeStations");
 
 			toast.success("Police station created successfully!");
 		},
@@ -98,10 +96,7 @@ export function useUpdateStation() {
 				updatedStation
 			);
 
-			// Invalidate all stations queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeStations");
 
 			toast.success("Police station updated successfully!");
 		},
@@ -128,10 +123,7 @@ export function useDeleteStation() {
 				queryKey: stationsQueryKeys.detail(deletedId),
 			});
 
-			// Invalidate all stations queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: stationsQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "policeStations");
 
 			toast.success("Police station deleted successfully!");
 		},

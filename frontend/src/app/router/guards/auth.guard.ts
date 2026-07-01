@@ -170,6 +170,21 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		return redirect("/auth/login");
 	}
 
+	// Users without an app role (and not admin) may only access the dashboard.
+	const hasAppAccess = !!(
+		user?.is_superuser ||
+		user?.is_staff ||
+		user?.role === "botanist" ||
+		user?.role === "finance"
+	);
+	if (!hasAppAccess && pathname !== "/") {
+		logger.warn(
+			"[RootAuthGuard] Roleless user blocked from non-dashboard route",
+			{ userId: user?.id, pathname }
+		);
+		return redirect("/");
+	}
+
 	// Check admin route protection - only superusers can access admin routes
 	if (pathname.startsWith("/admin")) {
 		const isAdmin = user?.is_superuser;

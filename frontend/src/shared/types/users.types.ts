@@ -52,7 +52,7 @@ export interface PoliceStationTiny {
 export interface PoliceOfficer {
 	id: number;
 	badge_number: string | null;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string; // Computed field
 	rank: OfficerRank;
@@ -68,7 +68,7 @@ export interface PoliceOfficer {
 export interface PoliceOfficerTiny {
 	id: number;
 	badge_number: string | null;
-	first_name: string | null; // Added for form pre-selection
+	given_names: string | null; // Added for form pre-selection
 	last_name: string | null; // Added for form pre-selection
 	full_name: string;
 	rank: OfficerRank; // Added rank field for form pre-selection
@@ -95,7 +95,7 @@ export interface PoliceStationUpdateRequest {
 // Police Officer creation request (matches PoliceOfficerCreateSerializer)
 export interface PoliceOfficerCreateRequest {
 	badge_number?: string | undefined;
-	first_name?: string | undefined;
+	given_names?: string | undefined;
 	last_name: string;
 	rank: OfficerRank;
 	station?: number | undefined;
@@ -104,7 +104,7 @@ export interface PoliceOfficerCreateRequest {
 // Police Officer update request (partial update)
 export interface PoliceOfficerUpdateRequest {
 	badge_number?: string | undefined;
-	first_name?: string | undefined;
+	given_names?: string | undefined;
 	last_name?: string;
 	rank?: OfficerRank;
 	station?: number | undefined;

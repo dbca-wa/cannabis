@@ -3,7 +3,7 @@ import { z } from "zod";
 // Matches UserUpdateRequest interface and backend validation constraints
 export const editUserSchema = z.object({
 	email: z.string().email("Please enter a valid email address").optional(),
-	first_name: z
+	given_names: z
 		.string()
 		.max(100, "First name must be 100 characters or less")
 		.optional(),

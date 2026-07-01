@@ -58,7 +58,7 @@ export type PaginatedInvitationsResponse = PaginatedResponse<InviteRecord>;
 export interface ITAssetsComboboxProps {
 	onSelect: (userData: {
 		email: string;
-		first_name: string;
+		given_names: string;
 		last_name: string;
 		it_asset_id: number;
 		employee_id: string;
@@ -68,7 +68,7 @@ export interface ITAssetsComboboxProps {
 // Form data types (matches backend exactly)
 export interface EditUserFormData {
 	email: string;
-	first_name: string;
+	given_names: string;
 	last_name: string;
 	role: Role;
 	is_staff?: boolean;

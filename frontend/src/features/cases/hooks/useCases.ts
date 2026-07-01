@@ -9,7 +9,6 @@ import {
 	updateCase,
 	deleteCase,
 	executeWorkflowAction,
-	sendBack,
 	getPhaseHistory,
 } from "../services/cases.service";
 import {
@@ -17,8 +16,8 @@ import {
 	type CaseCreateRequest,
 	type CaseUpdateRequest,
 	type WorkflowActionRequest,
-	type CasePhase,
 } from "@/shared/types/backend-api.types";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 // Standardised query keys following established patterns
 export const casesQueryKeys = {
@@ -52,12 +51,7 @@ export const useCases = (params: CasesSearchParams = {}) => {
 		},
 		onSuccess: async (newCase) => {
 			queryClient.setQueryData(casesQueryKeys.detail(newCase.id), newCase);
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
+			await invalidateRelatedQueries(queryClient, "cases");
 			toast.success(`Case "${newCase.case_number}" created successfully!`);
 			logger.info("Case created via hook", {
 				submissionId: newCase.id,
@@ -88,15 +82,7 @@ export const useCases = (params: CasesSearchParams = {}) => {
 		onSuccess: async (updatedCase) => {
 			// Invalidate the detail query to refetch full case data (with nested relations)
 			// instead of replacing cache with partial PATCH response
-			await queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(updatedCase.id),
-			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
+			await invalidateRelatedQueries(queryClient, "cases");
 			toast.success(`Case "${updatedCase.case_number}" updated successfully!`);
 			logger.info("Case updated via hook", {
 				submissionId: updatedCase.id,
@@ -122,12 +108,7 @@ export const useCases = (params: CasesSearchParams = {}) => {
 			queryClient.removeQueries({
 				queryKey: casesQueryKeys.detail(submissionId),
 			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
+			await invalidateRelatedQueries(queryClient, "cases");
 			toast.success("Case deleted successfully!");
 			logger.info("Case deleted via hook", { submissionId });
 		},
@@ -156,12 +137,7 @@ export const useCases = (params: CasesSearchParams = {}) => {
 			return executeWorkflowAction(id, action);
 		},
 		onSuccess: async (response, { id }) => {
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(id),
-			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
+			await invalidateRelatedQueries(queryClient, "cases");
 			toast.success(response.message);
 			logger.info("Workflow action executed via hook", {
 				submissionId: id,
@@ -255,15 +231,7 @@ export const useAdvancePhase = () => {
 				casesQueryKeys.detail(submissionId),
 				updatedCase
 			);
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: [...casesQueryKeys.detail(submissionId), "phase-history"],
-			});
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
+			await invalidateRelatedQueries(queryClient, "cases");
 			toast.success("Phase advanced successfully!");
 			logger.info("Phase advanced via hook", { submissionId });
 		},
@@ -271,60 +239,6 @@ export const useAdvancePhase = () => {
 			const errorMessage = getErrorMessage(error);
 			toast.error(`Failed to advance phase: ${errorMessage}`);
 			logger.error("Advance phase failed via hook", {
-				error: errorMessage,
-			});
-		},
-	});
-};
-
-// Hook for sending case back to earlier phase
-export const useSendBack = () => {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: async ({
-			submissionId,
-			targetPhase,
-			reason,
-		}: {
-			submissionId: number;
-			targetPhase: CasePhase;
-			reason: string;
-		}) => {
-			logger.info("Sending case back", {
-				submissionId,
-				targetPhase,
-				reason,
-			});
-			return sendBack(submissionId, {
-				target_phase: targetPhase,
-				reason,
-			});
-		},
-		onSuccess: async (response, { submissionId }) => {
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.detail(submissionId),
-			});
-			queryClient.invalidateQueries({
-				queryKey: casesQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: [...casesQueryKeys.detail(submissionId), "phase-history"],
-			});
-			queryClient.invalidateQueries({
-				queryKey: ["cases"],
-			});
-			toast.success(response.message);
-			logger.info("Case sent back via hook", {
-				submissionId,
-				newPhase: response.new_phase,
-				sentBackBy: response.sent_back_by,
-			});
-		},
-		onError: (error: unknown) => {
-			const errorMessage = getErrorMessage(error);
-			toast.error(`Failed to send back: ${errorMessage}`);
-			logger.error("Send back failed via hook", {
 				error: errorMessage,
 			});
 		},

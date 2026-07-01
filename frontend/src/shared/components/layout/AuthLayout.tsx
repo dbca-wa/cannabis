@@ -81,7 +81,12 @@ const AuthLayout = observer(() => {
 					"bg-[#fafbfb] dark:bg-background"
 				)}
 			>
-				<div className="w-full max-w-md p-8 space-y-8 rounded-xl bg-card dark:bg-card border border-border shadow-lg">
+				<div
+					className={cn(
+						"w-full max-w-md p-8 space-y-8 rounded-xl bg-card dark:bg-card",
+						"border border-border shadow-lg"
+					)}
+				>
 					<Outlet />
 				</div>
 			</div>

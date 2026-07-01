@@ -30,21 +30,15 @@ import { useForm } from "react-hook-form";
 import { useLocation } from "react-router";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { logger } from "@/shared/services/logger.service";
+import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
 import * as z from "zod";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
 const Login = () => {
 	useDocumentTitle("Login");
 
-	const VERSION = import.meta.env.VITE_APP_VERSION || "Unset";
-	const VITE_PRODUCTION_BACKEND_API_URL = import.meta.env
-		.VITE_PRODUCTION_BACKEND_API_URL;
-
-	const ENVIRON = VITE_PRODUCTION_BACKEND_API_URL?.includes("test")
-		? "TEST"
-		: VITE_PRODUCTION_BACKEND_API_URL?.includes("prod")
-			? "PROD"
-			: "LOCAL";
+	const VERSION = getAppVersion();
+	const ENVIRON = getAppEnvironment();
 
 	const { login, isLoggingIn, loginError, user, isAuthenticated, isLoading } =
 		useAuth();
@@ -115,7 +109,7 @@ const Login = () => {
 	}
 
 	return (
-		<Card className="bg-card">
+		<Card className="bg-card border-none">
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />

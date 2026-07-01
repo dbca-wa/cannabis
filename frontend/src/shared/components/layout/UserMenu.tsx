@@ -14,11 +14,11 @@ import {
 	Moon,
 	KeyRound,
 	LogOut,
-	PenLine,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useNavigate } from "react-router";
+import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
 
 const loaders = [
 	{ key: "minimal" as const, label: "Minimal", icon: Sparkles },
@@ -65,11 +65,6 @@ const UserMenu = observer((_props: UserMenuProps) => {
 	const handleChangePassword = () => {
 		setOpen(false);
 		navigate("/change-password");
-	};
-
-	const handleMySignature = () => {
-		setOpen(false);
-		navigate("/signature");
 	};
 
 	const handleLogout = () => {
@@ -186,19 +181,13 @@ const UserMenu = observer((_props: UserMenuProps) => {
 						Currently using{" "}
 						<span className="capitalize">{uiStore.resolvedTheme}</span> mode
 					</div>
+					<div className="px-2 text-[11px] text-muted-foreground">
+						Cannabis Version {getAppVersion()} ({getAppEnvironment()})
+					</div>
 				</div>
 
 				{/* Actions */}
 				<div className="border-t border-border/60 p-2">
-					{(user?.role === "botanist" || user?.is_superuser) && (
-						<button
-							onClick={handleMySignature}
-							className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-[13px] transition-colors cursor-pointer"
-						>
-							<PenLine className="w-4 h-4 text-muted-foreground" />
-							My Signature
-						</button>
-					)}
 					<button
 						onClick={handleChangePassword}
 						className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-[13px] transition-colors cursor-pointer"
@@ -208,7 +197,7 @@ const UserMenu = observer((_props: UserMenuProps) => {
 					</button>
 					<button
 						onClick={handleLogout}
-						className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-destructive/10 text-destructive text-[13px] transition-colors cursor-pointer"
+						className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-destructive/10 text-destructive dark:text-red-500/80 text-[13px] transition-colors cursor-pointer"
 					>
 						<LogOut className="w-4 h-4" />
 						Log out

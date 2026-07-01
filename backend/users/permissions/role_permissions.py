@@ -21,3 +21,13 @@ class IsStaffOrSuperuser(BasePermission):
         return request.user.is_authenticated and (
             request.user.is_staff or request.user.is_superuser
         )
+
+
+class HasAppAccess(BasePermission):
+    """Allow access only to users who can use the app: botanists, finance
+    officers, and admins (staff/superusers). Roleless users are rejected."""
+
+    message = "You need a role (botanist, finance officer, or admin) to do this."
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_app_access

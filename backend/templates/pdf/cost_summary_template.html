@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cost Summary {{ batch_number }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            color: #1f2937;
+            font-size: 12px;
+            margin: 40px;
+        }
+        h1 { font-size: 20px; margin: 0 0 4px; }
+        .muted { color: #6b7280; }
+        .header { border-bottom: 2px solid #047857; padding-bottom: 12px; margin-bottom: 20px; }
+        .meta { margin-bottom: 20px; }
+        .meta div { margin-bottom: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f0fdf4; color: #065f46; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+        td.num, th.num { text-align: right; }
+        tfoot td { font-weight: 600; border-top: 2px solid #047857; border-bottom: none; }
+        .total-row td { font-size: 14px; color: #065f46; }
+        .org { margin-top: 32px; font-size: 11px; color: #6b7280; }
+        .cert-numbers { margin: 0; padding-left: 18px; }
+        .cert-numbers li { margin-bottom: 2px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cost Summary</h1>
+        <div class="muted">{{ batch_number }} &middot; {{ date_batched }}</div>
+    </div>
+
+    <div class="meta">
+        <div><strong>Cases in batch:</strong> {{ cases|length }}</div>
+        <div><strong>Certificate numbers:</strong></div>
+        <ul class="cert-numbers">
+            {% for number in certificate_numbers %}
+            <li>{{ number }}</li>
+            {% empty %}
+            <li class="muted">None</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="num">Quantity</th>
+                <th class="num">Rate</th>
+                <th class="num">Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Certificates of Approved Botanist</td>
+                <td class="num">{{ certificate_count }}</td>
+                <td class="num">${{ cert_rate }}</td>
+                <td class="num">${{ cert_cost }}</td>
+            </tr>
+            <tr>
+                <td>Botanical Identification (drug bags)</td>
+                <td class="num">{{ bag_count }}</td>
+                <td class="num">${{ bag_rate }}</td>
+                <td class="num">${{ bag_cost }}</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Subtotal (before tax)</td>
+                <td class="num">${{ subtotal }}</td>
+            </tr>
+            <tr>
+                <td colspan="3">Tax ({{ tax_percentage }}%)</td>
+                <td class="num">${{ tax_amount }}</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="3">Total (after tax)</td>
+                <td class="num">${{ total }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Case</th>
+                <th class="num">Bags</th>
+                <th class="num">Certificates</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for case in cases %}
+            <tr>
+                <td>{{ case.case_number }}</td>
+                <td class="num">{{ case.bags }}</td>
+                <td class="num">{{ case.certificates }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="org">
+        {{ dbca_org_data.name }}<br>
+        {{ dbca_org_data.address }}, {{ dbca_org_data.city }},
+        {{ dbca_org_data.state }} {{ dbca_org_data.zip }}
+    </div>
+</body>
+</html>

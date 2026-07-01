@@ -1,1 +1,0 @@
-"""Defendants test package."""

@@ -6,11 +6,7 @@ import { logger } from "@/shared/services/logger.service";
  * Visual state of a wizard step indicator.
  */
 export type StepState =
-	| "active"
-	| "completed"
-	| "invalid"
-	| "inProgress"
-	| "future";
+	"active" | "completed" | "invalid" | "inProgress" | "future";
 
 /**
  * Step definition for the case processing wizard (Process 2).
@@ -22,28 +18,22 @@ export interface CaseProcessingStep {
 }
 
 /**
- * Step definitions for the case processing wizard (Process 2).
- * 6 steps matching the backend phase order.
+ * Step definitions for the case processing wizard.
+ * Three steps up to certificate generation; batching and completion happen
+ * from the Cases and Batches pages, not in this wizard.
  */
 export const CASE_PROCESSING_STEPS: readonly CaseProcessingStep[] = [
 	{
-		label: "Case Creation",
+		label: "Case Details",
 		description: "Case details",
-		phase: "case_creation",
+		phase: "details",
 	},
 	{ label: "Assessment", description: "Drug bags", phase: "assessment" },
 	{
-		label: "Unsigned Certificate",
+		label: "Certificate",
 		description: "Generate Certificate",
 		phase: "unsigned_generation",
 	},
-	{
-		label: "Botanist Sign-Off",
-		description: "Sign Certificate",
-		phase: "botanist_signoff",
-	},
-	{ label: "Invoicing", description: "Generate Invoice", phase: "invoicing" },
-	{ label: "Email", description: "Send Documents", phase: "send_emails" },
 ] as const;
 
 export const TOTAL_STEPS = CASE_PROCESSING_STEPS.length;
@@ -87,8 +77,8 @@ const INITIAL_STATE: CaseProcessingWizardStoreState = {
  * validation display, preview toggle, and blocking validation.
  *
  * Form data is owned by TanStack Query — this store only tracks navigation/display
- * concerns. Step 0 (Case Creation) starts pre-completed since the case already
- * exists from Process 1.
+ * concerns. Step 0 (Case Details) starts pre-completed since the case already
+ * exists from the creation wizard.
  *
  * Blocking validation (SPMS pattern): if step 0 becomes invalid after editing,
  * all subsequent steps are blocked until step 0 is corrected.

@@ -35,3 +35,5 @@ export const useCaseWizardStore = () => useStore().caseProcessingWizardStore;
 export const useCaseCreationWizardStore = () =>
 	useStore().caseCreationWizardStore;
 export const useDrugBagWranglerStore = () => useStore().drugBagWranglerStore;
+export const useCertificateGroupingStore = () =>
+	useStore().certificateGroupingStore;

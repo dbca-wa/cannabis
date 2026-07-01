@@ -10,7 +10,7 @@ export const addUserSchema = z
 			.refine((email) => email.endsWith("@dbca.wa.gov.au"), {
 				message: "Email must be a DBCA email address (@dbca.wa.gov.au)",
 			}),
-		first_name: z
+		given_names: z
 			.string()
 			.min(1, "First name is required")
 			.max(100, "First name must be 100 characters or less"),

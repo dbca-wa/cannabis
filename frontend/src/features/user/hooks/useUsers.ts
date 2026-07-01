@@ -16,6 +16,7 @@ import {
 } from "@/features/user/types/users.types";
 import type { AddUserFormData } from "../components/forms/schemas/addUserSchema";
 import type { InviteUserRequest } from "@/shared/types/backend-api.types";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 // Standardised query keys following police/defendants pattern
 export const usersQueryKeys = {
@@ -49,10 +50,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 			// Update specific user cache
 			queryClient.setQueryData(usersQueryKeys.detail(newUser.id), newUser);
 
-			// Invalidate all users queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "users");
 
 			toast.success(`User "${newUser.full_name}" created successfully!`);
 			logger.info("User created via hook", {
@@ -92,10 +90,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				updatedUser
 			);
 
-			// Invalidate all users queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "users");
 
 			toast.success(`User "${updatedUser.full_name}" updated successfully!`);
 			logger.info("User updated via hook", { userId: variables.id });
@@ -126,10 +121,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 				),
 			});
 
-			// Invalidate all users queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "users");
 
 			toast.success("User deleted successfully!");
 			logger.info("User deleted via hook", { userId: deletedUserId });
@@ -153,10 +145,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 			return inviteUserService(inviteData);
 		},
 		onSuccess: async (newUser) => {
-			// Invalidate all users queries to refresh everywhere
-			queryClient.invalidateQueries({
-				queryKey: usersQueryKeys.all,
-			});
+			await invalidateRelatedQueries(queryClient, "users");
 
 			toast.success(
 				`Invitation sent to "${newUser.external_user_data.full_name}" successfully!`

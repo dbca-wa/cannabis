@@ -22,12 +22,10 @@ import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
 const PHASE_OPTIONS = [
 	{ value: "all", label: "All States" },
-	{ value: "case_creation", label: "Case Creation" },
 	{ value: "assessment", label: "Assessment" },
 	{ value: "unsigned_generation", label: "Unsigned Certificate" },
-	{ value: "botanist_signoff", label: "Botanist Sign-Off" },
-	{ value: "invoicing", label: "Invoicing" },
-	{ value: "send_emails", label: "Email" },
+	{ value: "batching", label: "Batching" },
+	{ value: "in_batch", label: "In Batch" },
 	{ value: "complete", label: "Complete" },
 ];
 

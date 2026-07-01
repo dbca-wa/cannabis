@@ -433,8 +433,8 @@ class SettingsNotificationService {
 		if (user.email) {
 			return user.email;
 		}
-		if (user.first_name || user.last_name) {
-			return `${user.first_name || ""} ${user.last_name || ""}`.trim();
+		if (user.given_names || user.last_name) {
+			return `${user.given_names || ""} ${user.last_name || ""}`.trim();
 		}
 		return `User ${user.id}`;
 	}

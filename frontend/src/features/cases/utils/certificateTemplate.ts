@@ -131,7 +131,7 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 		const rank = officer.rank_display || "Officer";
 		const badge = officer.badge_number || "";
 		const lastName = officer.last_name?.toUpperCase() || "";
-		const firstName = officer.first_name || "";
+		const firstName = officer.given_names || "";
 		const fullName = firstName ? `${lastName}, ${firstName}` : lastName;
 
 		policeOfficerWithBadge = badge
@@ -186,10 +186,12 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 				? ` The plant was resealed in a new drug movement bag, tag numbers ${newTags}.`
 				: "";
 
-			// Include officer present during examination
-			const officerPresent = requesting_officer
-				? `${requesting_officer.rank_display || "Officer"} ${
-						requesting_officer.last_name?.toUpperCase() || ""
+			// Officer present during examination — the requesting officer if the
+			// samples were submitted on their behalf, otherwise the submitting officer
+			const presentOfficer = requesting_officer || submitting_officer;
+			const officerPresent = presentOfficer
+				? `${presentOfficer.rank_display || "Officer"} ${
+						presentOfficer.last_name?.toUpperCase() || ""
 					}`
 				: "";
 

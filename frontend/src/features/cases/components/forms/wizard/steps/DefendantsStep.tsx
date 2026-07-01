@@ -12,8 +12,13 @@ import {
 	getDefendantCasesBadgeColourClass,
 	getDefendantCasesBadge,
 } from "@/shared/utils/defendant-display.utils";
-import { Plus, X } from "lucide-react";
+import { Plus, X, UserX, Undo2 } from "lucide-react";
 import { SectionCard } from "../SectionCard";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 interface DefendantsStepProps {
@@ -23,17 +28,24 @@ interface DefendantsStepProps {
 	isTouched: boolean;
 	/** Callback to persist field changes via PATCH mutation */
 	onFieldChange: (field: string, value: unknown) => void;
+	/** Whether the user has acknowledged the case has no known defendant */
+	defendantUnknown: boolean;
+	/** Setter for the unknown-defendant acknowledgement */
+	onDefendantUnknownChange: (acknowledged: boolean) => void;
 }
 
 /**
  * Step 1 of the case creation wizard (Process 1) — dedicated defendants management.
- * Allows adding, viewing, and removing defendants associated with the case.
- * Validates that at least one defendant is present before allowing progression.
+ * The user must either add at least one defendant or explicitly mark the
+ * defendant as unknown (the certificate then renders "Unknown") before
+ * progressing.
  */
 export const DefendantsStep = ({
 	caseData,
 	isTouched,
 	onFieldChange,
+	defendantUnknown,
+	onDefendantUnknownChange,
 }: DefendantsStepProps) => {
 	const [selectedDefendantId, setSelectedDefendantId] = useState<number | null>(
 		null
@@ -59,20 +71,37 @@ export const DefendantsStep = ({
 		) {
 			onFieldChange("add_defendant", defendantToAdd);
 			setSelectedDefendantId(null);
+			// Adding a real defendant supersedes the "unknown" acknowledgement
+			if (defendantUnknown) {
+				onDefendantUnknownChange(false);
+			}
 		}
-	}, [defendantToAdd, selectedDefendantId, defendantIds, onFieldChange]);
+	}, [
+		defendantToAdd,
+		selectedDefendantId,
+		defendantIds,
+		onFieldChange,
+		defendantUnknown,
+		onDefendantUnknownChange,
+	]);
 
-	// Validation error (only displayed when isTouched)
+	// Validation error (only displayed when isTouched). The step is satisfied by
+	// either adding a defendant or acknowledging the defendant is unknown.
 	const error =
-		defendants.length === 0 ? "At least one defendant is required" : undefined;
+		defendants.length === 0 && !defendantUnknown
+			? "Add at least one defendant, or mark the defendant as unknown"
+			: undefined;
 
 	// Section states
-	const isComplete = defendants.length > 0;
-	const isInvalid = isTouched && defendants.length === 0;
+	const isComplete = defendants.length > 0 || defendantUnknown;
+	const isInvalid = isTouched && !!error;
 
 	const handleDefendantCreated = (newDefendant: DefendantTiny) => {
 		if (!defendantIds.includes(newDefendant.id)) {
 			onFieldChange("add_defendant", newDefendant);
+		}
+		if (defendantUnknown) {
+			onDefendantUnknownChange(false);
 		}
 	};
 
@@ -123,7 +152,8 @@ export const DefendantsStep = ({
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">
-							Search for existing defendants or click Add to create a new one
+							Search for an existing defendant, or click Add to create a new
+							one.
 						</p>
 					</div>
 
@@ -131,15 +161,65 @@ export const DefendantsStep = ({
 					<div className="space-y-2">
 						<Label>Selected Defendants ({defendants.length || "None"})</Label>
 						{defendants.length === 0 ? (
-							<div className="p-4 border border-dashed rounded-lg text-center">
-								<div className="text-sm font-medium text-muted-foreground">
-									Unknown
+							defendantUnknown ? (
+								<div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+									<div className="flex items-start gap-3">
+										<UserX className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+										<div className="flex-1">
+											<div className="text-sm font-medium">
+												Defendant marked as unknown
+											</div>
+											<div className="text-xs text-muted-foreground mt-1">
+												The certificate will record the defendant as
+												&quot;Unknown&quot;. Add a defendant above if one
+												becomes known.
+											</div>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												className="mt-3"
+												onClick={() => onDefendantUnknownChange(false)}
+											>
+												<Undo2 className="h-4 w-4 mr-2" />
+												Undo
+											</Button>
+										</div>
+									</div>
 								</div>
-								<div className="text-xs text-muted-foreground mt-1">
-									No defendants added. Defendant will default to
-									&quot;Unknown&quot; in certificate.
+							) : (
+								<div className="p-4 border border-dashed rounded-lg text-center">
+									<div className="text-sm font-medium text-muted-foreground">
+										No defendants added
+									</div>
+									<div className="text-xs text-muted-foreground mt-1">
+										Add a defendant above to continue, or mark the defendant as
+										unknown if their identity isn&apos;t known.
+									</div>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												className="mt-3 border-amber-400 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+												onClick={() => onDefendantUnknownChange(true)}
+											>
+												<UserX className="h-4 w-4 mr-2" />
+												Defendant is unknown
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent className="max-w-xs">
+											<p>
+												Use this when the defendant&apos;s identity isn&apos;t
+												known. The certificate will record the defendant as
+												&quot;Unknown&quot; and you can continue without adding
+												one.
+											</p>
+										</TooltipContent>
+									</Tooltip>
 								</div>
-							</div>
+							)
 						) : (
 							<div className="space-y-2">
 								{defendants.map((defendant) => (

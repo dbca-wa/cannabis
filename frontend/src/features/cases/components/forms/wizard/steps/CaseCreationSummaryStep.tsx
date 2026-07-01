@@ -18,6 +18,7 @@ import {
 } from "@/shared/utils/defendant-display.utils";
 import { Plus, X } from "lucide-react";
 import { SectionCard } from "../SectionCard";
+import { CasePoliceFormUpload } from "../../ocr/CasePoliceFormUpload";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 interface CaseCreationSummaryStepProps {
@@ -77,19 +78,13 @@ export const CaseCreationSummaryStep = ({
 		}
 	}, [defendantToAdd, selectedDefendantId, defendantIds, onFieldChange]);
 
-	// Validation errors
+	// Validation errors (defendants are optional — an empty list means the
+	// defendant is unknown and the certificate records "Unknown")
 	const errors = {
 		case_number: !caseNumber.trim()
 			? "Police reference number is required"
 			: undefined,
 		received: !received ? "Received date is required" : undefined,
-		defendants:
-			defendants.length === 0
-				? "At least one defendant is required"
-				: undefined,
-		requesting_officer: !requestingOfficer
-			? "Requesting officer is required"
-			: undefined,
 		submitting_officer: !submittingOfficer
 			? "Submitting officer is required"
 			: undefined,
@@ -99,10 +94,9 @@ export const CaseCreationSummaryStep = ({
 	const isCaseDetailsComplete = !!caseNumber.trim() && !!received;
 	const isCaseDetailsInvalid = isTouched && (!caseNumber.trim() || !received);
 	const isDefendantsComplete = defendants.length > 0;
-	const isDefendantsInvalid = isTouched && defendants.length === 0;
-	const isOfficersComplete = !!requestingOfficer && !!submittingOfficer;
-	const isOfficersInvalid =
-		isTouched && (!requestingOfficer || !submittingOfficer);
+	const isDefendantsInvalid = false;
+	const isOfficersComplete = !!submittingOfficer;
+	const isOfficersInvalid = isTouched && !submittingOfficer;
 
 	const handleDefendantCreated = (newDefendant: DefendantTiny) => {
 		if (!defendantIds.includes(newDefendant.id)) {
@@ -117,6 +111,12 @@ export const CaseCreationSummaryStep = ({
 
 	return (
 		<div className="space-y-4">
+			{/* Priority 3 form upload/replace (only when OCR is enabled) */}
+			<CasePoliceFormUpload
+				caseId={(caseData?.id as number) ?? 0}
+				currentFormUrl={(caseData?.police_form_url as string | null) ?? null}
+			/>
+
 			{/* Case Details Section (condensed) */}
 			<SectionCard
 				title="Case Details"
@@ -208,7 +208,6 @@ export const CaseCreationSummaryStep = ({
 								onValueChange={setSelectedDefendantId}
 								placeholder="Search for defendant..."
 								exclude={defendantIds}
-								error={isTouched && !!errors.defendants}
 							/>
 						</div>
 						<Button
@@ -221,9 +220,10 @@ export const CaseCreationSummaryStep = ({
 							Add
 						</Button>
 					</div>
-					{isTouched && errors.defendants && (
-						<p className="text-sm text-red-600" role="alert">
-							{errors.defendants}
+					{defendants.length === 0 && (
+						<p className="text-xs text-muted-foreground">
+							No defendants added — the certificate will record the defendant as
+							&quot;Unknown&quot;.
 						</p>
 					)}
 
@@ -269,24 +269,6 @@ export const CaseCreationSummaryStep = ({
 			>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
-						<Label htmlFor="summary_requesting_officer" className="required">
-							Requesting Officer
-						</Label>
-						<OfficerSearchComboBox
-							value={requestingOfficer}
-							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
-							placeholder="Search officer..."
-							error={isTouched && !!errors.requesting_officer}
-							showExternalAddButton
-						/>
-						{isTouched && errors.requesting_officer && (
-							<p className="text-sm text-red-600" role="alert">
-								{errors.requesting_officer}
-							</p>
-						)}
-					</div>
-
-					<div className="space-y-2">
 						<Label htmlFor="summary_submitting_officer" className="required">
 							Submitting Officer
 						</Label>
@@ -302,6 +284,24 @@ export const CaseCreationSummaryStep = ({
 								{errors.submitting_officer}
 							</p>
 						)}
+						<p className="text-xs text-muted-foreground">
+							Officer who delivered/submitted the samples.
+						</p>
+					</div>
+
+					<div className="space-y-2">
+						<Label htmlFor="summary_requesting_officer">
+							Requesting Officer (on behalf of)
+						</Label>
+						<OfficerSearchComboBox
+							value={requestingOfficer}
+							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
+							placeholder="Search officer..."
+							showExternalAddButton
+						/>
+						<p className="text-xs text-muted-foreground">
+							Optional — who the samples were submitted on behalf of.
+						</p>
 					</div>
 
 					<div className="space-y-2 md:col-span-2">

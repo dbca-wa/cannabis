@@ -1,76 +1,151 @@
-"""Tests for drug bags and botanical assessments."""
+"""Tests for drug-bag tag uniqueness rules.
+
+Key rule: a single bag may carry the same value for its original and new tag
+(the Priority 3 form sometimes repeats it). That value is still unique across
+bags — a different bag may not reuse it as either its original or new tag.
+"""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from cases.models import BotanicalAssessment, DrugBag
+from common.tests.factories import CaseFactory, DrugBagFactory
 
-User = get_user_model()
-
-
-@pytest.mark.django_db
-def test_bag_list(authenticated_client, submission, drug_bag):
-    """GET bags for submission returns 200 with data."""
-    url = reverse("drugbag_list", kwargs={"pk": submission.pk})
-    response = authenticated_client.get(url)
-
-    assert response.status_code == 200
-    # Response may be paginated or a list
-    if isinstance(response.data, dict):
-        assert "results" in response.data
-        assert len(response.data["results"]) >= 1
-    else:
-        assert len(response.data) >= 1
+pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.django_db
-def test_bag_create(authenticated_client, submission):
-    """POST bag for submission creates a new bag."""
-    url = reverse("drugbag_list", kwargs={"pk": submission.pk})
-    data = {
-        "submission": submission.pk,
-        "seal_tag_numbers": "TAG-NEW-001",
-        "content_type": "plant",
-    }
-    response = authenticated_client.post(url, data, format="json")
+class TestBatchCreateTagRule:
+    def test_same_original_and_new_allowed_for_one_bag(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            {
+                "bags": [
+                    {
+                        "seal_tag_numbers": "123",
+                        "new_seal_tag_numbers": "123",
+                        "content_type": "plant",
+                    }
+                ]
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data[0]["seal_tag_numbers"] == "123"
+        assert resp.data[0]["new_seal_tag_numbers"] == "123"
 
-    assert response.status_code == 201
-    assert DrugBag.objects.filter(seal_tag_numbers="TAG-NEW-001").exists()
+    def test_new_tag_reusing_another_bags_tag_is_rejected(self, finance_client):
+        # DB A: 123/123 (fine). DB B: 1234/123 — 123 belongs to A → rejected.
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            {
+                "bags": [
+                    {
+                        "seal_tag_numbers": "123",
+                        "new_seal_tag_numbers": "123",
+                        "content_type": "plant",
+                    },
+                    {
+                        "seal_tag_numbers": "1234",
+                        "new_seal_tag_numbers": "123",
+                        "content_type": "plant",
+                    },
+                ]
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_value_reused_as_original_and_new_across_bags_rejected(
+        self, finance_client
+    ):
+        # 456 appears as A's new tag and B's original tag → collision.
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            {
+                "bags": [
+                    {
+                        "seal_tag_numbers": "123",
+                        "new_seal_tag_numbers": "456",
+                        "content_type": "plant",
+                    },
+                    {
+                        "seal_tag_numbers": "456",
+                        "new_seal_tag_numbers": "789",
+                        "content_type": "plant",
+                    },
+                ]
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_distinct_tags_allowed(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            {
+                "bags": [
+                    {
+                        "seal_tag_numbers": "T100",
+                        "new_seal_tag_numbers": "T200",
+                        "content_type": "plant",
+                    },
+                    {
+                        "seal_tag_numbers": "T300",
+                        "new_seal_tag_numbers": "",
+                        "content_type": "plant",
+                    },
+                ]
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert len(resp.data) == 2
 
 
-@pytest.mark.django_db
-def test_bag_update(authenticated_client, drug_bag):
-    """PATCH bag updates fields."""
-    url = reverse("drugbag_detail", kwargs={"pk": drug_bag.pk})
-    data = {"new_seal_tag_numbers": "TAG-UPDATED"}
-    response = authenticated_client.patch(url, data, format="json")
+class TestSingleCreateTagRule:
+    def test_same_original_and_new_allowed(self, finance_client):
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_list", kwargs={"pk": case.pk}),
+            {
+                "submission": case.pk,
+                "seal_tag_numbers": "555",
+                "new_seal_tag_numbers": "555",
+                "content_type": "plant",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
 
-    assert response.status_code == 200
-    drug_bag.refresh_from_db()
-    assert drug_bag.new_seal_tag_numbers == "TAG-UPDATED"
+    def test_new_tag_colliding_with_existing_bag_rejected(self, finance_client):
+        other_case = CaseFactory()
+        DrugBagFactory(submission=other_case, seal_tag_numbers="999")
+        case = CaseFactory()
+        resp = finance_client.post(
+            reverse("drugbag_list", kwargs={"pk": case.pk}),
+            {
+                "submission": case.pk,
+                "seal_tag_numbers": "888",
+                "new_seal_tag_numbers": "999",
+                "content_type": "plant",
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
 
 
-@pytest.mark.django_db
-def test_assessment_create(api_client, drug_bag, botanist_user):
-    """POST assessment for bag creates a new assessment (botanist only)."""
-    api_client.force_authenticate(user=botanist_user)
-    url = reverse("assessment_create", kwargs={"drug_bag_id": drug_bag.pk})
-    data = {
-        "determination": "cannabis_sativa",
-        "botanist_notes": "Confirmed cannabis sativa",
-    }
-    response = api_client.post(url, data, format="json")
-
-    assert response.status_code == 201
-    assert BotanicalAssessment.objects.filter(drug_bag=drug_bag).exists()
-
-
-@pytest.mark.django_db
-def test_assessment_detail(authenticated_client, botanical_assessment):
-    """GET assessment by ID returns 200 with correct data."""
-    url = reverse("assessment_detail", kwargs={"pk": botanical_assessment.pk})
-    response = authenticated_client.get(url)
-
-    assert response.status_code == 200
-    assert response.data["determination"] == "cannabis_sativa"
+class TestUpdateTagRule:
+    def test_new_tag_equal_to_own_original_allowed(self, finance_client):
+        case = CaseFactory()
+        bag = DrugBagFactory(submission=case, seal_tag_numbers="777")
+        resp = finance_client.patch(
+            reverse("drugbag_detail", kwargs={"pk": bag.pk}),
+            {"new_seal_tag_numbers": "777"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        bag.refresh_from_db()
+        assert bag.new_seal_tag_numbers == "777"

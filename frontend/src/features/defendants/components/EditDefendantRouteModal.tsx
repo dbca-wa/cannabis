@@ -91,7 +91,7 @@ export const EditDefendantRouteModal = () => {
 				<DialogHeader>
 					<DialogTitle>Edit Defendant</DialogTitle>
 					<DialogDescription>
-						Update defendant information. Last name is required, first name is
+						Update defendant information. Last name is required, given names is
 						optional.
 					</DialogDescription>
 				</DialogHeader>

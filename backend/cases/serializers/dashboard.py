@@ -40,7 +40,6 @@ class CasePhaseHistorySerializer(serializers.ModelSerializer):
             "action_display",
             "user",
             "user_details",
-            "reason",
             "timestamp",
             "created_at",
         ]

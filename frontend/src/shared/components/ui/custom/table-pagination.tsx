@@ -94,6 +94,11 @@ export const TablePagination = observer<TablePaginationProps>(
 		const canGoPrevious = currentPage > 1 && !isLoading;
 		const canGoNext = currentPage < totalPages && !isLoading;
 
+		// Range of items shown on the current page (e.g. "26–50 of 1846")
+		const rangeStart =
+			totalItems === 0 ? 0 : (currentPage - 1) * currentPageSize + 1;
+		const rangeEnd = (currentPage - 1) * currentPageSize + itemsShown;
+
 		// Generate page numbers for pagination
 		const pageNumbers = generatePageNumbers(
 			currentPage,
@@ -112,7 +117,7 @@ export const TablePagination = observer<TablePaginationProps>(
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
 					{/* Left: Results info */}
 					<div className="text-sm text-muted-foreground">
-						Showing {itemsShown} of {totalItems} items
+						Showing {rangeStart}–{rangeEnd} of {totalItems} items
 					</div>
 
 					{/* Right: Page size selector */}

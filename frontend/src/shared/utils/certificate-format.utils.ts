@@ -24,7 +24,7 @@ declare global {
 export interface OfficerDetails {
 	rank_display?: string | null;
 	badge_number?: string | null;
-	first_name?: string | null;
+	given_names?: string | null;
 	last_name?: string | null;
 	station_name?: string | null;
 }
@@ -111,7 +111,7 @@ export const formatOfficerLegal = (
 	const rank = officer.rank_display || "";
 	const badge = officer.badge_number || "";
 	const surname = (officer.last_name || "").toUpperCase();
-	const firstName = officer.first_name || "";
+	const firstName = officer.given_names || "";
 	const org = officer.station_name || "";
 
 	let result = rank;

@@ -13,7 +13,7 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ("is_staff", "is_superuser", "is_active", "role", "groups")
 
     # Override search_fields to use email instead of username
-    search_fields = ("email", "first_name", "last_name")
+    search_fields = ("email", "given_names", "last_name")
 
     fieldsets = (
         (
@@ -22,7 +22,7 @@ class CustomUserAdmin(UserAdmin):
                 "fields": (
                     "email",
                     "password",
-                    "first_name",
+                    "given_names",
                     "last_name",
                     "role",
                 ),
@@ -73,7 +73,7 @@ class CustomUserAdmin(UserAdmin):
         (
             "Profile Information",
             {
-                "fields": ("first_name", "last_name", "role"),
+                "fields": ("given_names", "last_name", "role"),
                 "classes": ("wide",),
             },
         ),
@@ -81,7 +81,7 @@ class CustomUserAdmin(UserAdmin):
 
     list_display = (
         "email",
-        "first_name",
+        "given_names",
         "last_name",
         "role",
         "is_active",
@@ -91,7 +91,7 @@ class CustomUserAdmin(UserAdmin):
     )
 
     list_filter = ("is_staff", "is_superuser", "is_active", "role", "groups")
-    search_fields = ("email", "first_name", "last_name")
+    search_fields = ("email", "given_names", "last_name")
 
 
 @admin.register(UserPreferences)
@@ -102,17 +102,15 @@ class UserPreferencesAdmin(admin.ModelAdmin):
         "submissions_display_mode",
         "certificates_display_mode",
         "items_per_page",
-        "email_notifications",
         "reduce_motion",
     )
     list_filter = (
         "theme",
-        "email_notifications",
         "reduce_motion",
     )
     search_fields = (
         "user__email",
-        "user__first_name",
+        "user__given_names",
         "user__last_name",
     )
 
@@ -128,7 +126,7 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
         "is_valid_display",
     )
     list_filter = ("is_used", "created_at", "expires_at")
-    search_fields = ("user__email", "user__first_name", "user__last_name")
+    search_fields = ("user__email", "user__given_names", "user__last_name")
     readonly_fields = (
         "code_hash",
         "created_at",
@@ -168,7 +166,4 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
 #         ('theme', 'reduce_motion'),
 #         ('submissions_display_mode', 'certificates_display_mode'),
 #         ('items_per_page', 'date_format', 'time_format'),
-#         ('email_notifications', 'comment_notifications', 'reaction_notifications'),
-#         ('notify_submission_assigned', 'notify_phase_changes'),
-#         ('notify_certificate_generated', 'notify_invoices_generated', 'notify_pdfs_mailed'),
 #     )

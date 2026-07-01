@@ -59,7 +59,12 @@ export const DefendantsTable = observer(
 				search: defendantsSearchStore.state.searchTerm || undefined,
 				ordering,
 			}),
-			[pagination.pageSize, ordering]
+			[
+				defendantsSearchStore.state.currentPage,
+				defendantsSearchStore.state.searchTerm,
+				pagination.pageSize,
+				ordering,
+			]
 		);
 
 		// Fetch data

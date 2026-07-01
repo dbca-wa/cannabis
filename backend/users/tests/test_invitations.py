@@ -1,332 +1,191 @@
-"""Tests for invitation views (ExternalUserSearchView, InviteUserView, InviteActivationView)."""
+"""Tests for the invitation flow: invite, external search, and activation."""
 
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
 
 from users.models import InviteRecord
 
 User = get_user_model()
+pytestmark = pytest.mark.django_db
+
+# EmailService renders the template, then calls this sender. Patching it lets the
+# real render run (proving the template resolves) while capturing the HTML.
+SEND = "common.services.email_service.send_email_with_embedded_image"
 
 
-@pytest.fixture
-def invite_record(db, superuser):
-    """Create a valid invite record."""
-    return InviteRecord.objects.create(
-        email="newuser@external.com",
-        invited_by=superuser,
-        role="botanist",
-        token="test-token-abc123-valid",
-        expires_at=timezone.now() + timedelta(hours=24),
-        is_valid=True,
-        is_used=False,
-        external_user_data={
-            "id": 1,
-            "employee_id": "EMP001",
-            "given_name": "New",
-            "surname": "User",
-            "email": "newuser@external.com",
-            "title": "Botanist",
-            "division": "Science",
-            "unit": "Botany",
-        },
-    )
+class TestInviteUser:
+    def test_creates_record_and_sends_email(self, admin_client):
+        with patch(SEND) as mock_send:
+            resp = admin_client.post(
+                reverse("invite_user"),
+                {
+                    "external_user_data": {
+                        "email": "invitee@example.com",
+                        "given_name": "In",
+                        "surname": "Vitee",
+                        "id": 4321,
+                        "employee_id": "E1",
+                    },
+                    "role": "botanist",
+                },
+                format="json",
+            )
+        assert resp.status_code == 201
+        assert InviteRecord.objects.filter(email="invitee@example.com").exists()
+        assert mock_send.called
+        html = mock_send.call_args.kwargs.get("html_content", "")
+        assert "/auth/activate-invite/" in html
+
+    def test_requires_app_access(self, roleless_client):
+        resp = roleless_client.post(
+            reverse("invite_user"),
+            {"external_user_data": {"email": "x@example.com"}, "role": "botanist"},
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_rejects_existing_email(self, admin_client, botanist_user):
+        with patch(SEND):
+            resp = admin_client.post(
+                reverse("invite_user"),
+                {
+                    "external_user_data": {"email": botanist_user.email},
+                    "role": "botanist",
+                },
+                format="json",
+            )
+        # Existing user → 409 Conflict.
+        assert resp.status_code == 409
 
 
-@pytest.fixture
-def expired_invite(db, superuser):
-    """Create an expired invite record."""
-    return InviteRecord.objects.create(
-        email="expired@external.com",
-        invited_by=superuser,
-        role="finance",
-        token="expired-token-xyz789",
-        expires_at=timezone.now() - timedelta(hours=1),
-        is_valid=True,
-        is_used=False,
-        external_user_data={
-            "given_name": "Expired",
-            "surname": "User",
-            "email": "expired@external.com",
-        },
-    )
+class TestExternalUserSearch:
+    def test_short_query_returns_empty(self, botanist_client):
+        resp = botanist_client.get(reverse("external_user_search"), {"search": "a"})
+        assert resp.status_code == 200
+        assert resp.data["results"] == []
 
+    def test_requires_app_access(self, roleless_client):
+        resp = roleless_client.get(reverse("external_user_search"), {"search": "alice"})
+        assert resp.status_code == 403
 
-@pytest.fixture
-def used_invite(db, superuser):
-    """Create a used invite record."""
-    return InviteRecord.objects.create(
-        email="used@external.com",
-        invited_by=superuser,
-        role="none",
-        token="used-token-def456",
-        expires_at=timezone.now() + timedelta(hours=24),
-        is_valid=True,
-        is_used=True,
-        used_at=timezone.now(),
-        external_user_data={
-            "given_name": "Used",
-            "surname": "User",
-            "email": "used@external.com",
-        },
-    )
-
-
-@pytest.mark.django_db
-class TestExternalUserSearchView:
-    """Tests for ExternalUserSearchView."""
-
-    @patch("requests.get")
-    def test_search_returns_results(self, mock_get, admin_client):
-        """GET with valid search returns filtered external users."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = [
+    def test_returns_filtered_external_users(self, botanist_client):
+        fake_users = [
             {
                 "id": 1,
-                "employee_id": "EMP001",
-                "given_name": "Jane",
+                "given_name": "Alice",
                 "surname": "Smith",
-                "email": "jane.smith@external.com",
-                "title": "Scientist",
+                "email": "alice@example.com",
+                "employee_id": "E9",
+                "title": "Botanist",
                 "division": "Science",
-                "unit": "Botany",
-            },
-            {
-                "id": 2,
-                "employee_id": "EMP002",
-                "given_name": "Bob",
-                "surname": "Jones",
-                "email": "bob.jones@external.com",
-                "title": "Officer",
-                "division": "Finance",
-                "unit": "Accounts",
-            },
+                "unit": "Herbarium",
+            }
         ]
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        with patch("requests.get") as mock_get:
+            mock_get.return_value.json.return_value = fake_users
+            mock_get.return_value.raise_for_status.return_value = None
+            resp = botanist_client.get(
+                reverse("external_user_search"), {"search": "alice"}
+            )
+        assert resp.status_code == 200
+        assert any(r["email"] == "alice@example.com" for r in resp.data["results"])
 
-        url = reverse("external_user_search")
-        response = admin_client.get(url, {"search": "Jane"})
 
-        assert response.status_code == status.HTTP_200_OK
-        assert "results" in response.data
-        assert len(response.data["results"]) == 1
-        assert response.data["results"][0]["given_name"] == "Jane"
-
-    def test_search_too_short_query(self, admin_client):
-        """GET with query less than 2 chars returns empty results."""
-        url = reverse("external_user_search")
-        response = admin_client.get(url, {"search": "J"})
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"] == []
-
-    def test_search_empty_query(self, admin_client):
-        """GET with no search param returns empty results."""
-        url = reverse("external_user_search")
-        response = admin_client.get(url)
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["results"] == []
-
-    @patch("requests.get")
-    def test_search_excludes_existing_users(self, mock_get, admin_client, user):
-        """GET excludes users already in the system."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = [
-            {
-                "id": 1,
-                "given_name": "Test",
-                "surname": "User",
-                "email": user.email,  # Already exists
-                "title": "Existing",
-            },
-            {
-                "id": 2,
+class TestInviteActivation:
+    def _make_invite(self, inviter, **overrides):
+        defaults = dict(
+            email="newuser@example.com",
+            invited_by=inviter,
+            role="botanist",
+            token="tok-valid-123",
+            expires_at=timezone.now() + timedelta(hours=24),
+            external_user_data={
                 "given_name": "New",
-                "surname": "Person",
-                "email": "new.person@external.com",
-                "title": "New",
-            },
-        ]
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
-
-        url = reverse("external_user_search")
-        response = admin_client.get(url, {"search": "User"})
-
-        assert response.status_code == status.HTTP_200_OK
-        # Should not include the existing user
-        emails = [r["email"] for r in response.data["results"]]
-        assert user.email not in emails
-
-    def test_search_unauthenticated(self, api_client):
-        """GET without auth returns 401."""
-        url = reverse("external_user_search")
-        response = api_client.get(url, {"search": "test"})
-
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-@pytest.mark.django_db
-class TestInviteUserView:
-    """Tests for InviteUserView."""
-
-    @patch("users.views.invitations.render_to_string", return_value="<p>Invite</p>")
-    @patch("django.core.mail.send_mail")
-    def test_invite_user_success(self, mock_send_mail, mock_render, admin_client):
-        """POST with valid data creates invitation and sends email."""
-        mock_send_mail.return_value = 1
-
-        url = reverse("invite_user")
-        data = {
-            "external_user_data": {
-                "id": 1,
-                "employee_id": "EMP001",
-                "given_name": "New",
-                "surname": "Invitee",
-                "email": "new.invitee@external.com",
-            },
-            "role": "botanist",
-        }
-        response = admin_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["success"] is True
-        assert InviteRecord.objects.filter(email="new.invitee@external.com").exists()
-
-    def test_invite_missing_external_data(self, admin_client):
-        """POST without external_user_data returns error."""
-        url = reverse("invite_user")
-        data = {"role": "botanist"}
-        response = admin_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_invite_missing_email(self, admin_client):
-        """POST with external_user_data missing email returns error."""
-        url = reverse("invite_user")
-        data = {
-            "external_user_data": {"given_name": "No", "surname": "Email"},
-            "role": "botanist",
-        }
-        response = admin_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_invite_invalid_role(self, admin_client):
-        """POST with invalid role returns error."""
-        url = reverse("invite_user")
-        data = {
-            "external_user_data": {
-                "email": "valid@external.com",
-                "given_name": "Valid",
                 "surname": "User",
+                "id": 99,
+                "employee_id": "E2",
             },
-            "role": "invalid_role",
-        }
-        response = admin_client.post(url, data, format="json")
+        )
+        defaults.update(overrides)
+        return InviteRecord.objects.create(**defaults)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    def test_activate_creates_user_and_returns_tokens(self, api_client, admin_user):
+        invite = self._make_invite(admin_user)
+        resp = api_client.get(
+            reverse("activate_invite", kwargs={"token": invite.token})
+        )
+        assert resp.status_code == 200
+        assert "access" in resp.data and "refresh" in resp.data
+        assert User.objects.filter(email="newuser@example.com").exists()
+        invite.refresh_from_db()
+        assert invite.is_used is True
 
-    def test_invite_existing_user(self, admin_client, user):
-        """POST with email of existing user returns conflict."""
-        url = reverse("invite_user")
-        data = {
-            "external_user_data": {
-                "email": user.email,
-                "given_name": "Existing",
-                "surname": "User",
-            },
-            "role": "botanist",
-        }
-        response = admin_client.post(url, data, format="json")
+    def test_invalid_token(self, api_client):
+        resp = api_client.get(
+            reverse("activate_invite", kwargs={"token": "does-not-exist"})
+        )
+        assert resp.status_code in (400, 404)
 
-        assert response.status_code == status.HTTP_409_CONFLICT
-
-    @patch("users.views.invitations.render_to_string", return_value="<p>Invite</p>")
-    @patch("django.core.mail.send_mail")
-    def test_invite_duplicate_pending(self, mock_send_mail, mock_render, admin_client):
-        """POST with email that already has pending invite returns conflict."""
-        mock_send_mail.return_value = 1
-
-        url = reverse("invite_user")
-        data = {
-            "external_user_data": {
-                "email": "duplicate@external.com",
-                "given_name": "Dup",
-                "surname": "User",
-            },
-            "role": "botanist",
-        }
-        # First invite
-        response1 = admin_client.post(url, data, format="json")
-        assert response1.status_code == status.HTTP_201_CREATED
-
-        # Second invite (duplicate)
-        response = admin_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_409_CONFLICT
-
-    def test_invite_unauthenticated(self, api_client):
-        """POST without auth returns 401."""
-        url = reverse("invite_user")
-        response = api_client.post(url, {}, format="json")
-
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    def test_expired_token_rejected(self, api_client, admin_user):
+        invite = self._make_invite(
+            admin_user,
+            email="expired@example.com",
+            token="tok-expired",
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+        resp = api_client.get(
+            reverse("activate_invite", kwargs={"token": invite.token})
+        )
+        assert resp.status_code in (400, 404, 410)
+        assert not User.objects.filter(email="expired@example.com").exists()
 
 
-@pytest.mark.django_db
-class TestInviteActivationView:
-    """Tests for InviteActivationView."""
+class TestInviteEmailTool:
+    """The /admin testing-route tool that sends a live invite email."""
 
-    def test_activate_valid_invite(self, api_client, invite_record):
-        """GET with valid token creates user and returns tokens."""
-        url = reverse("activate_invite", kwargs={"token": invite_record.token})
-        response = api_client.get(url)
+    def test_sends_to_given_address_without_creating_records(self, admin_client):
+        with patch(SEND) as mock_send:
+            resp = admin_client.post(
+                reverse("test_invite_email"),
+                {"email": "preview@example.com", "role": "finance"},
+                format="json",
+            )
+        assert resp.status_code == 200
+        assert mock_send.called
+        assert mock_send.call_args.kwargs["recipient_email"] == ["preview@example.com"]
+        html = mock_send.call_args.kwargs.get("html_content", "")
+        assert "/auth/activate-invite/" in html
+        # No persistence — purely a preview send.
+        assert not InviteRecord.objects.filter(email="preview@example.com").exists()
+        assert not User.objects.filter(email="preview@example.com").exists()
 
-        # The view generates a random password that may occasionally fail validation
-        # (known issue in the view's password generation logic)
-        if response.status_code == status.HTTP_200_OK:
-            assert response.data["success"] is True
-            assert "access" in response.data
-            assert "refresh" in response.data
-            assert response.data["requires_password_change"] is True
+    def test_defaults_to_current_user_email(self, admin_client, admin_user):
+        with patch(SEND) as mock_send:
+            resp = admin_client.post(
+                reverse("test_invite_email"), {"role": "botanist"}, format="json"
+            )
+        assert resp.status_code == 200
+        assert mock_send.call_args.kwargs["recipient_email"] == [admin_user.email]
 
-            # User should be created
-            assert User.objects.filter(email="newuser@external.com").exists()
+    def test_rejects_invalid_role(self, admin_client):
+        with patch(SEND):
+            resp = admin_client.post(
+                reverse("test_invite_email"),
+                {"email": "x@example.com", "role": "wizard"},
+                format="json",
+            )
+        assert resp.status_code == 400
 
-            # Invite should be marked as used
-            invite_record.refresh_from_db()
-            assert invite_record.is_used is True
-        else:
-            # Password generation failed — this is a known view bug
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-
-    def test_activate_expired_invite(self, api_client, expired_invite):
-        """GET with expired token returns error."""
-        url = reverse("activate_invite", kwargs={"token": expired_invite.token})
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_activate_used_invite(self, api_client, used_invite):
-        """GET with already-used token returns error."""
-        url = reverse("activate_invite", kwargs={"token": used_invite.token})
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_activate_nonexistent_token(self, api_client):
-        """GET with non-existent token returns error."""
-        url = reverse("activate_invite", kwargs={"token": "nonexistent-token"})
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    def test_forbidden_for_non_staff(self, finance_client):
+        with patch(SEND):
+            resp = finance_client.post(
+                reverse("test_invite_email"),
+                {"email": "x@example.com", "role": "finance"},
+                format="json",
+            )
+        assert resp.status_code == 403

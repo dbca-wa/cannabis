@@ -1,5 +1,1 @@
-export {
-	downloadCertificatePdf,
-	downloadInvoicePdf,
-	openBlobInNewTab,
-} from "./pdf.service";
+export { downloadCertificatePdf, openBlobInNewTab } from "./pdf.service";

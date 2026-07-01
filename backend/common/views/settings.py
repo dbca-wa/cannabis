@@ -15,9 +15,26 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from users.permissions import HasAppAccess
+
 from ..models import SystemSettings
 
 logger = logging.getLogger(__name__)
+
+
+class SystemFeatureFlagsView(APIView):
+    """Read-only feature flags for any app user.
+
+    Unlike full system settings (admin-only), feature flags are needed by
+    botanists and finance officers — e.g. whether the OCR upload should appear
+    on case creation. Returns only non-sensitive flags.
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request):
+        settings_obj = SystemSettings.load()
+        return Response({"ocr_enabled": settings_obj.ocr_enabled})
 
 
 class SystemSettingsRateThrottle(UserRateThrottle):
@@ -53,33 +70,17 @@ class SystemSettingsView(APIView):
         response_data = {
             "cost_per_certificate": str(settings.cost_per_certificate),
             "cost_per_bag": str(settings.cost_per_bag),
-            "call_out_fee": str(settings.call_out_fee),
-            "cost_per_forensic_hour": str(settings.cost_per_forensic_hour),
-            "cost_per_kilometer_fuel": str(settings.cost_per_kilometer_fuel),
             "tax_percentage": str(settings.tax_percentage),
-            "forward_certificate_emails_to": settings.forward_certificate_emails_to,
-            "send_emails_to_self": settings.send_emails_to_self,
-            "email_testing_mode": settings.email_testing_mode,
-            "email_test_user": None,
+            "ocr_enabled": settings.ocr_enabled,
             "environment": environment,
-            "send_emails_to_self_editable": SystemSettings.is_send_emails_to_self_editable(),
         }
-
-        # Include email test user details if set
-        if settings.email_test_user:
-            response_data["email_test_user"] = {
-                "id": settings.email_test_user.id,
-                "email": settings.email_test_user.email,
-                "first_name": settings.email_test_user.first_name,
-                "last_name": settings.email_test_user.last_name,
-            }
 
         # Add audit information if available
         if settings.last_modified_by:
             response_data["last_modified_by"] = {
                 "id": settings.last_modified_by.id,
                 "email": settings.last_modified_by.email,
-                "first_name": settings.last_modified_by.first_name,
+                "given_names": settings.last_modified_by.given_names,
                 "last_name": settings.last_modified_by.last_name,
             }
         else:
@@ -125,24 +126,6 @@ class SystemSettingsView(APIView):
                 "max": Decimal("999999.99"),
                 "decimal_places": 2,
                 "field_name": "Bag identification cost",
-            },
-            "call_out_fee": {
-                "min": Decimal("0.00"),
-                "max": Decimal("999999.99"),
-                "decimal_places": 2,
-                "field_name": "Call out fee",
-            },
-            "cost_per_forensic_hour": {
-                "min": Decimal("0.00"),
-                "max": Decimal("999999.99"),
-                "decimal_places": 2,
-                "field_name": "Forensic hour cost",
-            },
-            "cost_per_kilometer_fuel": {
-                "min": Decimal("0.000"),
-                "max": Decimal("9999.999"),
-                "decimal_places": 3,
-                "field_name": "Fuel cost per kilometer",
             },
             "tax_percentage": {
                 "min": Decimal("0.00"),
@@ -278,6 +261,17 @@ class SystemSettingsView(APIView):
                 validation_errors["email_testing_mode"] = (
                     "Email testing mode must be true or false"
                 )
+
+        # Validate ocr_enabled feature flag
+        if "ocr_enabled" in request.data:
+            input_value = request.data["ocr_enabled"]
+            if isinstance(input_value, str):
+                bool_value = input_value.lower() in ("true", "1", "yes", "on")
+            else:
+                bool_value = bool(input_value)
+            old_values["ocr_enabled"] = settings.ocr_enabled
+            settings.ocr_enabled = bool_value
+            updated_fields.append("ocr_enabled")
 
         # Validate email_test_user field
         if "email_test_user" in request.data:

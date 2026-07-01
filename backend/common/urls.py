@@ -5,6 +5,11 @@ from . import views
 urlpatterns = [
     path("settings", views.SystemSettingsView.as_view(), name="system-settings"),
     path(
+        "feature-flags",
+        views.SystemFeatureFlagsView.as_view(),
+        name="system-feature-flags",
+    ),
+    path(
         "security-monitoring",
         views.SecurityMonitoringView.as_view(),
         name="security-monitoring",

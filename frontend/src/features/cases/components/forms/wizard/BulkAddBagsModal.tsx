@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useCallback, useId, useEffect } from "react";
+import { useState, useCallback, useId, useEffect, useMemo } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -23,24 +23,8 @@ import type {
 
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "plant", label: "Plant" },
-	{ value: "plant_material", label: "Plant Material" },
-	{ value: "cutting", label: "Cutting" },
-	{ value: "stalk", label: "Stalk" },
-	{ value: "stem", label: "Stem" },
 	{ value: "seed", label: "Seed" },
-	{ value: "seed_material", label: "Seed Material" },
-	{ value: "unknown_seed", label: "Unknown Seed" },
-	{ value: "seedling", label: "Seedling" },
-	{ value: "head", label: "Head" },
-	{ value: "rootball", label: "Rootball" },
-	{ value: "poppy", label: "Poppy" },
-	{ value: "poppy_plant", label: "Poppy Plant" },
-	{ value: "poppy_capsule", label: "Poppy Capsule" },
-	{ value: "poppy_head", label: "Poppy Head" },
-	{ value: "poppy_seed", label: "Poppy Seed" },
-	{ value: "mushroom", label: "Mushroom" },
-	{ value: "tablet", label: "Tablet" },
-	{ value: "unknown", label: "Unknown" },
+	{ value: "unknown", label: "Other" },
 ];
 
 const DETERMINATION_OPTIONS: {
@@ -49,15 +33,16 @@ const DETERMINATION_OPTIONS: {
 }[] = [
 	{ value: "pending", label: "Pending Assessment" },
 	{ value: "cannabis_sativa", label: "Cannabis sativa" },
-	{ value: "cannabis_indica", label: "Cannabis indica" },
-	{ value: "cannabis_hybrid", label: "Cannabis hybrid" },
-	{ value: "mixed", label: "Mixed" },
-	{ value: "papaver_somniferum", label: "Papaver somniferum" },
 	{ value: "degraded", label: "Degraded" },
-	{ value: "not_cannabis", label: "Not Cannabis" },
-	{ value: "unidentifiable", label: "Unidentifiable" },
 	{ value: "inconclusive", label: "Inconclusive" },
+	{ value: "not_cannabis", label: "Not Cannabis" },
 ];
+
+// Defaults applied to every new bag entry — most cases are cannabis sativa, so
+// pre-selecting these speeds up data entry (and is shown in the "set all"
+// dropdowns when the modal opens).
+const DEFAULT_CONTENT_TYPE: DrugBagContentType = "plant";
+const DEFAULT_DETERMINATION: BotanicalDetermination = "cannabis_sativa";
 
 interface BulkAddBagsModalProps {
 	open: boolean;
@@ -66,6 +51,7 @@ interface BulkAddBagsModalProps {
 	onAddBags: (
 		bags: Array<{
 			seal_tag_numbers: string;
+			new_seal_tag_numbers: string;
 			content_type: DrugBagContentType;
 			determination: BotanicalDetermination;
 		}>
@@ -75,10 +61,66 @@ interface BulkAddBagsModalProps {
 interface BulkBagEntry {
 	id: string;
 	seal_tag_numbers: string;
+	new_seal_tag_numbers: string;
 	content_type: DrugBagContentType;
 	determination: BotanicalDetermination;
-	tagError: string | null;
 }
+
+const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
+
+interface EntryError {
+	tagError: string | null;
+	newTagError: string | null;
+}
+
+/**
+ * Validate every entry together. Each non-blank tag value (original or new)
+ * shares one namespace: it must be unique across the existing case tags and all
+ * other entry tags. A bag may repeat the same value for its original and new
+ * tag (that is a single tag for that entry, not a duplicate). Returns an errors
+ * array aligned by index with the entries.
+ */
+const computeEntryErrors = (
+	entries: BulkBagEntry[],
+	existingTags: string[]
+): EntryError[] => {
+	// Count how many times each non-blank value is claimed across existing tags
+	// and every entry's original + new tag. A new tag equal to its own original
+	// is the same physical tag for that entry, so it is not counted twice.
+	const counts = new Map<string, number>();
+	const bump = (value: string) => {
+		const v = value.trim();
+		if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+	};
+	existingTags.forEach((t) => bump(t));
+	for (const e of entries) {
+		const orig = e.seal_tag_numbers.trim();
+		const neu = e.new_seal_tag_numbers.trim();
+		bump(orig);
+		if (neu && neu !== orig) bump(neu);
+	}
+
+	return entries.map((e) => {
+		const orig = e.seal_tag_numbers.trim();
+		const neu = e.new_seal_tag_numbers.trim();
+		let tagError: string | null = null;
+		let newTagError: string | null = null;
+
+		if (orig && !TAG_PATTERN.test(orig)) {
+			tagError = "Only letters, numbers, spaces, and hyphens allowed";
+		} else if (orig && (counts.get(orig) ?? 0) > 1) {
+			tagError = "This tag number is already in use";
+		}
+
+		if (neu && !TAG_PATTERN.test(neu)) {
+			newTagError = "Only letters, numbers, spaces, and hyphens allowed";
+		} else if (neu && neu !== orig && (counts.get(neu) ?? 0) > 1) {
+			newTagError = "This tag number is already in use";
+		}
+
+		return { tagError, newTagError };
+	});
+};
 
 export const BulkAddBagsModal = ({
 	open,
@@ -89,18 +131,26 @@ export const BulkAddBagsModal = ({
 	const instanceId = useId();
 	const [count, setCount] = useState(1);
 	const [entries, setEntries] = useState<BulkBagEntry[]>([]);
+	// Controlled values for the two "set all" dropdowns, so they visibly reflect
+	// the defaults when the modal opens.
+	const [setAllContentType, setSetAllContentType] =
+		useState<DrugBagContentType>(DEFAULT_CONTENT_TYPE);
+	const [setAllDetermination, setSetAllDetermination] =
+		useState<BotanicalDetermination>(DEFAULT_DETERMINATION);
 
 	// Reset state every time the modal opens fresh
 	useEffect(() => {
 		if (open) {
 			setCount(1);
+			setSetAllContentType(DEFAULT_CONTENT_TYPE);
+			setSetAllDetermination(DEFAULT_DETERMINATION);
 			setEntries([
 				{
 					id: `${instanceId}-0`,
 					seal_tag_numbers: "",
-					content_type: "plant",
-					determination: "pending",
-					tagError: null,
+					new_seal_tag_numbers: "",
+					content_type: DEFAULT_CONTENT_TYPE,
+					determination: DEFAULT_DETERMINATION,
 				},
 			]);
 		}
@@ -113,14 +163,14 @@ export const BulkAddBagsModal = ({
 				newEntries.push({
 					id: `${instanceId}-${i}`,
 					seal_tag_numbers: "",
-					content_type: "plant",
-					determination: "pending",
-					tagError: null,
+					new_seal_tag_numbers: "",
+					content_type: setAllContentType,
+					determination: setAllDetermination,
 				});
 			}
 			setEntries(newEntries);
 		},
-		[instanceId]
+		[instanceId, setAllContentType, setAllDetermination]
 	);
 
 	const handleCountChange = (value: string) => {
@@ -129,7 +179,18 @@ export const BulkAddBagsModal = ({
 		regenerateEntries(parsed);
 	};
 
+	const handleSetAllContentTypes = (value: string) => {
+		setSetAllContentType(value as DrugBagContentType);
+		setEntries((prev) =>
+			prev.map((entry) => ({
+				...entry,
+				content_type: value as DrugBagContentType,
+			}))
+		);
+	};
+
 	const handleSetAllDeterminations = (value: string) => {
+		setSetAllDetermination(value as BotanicalDetermination);
 		setEntries((prev) =>
 			prev.map((entry) => ({
 				...entry,
@@ -138,46 +199,20 @@ export const BulkAddBagsModal = ({
 		);
 	};
 
-	const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
-
-	const handleEntryTagChange = (entryId: string, newTag: string) => {
+	const handleEntryTagChange = (entryId: string, value: string) => {
 		setEntries((prev) =>
-			prev.map((entry) => {
-				if (entry.id !== entryId) return entry;
-				const formatErr =
-					newTag && !TAG_PATTERN.test(newTag)
-						? "Only letters, numbers, spaces, and hyphens allowed"
-						: null;
-				return { ...entry, seal_tag_numbers: newTag, tagError: formatErr };
-			})
+			prev.map((entry) =>
+				entry.id === entryId ? { ...entry, seal_tag_numbers: value } : entry
+			)
 		);
 	};
 
-	const handleEntryTagBlur = (entryId: string) => {
-		setEntries((prev) => {
-			const updated = [...prev];
-			const idx = updated.findIndex((e) => e.id === entryId);
-			if (idx === -1) return prev;
-
-			// Skip uniqueness check if format error already present
-			if (updated[idx].tagError) return prev;
-
-			const tag = updated[idx].seal_tag_numbers;
-			const otherEntryTags = updated
-				.filter((_, i) => i !== idx)
-				.map((e) => e.seal_tag_numbers);
-			const allOtherTags = [...existingTags, ...otherEntryTags];
-
-			if (tag && allOtherTags.includes(tag)) {
-				updated[idx] = {
-					...updated[idx],
-					tagError: "This tag number is already in use",
-				};
-			} else {
-				updated[idx] = { ...updated[idx], tagError: null };
-			}
-			return updated;
-		});
+	const handleEntryNewTagChange = (entryId: string, value: string) => {
+		setEntries((prev) =>
+			prev.map((entry) =>
+				entry.id === entryId ? { ...entry, new_seal_tag_numbers: value } : entry
+			)
+		);
 	};
 
 	const handleEntryContentTypeChange = (entryId: string, value: string) => {
@@ -200,13 +235,21 @@ export const BulkAddBagsModal = ({
 		);
 	};
 
-	const hasErrors = entries.some((e) => e.tagError !== null);
+	// Holistic validation across all entries + existing case tags.
+	const entryErrors = useMemo(
+		() => computeEntryErrors(entries, existingTags),
+		[entries, existingTags]
+	);
+	const hasErrors = entryErrors.some(
+		(e) => e.tagError !== null || e.newTagError !== null
+	);
 
 	const handleAddAll = () => {
 		if (hasErrors) return;
 
 		const bags = entries.map((entry) => ({
 			seal_tag_numbers: entry.seal_tag_numbers,
+			new_seal_tag_numbers: entry.new_seal_tag_numbers,
 			content_type: entry.content_type,
 			determination: entry.determination,
 		}));
@@ -217,6 +260,7 @@ export const BulkAddBagsModal = ({
 
 	const countInputId = `${instanceId}-count`;
 	const setAllId = `${instanceId}-set-all`;
+	const setAllContentId = `${instanceId}-set-all-content`;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,12 +285,37 @@ export const BulkAddBagsModal = ({
 						/>
 					</div>
 
+					{/* Set all content types */}
+					<div className="space-y-1">
+						<label htmlFor={setAllContentId} className="text-sm font-medium">
+							Set all content types to...
+						</label>
+						<Select
+							value={setAllContentType}
+							onValueChange={handleSetAllContentTypes}
+						>
+							<SelectTrigger id={setAllContentId}>
+								<SelectValue placeholder="Choose content type for all" />
+							</SelectTrigger>
+							<SelectContent>
+								{CONTENT_TYPE_OPTIONS.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
 					{/* Set all determinations */}
 					<div className="space-y-1">
 						<label htmlFor={setAllId} className="text-sm font-medium">
 							Set all determinations to...
 						</label>
-						<Select onValueChange={handleSetAllDeterminations}>
+						<Select
+							value={setAllDetermination}
+							onValueChange={handleSetAllDeterminations}
+						>
 							<SelectTrigger id={setAllId}>
 								<SelectValue placeholder="Choose determination for all" />
 							</SelectTrigger>
@@ -265,18 +334,27 @@ export const BulkAddBagsModal = ({
 						{entries.map((entry, index) => {
 							const tagId = `${instanceId}-tag-${index}`;
 							const tagErrorId = `${instanceId}-tag-error-${index}`;
+							const newTagId = `${instanceId}-new-tag-${index}`;
+							const newTagErrorId = `${instanceId}-new-tag-error-${index}`;
 							const contentId = `${instanceId}-content-${index}`;
 							const detId = `${instanceId}-det-${index}`;
+							const entryError = entryErrors[index] ?? {
+								tagError: null,
+								newTagError: null,
+							};
 
 							return (
 								<div
 									key={entry.id}
-									className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-3"
+									className="grid grid-cols-1 gap-3 rounded-lg border-2 border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-slate-800/50 sm:grid-cols-2"
 								>
-									{/* Tag input */}
+									<p className="col-span-full text-sm font-semibold text-foreground">
+										Bag {index + 1}
+									</p>
+									{/* Original tag input */}
 									<div className="space-y-1">
-										<label htmlFor={tagId} className="text-xs font-medium">
-											Tag
+										<label htmlFor={tagId} className="text-sm font-semibold">
+											Original Tag
 										</label>
 										<Input
 											id={tagId}
@@ -284,25 +362,57 @@ export const BulkAddBagsModal = ({
 											onChange={(e) =>
 												handleEntryTagChange(entry.id, e.target.value)
 											}
-											onBlur={() => handleEntryTagBlur(entry.id)}
-											aria-invalid={!!entry.tagError}
-											aria-describedby={entry.tagError ? tagErrorId : undefined}
-											className="text-sm"
+											aria-invalid={!!entryError.tagError}
+											aria-describedby={
+												entryError.tagError ? tagErrorId : undefined
+											}
+											className="text-base"
 										/>
-										{entry.tagError && (
+										{entryError.tagError && (
 											<p
 												id={tagErrorId}
-												className="text-xs text-red-600"
+												className="text-sm text-red-600 dark:text-red-400"
 												role="alert"
 											>
-												{entry.tagError}
+												{entryError.tagError}
+											</p>
+										)}
+									</div>
+
+									{/* New tag input */}
+									<div className="space-y-1">
+										<label htmlFor={newTagId} className="text-sm font-semibold">
+											New Tag
+										</label>
+										<Input
+											id={newTagId}
+											value={entry.new_seal_tag_numbers}
+											onChange={(e) =>
+												handleEntryNewTagChange(entry.id, e.target.value)
+											}
+											aria-invalid={!!entryError.newTagError}
+											aria-describedby={
+												entryError.newTagError ? newTagErrorId : undefined
+											}
+											className="text-base"
+										/>
+										{entryError.newTagError && (
+											<p
+												id={newTagErrorId}
+												className="text-sm text-red-600 dark:text-red-400"
+												role="alert"
+											>
+												{entryError.newTagError}
 											</p>
 										)}
 									</div>
 
 									{/* Content type select */}
 									<div className="space-y-1">
-										<label htmlFor={contentId} className="text-xs font-medium">
+										<label
+											htmlFor={contentId}
+											className="text-sm font-semibold"
+										>
 											Content Type
 										</label>
 										<Select
@@ -311,7 +421,7 @@ export const BulkAddBagsModal = ({
 												handleEntryContentTypeChange(entry.id, v)
 											}
 										>
-											<SelectTrigger id={contentId} className="text-sm">
+											<SelectTrigger id={contentId} className="text-base">
 												<SelectValue placeholder="Content type" />
 											</SelectTrigger>
 											<SelectContent>
@@ -326,7 +436,7 @@ export const BulkAddBagsModal = ({
 
 									{/* Determination select */}
 									<div className="space-y-1">
-										<label htmlFor={detId} className="text-xs font-medium">
+										<label htmlFor={detId} className="text-sm font-semibold">
 											Determination
 										</label>
 										<Select
@@ -335,7 +445,7 @@ export const BulkAddBagsModal = ({
 												handleEntryDeterminationChange(entry.id, v)
 											}
 										>
-											<SelectTrigger id={detId} className="text-sm">
+											<SelectTrigger id={detId} className="text-base">
 												<SelectValue placeholder="Determination" />
 											</SelectTrigger>
 											<SelectContent>

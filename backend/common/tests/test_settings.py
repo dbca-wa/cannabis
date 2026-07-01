@@ -1,49 +1,65 @@
-"""Tests for SystemSettings endpoints."""
+"""Tests for system settings + the OCR feature flag."""
 
 import pytest
 from django.urls import reverse
 
 from common.models import SystemSettings
 
-
-@pytest.mark.django_db
-def test_get_settings_as_admin(admin_client):
-    """GET system settings as admin returns 200 with settings object."""
-    # Ensure settings exist
-    SystemSettings.load()
-
-    url = reverse("system-settings")
-    response = admin_client.get(url)
-
-    assert response.status_code == 200
-    assert "cost_per_certificate" in response.data
-    assert "cost_per_bag" in response.data
-    assert "tax_percentage" in response.data
+pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.django_db
-def test_update_settings_as_admin(admin_client):
-    """PATCH system settings as admin returns 200 with persisted changes."""
-    SystemSettings.load()
+class TestSystemSettings:
+    def test_get_includes_ocr_enabled(self, admin_client):
+        resp = admin_client.get(reverse("system-settings"))
+        assert resp.status_code == 200
+        assert "ocr_enabled" in resp.data
 
-    url = reverse("system-settings")
-    data = {"cost_per_certificate": "150.00"}
-    response = admin_client.patch(url, data, format="json")
+    def test_get_requires_staff(self, botanist_client):
+        # Settings (incl. pricing) are admin-only.
+        resp = botanist_client.get(reverse("system-settings"))
+        assert resp.status_code == 403
 
-    assert response.status_code == 200
-    assert response.data["cost_per_certificate"] == "150.00"
+    def test_admin_can_toggle_ocr_enabled(self, admin_client):
+        resp = admin_client.patch(
+            reverse("system-settings"), {"ocr_enabled": True}, format="json"
+        )
+        assert resp.status_code == 200
+        assert resp.data["ocr_enabled"] is True
+        assert SystemSettings.load().ocr_enabled is True
 
-    # Verify persisted
-    settings = SystemSettings.load()
-    assert str(settings.cost_per_certificate) == "150.00"
+        resp = admin_client.patch(
+            reverse("system-settings"), {"ocr_enabled": False}, format="json"
+        )
+        assert resp.status_code == 200
+        assert resp.data["ocr_enabled"] is False
+
+    def test_non_staff_cannot_patch(self, botanist_client):
+        resp = botanist_client.patch(
+            reverse("system-settings"), {"ocr_enabled": True}, format="json"
+        )
+        assert resp.status_code == 403
 
 
-@pytest.mark.django_db
-def test_get_settings_as_regular_user(authenticated_client):
-    """GET system settings as non-admin returns 403."""
-    SystemSettings.load()
+class TestFeatureFlags:
+    """Feature flags are readable by any app user (not just admins)."""
 
-    url = reverse("system-settings")
-    response = authenticated_client.get(url)
+    def test_botanist_can_read_flags(self, botanist_client):
+        resp = botanist_client.get(reverse("system-feature-flags"))
+        assert resp.status_code == 200
+        assert "ocr_enabled" in resp.data
 
-    assert response.status_code == 403
+    def test_finance_can_read_flags(self, finance_client):
+        resp = finance_client.get(reverse("system-feature-flags"))
+        assert resp.status_code == 200
+        assert "ocr_enabled" in resp.data
+
+    def test_reflects_toggle(self, finance_client):
+        settings_obj = SystemSettings.load()
+        settings_obj.ocr_enabled = True
+        settings_obj.save()
+        resp = finance_client.get(reverse("system-feature-flags"))
+        assert resp.data["ocr_enabled"] is True
+
+    def test_roleless_blocked(self, roleless_client):
+        resp = roleless_client.get(reverse("system-feature-flags"))
+        assert resp.status_code == 403

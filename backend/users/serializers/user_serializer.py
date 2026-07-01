@@ -24,7 +24,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
-            "first_name",
+            "given_names",
             "last_name",
             "full_name",
             "initials",
@@ -52,10 +52,10 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         """Get user's full name"""
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name} {obj.last_name}"
-        elif obj.first_name:
-            return obj.first_name
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names} {obj.last_name}"
+        elif obj.given_names:
+            return obj.given_names
         elif obj.last_name:
             return obj.last_name
         else:
@@ -63,10 +63,10 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
 
     def get_initials(self, obj):
         """Get user initials for avatars"""
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name[0]}{obj.last_name[0]}".upper()
-        elif obj.first_name:
-            return obj.first_name[0].upper()
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names[0]}{obj.last_name[0]}".upper()
+        elif obj.given_names:
+            return obj.given_names[0].upper()
         elif obj.last_name:
             return obj.last_name[0].upper()
         else:
@@ -110,7 +110,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
-            "first_name",
+            "given_names",
             "last_name",
             "full_name",
             "initials",
@@ -123,13 +123,13 @@ class UserBasicSerializer(serializers.ModelSerializer):
         ]
 
     def get_full_name(self, obj):
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name} {obj.last_name}"
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names} {obj.last_name}"
         return obj.email.split("@")[0]
 
     def get_initials(self, obj):
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name[0]}{obj.last_name[0]}".upper()
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names[0]}{obj.last_name[0]}".upper()
         return obj.email[0].upper()
 
     def get_role_display(self, obj):
@@ -145,7 +145,6 @@ class UserTinySerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     initials = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
-    has_signature = serializers.SerializerMethodField()
     cases_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
@@ -153,7 +152,7 @@ class UserTinySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
-            "first_name",
+            "given_names",
             "last_name",
             "full_name",
             "initials",
@@ -164,33 +163,22 @@ class UserTinySerializer(serializers.ModelSerializer):
             "is_superuser",
             "date_joined",
             "last_login",
-            "has_signature",
             "cases_count",
         ]
         read_only_fields = ["id", "date_joined", "last_login"]
 
     def get_full_name(self, obj):
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name} {obj.last_name}"
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names} {obj.last_name}"
         return obj.email.split("@")[0]
 
     def get_initials(self, obj):
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name[0]}{obj.last_name[0]}".upper()
+        if obj.given_names and obj.last_name:
+            return f"{obj.given_names[0]}{obj.last_name[0]}".upper()
         return obj.email[0].upper()
 
     def get_role_display(self, obj):
         return obj.get_role_display()
-
-    def get_has_signature(self, obj):
-        """Return whether a botanist user has a signature on file."""
-        if obj.role != "botanist":
-            return None
-        if hasattr(obj, "_has_signature"):
-            return obj._has_signature
-        from signatures.models import Signature
-
-        return Signature.objects.filter(user=obj).exists()
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -203,7 +191,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "email",
-            "first_name",
+            "given_names",
             "last_name",
             "role",
             "password",

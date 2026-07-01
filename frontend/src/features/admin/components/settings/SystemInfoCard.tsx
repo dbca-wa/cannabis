@@ -149,7 +149,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ settings }) => {
 		dateString?: string | null,
 		user?: {
 			email?: string;
-			first_name?: string | null;
+			given_names?: string | null;
 			last_name?: string | null;
 			username?: string;
 		} | null
@@ -184,8 +184,8 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ settings }) => {
 		let userDisplay = "Unknown user";
 		if (user?.email) {
 			userDisplay = user.email;
-		} else if (user?.first_name || user?.last_name) {
-			userDisplay = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+		} else if (user?.given_names || user?.last_name) {
+			userDisplay = `${user.given_names || ""} ${user.last_name || ""}`.trim();
 		} else if (user?.username) {
 			userDisplay = user.username;
 		}

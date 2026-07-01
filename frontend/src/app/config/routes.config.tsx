@@ -1,13 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {
-	Home,
-	Settings,
-	Users,
-	Shield,
-	User,
-	TestTube,
-	PenLine,
-} from "lucide-react";
+import { Home, Settings, Users, Shield, User, TestTube } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { FaTriangleExclamation } from "react-icons/fa6";
 import { Navigate, type RouteObject } from "react-router";
@@ -16,20 +8,14 @@ const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import("@/pages/dashboard/Home"));
-const TestsHomePage = lazy(() => import("@/pages/tests/TestsHomePage"));
-const TestEmailPage = lazy(() => import("@/pages/tests/TestEmailPage"));
-const TestCertificatePage = lazy(
-	() => import("@/pages/tests/TestCertificatePage")
-);
-const TestInvoicePage = lazy(() => import("@/pages/tests/TestInvoicePage"));
 const CasesPage = lazy(() => import("@/pages/cases/Cases"));
+const BatchesPage = lazy(() => import("@/pages/batches/Batches"));
 const StaffPage = lazy(() => import("@/pages/users/Staff"));
 const OfficersPage = lazy(() => import("@/pages/police/Officers"));
 const StationsPage = lazy(() => import("@/pages/police/Stations"));
 const DefendantsPage = lazy(() => import("@/pages/defendants/Defendants"));
 const AdminPage = lazy(() => import("@/pages/admin/Admin"));
 const FinancialsPage = lazy(() => import("@/pages/financials/Financials"));
-const SignaturePage = lazy(() => import("@/pages/signature/SignaturePage"));
 const ChangePasswordPage = lazy(() => import("@/pages/auth/ChangePassword"));
 const DefendantMergePage = lazy(() =>
 	import("@/features/defendants/components/merge/DefendantMergePage").then(
@@ -211,13 +197,8 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 					activeIcon: <FaTriangleExclamation size={20} />,
 					tooltipContent: <p>Tests</p>,
 					adminOnly: false,
-					showInSidebar: true,
-					element: TestsHomePage,
-					children: [
-						{ path: "emails", element: TestEmailPage },
-						{ path: "certificates", element: TestCertificatePage },
-						{ path: "invoices", element: TestInvoicePage },
-					],
+					showInSidebar: false,
+					element: AdminPage,
 				} satisfies RouteConfig,
 			]
 		: []),
@@ -245,6 +226,16 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 				element: ProcessCase,
 			},
 		],
+	},
+	{
+		name: "Batches",
+		path: "/batches",
+		icon: <TestTube size={20} />,
+		activeIcon: <TestTube size={20} />,
+		tooltipContent: <p>Review batches, costs, and invoice numbers</p>,
+		adminOnly: false,
+		showInSidebar: true,
+		element: BatchesPage,
 	},
 	{
 		name: "Staff",
@@ -333,16 +324,6 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		adminOnly: false,
 		showInSidebar: true,
 		element: FinancialsPage,
-	},
-	{
-		name: "My Signature",
-		path: "/signature",
-		icon: <PenLine size={20} />,
-		activeIcon: <PenLine size={20} />,
-		tooltipContent: <p>Manage your digital signature</p>,
-		adminOnly: false,
-		showInSidebar: false,
-		element: SignaturePage,
 	},
 	{
 		name: "Change Password",
@@ -489,10 +470,10 @@ export const getSidebarItemFromRoute = (pathname: string): string => {
 	if (pathname.startsWith("/stations")) return "Stations";
 	if (pathname.startsWith("/financials")) return "Financials";
 	if (pathname.startsWith("/cases")) return "Cases";
+	if (pathname.startsWith("/batches")) return "Batches";
 	if (pathname.startsWith("/staff")) return "Staff";
 	if (pathname.startsWith("/admin")) return "Testing";
 	if (pathname.startsWith("/defendants")) return "Defendants";
-	if (pathname.startsWith("/signature")) return "My Signature";
 	if (pathname.startsWith("/change-password")) return "Change Password";
 
 	return "Home";

@@ -81,16 +81,6 @@ export interface UserPreferences {
 	// Pagination preferences
 	items_per_page: ItemsPerPageChoice;
 
-	// Notification preferences
-	email_notifications: boolean;
-	comment_notifications: boolean;
-	reaction_notifications: boolean;
-	notify_submission_assigned: boolean;
-	notify_phase_changes: boolean;
-	notify_certificate_generated: boolean;
-	notify_invoices_generated: boolean;
-	notify_pdfs_mailed: boolean;
-
 	// Accessibility preferences
 	reduce_motion: boolean;
 
@@ -109,16 +99,6 @@ export interface UserPreferences {
 		cases: DisplayModeChoice;
 		certificates: DisplayModeChoice;
 	};
-	notification_settings: {
-		email: boolean;
-		comments: boolean;
-		reactions: boolean;
-		assigned: boolean;
-		phase_changes: boolean;
-		certificates: boolean;
-		invoices: boolean;
-		sent: boolean;
-	};
 }
 
 // Complete user object (matches UserJWTObjectSerializer)
@@ -126,7 +106,7 @@ export interface User {
 	// Core user fields
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string; // Computed field
 	initials: string; // Computed field
@@ -157,7 +137,7 @@ export interface User {
 export interface UserBasic {
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string;
 	initials: string;
@@ -170,7 +150,7 @@ export interface UserBasic {
 export interface UserTiny {
 	id: number;
 	email: string;
-	first_name: string | null;
+	given_names: string | null;
 	last_name: string | null;
 	full_name: string;
 	initials: string;
@@ -187,7 +167,7 @@ export interface UserTiny {
 // User creation request (matches UserCreateSerializer)
 export interface UserCreateRequest {
 	email: string;
-	first_name: string;
+	given_names: string;
 	last_name: string;
 	role: UserRole;
 	password: string;
@@ -201,7 +181,7 @@ export interface UserCreateRequest {
 // User update request (partial update)
 export interface UserUpdateRequest {
 	email?: string;
-	first_name?: string;
+	given_names?: string;
 	last_name?: string;
 	role?: UserRole;
 	is_staff?: boolean;

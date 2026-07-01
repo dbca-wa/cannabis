@@ -1,22 +1,20 @@
-from rest_framework.exceptions import (
-    NotFound,
-    ValidationError,
-)
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import ListCreateAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..models import Case, CasePhaseHistory
 
 
 class CaseWorkflowView(APIView):
     """
-    POST: Trigger workflow actions for cases
+    POST: Trigger workflow actions for cases.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request, pk):
         try:
@@ -24,19 +22,22 @@ class CaseWorkflowView(APIView):
         except Case.DoesNotExist:
             raise NotFound("Case not found.")
 
+        # Complete cases are read-only for non-admins (server-side guard).
+        from ..permissions import ensure_case_editable
+
+        ensure_case_editable(submission, request.user)
+
         action = request.data.get("action")
 
         if action == "advance_phase":
             return self.advance_phase(request, submission)
         elif action == "generate_certificate":
             return self.generate_certificate(request, submission)
-        elif action == "generate_invoice":
-            return self.generate_invoice(request, submission)
         else:
             raise ValidationError("Invalid action.")
 
     def advance_phase(self, request, submission):
-        """Advance case to next phase using the workflow service"""
+        """Advance case to next phase using the workflow service."""
         from ..services import advance_submission_phase
 
         new_phase = advance_submission_phase(submission, request.user)
@@ -50,103 +51,30 @@ class CaseWorkflowView(APIView):
         )
 
     def generate_certificate(self, request, submission):
-        """Generate an unsigned certificate record for the submission.
-        If a certificate already exists (and is not locked), regenerate its PDF."""
-        from ..services import generate_unsigned_certificate, regenerate_certificate_pdf
+        """Generate certificate PDFs for the case (one per bag group)."""
+        from ..services import CertificateService
 
-        existing_cert = submission.certificates.first()
-
-        if existing_cert:
-            # Regenerate existing certificate's PDF (same cert number)
-            certificate = regenerate_certificate_pdf(existing_cert)
-            return Response(
-                {
-                    "message": "Certificate regenerated successfully",
-                    "certificate_number": certificate.certificate_number,
-                },
-                status=HTTP_200_OK,
-            )
-
-        # First-time generation
-        certificate = generate_unsigned_certificate(submission, request.user)
+        groups = request.data.get("groups")
+        group_notes = request.data.get("group_notes")
+        certificates = CertificateService.generate_certificates(
+            submission, request.user, groups=groups, group_notes=group_notes
+        )
 
         return Response(
             {
-                "message": "Certificate generated successfully",
-                "certificate_number": certificate.certificate_number,
+                "message": "Certificates generated successfully",
+                "certificate_numbers": [c.certificate_number for c in certificates],
             },
             status=HTTP_201_CREATED,
         )
-
-    def generate_invoice(self, request, submission):
-        """Generate invoice for submission."""
-        from ..services import generate_invoice
-
-        customer_number = request.data.get("customer_number", "").strip()
-        invoice = generate_invoice(submission, customer_number, request.user)
-
-        return Response(
-            {
-                "message": "Invoice generated successfully",
-                "invoice_number": invoice.invoice_number,
-                "total": str(invoice.total),
-            },
-            status=HTTP_201_CREATED,
-        )
-
-
-class SendDocumentsView(APIView):
-    """
-    POST: Send case certificate and invoice PDFs to the configured recipient.
-    Advances case phase to complete on success.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        try:
-            case = Case.objects.get(pk=pk)
-        except Case.DoesNotExist:
-            raise NotFound("Case not found.")
-
-        from ..services import EmailService
-
-        result = EmailService.send_case_documents(case, request.user)
-
-        return Response(result, status=HTTP_200_OK)
-
-
-class CaseSendBackView(APIView):
-    """
-    POST: Send case back to an earlier phase with a reason
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk):
-        try:
-            submission = Case.objects.select_related(
-                "approved_botanist", "finance_officer"
-            ).get(pk=pk)
-        except Case.DoesNotExist:
-            raise NotFound("Case not found.")
-
-        target_phase = request.data.get("target_phase")
-        reason = request.data.get("reason", "").strip()
-
-        from ..services import send_back_submission
-
-        result = send_back_submission(submission, target_phase, reason, request.user)
-
-        return Response(result, status=HTTP_200_OK)
 
 
 class CasePhaseHistoryView(ListCreateAPIView):
     """
-    GET: List phase history for a specific case
+    GET: List phase history for a specific case.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
         from ..serializers import CasePhaseHistorySerializer
@@ -159,17 +87,14 @@ class CasePhaseHistoryView(ListCreateAPIView):
             "user", "submission"
         )
 
-        # Filter by action type
         action = self.request.query_params.get("action")
         if action:
             queryset = queryset.filter(action=action)
 
-        # Filter by user
         user_id = self.request.query_params.get("user")
         if user_id:
             queryset = queryset.filter(user_id=user_id)
 
-        # Filter by phase
         from_phase = self.request.query_params.get("from_phase")
         if from_phase:
             queryset = queryset.filter(from_phase=from_phase)
@@ -178,7 +103,6 @@ class CasePhaseHistoryView(ListCreateAPIView):
         if to_phase:
             queryset = queryset.filter(to_phase=to_phase)
 
-        # Sorting (default: newest first)
         ordering = self.request.query_params.get("ordering", "-timestamp")
         if ordering:
             queryset = queryset.order_by(ordering)

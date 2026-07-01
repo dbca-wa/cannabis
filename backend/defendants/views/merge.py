@@ -1,8 +1,9 @@
 """Defendant merge view — combine duplicate defendant records."""
 
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from users.permissions import HasAppAccess
 
 from ..services import DefendantService
 
@@ -10,7 +11,7 @@ from ..services import DefendantService
 class DefendantMergeView(APIView):
     """Merge multiple defendant records into a single primary defendant."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasAppAccess]
 
     def post(self, request):
         primary_id = request.data.get("primary_id")
