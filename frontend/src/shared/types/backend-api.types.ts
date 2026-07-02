@@ -117,6 +117,7 @@ export interface User {
 	is_staff: boolean;
 	is_active: boolean;
 	is_superuser: boolean;
+	requires_password_change: boolean;
 	date_joined: string; // ISO datetime string
 	last_login: string | null; // ISO datetime string
 

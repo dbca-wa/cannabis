@@ -104,6 +104,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
     is_authenticated = serializers.SerializerMethodField()
+    requires_password_change = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -120,7 +121,12 @@ class UserBasicSerializer(serializers.ModelSerializer):
             "is_staff",
             "is_superuser",
             "is_active",
+            "requires_password_change",
         ]
+
+    def get_requires_password_change(self, obj):
+        """True if the user has never set their own password (invited users)."""
+        return obj.password_last_changed is None
 
     def get_full_name(self, obj):
         if obj.given_names and obj.last_name:

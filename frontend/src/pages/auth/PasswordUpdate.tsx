@@ -152,8 +152,9 @@ const PasswordUpdate = () => {
 			logger.info("Password updated successfully", { userId: user.id });
 			showSuccess("Password updated successfully!");
 
-			// Navigate to home page after successful password update
-			navigate("/");
+			// Hard navigation to force a fresh /whoami fetch — ensures the guard
+			// sees requires_password_change is now false after the update.
+			window.location.href = "/";
 		} catch (error) {
 			// Use enhanced error handling
 			errorHandlingService.handleError(error, {

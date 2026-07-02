@@ -74,14 +74,7 @@ const InviteActivation = () => {
 
 				// Auto-redirect to password update after a short delay
 				setTimeout(() => {
-					navigate("/auth/password-update", {
-						replace: true,
-						state: {
-							isFirstTime: true,
-							temporaryPassword: data.temporary_password,
-							fromInvitation: true,
-						},
-					});
+					window.location.href = "/auth/password-update?fromReset=true";
 				}, 2000);
 			} catch (error) {
 				logger.error("Failed to activate invitation", { error });
@@ -184,17 +177,10 @@ const InviteActivation = () => {
 								</p>
 
 								<Button
-									onClick={() =>
-										navigate("/auth/password-update", {
-											replace: true,
-											state: {
-												isFirstTime: true,
-												temporaryPassword:
-													activationState.data.temporary_password,
-												fromInvitation: true,
-											},
-										})
-									}
+									onClick={() => {
+										window.location.href =
+											"/auth/password-update?fromReset=true";
+									}}
 									className="w-full"
 								>
 									Set Up Password Now

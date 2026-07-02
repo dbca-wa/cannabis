@@ -166,6 +166,16 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		return redirect("/auth/login");
 	}
 
+	// Force password change for invited users who haven't set their password
+	if (
+		user?.requires_password_change &&
+		pathname !== "/auth/password-update" &&
+		!pathname.startsWith("/auth/")
+	) {
+		logger.debug("[RootAuthGuard] User requires password change, redirecting");
+		return redirect("/auth/password-update?fromReset=true");
+	}
+
 	// Users without an app role (and not admin) may only access the dashboard.
 	const hasAppAccess = !!(
 		user?.is_superuser ||
