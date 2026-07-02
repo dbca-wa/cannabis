@@ -37,7 +37,7 @@ export const navGroups: NavGroup[] = [
 			{ to: "/", label: "Dashboard", icon: LayoutDashboard },
 			{ to: "/staff", label: "Staff", icon: Users },
 			{
-				to: "/admin",
+				to: "/testing",
 				label: "Testing",
 				icon: Settings,
 				adminOnly: true,

@@ -111,7 +111,7 @@ const Login = () => {
 	}
 
 	return (
-		<Card className="bg-card border-none">
+		<Card className="w-full max-w-md mx-auto bg-card border-none">
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />

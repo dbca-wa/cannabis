@@ -182,7 +182,7 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 	}
 
 	// Check admin route protection - only superusers can access admin routes
-	if (pathname.startsWith("/admin")) {
+	if (pathname.startsWith("/testing")) {
 		const isAdmin = user?.is_superuser;
 		if (!isAdmin) {
 			logger.warn(

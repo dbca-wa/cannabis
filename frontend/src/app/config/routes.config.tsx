@@ -337,7 +337,7 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 	},
 	{
 		name: "Testing",
-		path: "/admin",
+		path: "/testing",
 		icon: <Settings size={20} />,
 		activeIcon: <Settings size={20} />,
 		tooltipContent: <p>Generate test documents and emails</p>,
@@ -472,7 +472,7 @@ export const getSidebarItemFromRoute = (pathname: string): string => {
 	if (pathname.startsWith("/cases")) return "Cases";
 	if (pathname.startsWith("/batches")) return "Batches";
 	if (pathname.startsWith("/staff")) return "Staff";
-	if (pathname.startsWith("/admin")) return "Testing";
+	if (pathname.startsWith("/testing")) return "Testing";
 	if (pathname.startsWith("/defendants")) return "Defendants";
 	if (pathname.startsWith("/change-password")) return "Change Password";
 

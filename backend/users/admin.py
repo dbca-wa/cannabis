@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from users.models import PasswordResetCode, User, UserPreferences
+from users.models import InviteRecord, PasswordResetCode, User, UserPreferences
 
 
 @admin.register(User)
@@ -167,3 +167,12 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
 #         ('submissions_display_mode', 'certificates_display_mode'),
 #         ('items_per_page', 'date_format', 'time_format'),
 #     )
+
+
+@admin.register(InviteRecord)
+class InviteRecordAdmin(admin.ModelAdmin):
+    list_display = ("email", "role", "invited_by", "is_valid", "is_used", "created_at")
+    list_filter = ("role", "is_valid", "is_used")
+    search_fields = ("email", "invited_by__email")
+    ordering = ("-created_at",)
+    readonly_fields = ("token", "created_at", "expires_at")

@@ -59,7 +59,7 @@ const ContentLayout = observer(
 				commonShortcuts.navigation.home(() => navigate("/")),
 				commonShortcuts.navigation.users(() => navigate("/staff")),
 				commonShortcuts.navigation.police(() => navigate("/police")),
-				commonShortcuts.navigation.admin(() => navigate("/admin")),
+				commonShortcuts.navigation.admin(() => navigate("/testing")),
 				commonShortcuts.general.toggleTheme(() => uiStore.toggleTheme()),
 				commonShortcuts.general.help(() => setShowGlobalShortcutsHelp(true)),
 			],
