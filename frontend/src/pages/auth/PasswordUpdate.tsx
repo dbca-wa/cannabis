@@ -51,6 +51,7 @@ const PasswordUpdate = () => {
 	const isFirstTime =
 		searchParams.get("firstTime") === "true" ||
 		searchParams.get("reset") === "true" ||
+		searchParams.get("fromReset") === "true" ||
 		location.state?.isFirstTime === true;
 
 	// Check if coming from invitation activation
@@ -58,7 +59,9 @@ const PasswordUpdate = () => {
 	const temporaryPassword = location.state?.temporaryPassword;
 
 	// Check if coming from reset code verification
-	const fromResetCode = location.state?.fromResetCode === true;
+	const fromResetCode =
+		searchParams.get("fromReset") === "true" ||
+		location.state?.fromResetCode === true;
 
 	const form = useForm<PasswordUpdateFormData>({
 		resolver: zodResolver(passwordUpdateSchema),

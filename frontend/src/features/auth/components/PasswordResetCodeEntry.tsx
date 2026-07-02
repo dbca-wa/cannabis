@@ -127,13 +127,10 @@ export const PasswordResetCodeEntry = () => {
 
 			toast.success("Code verified! Redirecting to password update...");
 
-			// Navigate to password update page
-			navigate("/auth/password-update", {
-				state: {
-					isFirstTime: true,
-					fromResetCode: true,
-				},
-			});
+			// Use hard navigation (not React Router) to avoid the route guard
+			// race condition — tokens were just stored and the guard's async
+			// getCurrentUser() may not see them yet on a client-side transition.
+			window.location.href = "/auth/password-update?fromReset=true";
 		} catch (error) {
 			const errorMessage = getErrorMessage(error);
 			logger.error("Reset code verification failed", {

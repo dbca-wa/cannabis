@@ -100,17 +100,13 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 
 	// For auth routes, handle them first to avoid unnecessary auth checks
 	if (pathname.startsWith("/auth/")) {
-		// Special caseObj: password-update requires authentication
+		// Special caseObj: password-update — allow access without guard check.
+		// The component itself verifies auth state and redirects if needed.
+		// This avoids a race condition where tokens are stored but the guard's
+		// getCurrentUser() call hasn't resolved yet (freshly verified reset code).
 		if (pathname === "/auth/password-update") {
-			const { isAuthenticated } = await checkAuthStatus();
-			if (!isAuthenticated) {
-				logger.debug(
-					"[RootAuthGuard] Password update requires authentication, redirecting to login"
-				);
-				return redirect("/auth/login");
-			}
 			logger.debug(
-				"[RootAuthGuard] User authenticated, allowing access to password update"
+				"[RootAuthGuard] Password update page, allowing access (component handles auth)"
 			);
 			return null;
 		}
