@@ -27,7 +27,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { getErrorMessage } from "@/shared/utils/error.utils";
 import { logger } from "@/shared/services/logger.service";
 import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
@@ -45,6 +45,7 @@ const Login = () => {
 
 	const [showForgotPassword, setShowForgotPassword] = useState(false);
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	// Check if we should show forgot password modal from navigation state
 	useEffect(() => {
@@ -70,12 +71,13 @@ const Login = () => {
 	// Log when user is authenticated
 	useEffect(() => {
 		if (isAuthenticated && user && user.id) {
-			logger.info("User authenticated, navigation handled by auth store", {
+			logger.info("User already authenticated, redirecting to dashboard", {
 				userId: user.id,
 				email: user.email,
 			});
+			navigate("/");
 		}
-	}, [isAuthenticated, user]);
+	}, [isAuthenticated, user, navigate]);
 
 	const onSubmit = async (values: z.infer<typeof loginSchema>) => {
 		logger.info("Login form submitted", { email: values.email });
