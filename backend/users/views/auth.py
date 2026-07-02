@@ -399,9 +399,6 @@ class VerifyResetCodeView(APIView):
 
             tokens = AuthService.generate_tokens_for_user(user)
 
-            # Update password change timestamp
-            PasswordResetCodeService.update_password_change_timestamp(user)
-
             # Clear failed attempts after successful verification
             BruteForceProtectionThrottle.clear_failed_attempts(email, client_ip)
 

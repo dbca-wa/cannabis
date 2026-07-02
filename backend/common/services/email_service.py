@@ -60,6 +60,22 @@ class EmailService:
         """
         full_context = {**EmailService._get_base_context(), **context}
 
+        # Derive recipient_name for the base template footer if not explicitly set
+        if "recipient_name" not in full_context:
+            user = full_context.get("user")
+            if user and hasattr(user, "given_names"):
+                name_parts = [
+                    getattr(user, "given_names", "") or "",
+                    getattr(user, "last_name", "") or "",
+                ]
+                full_context["recipient_name"] = (
+                    " ".join(p for p in name_parts if p) or "you"
+                )
+            else:
+                full_context["recipient_name"] = full_context.get(
+                    "recipient_first_name", "you"
+                )
+
         try:
             html_content = render_to_string(template_name, full_context)
         except Exception as e:

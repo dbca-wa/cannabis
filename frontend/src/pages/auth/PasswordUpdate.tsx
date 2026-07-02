@@ -44,7 +44,7 @@ const PasswordUpdate = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const location = useLocation();
-	const { user, isAuthenticated } = useAuth();
+	const { user, isAuthenticated, isLoading } = useAuth();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Check if this is a first-time password setup (from invitation or reset)
@@ -81,15 +81,15 @@ const PasswordUpdate = () => {
 		watchedConfirmPassword
 	);
 
-	// Redirect if not authenticated
+	// Redirect if not authenticated (but wait for auth state to load first)
 	useEffect(() => {
-		if (!isAuthenticated) {
+		if (!isLoading && !isAuthenticated) {
 			logger.warn(
 				"Unauthenticated user attempted to access password update page"
 			);
 			navigate("/auth/login");
 		}
-	}, [isAuthenticated, navigate]);
+	}, [isAuthenticated, isLoading, navigate]);
 
 	// Clear current password error when user changes the current password
 	useEffect(() => {
