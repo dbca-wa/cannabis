@@ -2,11 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/shared/services/api/client.service";
 import { dashboardKeys } from "./queryKeys";
 
+interface PhaseCountEntry {
+	cases: number;
+	forms: number;
+}
+
 interface PhaseCountsResponse {
-	assessment: number;
-	unsigned_generation: number;
-	batching: number;
-	in_batch: number;
+	assessment: PhaseCountEntry;
+	unsigned_generation: PhaseCountEntry;
+	batching: PhaseCountEntry;
+	in_batch: PhaseCountEntry;
 }
 
 export const usePhaseStats = () => {

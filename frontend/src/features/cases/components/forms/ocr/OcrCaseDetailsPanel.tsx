@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { Link } from "react-router";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import {
 	AlertDialog,
@@ -12,7 +13,7 @@ import {
 	AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, Info } from "lucide-react";
 import { useOcrEnabled } from "@/shared/hooks/data";
 import { useCaseFormStore } from "../../../hooks/useCaseFormStore";
 import { ocrResultStore } from "../../../stores/ocrResult.store";
@@ -57,6 +58,7 @@ export const OcrCaseDetailsPanel = observer(() => {
 	const isHttp413 =
 		store.error?.includes("413") ||
 		store.error?.toLowerCase().includes("file size");
+	const caseMatch = store.caseMatch;
 
 	return (
 		<div className="space-y-4">
@@ -67,6 +69,29 @@ export const OcrCaseDetailsPanel = observer(() => {
 					isComplete ? () => setShowReuploadConfirm(true) : undefined
 				}
 			/>
+
+			{isComplete && caseMatch?.matched && caseMatch.case_id && (
+				<Alert className="border-blue-500/50">
+					<Info className="h-4 w-4 text-blue-600" />
+					<AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+						<span className="text-blue-800">
+							This police reference matches an existing case
+							{caseMatch.case_number ? ` (${caseMatch.case_number})` : ""}.
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							className="shrink-0 self-start sm:self-auto"
+							asChild
+						>
+							<Link to={`/cases/${caseMatch.case_id}`}>
+								Add a form to this case
+								<ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
+							</Link>
+						</Button>
+					</AlertDescription>
+				</Alert>
+			)}
 
 			{isComplete && store.isUnreliableExtraction && (
 				<Alert className="border-amber-500/50">

@@ -18,6 +18,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
     is_authenticated = serializers.SerializerMethodField()
+    requires_password_change = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -38,6 +39,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "is_authenticated",
+            "requires_password_change",
             "preferences",
         ]
         read_only_fields = [
@@ -45,6 +47,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "is_authenticated",
+            "requires_password_change",
             "full_name",
             "initials",
             "role_display",
@@ -79,6 +82,10 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
     def get_is_authenticated(self, obj):
         """Always true for this serializer (user is authenticated if we're serializing them)"""
         return True
+
+    def get_requires_password_change(self, obj):
+        """True if the user has never set their own password (invited users)."""
+        return obj.password_last_changed is None
 
 
 class UserJWTTokenSerializer(serializers.Serializer):

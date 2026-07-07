@@ -149,12 +149,9 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
         serializer.save()
 
     def perform_destroy(self, instance):
-        """Custom deletion logic"""
+        """Delete user permanently."""
         settings.LOGGER.warning(f"User {self.request.user} deleted user {instance}")
-
-        # Soft delete instead of hard delete
-        instance.is_active = False
-        instance.save()
+        instance.delete()
 
 
 class UserExportView(APIView):

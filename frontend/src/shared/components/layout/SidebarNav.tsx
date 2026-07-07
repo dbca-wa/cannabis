@@ -3,13 +3,14 @@ import { motion } from "motion/react";
 import {
 	LayoutDashboard,
 	FileStack,
+	Mail,
 	Users,
 	Shield,
 	Building2,
 	UserSquare2,
-	DollarSign,
 	Settings,
-	Boxes,
+	Package,
+	TestTube,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
@@ -32,25 +33,26 @@ interface NavGroup {
 // eslint-disable-next-line react-refresh/only-export-components
 export const navGroups: NavGroup[] = [
 	{
-		label: "DBCA",
+		label: "Casework",
 		items: [
 			{ to: "/", label: "Dashboard", icon: LayoutDashboard },
-			{ to: "/staff", label: "Staff", icon: Users },
+			{ to: "/cases", label: "Cases", icon: FileStack },
+			{ to: "/batches", label: "Batches", icon: Package },
+			{ to: "/settings", label: "Settings", icon: Settings },
 			{
 				to: "/testing",
 				label: "Testing",
-				icon: Settings,
+				icon: TestTube,
 				adminOnly: true,
 				devOnly: true,
 			},
 		],
 	},
 	{
-		label: "Casework",
+		label: "Users",
 		items: [
-			{ to: "/cases", label: "Cases", icon: FileStack },
-			{ to: "/batches", label: "Batches", icon: Boxes },
-			{ to: "/financials", label: "Financials", icon: DollarSign },
+			{ to: "/staff", label: "Staff", icon: Users },
+			{ to: "/invites", label: "Invitations", icon: Mail, adminOnly: true },
 		],
 	},
 	{

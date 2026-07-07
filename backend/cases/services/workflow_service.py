@@ -1,12 +1,14 @@
 """Workflow service — phase transition business logic.
 
-Handles the 5-phase case state machine:
+Handles the 5-phase workflow state machine:
   assessment → unsigned_generation → batching → in_batch → complete
 
-There is no "send back" action; cases only move forward. The transition from
-batching → in_batch happens when a case is added to a batch. The transition from
-in_batch → complete is driven by BatchService when an invoice-raised number is
-recorded on the batch, not by a manual advance.
+The workflow unit is the Priority 3 form: each form runs the sequence and its
+single certificate drives the later phases. There is no "send back" action;
+forms only move forward. The transition from batching → in_batch happens when a
+form's certificate is added to a batch. The transition from in_batch → complete
+is driven by BatchService when an invoice-raised number is recorded on the
+batch, not by a manual advance.
 """
 
 from django.conf import settings
@@ -88,46 +90,50 @@ class WorkflowService:
             raise ValidationError("Can only advance to the next phase.")
 
     @staticmethod
-    def _can_advance_from_unsigned(case):
-        """A case may only leave unsigned_generation once it has at least one
-        generated certificate."""
-        return case.certificates.exists()
+    def _can_advance_from_unsigned(form):
+        """A form may only leave unsigned_generation once its single
+        certificate has been generated."""
+        return hasattr(form, "certificate")
 
     @staticmethod
     @transaction.atomic
-    def advance_case(case, user):
-        """Advance a case to its next phase and record phase history.
+    def advance_form(form, user):
+        """Advance a Priority 3 form to its next phase and record phase history.
+
+        Writes a CasePhaseHistory row linked to both the form and its case, so
+        the audit trail is available at the form and case levels.
 
         Returns:
             The new phase value.
 
         Raises:
-            ValidationError: If the case cannot be advanced.
+            ValidationError: If the form cannot be advanced.
         """
-        next_phase = PHASE_TRANSITIONS.get(case.phase)
+        next_phase = PHASE_TRANSITIONS.get(form.phase)
 
         if not next_phase:
             raise ValidationError(
-                f"Cannot advance from phase {case.get_phase_display()}."
+                f"Cannot advance from phase {form.get_phase_display()}."
             )
 
         if (
-            case.phase == Case.PhaseChoices.UNSIGNED_GENERATION
-            and not WorkflowService._can_advance_from_unsigned(case)
+            form.phase == Case.PhaseChoices.UNSIGNED_GENERATION
+            and not WorkflowService._can_advance_from_unsigned(form)
         ):
             raise ValidationError(
-                "Generate at least one certificate before advancing to batching."
+                "Generate this form's certificate before advancing to batching."
             )
 
-        WorkflowService.validate_transition(case.phase, next_phase, "advance")
+        WorkflowService.validate_transition(form.phase, next_phase, "advance")
 
-        old_phase = case.phase
-        case.phase = next_phase
-        case.last_actioned_by = user
-        case.save(update_fields=["phase", "last_actioned_by"])
+        old_phase = form.phase
+        form.phase = next_phase
+        form.last_actioned_by = user
+        form.save(update_fields=["phase", "last_actioned_by"])
 
         CasePhaseHistory.objects.create(
-            submission=case,
+            submission=form.case,
+            form=form,
             from_phase=old_phase,
             to_phase=next_phase,
             action="advance",
@@ -135,8 +141,8 @@ class WorkflowService:
         )
 
         settings.LOGGER.info(
-            f"User {user} advanced case {case.case_number} "
-            f"from {old_phase} to {next_phase}"
+            f"User {user} advanced form {form.pk} "
+            f"(case {form.case.case_number}) from {old_phase} to {next_phase}"
         )
 
         return next_phase
@@ -158,6 +164,6 @@ def validate_transition(current_phase, target_phase, action="advance"):
     return WorkflowService.validate_transition(current_phase, target_phase, action)
 
 
-def advance_submission_phase(submission, user):
-    """Backward-compatible alias."""
-    return WorkflowService.advance_case(submission, user)
+def advance_form_phase(form, user):
+    """Convenience wrapper around WorkflowService.advance_form."""
+    return WorkflowService.advance_form(form, user)

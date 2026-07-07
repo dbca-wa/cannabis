@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from common.models import AuditModel, SystemSettings
@@ -30,7 +31,6 @@ class Case(AuditModel):
         blank=True,
         related_name="botanist_cases",
         help_text="The approved botanist handling this case",
-        limit_choices_to={"role": "botanist"},
     )
     finance_officer = models.ForeignKey(
         "users.User",
@@ -39,7 +39,6 @@ class Case(AuditModel):
         blank=True,
         related_name="finance_cases",
         help_text="The finance officer handling this case",
-        limit_choices_to={"role": "finance"},
     )
     requesting_officer = models.ForeignKey(
         "police.PoliceOfficer",
@@ -86,27 +85,16 @@ class Case(AuditModel):
         help_text="Defendants involved in this case",
     )
 
-    # Workflow phase - 5-phase state machine
+    # Canonical workflow phase enumeration. A case no longer stores a single
+    # phase; the workflow phase lives on each Priority 3 form and the case
+    # presents a derived status (see derived_status). This enum is reused by
+    # Priority3Form.phase and CasePhaseHistory.
     class PhaseChoices(models.TextChoices):
         ASSESSMENT = "assessment", "Assessment"
         UNSIGNED_GENERATION = "unsigned_generation", "Unsigned Certificate"
         BATCHING = "batching", "Batching"
         IN_BATCH = "in_batch", "In Batch"
         COMPLETE = "complete", "Complete"
-
-    phase = models.CharField(
-        max_length=30,
-        choices=PhaseChoices.choices,
-        default=PhaseChoices.ASSESSMENT,
-        help_text="Current phase of the case workflow",
-    )
-
-    security_movement_envelope = models.CharField(
-        max_length=20,
-        blank=True,
-        verbose_name="Security Movement Envelope",
-        help_text="Security Movement Envelope number for the bags (can be empty for drafts)",
-    )
 
     internal_comments = models.TextField(
         blank=True,
@@ -115,43 +103,12 @@ class Case(AuditModel):
         help_text="Any internal comments not showing on certificate",
     )
 
-    additional_notes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="Additional Notes",
-        help_text="Section C certificate content (additional notes for the examining botanist)",
-    )
-
-    # Optional scanned Priority 3 police form this case was created from.
-    # Stored in Azure Blob in production; never required (kept for reference).
-    police_form = models.FileField(
-        upload_to="police_forms/",
-        blank=True,
-        null=True,
-        verbose_name="Police Priority 3 Form",
-        help_text="Optional scanned Priority 3 form used to create this case",
-    )
-
     # Legacy flag — ETL-imported historical cases that predate the current
     # workflow. These are in the Complete phase and have no certificates or
     # batches; they exist for reference and reporting only.
     is_legacy = models.BooleanField(
         default=False,
         help_text="True for ETL-imported historical cases that predate the current workflow.",
-    )
-
-    # Workflow timestamps
-    certificates_generated_at = models.DateTimeField(blank=True, null=True)
-    completed_at = models.DateTimeField(blank=True, null=True)
-
-    # Batching — a case belongs to at most one batch
-    batch = models.ForeignKey(
-        "submissions.Batch",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="cases",
-        help_text="The batch this case has been included in, if any",
     )
 
     # Tracks the user who last actioned (moved/edited) the case
@@ -165,36 +122,138 @@ class Case(AuditModel):
     )
 
     @property
-    def is_batch_eligible(self):
-        """A case is eligible for batching when it has reached the Batching
-        phase and is not already attached to a batch."""
-        return self.phase == self.PhaseChoices.BATCHING and self.batch_id is None
+    def bag_count(self):
+        """Total drug bags across all of this case's forms."""
+        return DrugBag.objects.filter(form__case=self).count()
+
+    @property
+    def derived_status(self):
+        """Read-only status aggregated from this case's forms.
+
+        Complete when the case has forms and every form is complete; otherwise
+        the least-advanced phase among the non-complete forms; assessment when
+        the case has no forms yet.
+        """
+        from .services.workflow_service import WorkflowService
+
+        forms = list(self.forms.all())
+        if not forms:
+            return Case.PhaseChoices.ASSESSMENT
+        phases = [form.phase for form in forms]
+        if all(phase == Case.PhaseChoices.COMPLETE for phase in phases):
+            return Case.PhaseChoices.COMPLETE
+        order = WorkflowService.get_phase_order()
+        non_complete = [
+            phase for phase in phases if phase != Case.PhaseChoices.COMPLETE
+        ]
+        return min(non_complete, key=order.index)
 
     @property
     def cannabis_present(self):
-        """Check if any bag contains cannabis"""
-        return self.bags.filter(
-            assessment__determination__icontains="cannabis"
+        """Check if any bag on any of this case's forms contains cannabis."""
+        return DrugBag.objects.filter(
+            form__case=self,
+            assessment__determination__icontains="cannabis",
         ).exists()
 
     @property
     def bags_received(self):
-        """Count of bags received"""
-        return self.bags.count()
+        """Count of bags received across all of this case's forms."""
+        return self.bag_count
 
     @property
     def total_plants(self):
-        """Total plant specimens across all bags (count of bags)"""
-        return self.bags.count()
+        """Total plant specimens across all bags (count of bags)."""
+        return self.bag_count
 
     def __str__(self):
-        return f"Case {self.case_number} - {self.get_phase_display()}"
+        return f"Case {self.case_number}"
 
     class Meta:
         verbose_name = "Case"
         verbose_name_plural = "Cases"
         ordering = ["-received"]
         db_table = "submissions_case"
+
+
+class Priority3Form(AuditModel):
+    """A single Priority 3 police form within a case.
+
+    A case contains one or more Priority 3 forms. Each form owns its own scanned
+    image and its own drug bags (at most five, enforced in the service layer) and
+    produces exactly one certificate. The workflow phase lives on the form
+    because the form is the unit of work and its certificate is the unit of
+    batching.
+    """
+
+    # The maximum number of drug bags a single Priority 3 form may hold.
+    MAX_BAGS = 5
+
+    case = models.ForeignKey(
+        Case,
+        on_delete=models.CASCADE,
+        related_name="forms",
+        help_text="The case this Priority 3 form belongs to",
+    )
+
+    scanned_image = models.FileField(
+        upload_to="priority3_forms/",
+        blank=True,
+        null=True,
+        verbose_name="Scanned Priority 3 Form",
+        help_text="Scanned Priority 3 form image for this form only",
+    )
+
+    security_movement_envelope = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Security Movement Envelope",
+        help_text="Security Movement Envelope number for this form's bags",
+    )
+
+    phase = models.CharField(
+        max_length=30,
+        choices=Case.PhaseChoices.choices,
+        default=Case.PhaseChoices.ASSESSMENT,
+        help_text="Current phase of this form's workflow",
+    )
+
+    # Workflow timestamps
+    certificates_generated_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    # Per-form Section C "other matters" notes for the certificate
+    additional_notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Section C Notes",
+        help_text="Per-form Section C 'other matters' content for this form's certificate",
+    )
+
+    # Certificate readiness — set by the user after reviewing the generated cert
+    marked_ready = models.BooleanField(
+        default=False,
+        help_text="Whether this form's certificate has been reviewed and marked ready for batching",
+    )
+
+    # Tracks the user who last actioned (moved/edited) this form
+    last_actioned_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="last_actioned_forms",
+        help_text="User who last performed a workflow action on this form",
+    )
+
+    def __str__(self):
+        return f"Priority 3 Form {self.pk} - {self.case.case_number}"
+
+    class Meta:
+        verbose_name = "Priority 3 Form"
+        verbose_name_plural = "Priority 3 Forms"
+        ordering = ["case", "id"]
+        db_table = "submissions_priority3form"
 
 
 class CasePhaseHistory(AuditModel):
@@ -205,6 +264,15 @@ class CasePhaseHistory(AuditModel):
         on_delete=models.CASCADE,
         related_name="phase_history",
         help_text="The case this history entry belongs to",
+    )
+
+    form = models.ForeignKey(
+        Priority3Form,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="phase_history",
+        help_text="The Priority 3 form this history entry belongs to, if any",
     )
 
     from_phase = models.CharField(
@@ -259,11 +327,11 @@ class DrugBag(AuditModel):
     A bag received from police potentially containing cannabis
     """
 
-    submission = models.ForeignKey(
-        Case,
+    form = models.ForeignKey(
+        Priority3Form,
         on_delete=models.CASCADE,
         related_name="bags",
-        help_text="The case this bag belongs to",
+        help_text="The Priority 3 form this bag belongs to",
     )
 
     class ContentType(models.TextChoices):
@@ -333,16 +401,53 @@ class DrugBag(AuditModel):
 
     @property
     def security_movement_envelope(self):
-        """Get envelope number from parent submission"""
-        return self.submission.security_movement_envelope
+        """Get the envelope number from the parent Priority 3 form."""
+        return self.form.security_movement_envelope
+
+    def _would_exceed_form_bag_cap(self):
+        """Return True when attaching this bag would push its form past the cap.
+
+        Counts the other bags already attached to the destination form,
+        excluding this bag when it is being updated in place, so editing an
+        existing bag or moving one between forms is judged against the
+        destination form only.
+        """
+        if self.form_id is None:
+            return False
+        siblings = DrugBag.objects.filter(form_id=self.form_id)
+        if self.pk is not None:
+            siblings = siblings.exclude(pk=self.pk)
+        return siblings.count() >= Priority3Form.MAX_BAGS
+
+    def clean(self):
+        """Reject a bag that would take its form beyond the five-bag limit."""
+        super().clean()
+        if self._would_exceed_form_bag_cap():
+            raise ValidationError(
+                {
+                    "form": (
+                        f"A Priority 3 form may hold at most "
+                        f"{Priority3Form.MAX_BAGS} drug bags."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        # Defensive backstop enforcing the five-bag cap on every write path,
+        # including the admin and shell, not just the service layer.
+        if self._would_exceed_form_bag_cap():
+            raise ValidationError(
+                f"A Priority 3 form may hold at most {Priority3Form.MAX_BAGS} "
+                f"drug bags."
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Bag {self.seal_tag_numbers} - {self.submission.case_number}"
+        return f"Bag {self.seal_tag_numbers} - {self.form.case.case_number}"
 
     class Meta:
         verbose_name = "Drug Bag"
         verbose_name_plural = "Drug Bags"
-        unique_together = ["submission", "seal_tag_numbers"]
 
 
 class BotanicalAssessment(AuditModel):
@@ -430,27 +535,30 @@ class BotanicalAssessment(AuditModel):
 
 
 class Certificate(AuditModel):
-    """Generated certificates for submission drug bags"""
+    """Generated certificate for a single Priority 3 form's drug bags."""
 
-    submission = models.ForeignKey(
-        "submissions.Case",
+    form = models.OneToOneField(
+        Priority3Form,
         on_delete=models.CASCADE,
-        related_name="certificates",
+        related_name="certificate",
+        help_text="The Priority 3 form this certificate is generated for",
     )
 
-    # The specific drug bags this certificate covers (max 5 enforced in service)
-    bags = models.ManyToManyField(
-        "submissions.DrugBag",
-        related_name="certificates",
+    # Batching unit — a certificate belongs to at most one batch
+    batch = models.ForeignKey(
+        "submissions.Batch",
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text="The drug bags covered by this certificate (up to 5)",
+        related_name="certificates",
+        help_text="The batch this certificate has been included in, if any",
     )
 
     certificate_number = models.CharField(
         max_length=50,
         unique=True,
         blank=True,  # Will be auto-generated
-        help_text="Auto-generated certificate number (e.g., CRT2024-001)",
+        help_text="Auto-generated certificate number (e.g., R1, R2, R15)",
     )
 
     # Date the certificate was certified (rendered on the PDF)
@@ -484,22 +592,45 @@ class Certificate(AuditModel):
         help_text="Size of the certificate PDF in bytes",
     )
 
+    @property
+    def case(self):
+        """The case that owns this certificate's form."""
+        return self.form.case
+
+    @property
+    def bags(self):
+        """The drug bags covered by this certificate (its form's bags)."""
+        return self.form.bags
+
+    @property
+    def is_batch_eligible(self):
+        """Eligible for batching once its form has reached the Batching phase
+        and the certificate is not already attached to a batch."""
+        return self.form.phase == Case.PhaseChoices.BATCHING and self.batch_id is None
+
     def save(self, *args, **kwargs):
-        """Auto-generate certificate number on creation."""
-        if not self.certificate_number:
+        """Auto-generate certificate number on creation using R{counter} format.
+
+        Uses the SystemSettings counter to produce sequential gap-free numbers
+        (R1, R2, R3...). Existing certificates that still have the old CRT
+        format get reassigned a new R-number on next save (e.g., regenerate).
+        """
+        if not self.certificate_number or not self.certificate_number.startswith("R"):
+            from common.models import SystemSettings
+
             settings_obj = SystemSettings.load()
             self.certificate_number = settings_obj.get_next_certificate_number()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Certificate {self.certificate_number} - {self.submission.case_number}"
+        return f"Certificate {self.certificate_number} - {self.form.case.case_number}"
 
     class Meta:
         verbose_name = "Certificate"
         verbose_name_plural = "Certificates"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["submission", "-created_at"]),
+            models.Index(fields=["batch", "-created_at"]),
             models.Index(fields=["certificate_number"]),
         ]
 

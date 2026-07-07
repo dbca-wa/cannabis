@@ -57,7 +57,8 @@ class CasePhaseHistorySerializer(serializers.ModelSerializer):
 class PendingAttentionSerializer(serializers.ModelSerializer):
     """Read-only serializer for the pending attention dashboard endpoint."""
 
-    phase_display = serializers.CharField(source="get_phase_display", read_only=True)
+    derived_status = serializers.SerializerMethodField()
+    derived_status_display = serializers.SerializerMethodField()
     approved_botanist_name = serializers.CharField(
         source="approved_botanist.full_name", read_only=True
     )
@@ -71,14 +72,26 @@ class PendingAttentionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "case_number",
-            "phase",
-            "phase_display",
+            "derived_status",
+            "derived_status_display",
             "received",
             "approved_botanist_name",
             "finance_officer_name",
             "bags_count",
         ]
-        read_only_fields = fields
+        read_only_fields = ["id", "case_number", "received"]
+
+    def get_derived_status(self, obj):
+        return str(obj.derived_status)
+
+    def get_derived_status_display(self, obj):
+        try:
+            return Case.PhaseChoices(obj.derived_status).label
+        except ValueError:
+            return str(obj.derived_status)
 
     def get_bags_count(self, obj):
-        return getattr(obj, "bags_count", 0)
+        annotated = getattr(obj, "bags_count", None)
+        if annotated is not None:
+            return annotated
+        return obj.bag_count

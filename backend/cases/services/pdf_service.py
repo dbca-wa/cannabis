@@ -9,10 +9,7 @@ import subprocess
 import tempfile
 
 from django.conf import settings
-from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
-
-CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
 
 
 class PDFService:
@@ -81,43 +78,3 @@ class PDFService:
                 os.unlink(html_path)
             if pdf_path and os.path.exists(pdf_path):
                 os.unlink(pdf_path)
-
-    @staticmethod
-    def generate_certificate_pdf(case) -> bytes:
-        """Build certificate context, render template, and return PDF bytes.
-
-        Args:
-            case: Case model instance with related bags, defendants, etc.
-
-        Returns:
-            Raw PDF bytes of the rendered certificate.
-        """
-        context = PDFService._build_certificate_context(case)
-        html = render_to_string(CERTIFICATE_TEMPLATE, context)
-        return PDFService._html_to_pdf(html)
-
-    @staticmethod
-    def _build_certificate_context(case) -> dict:
-        """Assemble template variables for certificate PDF rendering.
-
-        Delegates to CertificateService.build_certificate_context for the
-        actual context construction, then applies file:// prefix to image paths.
-
-        Args:
-            case: Case model instance.
-
-        Returns:
-            Dictionary of template context variables.
-        """
-        from .certificate_service import CertificateService
-
-        certificate = case.certificates.first()
-        context = CertificateService.build_certificate_context(case, certificate)
-
-        # Apply file:// prefix for PrinceXML image resolution
-        if context.get("logo_path") and not str(context["logo_path"]).startswith(
-            "file://"
-        ):
-            context["logo_path"] = f"file://{context['logo_path']}"
-
-        return context

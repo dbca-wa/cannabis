@@ -5,10 +5,17 @@ items, and user-specific case lists used by dashboard widgets.
 """
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from ..models import Batch, Case, Certificate, DrugBag
+from ..models import Batch, Case, Certificate, DrugBag, Priority3Form
+
+# Every workflow phase except Complete — the "active" phases. A case counts as
+# active while it has at least one form in one of these phases.
+ACTIVE_PHASES = [
+    phase for phase in Case.PhaseChoices.values if phase != Case.PhaseChoices.COMPLETE
+]
 
 
 class DashboardService:
@@ -42,18 +49,22 @@ class DashboardService:
             )
             role_in_submission = "user"
 
-        queryset = queryset.exclude(phase=Case.PhaseChoices.COMPLETE).order_by(
-            "-received"
-        )[:10]
+        # Active cases are those with at least one non-complete form.
+        queryset = (
+            queryset.filter(forms__phase__in=ACTIVE_PHASES)
+            .distinct()
+            .order_by("-received")[:10]
+        )
 
         cases_data = []
         for case in queryset:
+            status = case.derived_status
             cases_data.append(
                 {
                     "id": case.id,
                     "case_number": case.case_number,
-                    "phase": case.phase,
-                    "phase_display": case.get_phase_display(),
+                    "phase": str(status),
+                    "phase_display": Case.PhaseChoices(status).label,
                     "received": case.received.isoformat(),
                     "role_in_submission": role_in_submission,
                 }
@@ -179,27 +190,41 @@ class DashboardService:
 
     @staticmethod
     def get_phase_counts():
-        """Return count of cases in each active (non-complete) phase.
+        """Return case and form counts for each active (non-complete) phase.
 
-        Returns:
-            A dictionary mapping phase name to count.
+        Returns a dictionary mapping phase name to an object with:
+        - cases: number of distinct cases that have at least one form in this phase
+        - forms: number of forms in this phase
         """
-        counts = (
-            Case.objects.exclude(phase="complete")
-            .values("phase")
-            .annotate(count=Count("id"))
-        )
-
         active_phases = [
             "assessment",
             "unsigned_generation",
             "batching",
             "in_batch",
         ]
-        result = {phase: 0 for phase in active_phases}
-        for entry in counts:
-            if entry["phase"] in result:
-                result[entry["phase"]] = entry["count"]
+
+        # Form counts per phase
+        form_counts = (
+            Priority3Form.objects.exclude(phase="complete")
+            .values("phase")
+            .annotate(count=Count("id"))
+        )
+        form_map = {entry["phase"]: entry["count"] for entry in form_counts}
+
+        # Case counts per phase (distinct cases with at least one form in that phase)
+        case_counts = (
+            Priority3Form.objects.exclude(phase="complete")
+            .values("phase")
+            .annotate(case_count=Count("case_id", distinct=True))
+        )
+        case_map = {entry["phase"]: entry["case_count"] for entry in case_counts}
+
+        result = {}
+        for phase in active_phases:
+            result[phase] = {
+                "cases": case_map.get(phase, 0),
+                "forms": form_map.get(phase, 0),
+            }
 
         return result
 
@@ -275,8 +300,8 @@ class DashboardService:
             ).count()
 
             bags_count = DrugBag.objects.filter(
-                submission__received__gte=month_start,
-                submission__received__lt=month_end,
+                form__case__received__gte=month_start,
+                form__case__received__lt=month_end,
             ).count()
 
             # Revenue is recognised when a batch's invoice-raised number is set
@@ -309,24 +334,39 @@ class DashboardService:
         """
         if user.role == "finance":
             role_filter = Q(
-                phase__in=[
+                forms__phase__in=[
                     "unsigned_generation",
                     "batching",
                 ]
             )
         elif user.role == "botanist":
             role_filter = Q(
-                phase__in=["assessment"],
+                forms__phase__in=["assessment"],
                 approved_botanist=user,
             )
         elif user.is_superuser:
-            role_filter = ~Q(phase="complete")
+            role_filter = Q(forms__phase__in=ACTIVE_PHASES)
         else:
             return None
+
+        # Count every bag on the case via a correlated subquery so the count is
+        # independent of the forms__phase join used by role_filter (which would
+        # otherwise restrict the count to bags on matching-phase forms).
+        bags_count = Coalesce(
+            Subquery(
+                DrugBag.objects.filter(form__case=OuterRef("pk"))
+                .order_by()
+                .values("form__case")
+                .annotate(total=Count("pk"))
+                .values("total")[:1]
+            ),
+            0,
+        )
 
         return (
             Case.objects.filter(role_filter)
             .select_related("approved_botanist", "finance_officer")
-            .annotate(bags_count=Count("bags"))
+            .annotate(bags_count=bags_count)
+            .distinct()
             .order_by("received")
         )

@@ -29,6 +29,13 @@ export interface CaseCreationWizardStoreState extends BaseStoreState {
 	isSubmitting: boolean;
 	/** User has explicitly acknowledged the case has no known defendant */
 	defendantUnknownAcknowledged: boolean;
+	/**
+	 * The id of an existing case the entered police reference currently matches,
+	 * or null when the reference is unused. While set, finalise is blocked and
+	 * the user is steered into that case's add-form flow; correcting the
+	 * reference to an unused value clears it and allows normal creation.
+	 */
+	matchedExistingCaseId: number | null;
 }
 
 const INITIAL_STATE: CaseCreationWizardStoreState = {
@@ -40,6 +47,7 @@ const INITIAL_STATE: CaseCreationWizardStoreState = {
 	touchedSteps: new Set<number>(),
 	isSubmitting: false,
 	defendantUnknownAcknowledged: false,
+	matchedExistingCaseId: null,
 };
 
 /**
@@ -76,6 +84,7 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 			setSubmitting: action,
 			setStepValidationFn: action,
 			setDefendantUnknownAcknowledged: action,
+			setMatchedExistingCaseId: action,
 
 			// Reset
 			reset: action,
@@ -84,6 +93,7 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 			canGoBack: computed,
 			canGoForward: computed,
 			isLastStep: computed,
+			hasMatchedExistingCase: computed,
 		});
 	}
 
@@ -200,6 +210,16 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 		this.state.defendantUnknownAcknowledged = acknowledged;
 	};
 
+	/**
+	 * Record the existing case the entered police reference currently matches
+	 * (or null when the reference is unused). Set from the debounced check so
+	 * finalise can be blocked while a match stands and the user can be routed
+	 * into that case's add-form flow.
+	 */
+	setMatchedExistingCaseId = (caseId: number | null) => {
+		this.state.matchedExistingCaseId = caseId;
+	};
+
 	// ============================================================================
 	// Computed Properties
 	// ============================================================================
@@ -233,6 +253,15 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 	 */
 	get isLastStep(): boolean {
 		return this.state.currentStep === CASE_CREATION_TOTAL_STEPS - 1;
+	}
+
+	/**
+	 * Whether the entered police reference currently matches an existing case.
+	 * While true, creation is blocked and the user is steered into that case's
+	 * add-form flow.
+	 */
+	get hasMatchedExistingCase(): boolean {
+		return this.state.matchedExistingCaseId !== null;
 	}
 
 	// ============================================================================
@@ -275,6 +304,7 @@ export class CaseCreationWizardStore extends BaseStore<CaseCreationWizardStoreSt
 		this.state.touchedSteps.clear();
 		this.state.isSubmitting = false;
 		this.state.defendantUnknownAcknowledged = false;
+		this.state.matchedExistingCaseId = null;
 		this.state.loading = false;
 		this.state.error = null;
 		this.state.initialised = false;

@@ -1,12 +1,16 @@
 """Batch service — batching, cost summary, and ZIP packaging business logic.
 
-A batch groups one or more eligible cases (those that have completed unsigned
-certificate generation and are not already batched). Creating a batch snapshots
-the current rates, tallies certificates and bags, computes the cost breakdown,
-and produces a downloadable ZIP of all certificate PDFs plus a cost-summary PDF.
+A batch groups one or more eligible certificates (those whose form has reached
+the Batching phase and that are not already in a batch). Creating a batch
+snapshots the current rates, tallies the certificates and the drug bags their
+forms cover, computes the cost breakdown, and produces a downloadable ZIP of all
+certificate PDFs plus a cost-summary PDF.
 
-Cases are only marked Complete once a unique invoice-raised number is recorded
-on the batch (a post-batching action on the Batches page).
+Costing and batching are per certificate: a case's certificates may land in
+different batches over time. A certificate's form advances to In Batch when the
+certificate joins a batch, and is only marked Complete once a unique
+invoice-raised number is recorded on the batch (a post-batching action on the
+Batches page).
 """
 
 import io
@@ -22,7 +26,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from common.models import SystemSettings
 
-from ..models import Batch, Case
+from ..models import Batch, Case, Certificate
 from .pdf_service import PDFService
 from .workflow_service import WorkflowService
 
@@ -44,51 +48,55 @@ class BatchService:
         return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @staticmethod
-    def _certificate_numbers(cases):
-        """Return the sorted list of all certificate numbers across the cases."""
-        numbers = []
-        for case in cases:
-            numbers.extend(
-                case.certificates.values_list("certificate_number", flat=True)
-            )
+    def _certificate_numbers(certificates):
+        """Return the sorted list of the given certificates' numbers."""
+        numbers = [c.certificate_number for c in certificates]
         return sorted(n for n in numbers if n)
 
     @staticmethod
-    def _certificate_number_range(cases):
-        """Build a comma-separated string of every certificate number in the batch."""
-        return ", ".join(BatchService._certificate_numbers(cases))
+    def _certificate_number_range(certificates):
+        """Build a comma-separated string of every certificate number given."""
+        return ", ".join(BatchService._certificate_numbers(certificates))
 
     @staticmethod
     @transaction.atomic
-    def create_batch(case_ids, user):
-        """Create a batch from the given eligible case ids.
+    def create_batch(certificate_ids, user):
+        """Create a batch from the given eligible certificate ids.
 
-        Cases remain in the Batching phase; they are only completed when an
-        invoice-raised number is recorded (see record_invoice_raised).
+        Only certificates whose form is in the Batching phase and that are not
+        already in a batch may be included. The certificates' forms advance to
+        In Batch; they are only completed when an invoice-raised number is
+        recorded (see record_invoice_raised).
 
         Raises:
-            ValidationError: If no cases given or any case is ineligible.
+            ValidationError: If no certificates are given, any are missing, or
+                any are not eligible for batching.
         """
-        if not case_ids:
-            raise ValidationError({"case_ids": ["Select at least one case."]})
+        if not certificate_ids:
+            raise ValidationError(
+                {"certificate_ids": ["Select at least one certificate."]}
+            )
 
-        cases = list(
-            Case.objects.filter(pk__in=case_ids).prefetch_related(
-                "certificates", "bags"
+        certs = list(
+            Certificate.objects.filter(pk__in=certificate_ids).select_related(
+                "form", "form__case"
             )
         )
-        found_ids = {c.pk for c in cases}
-        missing = set(case_ids) - found_ids
+        found_ids = {c.pk for c in certs}
+        missing = set(certificate_ids) - found_ids
         if missing:
-            raise ValidationError({"case_ids": [f"Cases not found: {sorted(missing)}"]})
+            raise ValidationError(
+                {"certificate_ids": [f"Certificates not found: {sorted(missing)}"]}
+            )
 
-        ineligible = [c.case_number for c in cases if not c.is_batch_eligible]
+        ineligible = [c.certificate_number for c in certs if not c.is_batch_eligible]
         if ineligible:
             raise ValidationError(
                 {
-                    "case_ids": [
-                        "These cases are not eligible for batching (must be in "
-                        f"Batching and not already batched): {ineligible}"
+                    "certificate_ids": [
+                        "These certificates are not eligible for batching (must "
+                        "be in the Batching phase and not already batched): "
+                        f"{ineligible}"
                     ]
                 }
             )
@@ -98,8 +106,8 @@ class BatchService:
         bag_rate = settings_obj.cost_per_bag
         tax_percentage = settings_obj.tax_percentage
 
-        certificate_count = sum(c.certificates.count() for c in cases)
-        bag_count = sum(c.bags.count() for c in cases)
+        certificate_count = len(certs)
+        bag_count = sum(c.form.bags.count() for c in certs)
 
         cert_cost = BatchService._money(certificate_count * cert_rate)
         bag_cost = BatchService._money(bag_count * bag_rate)
@@ -118,27 +126,47 @@ class BatchService:
             subtotal=subtotal,
             tax_amount=tax_amount,
             total=total,
-            certificate_number_range=BatchService._certificate_number_range(cases),
+            certificate_number_range=BatchService._certificate_number_range(certs),
             created_by=user,
         )
 
-        # Attach each case to the batch and advance it to the In Batch phase.
-        # Cases are only completed once an invoice-raised number is recorded.
-        for case in cases:
-            case.batch = batch
-            case.save(update_fields=["batch"])
-            WorkflowService.advance_case(case, user)
+        # Attach each certificate to the batch and advance its form to In Batch.
+        # Forms are only completed once an invoice-raised number is recorded.
+        for cert in certs:
+            cert.batch = batch
+            cert.save(update_fields=["batch"])
+            WorkflowService.advance_form(cert.form, user)
 
         BatchService.build_zip(batch)
 
         settings.LOGGER.info(
-            f"User {user} created {batch.batch_number} with {len(cases)} case(s)"
+            f"User {user} created {batch.batch_number} with "
+            f"{len(certs)} certificate(s)"
         )
         return batch
 
     @staticmethod
     def build_cost_summary_context(batch):
-        cases = list(batch.cases.all())
+        certificates = list(
+            batch.certificates.select_related("form", "form__case").prefetch_related(
+                "form__bags"
+            )
+        )
+
+        # Derive the distinct cases behind the batch's certificates, tallying
+        # each case's contribution from only the certificates in this batch.
+        case_rows = {}
+        for cert in certificates:
+            case = cert.form.case
+            row = case_rows.setdefault(
+                case.pk,
+                {"case_number": case.case_number, "bags": 0, "certificates": 0},
+            )
+            row["bags"] += cert.form.bags.count()
+            row["certificates"] += 1
+
+        cases = sorted(case_rows.values(), key=lambda row: row["case_number"])
+
         return {
             "batch_number": batch.batch_number,
             "date_batched": batch.created_at.strftime("%d %B %Y"),
@@ -153,15 +181,8 @@ class BatchService:
             "tax_amount": float(batch.tax_amount),
             "total": float(batch.total),
             "certificate_number_range": batch.certificate_number_range,
-            "certificate_numbers": BatchService._certificate_numbers(cases),
-            "cases": [
-                {
-                    "case_number": c.case_number,
-                    "bags": c.bags.count(),
-                    "certificates": c.certificates.count(),
-                }
-                for c in cases
-            ],
+            "certificate_numbers": BatchService._certificate_numbers(certificates),
+            "cases": cases,
             "dbca_org_data": {
                 "name": "Department of Biodiversity, Conservation and Attractions",
                 "address": "Locked Bag 104",
@@ -181,17 +202,14 @@ class BatchService:
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr(f"cost_summary_{batch.batch_number}.pdf", summary_pdf)
-            for case in batch.cases.all().prefetch_related("certificates"):
-                for cert in case.certificates.all():
-                    pdf = cert.pdf_file
-                    if not pdf:
-                        continue
-                    pdf.open("rb")
-                    data = pdf.read()
-                    pdf.close()
-                    archive.writestr(
-                        f"certificates/{cert.certificate_number}.pdf", data
-                    )
+            for cert in batch.certificates.all():
+                pdf = cert.pdf_file
+                if not pdf:
+                    continue
+                pdf.open("rb")
+                data = pdf.read()
+                pdf.close()
+                archive.writestr(f"certificates/{cert.certificate_number}.pdf", data)
 
         zip_bytes = buffer.getvalue()
         if batch.zip_file:
@@ -210,7 +228,10 @@ class BatchService:
     @staticmethod
     @transaction.atomic
     def record_invoice_raised(batch, number, user):
-        """Record a unique invoice-raised number and complete the batch's cases.
+        """Record a unique invoice-raised number and complete the batch's forms.
+
+        Advances each of the batch's certificates' forms from In Batch to
+        Complete and stamps the form's completion time.
 
         Raises:
             ValidationError: If the number is blank or already used.
@@ -239,26 +260,27 @@ class BatchService:
         batch.invoice_raised_at = timezone.now()
         batch.save(update_fields=["invoice_raised_number", "invoice_raised_at"])
 
-        for case in batch.cases.all():
-            if case.phase == Case.PhaseChoices.COMPLETE:
+        certificates = list(batch.certificates.select_related("form").all())
+        for cert in certificates:
+            form = cert.form
+            if form.phase == Case.PhaseChoices.COMPLETE:
                 continue
             # Advance through to complete (in_batch → complete).
-            new_phase = case.phase
-            while new_phase != Case.PhaseChoices.COMPLETE:
-                new_phase = WorkflowService.advance_case(case, user)
-            case.completed_at = timezone.now()
-            case.save(update_fields=["completed_at"])
+            while form.phase != Case.PhaseChoices.COMPLETE:
+                WorkflowService.advance_form(form, user)
+            form.completed_at = timezone.now()
+            form.save(update_fields=["completed_at"])
 
         settings.LOGGER.info(
             f"User {user} recorded invoice {number} on {batch.batch_number}; "
-            f"{batch.cases.count()} case(s) completed"
+            f"{len(certificates)} certificate(s) completed"
         )
         return batch
 
     @staticmethod
     @transaction.atomic
     def unset_invoice_raised(batch, user):
-        """Clear the invoice-raised number and return the batch's cases to the
+        """Clear the invoice-raised number and return the batch's forms to the
         In Batch phase.
 
         Raises:
@@ -278,35 +300,39 @@ class BatchService:
         batch.invoice_raised_at = None
         batch.save(update_fields=["invoice_raised_number", "invoice_raised_at"])
 
-        for case in batch.cases.all():
-            if case.phase == Case.PhaseChoices.COMPLETE:
-                case.phase = Case.PhaseChoices.IN_BATCH
-                case.completed_at = None
-                case.last_actioned_by = user
-                case.save(update_fields=["phase", "completed_at", "last_actioned_by"])
+        certificates = list(batch.certificates.select_related("form").all())
+        for cert in certificates:
+            form = cert.form
+            if form.phase == Case.PhaseChoices.COMPLETE:
+                form.phase = Case.PhaseChoices.IN_BATCH
+                form.completed_at = None
+                form.last_actioned_by = user
+                form.save(update_fields=["phase", "completed_at", "last_actioned_by"])
 
         settings.LOGGER.info(
             f"User {user} unset invoice {number} on {batch.batch_number}; "
-            f"{batch.cases.count()} case(s) returned to in-batch"
+            f"{len(certificates)} certificate(s) returned to in-batch"
         )
         return batch
 
     @staticmethod
     @transaction.atomic
     def delete_batch(batch, user):
-        """Delete a batch and return its cases to the Batching phase."""
-        for case in batch.cases.all():
-            case.batch = None
-            if case.phase in (
+        """Delete a batch, freeing its certificates and returning each form to
+        the Batching phase."""
+        certificates = list(batch.certificates.select_related("form").all())
+        for cert in certificates:
+            form = cert.form
+            cert.batch = None
+            cert.save(update_fields=["batch"])
+            if form.phase in (
                 Case.PhaseChoices.IN_BATCH,
                 Case.PhaseChoices.COMPLETE,
             ):
-                case.phase = Case.PhaseChoices.BATCHING
-                case.completed_at = None
-            case.last_actioned_by = user
-            case.save(
-                update_fields=["batch", "phase", "completed_at", "last_actioned_by"]
-            )
+                form.phase = Case.PhaseChoices.BATCHING
+                form.completed_at = None
+            form.last_actioned_by = user
+            form.save(update_fields=["phase", "completed_at", "last_actioned_by"])
 
         if batch.zip_file:
             batch.zip_file.delete(save=False)

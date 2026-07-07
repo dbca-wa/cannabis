@@ -97,7 +97,6 @@ export const WizardPreviewPanel = observer(function WizardPreviewPanel({
 				bags={activeGroup.bags}
 				fonts={FONTS}
 				certifiedDate={today}
-				notes={activeGroup.notes}
 			/>
 
 			{groups.length > 1 && (

@@ -319,6 +319,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "common.middleware.AdminOnlyCsrfMiddleware",  # CSRF only for /admin/ routes
     "common.middleware.SecurityAuditMiddleware",  # Security audit logging
+    "common.middleware.APIRequestLoggingMiddleware",  # API request/response logging
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

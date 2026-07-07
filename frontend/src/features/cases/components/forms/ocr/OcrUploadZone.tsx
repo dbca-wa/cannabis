@@ -10,6 +10,7 @@ import {
 	Loader2,
 	AlertCircle,
 	CheckCircle2,
+	Camera,
 } from "lucide-react";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useOcrUpload } from "@/features/cases/hooks/useOcrUpload";
@@ -34,6 +35,7 @@ interface OcrUploadZoneProps {
 export const OcrUploadZone = observer(
 	({ onExtracted, onClear, onReuploadRequest }: OcrUploadZoneProps) => {
 		const fileInputRef = useRef<HTMLInputElement>(null);
+		const cameraInputRef = useRef<HTMLInputElement>(null);
 		const [dragOver, setDragOver] = useState(false);
 		const [validationError, setValidationError] = useState<string | null>(null);
 		const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -97,6 +99,15 @@ export const OcrUploadZone = observer(
 			[handleFile]
 		);
 
+		const handleCameraChange = useCallback(
+			(e: React.ChangeEvent<HTMLInputElement>) => {
+				const file = e.target.files?.[0];
+				if (file) handleFile(file);
+				if (cameraInputRef.current) cameraInputRef.current.value = "";
+			},
+			[handleFile]
+		);
+
 		const handleRemoveFile = useCallback(() => {
 			setSelectedFile(null);
 			setValidationError(null);
@@ -115,6 +126,10 @@ export const OcrUploadZone = observer(
 
 		const openFilePicker = useCallback(() => {
 			fileInputRef.current?.click();
+		}, []);
+
+		const openCamera = useCallback(() => {
+			cameraInputRef.current?.click();
 		}, []);
 
 		// Processing state
@@ -259,6 +274,18 @@ export const OcrUploadZone = observer(
 							PDF, PNG, JPEG, or TIFF — up to 20 MB
 						</p>
 					</div>
+					<div className="mt-3 flex justify-center">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={openCamera}
+							aria-label="Capture police form using camera"
+						>
+							<Camera className="h-4 w-4 mr-1" />
+							Capture with camera
+						</Button>
+					</div>
 					<input
 						ref={fileInputRef}
 						type="file"
@@ -266,6 +293,15 @@ export const OcrUploadZone = observer(
 						className="hidden"
 						onChange={handleInputChange}
 						aria-label="Select police form file"
+					/>
+					<input
+						ref={cameraInputRef}
+						type="file"
+						accept="image/*"
+						capture="environment"
+						className="hidden"
+						onChange={handleCameraChange}
+						aria-label="Capture police form with camera"
 					/>
 				</CardContent>
 			</Card>

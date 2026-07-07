@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from users.permissions import HasAppAccess
 
-from ..models import BotanicalAssessment, Case, DrugBag
+from ..models import BotanicalAssessment, DrugBag, Priority3Form
 from ..serializers import (
     BotanicalAssessmentSerializer,
     DrugBagBatchCreateSerializer,
@@ -37,7 +37,7 @@ class DrugBagListView(ListCreateAPIView):
     def get_queryset(self):
         pk = self.kwargs.get("pk")
         return (
-            DrugBag.objects.filter(submission_id=pk)
+            DrugBag.objects.filter(form__case_id=pk)
             .prefetch_related("assessment")
             .order_by("seal_tag_numbers")
         )
@@ -45,7 +45,8 @@ class DrugBagListView(ListCreateAPIView):
     def perform_create(self, serializer):
         bag = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} created drug bag {bag.seal_tag_numbers} for submission {bag.submission.case_number}"
+            f"User {self.request.user} created drug bag {bag.seal_tag_numbers} "
+            f"for case {bag.form.case.case_number}"
         )
 
 
@@ -58,7 +59,7 @@ class DrugBagDetailView(RetrieveUpdateDestroyAPIView):
 
     queryset = (
         DrugBag.objects.all()
-        .select_related("submission")
+        .select_related("form", "form__case")
         .prefetch_related("assessment")
     )
     serializer_class = DrugBagSerializer
@@ -115,7 +116,7 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
     DELETE: Delete assessment
     """
 
-    queryset = BotanicalAssessment.objects.all().select_related("drug_bag__submission")
+    queryset = BotanicalAssessment.objects.all().select_related("drug_bag__form__case")
     serializer_class = BotanicalAssessmentSerializer
     permission_classes = [HasAppAccess]
 
@@ -140,21 +141,21 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
 
 
 class DrugBagBatchCreateView(APIView):
-    """Batch-create multiple drug bags (with optional assessments) in one request."""
+    """Batch-create multiple drug bags (with optional assessments) on a form."""
 
     permission_classes = [HasAppAccess]
 
     def post(self, request, pk):
         try:
-            submission = Case.objects.get(pk=pk)
-        except Case.DoesNotExist:
-            raise NotFound("Case not found.")
+            form = Priority3Form.objects.select_related("case").get(pk=pk)
+        except Priority3Form.DoesNotExist:
+            raise NotFound("Priority 3 form not found.")
 
         serializer = DrugBagBatchCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         bags = DrugBagService.batch_create(
-            submission=submission,
+            form=form,
             bags_data=serializer.validated_data["bags"],
             user=request.user,
         )

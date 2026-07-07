@@ -201,8 +201,13 @@ export const StationSearchComboBox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{initialData
-												?.slice(0, 6)
+											{[...(initialData ?? [])]
+												.sort((a, b) =>
+													(a.name ?? "")
+														.toLowerCase()
+														.localeCompare((b.name ?? "").toLowerCase())
+												)
+												.slice(0, 6)
 												.map((station: PoliceStation) => (
 													<CommandItem
 														key={station.id}
@@ -245,7 +250,12 @@ export const StationSearchComboBox = React.forwardRef<
 									</div>
 								) : (
 									<CommandGroup>
-										{searchResults.results
+										{[...searchResults.results]
+											.sort((a, b) =>
+												(a.name ?? "")
+													.toLowerCase()
+													.localeCompare((b.name ?? "").toLowerCase())
+											)
 											.slice(0, 6)
 											.map((station: PoliceStation) => (
 												<CommandItem

@@ -1,8 +1,11 @@
 import { useState, useCallback } from "react";
 import { motion } from "motion/react";
 import { PageTransition } from "@/shared/components/PageTransition";
-import { FlaskConical, Package, Percent } from "lucide-react";
+import { FlaskConical, Package, Percent, Hash } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Label } from "@/shared/components/ui/label";
 import { BaseFeeModal } from "@/shared/components/BaseFeeModal";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -93,6 +96,8 @@ const SettingsContent = () => {
 		{}
 	);
 	const [showConfirmation, setShowConfirmation] = useState(false);
+	const [counterValue, setCounterValue] = useState<string>("");
+	const [counterLoaded, setCounterLoaded] = useState(false);
 
 	const applySettingsChanges = useCallback(
 		async (changes: Record<string, string>) => {
@@ -187,6 +192,11 @@ const SettingsContent = () => {
 		setShowConfirmation(false);
 	}, []);
 
+	const handleSaveCounter = useCallback(async () => {
+		if (!settings || !user) return;
+		await handleSettingsUpdate("certificate_counter", counterValue);
+	}, [settings, user, counterValue, handleSettingsUpdate]);
+
 	const openEdit = (index: number) => {
 		if (!settings) return;
 		setEditingIndex(index);
@@ -198,6 +208,17 @@ const SettingsContent = () => {
 		await handleSettingsUpdate(rate.key, value);
 		setEditingIndex(null);
 	};
+
+	// Sync counter from settings once loaded
+	if (settings && !counterLoaded) {
+		setCounterValue(
+			String(
+				(settings as unknown as Record<string, unknown>).certificate_counter ??
+					"0"
+			)
+		);
+		setCounterLoaded(true);
+	}
 
 	if (!settings)
 		return (
@@ -286,6 +307,75 @@ const SettingsContent = () => {
 							);
 						})}
 					</div>
+				</Card>
+				{/* Certificate counter */}
+				<Card className="p-6">
+					<div className="mb-5">
+						<h3>Certificate Numbering</h3>
+						<p className="text-[13px] text-muted-foreground">
+							The next certificate generated will use this number. Format: R
+							followed by 6 zero-padded digits.
+						</p>
+					</div>
+					<div className="flex items-end gap-3">
+						<div className="flex-1 max-w-xs">
+							<Label
+								htmlFor="certificate_counter"
+								className="text-sm mb-1.5 block"
+							>
+								Next Certificate Number
+							</Label>
+							<div className="flex items-center gap-2">
+								<div className="flex items-center gap-1.5 rounded-md border px-3 py-2 bg-muted/30">
+									<Hash className="h-4 w-4 text-muted-foreground" />
+									<span className="text-sm font-mono text-muted-foreground">
+										R
+									</span>
+									<span className="text-sm font-mono font-medium">
+										{String(parseInt(counterValue || "0", 10) + 1).padStart(
+											6,
+											"0"
+										)}
+									</span>
+								</div>
+							</div>
+						</div>
+						<div className="flex-1 max-w-[200px]">
+							<Label
+								htmlFor="certificate_counter_input"
+								className="text-sm mb-1.5 block"
+							>
+								Counter Value
+							</Label>
+							<Input
+								id="certificate_counter_input"
+								type="number"
+								min={0}
+								max={999999}
+								value={counterValue}
+								onChange={(e) => setCounterValue(e.target.value)}
+								className="font-mono"
+							/>
+						</div>
+						<Button
+							size="sm"
+							onClick={handleSaveCounter}
+							disabled={
+								isUpdating ||
+								counterValue ===
+									String(
+										(settings as unknown as Record<string, unknown>)
+											?.certificate_counter ?? "0"
+									)
+							}
+						>
+							Save
+						</Button>
+					</div>
+					<p className="text-xs text-muted-foreground mt-3">
+						The counter is incremented before each certificate is generated.
+						Setting it to 5 means the next certificate will be R000006.
+					</p>
 				</Card>
 			</div>
 

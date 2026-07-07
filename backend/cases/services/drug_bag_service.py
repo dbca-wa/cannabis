@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
-from ..models import BotanicalAssessment, DrugBag
+from ..models import BotanicalAssessment, DrugBag, Priority3Form
 
 
 class DrugBagService:
@@ -23,7 +23,7 @@ class DrugBagService:
         """
         try:
             return (
-                DrugBag.objects.select_related("submission")
+                DrugBag.objects.select_related("form", "form__case")
                 .prefetch_related("assessment")
                 .get(pk=pk)
             )
@@ -31,14 +31,14 @@ class DrugBagService:
             raise NotFound(f"Drug bag with pk {pk} not found.")
 
     @staticmethod
-    def get_submission_bags(submission_id):
-        """Retrieve all drug bags for a given submission.
+    def get_case_bags(case_id):
+        """Retrieve all drug bags for a case, across all of its forms.
 
         Returns:
             QuerySet of DrugBag instances ordered by seal_tag_numbers.
         """
         return (
-            DrugBag.objects.filter(submission_id=submission_id)
+            DrugBag.objects.filter(form__case_id=case_id)
             .prefetch_related("assessment")
             .order_by("seal_tag_numbers")
         )
@@ -115,27 +115,82 @@ class DrugBagService:
         return assessment
 
     @staticmethod
+    def _ensure_form_capacity(form, additional):
+        """Reject the write when a form cannot hold `additional` more bags.
+
+        A Priority 3 form holds at most five drug bags. When the requested bags
+        would push the form beyond that limit the whole request is rejected, so
+        no bags are silently dropped and the caller learns nothing was recorded.
+
+        Raises:
+            ValidationError: If the form's remaining capacity is too small.
+        """
+        current = form.bags.count()
+        if current + additional > Priority3Form.MAX_BAGS:
+            remaining = max(Priority3Form.MAX_BAGS - current, 0)
+            raise ValidationError(
+                f"A Priority 3 form may hold at most {Priority3Form.MAX_BAGS} "
+                f"drug bags. This form already has {current}, so it can take "
+                f"{remaining} more."
+            )
+
+    @staticmethod
+    def create_bag(form, data, user):
+        """Create a single drug bag on a form, enforcing the five-bag cap.
+
+        Args:
+            form: The Priority3Form the bag attaches to.
+            data: Validated bag fields (content_type, seal tags, weights, ...).
+            user: The user creating the bag.
+
+        Returns:
+            The newly created DrugBag instance.
+
+        Raises:
+            ValidationError: If the form already holds five bags.
+        """
+        DrugBagService._ensure_form_capacity(form, 1)
+
+        fields = {key: value for key, value in data.items() if key != "form"}
+        bag = DrugBag.objects.create(form=form, **fields)
+
+        settings.LOGGER.info(
+            f"User {user} created drug bag {bag.seal_tag_numbers} "
+            f"for form {form.pk} on case {form.case.case_number}"
+        )
+
+        return bag
+
+    @staticmethod
     @transaction.atomic
-    def batch_create(submission, bags_data, user):
-        """Create multiple bags with assessments in a single transaction.
+    def batch_create(form, bags_data, user):
+        """Create multiple bags with assessments on a form in one transaction.
+
+        The form holds at most five drug bags. When the requested bags would not
+        all fit, the batch is rejected outright rather than partially recorded.
 
         Tag-uniqueness validation (within the batch and against existing bags)
         is handled by DrugBagBatchCreateSerializer before this runs.
 
         Args:
-            submission: The Case instance.
-            bags_data: List of dicts with keys: seal_tag_numbers, new_seal_tag_numbers,
-                       content_type, determination, assessment_date.
+            form: The Priority3Form the bags attach to.
+            bags_data: List of dicts with keys: seal_tag_numbers,
+                       new_seal_tag_numbers, content_type, determination,
+                       assessment_date.
             user: The user performing the creation.
 
         Returns:
             List of created DrugBag instances (with nested assessment).
+
+        Raises:
+            ValidationError: If the form cannot hold all of the requested bags.
         """
-        # Create all bags and assessments
+        DrugBagService._ensure_form_capacity(form, len(bags_data))
+
         created_bags = []
         for entry in bags_data:
             bag = DrugBag.objects.create(
-                submission=submission,
+                form=form,
                 seal_tag_numbers=entry["seal_tag_numbers"],
                 new_seal_tag_numbers=entry.get("new_seal_tag_numbers") or "",
                 content_type=entry.get("content_type", DrugBag.ContentType.PLANT),
@@ -153,7 +208,7 @@ class DrugBagService:
 
         settings.LOGGER.info(
             f"User {user} batch-created {len(created_bags)} bags "
-            f"for case {submission.case_number}"
+            f"for form {form.pk} on case {form.case.case_number}"
         )
 
         # Refresh to include nested assessment relations

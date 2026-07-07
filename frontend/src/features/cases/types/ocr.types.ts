@@ -55,8 +55,16 @@ export interface OcrMatchesMap {
 	defendant: OcrMatchResult;
 }
 
+/** Result of checking whether the extracted police reference matches an existing case. */
+export interface OcrCaseMatch {
+	matched: boolean;
+	case_id: number | null;
+	case_number: string | null;
+}
+
 /** Complete API response from the OCR upload endpoint. */
 export interface OcrExtractionResponse {
 	extraction: OcrExtraction;
 	matches: OcrMatchesMap;
+	case_match: OcrCaseMatch;
 }

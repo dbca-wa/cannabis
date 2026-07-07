@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ReactNode,
+} from "react";
 import { observer } from "mobx-react-lite";
 import { useCaseProcessingWizardStore } from "@/app/providers/store.provider";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -6,8 +13,7 @@ import {
 	CASE_PROCESSING_STEPS,
 	type StepState,
 } from "@/app/stores/derived/case-processing-wizard.store";
-import { PHASE_KEYS } from "@/shared/constants/phases.config";
-import type { CasePhase } from "@/shared/types/backend-api.types";
+import { FormsNavigator } from "../FormsNavigator";
 import { FormPreviewToggle } from "./FormPreviewToggle";
 import { WizardStepper } from "./WizardStepper";
 import { WizardLayout } from "./WizardLayout";
@@ -18,123 +24,130 @@ import { AssessmentStep } from "./steps/AssessmentStep";
 import { UnsignedCertificateStep } from "./steps/UnsignedCertificateStep";
 
 interface CaseProcessingWizardContainerProps {
-	/** Case data from TanStack Query */
+	/** Case data (with form-scoped bags/certificate/phase) from TanStack Query */
 	caseData: Record<string, unknown> | null;
+	/** Case ID for the FormsNavigator */
+	caseId: number;
+	/** Active form ID for the FormsNavigator */
+	activeFormId: number;
+	/** All forms on the case (for cross-form validation) */
+	forms?: Array<{
+		id: number;
+		bags?: Array<unknown>;
+		certificate?: unknown | null;
+	}>;
 	/** Callback to persist field changes via mutation */
 	onFieldChange: (field: string, value: unknown) => void;
 	/** Callback to trigger a workflow action (advance_phase, generate_certificate) */
 	onAction: (action: string) => void;
-	/** Callback to finalise the case (advance to batching and exit) */
+	/** Callback to finalise the form (advance to batching and exit) */
 	onSubmit: () => void;
-	/** Callback to discard the draft case */
+	/** Callback to discard/leave the form */
 	onDiscard: () => void;
+	/** Callback when a form is selected in the FormsNavigator */
+	onFormSelect?: (formId: number) => void;
+	/** Callback when the "Add Form" button is clicked */
+	onAddForm?: () => void;
+	/** Callback when a form is deleted in the FormsNavigator */
+	onDeleteForm?: (formId: number) => void;
 }
 
-/**
- * The workflow phase each wizard step corresponds to. Step 0 (Case Details) is
- * not a workflow phase, so it maps to null. Used to mark a step complete once
- * the case has advanced beyond it.
- */
-const STEP_PHASE: (CasePhase | null)[] = [
-	null,
-	"assessment",
-	"unsigned_generation",
-];
-
-// Completed cases are locked for non-admins: delete, regenerate, and finalise
-// are disabled with this explanation.
+// Completed forms are locked for non-admins: regenerate and finalise are
+// disabled with this explanation.
 const COMPLETE_LOCK_MESSAGE =
-	"Only an administrator can delete, regenerate, or finalise a completed case.";
+	"Only an administrator can regenerate or finalise a completed form.";
 
 /**
- * Orchestrator for the case processing wizard.
+ * Orchestrator for the case processing wizard (form-scoped).
  *
  * Steps:
  * 0 - Case Details (pre-completed summary, prefilled from the creation wizard)
- * 1 - Assessment (drug bags and botanical notes)
- * 2 - Certificate (generate the certificate PDF(s))
+ * 1 - Assessment (form's drug bags and botanical notes)
+ * 2 - Certificate (generate and preview the form's single certificate)
  *
- * Step 0 is not a workflow phase — cases start in the Assessment phase. After
- * certificate generation the case advances to the Batching phase, where it is
- * batched from the Cases page.
+ * Step 0 is not a workflow phase — forms start in the Assessment phase. After
+ * certificate generation the form advances to the Batching phase.
  */
 export const CaseProcessingWizardContainer = observer(
 	({
 		caseData,
+		caseId,
+		activeFormId,
+		forms,
 		onFieldChange,
 		onAction,
 		onSubmit,
 		onDiscard,
+		onFormSelect,
+		onAddForm,
+		onDeleteForm,
 	}: CaseProcessingWizardContainerProps) => {
 		const store = useCaseProcessingWizardStore();
 		const contentRef = useRef<HTMLDivElement>(null);
 		const { isAdmin } = useAuth();
-		// A completed case is read-only for non-admins.
+		// A completed form is read-only for non-admins.
 		const lockForNonAdmin =
 			(caseData?.phase as string) === "complete" && !isAdmin;
-		// Tracks the last case for which we auto-advanced out of the assessment
-		// phase, so the advance fires at most once per case.
-		const assessmentAdvancedForCaseRef = useRef<number | null>(null);
+		// Tracks the last form for which we auto-advanced out of the assessment
+		// phase, so the advance fires at most once per form.
+		const assessmentAdvancedForFormRef = useRef<number | null>(null);
 
-		/** Step 0: case_number + received + submitting officer */
+		// Tracks whether all forms on the Certificate step have been marked ready
+		const [allFormsReady, setAllFormsReady] = useState(false);
+
+		/** Step 0: case_number + received + submitting officer + approved botanist */
 		const isStep0Valid = !!(
 			caseData &&
 			(caseData.case_number as string)?.trim() &&
 			(caseData.received as string)?.trim() &&
-			caseData.submitting_officer_id
+			caseData.submitting_officer_id &&
+			caseData.approved_botanist_id
 		);
 
-		/** Step 1: approved botanist set, every bag assessed, notes >= 4 chars */
-		const isStep1Valid = !!(
-			caseData &&
-			caseData.approved_botanist_id &&
-			Array.isArray(caseData.bags) &&
-			(
-				caseData.bags as Array<{
+		/** Case-level: true when no forms exist OR all forms have ≥1 bag. */
+		const allFormsHaveBags =
+			!forms ||
+			forms.length === 0 ||
+			forms.every((f) => (f.bags?.length ?? 0) > 0);
+
+		/** Case-level: true when all forms have all bags assessed (determination not pending).
+		 * Checks across ALL forms, not just the active one. */
+		const allBagsAssessed = !!(
+			forms &&
+			forms.length > 0 &&
+			forms.every((f) => {
+				const bags = (f.bags ?? []) as Array<{
 					assessment?: { determination?: string } | null;
-				}>
-			).length > 0 &&
-			(
-				caseData.bags as Array<{
-					assessment?: { determination?: string } | null;
-				}>
-			).every(
-				(bag) =>
-					bag.assessment &&
-					bag.assessment.determination &&
-					bag.assessment.determination !== "pending"
-			) &&
-			typeof caseData.additional_notes === "string" &&
-			caseData.additional_notes.trim().length >= 4
+				}>;
+				return (
+					bags.length > 0 &&
+					bags.every(
+						(bag) =>
+							bag.assessment &&
+							bag.assessment.determination &&
+							bag.assessment.determination !== "pending"
+					)
+				);
+			})
 		);
 
-		/** Step 2: at least one certificate generated */
-		const isStep2Valid = !!(
-			caseData &&
-			Array.isArray(caseData.certificates) &&
-			(caseData.certificates as unknown[]).length > 0
+		/** Step 1 (Assessment): all forms have bags AND all bags assessed.
+		 * Section C notes are NOT required — they default to "None". */
+		const isStep1Valid = allFormsHaveBags && allBagsAssessed;
+
+		/** Case-level: true when ALL forms have a certificate generated. */
+		const allFormsHaveCerts = !!(
+			forms &&
+			forms.length > 0 &&
+			forms.every((f) => !!f.certificate)
 		);
 
-		const currentPhaseIndex = PHASE_KEYS.indexOf(
-			caseData?.phase as (typeof PHASE_KEYS)[number]
-		);
-		// A step is "past" once the case has advanced beyond that step's phase.
-		// Step 0 (Case Details) has no phase, so it relies on field validity alone.
-		const isPastStep = (stepIndex: number): boolean => {
-			const stepPhase = STEP_PHASE[stepIndex];
-			if (!stepPhase) return false;
-			const phaseIndex = PHASE_KEYS.indexOf(stepPhase);
-			return phaseIndex !== -1 && currentPhaseIndex > phaseIndex;
-		};
+		/** Step 2 (Certificate): all forms have a cert. */
+		const isStep2Valid = allFormsHaveCerts;
 
 		const stepValidities = useMemo(
-			() => [
-				isStep0Valid || isPastStep(0),
-				isStep1Valid || isPastStep(1),
-				isStep2Valid || isPastStep(2),
-			],
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[isStep0Valid, isStep1Valid, isStep2Valid, currentPhaseIndex]
+			() => [isStep0Valid, isStep1Valid, isStep2Valid],
+			[isStep0Valid, isStep1Valid, isStep2Valid]
 		);
 
 		const stepStates: StepState[] = CASE_PROCESSING_STEPS.map((_, index) =>
@@ -152,24 +165,27 @@ export const CaseProcessingWizardContainer = observer(
 		useEffect(() => {
 			if (caseData && !store.state.initialised) {
 				store.initializeFromValidities(stepValidities);
+				// Auto-advance past already-completed steps
+				if (stepValidities[0] && store.state.currentStep === 0) {
+					store.markStepCompleted(0);
+					store.nextStep();
+				}
 			}
 		}, [caseData, store, stepValidities]);
 
 		// Keep the workflow phase in step with wizard progress. Reaching the
-		// certificate step means the assessment is done, so advance the case out
-		// of the assessment phase if it is still there (the wizard may have
-		// auto-skipped the assessment "Continue" step). Guarded per case so it
-		// fires exactly once — the phase only moves forward from here.
+		// certificate step means the assessment is done, so advance the form out
+		// of the assessment phase if it is still there.
 		useEffect(() => {
-			const caseId = (caseData?.id as number | undefined) ?? null;
+			const formId = (caseData?.formId as number | undefined) ?? null;
 			if (
 				caseData &&
-				caseId !== null &&
+				formId !== null &&
 				store.state.currentStep === 2 &&
 				caseData.phase === "assessment" &&
-				assessmentAdvancedForCaseRef.current !== caseId
+				assessmentAdvancedForFormRef.current !== formId
 			) {
-				assessmentAdvancedForCaseRef.current = caseId;
+				assessmentAdvancedForFormRef.current = formId;
 				onAction("advance_phase");
 			}
 		}, [caseData, store.state.currentStep, onAction]);
@@ -193,8 +209,6 @@ export const CaseProcessingWizardContainer = observer(
 			}
 
 			if (stepValidities[current]) {
-				// Phase progression is handled by the effect that advances the case
-				// when it reaches the certificate step, so Continue just navigates.
 				store.markStepCompleted(current);
 				store.nextStep();
 				scrollToTop();
@@ -252,13 +266,20 @@ export const CaseProcessingWizardContainer = observer(
 
 		const isCertificateStep = store.state.currentStep === 2;
 
-		// Completed cases are read-only for non-admins: wrap the editable steps in
+		// Preview is only meaningful when there's an active form with at least one bag
+		const hasPreviewContent = !!(
+			caseData?.formId &&
+			Array.isArray(caseData?.bags) &&
+			(caseData.bags as unknown[]).length > 0
+		);
+
+		// Completed forms are read-only for non-admins: wrap the editable steps in
 		// a disabled fieldset (with a notice) so every control inside is locked.
 		const renderLockable = (content: ReactNode) =>
 			lockForNonAdmin ? (
 				<div className="space-y-4">
 					<div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-						This case is complete and read-only. Only an administrator can make
+						This form is complete and read-only. Only an administrator can make
 						changes.
 					</div>
 					<fieldset
@@ -291,6 +312,7 @@ export const CaseProcessingWizardContainer = observer(
 							caseId={(caseData?.id as number) ?? 0}
 							isTouched={isTouched}
 							onFieldChange={onFieldChange}
+							onAddForm={onAddForm}
 						/>
 					);
 				case 2:
@@ -298,9 +320,11 @@ export const CaseProcessingWizardContainer = observer(
 						<UnsignedCertificateStep
 							caseData={caseData}
 							caseId={(caseData?.id as number) ?? 0}
+							formId={(caseData?.formId as number) ?? 0}
 							onAction={onAction}
 							lockActions={lockForNonAdmin}
 							lockMessage={COMPLETE_LOCK_MESSAGE}
+							onAllReadyChange={setAllFormsReady}
 						/>
 					);
 				default:
@@ -312,33 +336,54 @@ export const CaseProcessingWizardContainer = observer(
 			<div className="flex flex-col gap-6 h-full">
 				<div className="flex items-center justify-between">
 					<h1 className="text-2xl font-bold tracking-tight">Process Case</h1>
-					{!isCertificateStep && (
-						<FormPreviewToggle
-							activeView={store.state.showPreview ? "preview" : "form"}
-							onToggle={handleToggle}
-						/>
-					)}
+					{hasPreviewContent &&
+						store.state.currentStep >= 1 &&
+						!isCertificateStep && (
+							<FormPreviewToggle
+								activeView={store.state.showPreview ? "preview" : "form"}
+								onToggle={handleToggle}
+							/>
+						)}
 				</div>
 
 				<WizardStepper
 					currentStep={store.state.currentStep}
 					stepStates={stepStates}
+					stepValidities={stepValidities}
 					onStepClick={handleStepClick}
 					stepDescriptions={stepDescriptions}
 					stepLabels={stepLabels}
 				/>
 
+				{store.state.currentStep >= 1 && (
+					<FormsNavigator
+						caseId={caseId}
+						activeFormId={activeFormId}
+						onFormSelect={onFormSelect ?? (() => {})}
+						onAddForm={
+							store.state.currentStep === 1
+								? (onAddForm ?? (() => {}))
+								: undefined
+						}
+						onDeleteForm={
+							store.state.currentStep === 1 ? onDeleteForm : undefined
+						}
+					/>
+				)}
+
 				<div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto">
 					<WizardLayout
 						formPanel={renderStepContent()}
 						previewPanel={
-							isCertificateStep ? (
-								renderStepContent()
-							) : (
-								<WizardPreviewPanel caseData={caseData} />
-							)
+							hasPreviewContent ? (
+								isCertificateStep ? (
+									renderStepContent()
+								) : (
+									<WizardPreviewPanel caseData={caseData} />
+								)
+							) : null
 						}
-						showPreview={store.state.showPreview}
+						showPreview={hasPreviewContent && store.state.showPreview}
 						fullWidthPreview={isCertificateStep}
 					/>
 				</div>
@@ -350,11 +395,17 @@ export const CaseProcessingWizardContainer = observer(
 					onBack={handleBack}
 					onContinue={handleContinueOrFinalise}
 					onDiscard={onDiscard}
+					canContinue={
+						store.state.currentStep === 2
+							? allFormsReady
+							: store.state.currentStep !== 1 ||
+								(!!forms && forms.length > 0 && allFormsHaveBags)
+					}
 					lockActions={lockForNonAdmin}
 					lockMessage={COMPLETE_LOCK_MESSAGE}
-					discardLabel="Delete Case"
-					discardModalTitle="Delete this case?"
-					discardModalDescription="This will permanently delete the case and all associated drug bags and certificates. Defendants, officers, and users will not be affected. This action cannot be undone."
+					discardLabel="Back to Cases"
+					discardModalTitle="Leave this form?"
+					discardModalDescription="Any unsaved progress will be lost. You can return to this form from the case's forms list."
 				/>
 			</div>
 		);

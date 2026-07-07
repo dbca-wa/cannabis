@@ -192,8 +192,8 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 	}
 
 	// Check admin route protection - only superusers can access admin routes
-	if (pathname.startsWith("/testing")) {
-		const isAdmin = user?.is_superuser;
+	if (pathname.startsWith("/testing") || pathname.startsWith("/invites")) {
+		const isAdmin = user?.is_superuser || user?.is_staff;
 		if (!isAdmin) {
 			logger.warn(
 				"[RootAuthGuard] Non-admin user attempted to access admin route",
@@ -204,7 +204,7 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 					pathname,
 				}
 			);
-			return redirect("/"); // Redirect to home page
+			return redirect("/");
 		}
 		logger.debug("[RootAuthGuard] Admin user accessing admin route");
 	}

@@ -41,8 +41,12 @@ class BatchListCreateView(ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
+        # Batch tallies and the "cases" column derive from the batch's
+        # certificates and their forms' cases/bags.
         queryset = Batch.objects.prefetch_related(
-            "cases", "cases__certificates", "cases__bags"
+            "certificates__form__case__approved_botanist",
+            "certificates__form__case__submitting_officer",
+            "certificates__form__bags",
         )
         ordering = self.request.query_params.get("ordering", "-created_at")
         if ordering not in VALID_ORDERINGS:
@@ -53,7 +57,7 @@ class BatchListCreateView(ListAPIView):
         serializer = BatchCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         batch = BatchService.create_batch(
-            serializer.validated_data["case_ids"], request.user
+            serializer.validated_data["certificate_ids"], request.user
         )
         out = BatchDetailSerializer(batch, context={"request": request})
         return Response(out.data, status=HTTP_201_CREATED)
@@ -123,7 +127,7 @@ class BatchExportView(APIView):
     permission_classes = [HasAppAccess]
 
     def get(self, request):
-        batches = Batch.objects.prefetch_related("cases").order_by("-created_at")
+        batches = Batch.objects.prefetch_related("certificates").order_by("-created_at")
         rows = BatchService.export_rows(batches)
 
         response = HttpResponse(content_type="text/csv")

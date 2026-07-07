@@ -4,10 +4,12 @@ from ..models import Case
 
 
 class CaseUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating cases — accepts all editable fields
-    and returns the full case data for cache updates."""
+    """Serializer for updating cases — accepts the editable base-data fields
+    and returns the full case data for cache updates.
 
-    phase_display = serializers.CharField(source="get_phase_display", read_only=True)
+    The workflow phase lives on each Priority 3 form and is advanced by the
+    workflow service, so it is not editable through the case here.
+    """
 
     class Meta:
         model = Case
@@ -15,22 +17,12 @@ class CaseUpdateSerializer(serializers.ModelSerializer):
             "id",
             "case_number",
             "received",
-            "security_movement_envelope",
             "internal_comments",
-            "additional_notes",
             "approved_botanist",
             "finance_officer",
             "requesting_officer",
             "submitting_officer",
             "station",
             "defendants",
-            "phase",
-            "phase_display",
         ]
-        read_only_fields = ["id", "phase_display"]
-
-    def validate_phase(self, value):
-        """Validate phase transitions"""
-        if self.instance and self.instance.phase != value:
-            pass
-        return value
+        read_only_fields = ["id"]

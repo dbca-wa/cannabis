@@ -13,6 +13,8 @@ export const ENDPOINTS = {
 		ACTIVATE_INVITE: (token: string) => `/users/auth/activate-invite/${token}`,
 		VALIDATE_PASSWORD: "/users/validate-password",
 		TEST_INVITE_EMAIL: "/users/auth/test-invite-email",
+		INVITES: "/users/invites",
+		INVITE_REVOKE: (id: number) => `/users/invites/${id}/revoke`,
 	},
 
 	// User endpoints
@@ -77,6 +79,21 @@ export const ENDPOINTS = {
 		PHASE_HISTORY: (id: string | number) => `/cases/${id}/phase-history`,
 		OCR_UPLOAD: "/cases/ocr-upload",
 		POLICE_FORM: (id: string | number) => `/cases/${id}/police-form`,
+		// Priority 3 form endpoints (a case contains one or more forms)
+		FORMS: {
+			LIST: (caseId: string | number) => `/cases/${caseId}/forms`,
+			CREATE: (caseId: string | number) => `/cases/${caseId}/forms`,
+			DETAIL: (formId: string | number) => `/cases/forms/${formId}`,
+			UPDATE: (formId: string | number) => `/cases/forms/${formId}`,
+			DELETE: (formId: string | number) => `/cases/forms/${formId}`,
+			WORKFLOW: (formId: string | number) => `/cases/forms/${formId}/workflow`,
+			BAGS_BATCH: (formId: string | number) =>
+				`/cases/forms/${formId}/bags/batch`,
+			CERTIFICATE_GENERATE: (formId: string | number) =>
+				`/cases/forms/${formId}/certificate/generate`,
+			SCANNED_IMAGE: (formId: string | number) =>
+				`/cases/forms/${formId}/scanned-image`,
+		},
 		BAGS: {
 			LIST: (caseId: string | number) => `/cases/${caseId}/bags`,
 			CREATE: (caseId: string | number) => `/cases/${caseId}/bags`,

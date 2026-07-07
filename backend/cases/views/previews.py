@@ -8,13 +8,12 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
-from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
 from users.permissions import HasAppAccess
 
-from ..models import Case
+from ..models import Case, Certificate
 from ..services.certificate_service import build_certificate_context
 
 
@@ -33,34 +32,19 @@ class CertificatePreviewView(APIView):
                 "Preview endpoints are only available in DEBUG mode."
             )
 
-        submission = get_object_or_404(Case, pk=pk)
+        case = get_object_or_404(Case, pk=pk)
 
-        certificate = submission.certificates.first()
+        certificate = (
+            Certificate.objects.filter(form__case=case)
+            .select_related("form", "form__case")
+            .first()
+        )
         if certificate is None:
-            certificate = _MockCertificate(
-                certificate_number="PREVIEW-0000",
-                certified_date=timezone.now().date(),
+            return HttpResponse(
+                "<p>No certificate is available to preview for this case yet.</p>",
+                content_type="text/html",
             )
 
-        context = build_certificate_context(submission, certificate)
+        context = build_certificate_context(certificate)
         html = render_to_string("pdf/certificate_template.html", context)
         return HttpResponse(html, content_type="text/html")
-
-
-class _MockCertificate:
-    """Lightweight stand-in for a Certificate when none exists yet."""
-
-    def __init__(self, certificate_number, certified_date=None):
-        self.certificate_number = certificate_number
-        self.certified_date = certified_date
-
-    class _EmptyBags:
-        def select_related(self, *args, **kwargs):
-            return self
-
-        def all(self):
-            return []
-
-    @property
-    def bags(self):
-        return self._EmptyBags()

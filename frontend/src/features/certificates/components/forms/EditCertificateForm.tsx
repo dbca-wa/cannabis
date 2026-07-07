@@ -35,7 +35,7 @@ export const EditCertificateForm: React.FC<EditCertificateFormProps> = ({
 	const form = useForm<EditCertificateFormData>({
 		resolver: zodResolver(editCertificateSchema),
 		defaultValues: {
-			case: certificate.submission,
+			case: certificate.case_id ?? undefined,
 		},
 	});
 

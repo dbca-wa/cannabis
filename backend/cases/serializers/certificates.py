@@ -4,23 +4,37 @@ from ..models import Certificate
 
 
 class CertificateSerializer(serializers.ModelSerializer):
-    """Serialiser for the final certificate (single PDF, no signature)."""
+    """Serialiser for the final certificate (single PDF, no signature).
+
+    A certificate belongs to exactly one Priority 3 form; its case, defendants
+    and covered bags are reached through that form.
+    """
 
     pdf_url = serializers.SerializerMethodField()
-    submission = serializers.PrimaryKeyRelatedField(read_only=True)
-    submission_case_number = serializers.SerializerMethodField()
+    form = serializers.PrimaryKeyRelatedField(read_only=True)
+    case_id = serializers.SerializerMethodField()
+    case_number = serializers.SerializerMethodField()
     defendant_names = serializers.SerializerMethodField()
     bag_ids = serializers.SerializerMethodField()
+    batch_id = serializers.IntegerField(source="batch.id", read_only=True, default=None)
+    batch_number = serializers.CharField(
+        source="batch.batch_number", read_only=True, default=None
+    )
+    is_batch_eligible = serializers.ReadOnlyField()
 
     class Meta:
         model = Certificate
         fields = [
             "id",
             "certificate_number",
-            "submission",
-            "submission_case_number",
+            "form",
+            "case_id",
+            "case_number",
             "defendant_names",
             "bag_ids",
+            "batch_id",
+            "batch_number",
+            "is_batch_eligible",
             "certified_date",
             "additional_notes",
             "pdf_generating",
@@ -42,17 +56,21 @@ class CertificateSerializer(serializers.ModelSerializer):
             return pdf.url
         return None
 
-    def get_submission_case_number(self, obj):
-        if obj.submission:
-            return obj.submission.case_number
-        return None
+    def get_case_id(self, obj):
+        case = obj.form.case if obj.form_id else None
+        return case.pk if case else None
+
+    def get_case_number(self, obj):
+        case = obj.form.case if obj.form_id else None
+        return case.case_number if case else None
 
     def get_defendant_names(self, obj):
-        if obj.submission:
-            defendants = obj.submission.defendants.all()
+        case = obj.form.case if obj.form_id else None
+        if case:
+            defendants = case.defendants.all()
             if defendants:
                 return ", ".join(d.full_name for d in defendants)
         return None
 
     def get_bag_ids(self, obj):
-        return list(obj.bags.values_list("id", flat=True))
+        return list(obj.form.bags.values_list("id", flat=True))

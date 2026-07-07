@@ -135,7 +135,6 @@ class ModelFactory:
                             "submitting_officer": submitting_officer,
                             "requesting_officer": requesting_officer,
                             "internal_comments": data.internal_comments,
-                            "additional_notes": data.additional_notes,
                             "security_movement_envelope": data.security_movement_envelope
                             or f"SME-{data.legacy_id}",
                             "phase": Submission.PhaseChoices.COMPLETE,
@@ -151,8 +150,6 @@ class ModelFactory:
                         submission.requesting_officer = requesting_officer
                         if data.internal_comments:
                             submission.internal_comments = data.internal_comments
-                        if data.additional_notes:
-                            submission.additional_notes = data.additional_notes
                         if data.security_movement_envelope:
                             submission.security_movement_envelope = (
                                 data.security_movement_envelope

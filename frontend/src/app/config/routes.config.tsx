@@ -1,5 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Home, Settings, Users, Shield, User, TestTube } from "lucide-react";
+import {
+	Home,
+	Mail,
+	Settings,
+	Users,
+	Shield,
+	User,
+	TestTube,
+} from "lucide-react";
 import { lazy, Suspense } from "react";
 import { FaTriangleExclamation } from "react-icons/fa6";
 import { Navigate, type RouteObject } from "react-router";
@@ -15,7 +23,8 @@ const OfficersPage = lazy(() => import("@/pages/police/Officers"));
 const StationsPage = lazy(() => import("@/pages/police/Stations"));
 const DefendantsPage = lazy(() => import("@/pages/defendants/Defendants"));
 const AdminPage = lazy(() => import("@/pages/admin/Admin"));
-const FinancialsPage = lazy(() => import("@/pages/financials/Financials"));
+const InvitesPage = lazy(() => import("@/pages/invites/Invites"));
+const SettingsPage = lazy(() => import("@/pages/financials/Financials"));
 const ChangePasswordPage = lazy(() => import("@/pages/auth/ChangePassword"));
 const DefendantMergePage = lazy(() =>
 	import("@/features/defendants/components/merge/DefendantMergePage").then(
@@ -126,11 +135,6 @@ const ProcessCase = lazy(() =>
 		default: m.ProcessCase,
 	}))
 );
-const EditCase = lazy(() =>
-	import("@/pages/cases/EditCase").then((m) => ({
-		default: m.EditCase,
-	}))
-);
 const DeleteCaseRouteModal = lazy(() =>
 	import("@/features/cases/components/modals/DeleteCaseRouteModal").then(
 		(m) => ({
@@ -213,18 +217,9 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		element: CasesPage,
 		useAsLayout: true,
 		children: [
-			// Modal routes (render in Outlet as overlays on top of CasesPage)
 			{ path: "add", element: CreateCase },
-			{ path: ":submissionId", element: EditCase },
-			{
-				path: ":submissionId/delete",
-				element: DeleteCaseRouteModal,
-			},
-			// Full-page child routes
-			{
-				path: ":id/process",
-				element: ProcessCase,
-			},
+			{ path: ":id", element: ProcessCase },
+			{ path: ":id/delete", element: DeleteCaseRouteModal },
 		],
 	},
 	{
@@ -316,14 +311,14 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		},
 	},
 	{
-		name: "Financials",
-		path: "/financials",
+		name: "Settings",
+		path: "/settings",
 		icon: <Home size={20} />,
 		activeIcon: <Home size={20} />,
 		tooltipContent: <p>Manage cost settings and pricing</p>,
 		adminOnly: false,
 		showInSidebar: true,
-		element: FinancialsPage,
+		element: SettingsPage,
 	},
 	{
 		name: "Change Password",
@@ -334,6 +329,16 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		adminOnly: false,
 		showInSidebar: false,
 		element: ChangePasswordPage,
+	},
+	{
+		name: "Invitations",
+		path: "/invites",
+		icon: <Mail size={20} />,
+		activeIcon: <Mail size={20} />,
+		tooltipContent: <p>Manage user invitations</p>,
+		adminOnly: true,
+		showInSidebar: true,
+		element: InvitesPage,
 	},
 	{
 		name: "Testing",
@@ -468,10 +473,11 @@ export const getSidebarItemFromRoute = (pathname: string): string => {
 	// Handle nested routes by prefix matching
 	if (pathname.startsWith("/officers")) return "Officers";
 	if (pathname.startsWith("/stations")) return "Stations";
-	if (pathname.startsWith("/financials")) return "Financials";
+	if (pathname.startsWith("/settings")) return "Settings";
 	if (pathname.startsWith("/cases")) return "Cases";
 	if (pathname.startsWith("/batches")) return "Batches";
 	if (pathname.startsWith("/staff")) return "Staff";
+	if (pathname.startsWith("/invites")) return "Invitations";
 	if (pathname.startsWith("/testing")) return "Testing";
 	if (pathname.startsWith("/defendants")) return "Defendants";
 	if (pathname.startsWith("/change-password")) return "Change Password";

@@ -4,14 +4,15 @@ import {
 } from "@/shared/components/layout/ResponsiveModal";
 import { useUsers } from "@/features/user/hooks/useUsers";
 import { useNavigate, useParams } from "react-router";
-
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import EditUserForm from "@/features/user/components/forms/EditUserForm";
 import type { EditUserFormData } from "../../types";
 
 export const EditUserModal = () => {
 	const navigate = useNavigate();
 	const { userId } = useParams();
-	const { updateUser, isUpdating } = useUsers();
+	const { user: currentUser } = useAuth();
+	const { updateUser, isUpdating, deleteUser } = useUsers();
 
 	const handleClose = () => {
 		navigate("/staff");
@@ -19,33 +20,33 @@ export const EditUserModal = () => {
 
 	const handleSubmit = async (transformedData: EditUserFormData) => {
 		if (!userId) return;
-
-		console.log("Transformed data from form:", transformedData);
-
-		// Use the updateUser function with callbacks
 		updateUser(
+			{ id: userId, data: transformedData },
 			{
-				id: userId,
-				data: transformedData,
-			},
-			{
-				onSuccess: () => {
-					console.log("User updated successfully, closing modal");
-					handleClose();
-				},
-				onError: (error) => {
-					console.error("Update error:", error);
-					// Error is already handled by the hook (toast), just log here
-				},
+				onSuccess: () => handleClose(),
+				onError: (error) => console.error("Update error:", error),
 			}
 		);
 	};
 
+	const handleDelete = () => {
+		if (!userId) return;
+		if (
+			!window.confirm(
+				"Are you sure you want to delete this user? This action cannot be undone."
+			)
+		)
+			return;
+		deleteUser(userId, { onSuccess: () => handleClose() });
+	};
+
+	const isAdmin = currentUser?.is_superuser || currentUser?.is_staff;
+
 	return (
 		<ResponsiveModal
-			open={true} // Always open when this component renders
+			open={true}
 			onOpenChange={(open: boolean) => {
-				if (!open) handleClose(); // Navigate away when modal closes
+				if (!open) handleClose();
 			}}
 		>
 			<ResponsiveModalContent
@@ -57,6 +58,7 @@ export const EditUserModal = () => {
 					onCancel={handleClose}
 					onSubmit={handleSubmit}
 					isSubmitting={isUpdating}
+					onDelete={isAdmin ? handleDelete : undefined}
 				/>
 			</ResponsiveModalContent>
 		</ResponsiveModal>

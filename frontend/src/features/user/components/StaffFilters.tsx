@@ -46,7 +46,7 @@ export const StaffFilters = observer(() => {
 		if (store.state.searchTerm !== localSearch) {
 			setLocalSearch(store.state.searchTerm);
 		}
-	}, [store.state.searchTerm, localSearch]);
+	}, [store.state.searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	return (
 		<FilterContainer>

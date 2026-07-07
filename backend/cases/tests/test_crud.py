@@ -3,7 +3,7 @@
 import pytest
 from django.urls import reverse
 
-from common.tests.factories import CaseFactory
+from common.tests.factories import CaseFactory, Priority3FormFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -82,7 +82,8 @@ class TestCaseDetail:
         assert resp.status_code == 204
 
     def test_complete_case_readonly_for_non_admin(self, finance_client):
-        case = CaseFactory(phase="complete")
+        case = CaseFactory()
+        Priority3FormFactory(case=case, phase="complete")
         resp = finance_client.patch(
             reverse("case_detail", kwargs={"pk": case.pk}),
             {"internal_comments": "edit"},
@@ -91,7 +92,8 @@ class TestCaseDetail:
         assert resp.status_code == 403
 
     def test_complete_case_editable_by_admin(self, admin_client):
-        case = CaseFactory(phase="complete")
+        case = CaseFactory()
+        Priority3FormFactory(case=case, phase="complete")
         resp = admin_client.patch(
             reverse("case_detail", kwargs={"pk": case.pk}),
             {"internal_comments": "admin edit"},

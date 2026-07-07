@@ -14,10 +14,10 @@ class TestSystemSettings:
         assert resp.status_code == 200
         assert "ocr_enabled" in resp.data
 
-    def test_get_requires_staff(self, botanist_client):
-        # Settings (incl. pricing) are admin-only.
+    def test_get_allowed_for_any_authenticated_user(self, botanist_client):
+        # Settings (incl. pricing) are viewable by any authenticated user.
         resp = botanist_client.get(reverse("system-settings"))
-        assert resp.status_code == 403
+        assert resp.status_code == 200
 
     def test_admin_can_toggle_ocr_enabled(self, admin_client):
         resp = admin_client.patch(

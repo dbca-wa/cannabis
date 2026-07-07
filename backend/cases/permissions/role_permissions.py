@@ -52,11 +52,12 @@ def is_admin(user) -> bool:
 
 
 def ensure_case_editable(case, user) -> None:
-    """Guard against edits to a completed case.
+    """Guard against edits to a fully-complete case.
 
-    A case in the Complete phase is read-only for everyone except admins
-    (staff/superuser). This enforces the rule server-side, matching the
-    client-side guard.
+    A case whose derived status is Complete (every form complete) is read-only
+    for everyone except admins (staff/superuser). This keeps a finished case's
+    base data frozen for non-admins; individual form edits are guarded
+    separately by ensure_form_editable.
 
     Raises:
         PermissionDenied: If the case is complete and the user is not an admin.
@@ -66,5 +67,27 @@ def ensure_case_editable(case, user) -> None:
     # Imported here to avoid a circular import at module load.
     from ..models import Case
 
-    if case.phase == Case.PhaseChoices.COMPLETE and not is_admin(user):
+    if case.derived_status == Case.PhaseChoices.COMPLETE and not is_admin(user):
         raise PermissionDenied("This case is complete and can no longer be edited.")
+
+
+def ensure_form_editable(form, user) -> None:
+    """Guard against edits to a completed Priority 3 form.
+
+    A form whose certificate is complete (the Complete phase) is read-only for
+    everyone except admins (staff/superuser). This keeps completed certificates
+    frozen for non-admin users while still allowing new forms to be added to the
+    same case.
+
+    Raises:
+        PermissionDenied: If the form is complete and the user is not an admin.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    # Imported here to avoid a circular import at module load.
+    from ..models import Case
+
+    if form.phase == Case.PhaseChoices.COMPLETE and not is_admin(user):
+        raise PermissionDenied(
+            "This form's certificate is complete and can no longer be edited."
+        )

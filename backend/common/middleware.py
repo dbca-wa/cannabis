@@ -92,3 +92,62 @@ class AdminOnlyCsrfMiddleware:
             # Delegate to Django's built-in CSRF middleware for admin routes
             return self.csrf_middleware(request)
         return self.get_response(request)
+
+
+class APIRequestLoggingMiddleware:
+    """
+    Logs every API request under /api/v1/ with method, path, user info,
+    and request body for mutation requests. Logs error response bodies
+    on 4xx/5xx for debugging DRF validation failures.
+    """
+
+    MUTATION_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.logger = logging.getLogger("api.request")
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if not request.path.startswith("/api/v1/"):
+            return self.get_response(request)
+
+        # Capture request body before processing (stream can only be read once)
+        body_str = ""
+        if request.method in self.MUTATION_METHODS:
+            try:
+                body = request.body.decode("utf-8", errors="replace")
+                if body:
+                    body_str = body[:2000] + (
+                        "...(truncated)" if len(body) > 2000 else ""
+                    )
+            except Exception:  # nosec B110
+                pass
+
+        response = self.get_response(request)
+
+        # Resolve user AFTER response — DRF authenticates during view processing
+        user_info = "anonymous"
+        if hasattr(request, "user") and request.user.is_authenticated:
+            user_info = f"{request.user.email} (id={request.user.id})"
+
+        # Log the request
+        log_parts = [f"[API] {request.method} {request.path} by {user_info}"]
+        if body_str:
+            log_parts.append(f"body: {body_str}")
+        self.logger.info(" | ".join(log_parts))
+
+        # Log error responses with response body
+        if response.status_code >= 400:
+            try:
+                response_body = response.content.decode("utf-8", errors="replace")[
+                    :2000
+                ]
+                self.logger.warning(
+                    f"[API] {response.status_code} {response.reason_phrase} | {response_body}"
+                )
+            except Exception:
+                self.logger.warning(
+                    f"[API] {response.status_code} {response.reason_phrase}"
+                )
+
+        return response

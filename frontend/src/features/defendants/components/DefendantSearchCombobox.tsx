@@ -209,8 +209,15 @@ export const DefendantSearchCombobox = React.forwardRef<
 												</div>
 											</div>
 											<CommandGroup>
-												{initialData
-													?.slice(0, 6)
+												{[...(initialData ?? [])]
+													.sort((a, b) => {
+														const nameA =
+															`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
+														const nameB =
+															`${b.last_name ?? ""} ${b.given_names ?? ""}`.toLowerCase();
+														return nameA.localeCompare(nameB);
+													})
+													.slice(0, 6)
 													.map((defendant: DefendantTiny) => (
 														<CommandItem
 															key={defendant.id}
@@ -261,7 +268,14 @@ export const DefendantSearchCombobox = React.forwardRef<
 										</div>
 									) : (
 										<CommandGroup>
-											{searchResults.results
+											{[...searchResults.results]
+												.sort((a, b) => {
+													const nameA =
+														`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
+													const nameB =
+														`${b.last_name ?? ""} ${b.given_names ?? ""}`.toLowerCase();
+													return nameA.localeCompare(nameB);
+												})
 												.slice(0, 6)
 												.map((defendant: DefendantTiny) => (
 													<CommandItem

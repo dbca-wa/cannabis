@@ -61,11 +61,11 @@ describe("batches.service", () => {
 		expect(apiMock.get).toHaveBeenCalledWith(ENDPOINTS.BATCHES.DETAIL(7));
 	});
 
-	it("creates a batch from the selected cases", async () => {
+	it("creates a batch from the selected certificates", async () => {
 		apiMock.post.mockResolvedValue({ id: 1, batch_number: "CB-1" });
-		await createBatch({ case_ids: [1, 2, 3] });
+		await createBatch({ certificate_ids: [1, 2, 3] });
 		expect(apiMock.post).toHaveBeenCalledWith(ENDPOINTS.BATCHES.CREATE, {
-			case_ids: [1, 2, 3],
+			certificate_ids: [1, 2, 3],
 		});
 	});
 

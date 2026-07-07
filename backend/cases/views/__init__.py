@@ -22,7 +22,6 @@ from .certificates import (  # noqa: F401
     AllCertificatesListView,
     CertificateDetailView,
     CertificateDownloadView,
-    CertificateGenerateView,
     CertificateListView,
     CertificatePdfView,
     CertificateRegenerateView,
@@ -38,11 +37,17 @@ from .dashboard import (  # noqa: F401
     RevenueStatsView,
 )
 from .drafts import CaseDraftView  # noqa: F401
-from .ocr import OcrUploadView, PoliceFormUploadView, ServiceUnavailable  # noqa: F401
+from .forms import (  # noqa: F401
+    CaseFormListCreateView,
+    FormCertificateGenerateView,
+    FormDetailView,
+    FormScannedImageUploadView,
+)
+from .ocr import OcrUploadView, ServiceUnavailable  # noqa: F401
 from .previews import CertificatePreviewView  # noqa: F401
 from .workflow import (  # noqa: F401
     CasePhaseHistoryView,
-    CaseWorkflowView,
+    FormWorkflowView,
 )
 
 __all__ = [
@@ -62,7 +67,6 @@ __all__ = [
     "AllCertificatesListView",
     "CertificateDetailView",
     "CertificateDownloadView",
-    "CertificateGenerateView",
     "CertificateListView",
     "CertificatePdfView",
     "CertificateRegenerateView",
@@ -71,6 +75,11 @@ __all__ = [
     "CaseDetailView",
     "CaseListView",
     "CaseNumberCheckView",
+    # forms
+    "CaseFormListCreateView",
+    "FormCertificateGenerateView",
+    "FormDetailView",
+    "FormScannedImageUploadView",
     # dashboard
     "CertificateStatsView",
     "MyCasesView",
@@ -82,11 +91,10 @@ __all__ = [
     "CaseDraftView",
     # ocr
     "OcrUploadView",
-    "PoliceFormUploadView",
     "ServiceUnavailable",
     # previews
     "CertificatePreviewView",
     # workflow
     "CasePhaseHistoryView",
-    "CaseWorkflowView",
+    "FormWorkflowView",
 ]

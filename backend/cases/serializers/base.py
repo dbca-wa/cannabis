@@ -4,12 +4,19 @@ from rest_framework import serializers
 from defendants.serializers import DefendantTinySerializer
 from police.models import PoliceOfficer
 
-from ..models import Case
-from .bags import DrugBagSerializer
-from .certificates import CertificateSerializer
+from ..models import Case, Certificate
 from .dashboard import CasePhaseHistorySerializer
+from .forms import Priority3FormSerializer, Priority3FormTinySerializer
 
 User = get_user_model()
+
+
+def _derived_status_label(status):
+    """Return the human-readable label for a case's derived status value."""
+    try:
+        return Case.PhaseChoices(status).label
+    except ValueError:
+        return str(status)
 
 
 class UserTinySerializer(serializers.ModelSerializer):
@@ -49,7 +56,8 @@ class PoliceOfficerTinySerializer(serializers.ModelSerializer):
 class CaseListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for case lists"""
 
-    phase_display = serializers.CharField(source="get_phase_display", read_only=True)
+    derived_status = serializers.SerializerMethodField()
+    derived_status_display = serializers.SerializerMethodField()
     requesting_officer_name = serializers.CharField(
         source="requesting_officer.full_name", read_only=True
     )
@@ -72,14 +80,8 @@ class CaseListSerializer(serializers.ModelSerializer):
         source="station.name", read_only=True, default=None
     )
     certificate_id = serializers.SerializerMethodField()
-    batch_id = serializers.IntegerField(source="batch.id", read_only=True, default=None)
-    batch_number = serializers.CharField(
-        source="batch.batch_number", read_only=True, default=None
-    )
-    batch_invoice_raised_number = serializers.CharField(
-        source="batch.invoice_raised_number", read_only=True, default=None
-    )
-    is_batch_eligible = serializers.ReadOnlyField()
+    forms = Priority3FormTinySerializer(many=True, read_only=True)
+    forms_count = serializers.SerializerMethodField()
     bags_count = serializers.SerializerMethodField()
     certificates_count = serializers.SerializerMethodField()
     defendants_count = serializers.SerializerMethodField()
@@ -91,8 +93,8 @@ class CaseListSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "case_number",
-            "phase",
-            "phase_display",
+            "derived_status",
+            "derived_status_display",
             "received",
             "requesting_officer_name",
             "requesting_officer_rank",
@@ -102,10 +104,8 @@ class CaseListSerializer(serializers.ModelSerializer):
             "submitting_officer_station",
             "station_name",
             "certificate_id",
-            "batch_id",
-            "batch_number",
-            "batch_invoice_raised_number",
-            "is_batch_eligible",
+            "forms",
+            "forms_count",
             "bags_count",
             "certificates_count",
             "defendants_count",
@@ -114,11 +114,20 @@ class CaseListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
+    def get_derived_status(self, obj):
+        return str(obj.derived_status)
+
+    def get_derived_status_display(self, obj):
+        return _derived_status_label(obj.derived_status)
+
+    def get_forms_count(self, obj):
+        return obj.forms.count()
+
     def get_bags_count(self, obj):
-        return obj.bags.count()
+        return obj.bag_count
 
     def get_certificates_count(self, obj):
-        return obj.certificates.count()
+        return Certificate.objects.filter(form__case=obj).count()
 
     def get_defendants_count(self, obj):
         return obj.defendants.count()
@@ -139,17 +148,21 @@ class CaseListSerializer(serializers.ModelSerializer):
         return names
 
     def get_certificate_id(self, obj):
-        """Return ID of the first certificate that has a generated PDF."""
-        cert = obj.certificates.first()
-        if cert and cert.pdf_file:
-            return cert.pk
-        return None
+        """Return the id of the first certificate on this case with a PDF."""
+        certificate = (
+            Certificate.objects.filter(form__case=obj)
+            .exclude(pdf_file="")
+            .order_by("created_at")
+            .first()
+        )
+        return certificate.pk if certificate else None
 
 
 class CaseSerializer(serializers.ModelSerializer):
     """Complete serializer for cases"""
 
-    phase_display = serializers.CharField(source="get_phase_display", read_only=True)
+    derived_status = serializers.SerializerMethodField()
+    derived_status_display = serializers.SerializerMethodField()
 
     # Staff assignments
     approved_botanist_details = UserTinySerializer(
@@ -169,36 +182,33 @@ class CaseSerializer(serializers.ModelSerializer):
     defendants_details = DefendantTinySerializer(
         source="defendants", many=True, read_only=True
     )
-    bags = DrugBagSerializer(many=True, read_only=True)
-    certificates = CertificateSerializer(many=True, read_only=True)
+    forms = Priority3FormSerializer(many=True, read_only=True)
     phase_history = CasePhaseHistorySerializer(many=True, read_only=True)
 
-    # Batching
-    batch_id = serializers.IntegerField(source="batch.id", read_only=True, default=None)
-    batch_number = serializers.CharField(
-        source="batch.batch_number", read_only=True, default=None
-    )
-    batch_invoice_raised_number = serializers.CharField(
-        source="batch.invoice_raised_number", read_only=True, default=None
-    )
-    is_batch_eligible = serializers.ReadOnlyField()
+    # Per-case counts
+    forms_count = serializers.SerializerMethodField()
+    bags_count = serializers.SerializerMethodField()
+    certificates_count = serializers.SerializerMethodField()
 
     # Computed properties
     cannabis_present = serializers.ReadOnlyField()
     bags_received = serializers.ReadOnlyField()
     total_plants = serializers.ReadOnlyField()
 
-    # Optional stored Priority 3 form (read-only URL)
-    police_form_url = serializers.SerializerMethodField()
+    def get_derived_status(self, obj):
+        return str(obj.derived_status)
 
-    def get_police_form_url(self, obj):
-        """Return the stored police-form URL, or None if not set."""
-        if obj.police_form:
-            try:
-                return obj.police_form.url
-            except ValueError:
-                return None
-        return None
+    def get_derived_status_display(self, obj):
+        return _derived_status_label(obj.derived_status)
+
+    def get_forms_count(self, obj):
+        return obj.forms.count()
+
+    def get_bags_count(self, obj):
+        return obj.bag_count
+
+    def get_certificates_count(self, obj):
+        return Certificate.objects.filter(form__case=obj).count()
 
     class Meta:
         model = Case
@@ -206,11 +216,9 @@ class CaseSerializer(serializers.ModelSerializer):
             "id",
             "case_number",
             "received",
-            "phase",
-            "phase_display",
-            "security_movement_envelope",
+            "derived_status",
+            "derived_status_display",
             "internal_comments",
-            "additional_notes",
             # Staff assignments
             "approved_botanist",
             "approved_botanist_details",
@@ -224,23 +232,16 @@ class CaseSerializer(serializers.ModelSerializer):
             "defendants",
             "defendants_details",
             # Related objects
-            "bags",
-            "certificates",
+            "forms",
             "phase_history",
-            # Batching
-            "batch_id",
-            "batch_number",
-            "batch_invoice_raised_number",
-            "is_batch_eligible",
+            # Per-case counts
+            "forms_count",
+            "bags_count",
+            "certificates_count",
             # Computed properties
             "cannabis_present",
             "bags_received",
             "total_plants",
-            # Police form
-            "police_form_url",
-            # Workflow timestamps
-            "certificates_generated_at",
-            "completed_at",
             # Audit fields
             "created_at",
             "updated_at",
@@ -249,9 +250,4 @@ class CaseSerializer(serializers.ModelSerializer):
             "id",
             "created_at",
             "updated_at",
-            "cannabis_present",
-            "bags_received",
-            "total_plants",
-            "phase_display",
-            "police_form_url",
         ]

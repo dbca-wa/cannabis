@@ -147,9 +147,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		onSuccess: async (newUser) => {
 			await invalidateRelatedQueries(queryClient, "users");
 
-			toast.success(
-				`Invitation sent to "${newUser.external_user_data.full_name}" successfully!`
-			);
+			toast.success(`Invitation sent to "${newUser.email}" successfully!`);
 			logger.info("User invitation sent via hook", {
 				userId: newUser.id,
 				email: newUser.email,

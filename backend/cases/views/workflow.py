@@ -1,71 +1,46 @@
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
+from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
 
 from users.permissions import HasAppAccess
 
-from ..models import Case, CasePhaseHistory
+from ..models import CasePhaseHistory, Priority3Form
 
 
-class CaseWorkflowView(APIView):
+class FormWorkflowView(APIView):
     """
-    POST: Trigger workflow actions for cases.
+    POST: Advance a Priority 3 form to its next workflow phase.
     """
 
     permission_classes = [HasAppAccess]
 
     def post(self, request, pk):
         try:
-            submission = Case.objects.get(pk=pk)
-        except Case.DoesNotExist:
-            raise NotFound("Case not found.")
+            form = Priority3Form.objects.select_related("case").get(pk=pk)
+        except Priority3Form.DoesNotExist:
+            raise NotFound("Priority 3 form not found.")
 
-        # Complete cases are read-only for non-admins (server-side guard).
-        from ..permissions import ensure_case_editable
+        # Completed forms are read-only for non-admins (server-side guard).
+        from ..permissions import ensure_form_editable
 
-        ensure_case_editable(submission, request.user)
+        ensure_form_editable(form, request.user)
 
         action = request.data.get("action")
-
-        if action == "advance_phase":
-            return self.advance_phase(request, submission)
-        elif action == "generate_certificate":
-            return self.generate_certificate(request, submission)
-        else:
+        if action != "advance_phase":
             raise ValidationError("Invalid action.")
 
-    def advance_phase(self, request, submission):
-        """Advance case to next phase using the workflow service."""
-        from ..services import advance_submission_phase
+        from ..services import WorkflowService
 
-        new_phase = advance_submission_phase(submission, request.user)
+        new_phase = WorkflowService.advance_form(form, request.user)
 
         return Response(
             {
-                "message": f"Case advanced to {submission.get_phase_display()}",
+                "message": f"Form advanced to {form.get_phase_display()}",
                 "new_phase": new_phase,
             },
             status=HTTP_200_OK,
-        )
-
-    def generate_certificate(self, request, submission):
-        """Generate certificate PDFs for the case (one per bag group)."""
-        from ..services import CertificateService
-
-        groups = request.data.get("groups")
-        group_notes = request.data.get("group_notes")
-        certificates = CertificateService.generate_certificates(
-            submission, request.user, groups=groups, group_notes=group_notes
-        )
-
-        return Response(
-            {
-                "message": "Certificates generated successfully",
-                "certificate_numbers": [c.certificate_number for c in certificates],
-            },
-            status=HTTP_201_CREATED,
         )
 
 

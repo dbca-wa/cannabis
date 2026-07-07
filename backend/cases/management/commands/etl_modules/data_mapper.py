@@ -386,7 +386,7 @@ class CannabisDataMapper:
     # ------------------------------------------------------------------
 
     def _get_additional_notes(self, json_record: Dict[str, Any]) -> Optional[str]:
-        """Extract Section C 'other matters' content → Case.additional_notes."""
+        """Extract Section C 'other matters' content from the legacy record."""
         raw = json_record.get("other_matters")
         value = self._unwrap_json_field(raw, "other_matters")
         if value and isinstance(value, str) and value.strip():

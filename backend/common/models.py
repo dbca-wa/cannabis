@@ -193,12 +193,13 @@ class SystemSettings(models.Model):
         return obj
 
     def get_next_certificate_number(self):
-        """Generate and return next certificate number"""
-        year = datetime.now().year
-        cert_num = f"CRT{year}-{self.certificate_counter:03d}"
+        """Generate and return the next certificate number in R{nnnnnn} format.
+
+        Always 6 digits zero-padded (e.g., R000001, R000032, R005000).
+        """
         self.certificate_counter += 1
         self.save(update_fields=["certificate_counter"])
-        return cert_num
+        return f"R{self.certificate_counter:06d}"
 
     def get_next_batch_number(self):
         """Generate and return next batch number"""

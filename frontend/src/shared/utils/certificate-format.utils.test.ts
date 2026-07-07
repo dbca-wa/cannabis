@@ -74,7 +74,7 @@ describe("certificate-format.utils", () => {
 					{ content_type_display: "Plant Material" },
 					{ content_type_display: "Seed" },
 				])
-			).toBe("quantity of Plant Material, Seed");
+			).toBe("quantity of Plant Material and Seed");
 		});
 	});
 
