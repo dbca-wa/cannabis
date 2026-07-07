@@ -31,13 +31,16 @@ export interface PhaseHistoryEntry {
 }
 
 // Complete Case (matches CaseSerializer)
+// A case owns the shared base data for all of its Priority 3 forms. The
+// workflow phase, drug bags, certificates, and scanned image now live on the
+// forms, so the case exposes a derived status and per-case counts instead.
 export interface Case {
 	id: number;
 	case_number: string;
 	received: string;
-	phase: CasePhase;
-	phase_display: string;
-	security_movement_envelope: string;
+	/** Aggregated status across the case's forms (least-advanced non-complete) */
+	derived_status: CasePhase;
+	derived_status_display: string;
 	internal_comments: string | null;
 
 	// Staff assignments (foreign key IDs)
@@ -58,27 +61,21 @@ export interface Case {
 	defendants: number[];
 	defendants_details: DefendantTiny[];
 
-	// Related objects
-	bags: DrugBag[];
-	certificates: Certificate[];
-
-	// Batching
-	batch_id: number | null;
-	batch_number: string | null;
-	batch_invoice_raised_number: string | null;
-	is_batch_eligible: boolean;
+	// Priority 3 forms — each owns its bags, scanned image, and certificate
+	forms: Priority3Form[];
 
 	// Phase history (audit trail of all phase transitions)
 	phase_history: PhaseHistoryEntry[];
+
+	// Per-case counts (derived from the case's forms)
+	forms_count: number;
+	bags_count: number;
+	certificates_count: number;
 
 	// Computed properties
 	cannabis_present: boolean;
 	bags_received: number;
 	total_plants: number;
-
-	// Workflow timestamps
-	certificates_generated_at: string | null;
-	completed_at: string | null;
 
 	// Audit fields
 	created_at: string;
@@ -89,30 +86,98 @@ export interface Case {
 export interface CaseTiny {
 	id: number;
 	case_number: string;
-	phase: CasePhase;
-	phase_display: string;
+	derived_status: CasePhase;
+	derived_status_display: string;
 	received: string;
 	requesting_officer_name: string | null;
+	requesting_officer_rank: string | null;
+	requesting_officer_station: string | null;
 	submitting_officer_name: string | null;
+	submitting_officer_rank: string | null;
+	submitting_officer_station: string | null;
+	station_name: string | null;
+	certificate_id: number | null;
+	// Each form's summary, including its single certificate and bag count
+	forms: Priority3FormTiny[];
+	forms_count: number;
 	bags_count: number;
 	certificates_count: number;
 	defendants_count: number;
+	defendant_names: string[];
 	cannabis_present: boolean;
-	certificate_id: number | null;
-	batch_id: number | null;
-	batch_number: string | null;
-	batch_invoice_raised_number: string | null;
-	is_batch_eligible: boolean;
 	created_at: string;
 }
 
-// Case creation request (matches CaseCreateSerializer)
+// Priority 3 form (matches Priority3FormSerializer)
+// A form belongs to exactly one case, owns at most five drug bags and its own
+// scanned image, and produces exactly one certificate.
+export interface Priority3Form {
+	id: number;
+	case: number;
+	scanned_image_url: string | null;
+	security_movement_envelope: string;
+	additional_notes: string | null;
+	phase: CasePhase;
+	phase_display: string;
+	bags: DrugBag[];
+	certificate: Certificate | null;
+	marked_ready: boolean;
+	certificates_generated_at: string | null;
+	completed_at: string | null;
+}
+
+// Lightweight Priority 3 form for nesting in case listings
+// (matches Priority3FormTinySerializer — bag count instead of the full bag list)
+export interface Priority3FormTiny {
+	id: number;
+	case: number;
+	scanned_image_url: string | null;
+	security_movement_envelope: string;
+	phase: CasePhase;
+	phase_display: string;
+	bags_count: number;
+	certificate: Certificate | null;
+	marked_ready: boolean;
+	certificates_generated_at: string | null;
+	completed_at: string | null;
+}
+
+// Priority 3 form creation request (matches Priority3FormSerializer writable fields)
+export interface Priority3FormCreateRequest {
+	security_movement_envelope?: string;
+}
+
+// Priority 3 form update request (partial update of the form's editable fields)
+export interface Priority3FormUpdateRequest {
+	security_movement_envelope?: string;
+	additional_notes?: string | null;
+	marked_ready?: boolean;
+}
+
+// Generate a form's single certificate (optional Section C note)
+export interface FormCertificateGenerateRequest {
+	section_c_note?: string | null;
+}
+
+// Advance a form to its next workflow phase
+export interface FormWorkflowRequest {
+	action: "advance_phase";
+}
+
+// Response from advancing a form's workflow phase
+export interface FormWorkflowResponse {
+	message: string;
+	new_phase: CasePhase;
+}
+
+// Case creation request (matches CaseCreateSerializer — base data only)
 export interface CaseCreateRequest {
 	case_number: string;
 	received: string;
-	security_movement_envelope: string;
 	requesting_officer?: number | null;
 	submitting_officer?: number | null;
+	station?: number | null;
+	approved_botanist?: number | null;
 	defendants?: number[];
 }
 
@@ -125,11 +190,10 @@ export interface CaseDraft {
 	updated_at: string;
 }
 
-// Case update request (matches CaseUpdateSerializer)
+// Case update request (matches CaseUpdateSerializer — editable base data)
 export interface CaseUpdateRequest {
 	case_number?: string;
 	received?: string;
-	security_movement_envelope?: string;
 	internal_comments?: string | null;
 	approved_botanist?: number | null;
 	finance_officer?: number | null;

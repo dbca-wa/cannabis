@@ -18,6 +18,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
     is_authenticated = serializers.SerializerMethodField()
+    requires_password_change = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -38,6 +39,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "is_authenticated",
+            "requires_password_change",
             "preferences",
         ]
         read_only_fields = [
@@ -45,6 +47,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "is_authenticated",
+            "requires_password_change",
             "full_name",
             "initials",
             "role_display",
@@ -80,6 +83,10 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
         """Always true for this serializer (user is authenticated if we're serializing them)"""
         return True
 
+    def get_requires_password_change(self, obj):
+        """True if the user has never set their own password (invited users)."""
+        return obj.password_last_changed is None
+
 
 class UserJWTTokenSerializer(serializers.Serializer):
     """
@@ -104,6 +111,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     initials = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
     is_authenticated = serializers.SerializerMethodField()
+    requires_password_change = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -120,7 +128,12 @@ class UserBasicSerializer(serializers.ModelSerializer):
             "is_staff",
             "is_superuser",
             "is_active",
+            "requires_password_change",
         ]
+
+    def get_requires_password_change(self, obj):
+        """True if the user has never set their own password (invited users)."""
+        return obj.password_last_changed is None
 
     def get_full_name(self, obj):
         if obj.given_names and obj.last_name:

@@ -4,7 +4,13 @@ from ..models import Case
 
 
 class CaseCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating cases"""
+    """Serializer for creating cases (base data only).
+
+    A case owns the shared base data — police reference, received date,
+    defendants, officers, and station — for all of its Priority 3 forms. Bags,
+    the scanned image, and the security movement envelope belong to a form and
+    are captured when a form is added, not at case creation.
+    """
 
     class Meta:
         model = Case
@@ -12,10 +18,11 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             "id",
             "case_number",
             "received",
-            "security_movement_envelope",
             "requesting_officer",
             "submitting_officer",
+            "station",
             "defendants",
+            "approved_botanist",
         ]
         read_only_fields = ["id"]
 
@@ -24,7 +31,7 @@ class CaseCreateSerializer(serializers.ModelSerializer):
         Validate case data.
         Required fields must be present and not blank.
         """
-        required_fields = ["case_number", "security_movement_envelope"]
+        required_fields = ["case_number"]
         for field in required_fields:
             value = data.get(field)
             if not value or (isinstance(value, str) and not value.strip()):

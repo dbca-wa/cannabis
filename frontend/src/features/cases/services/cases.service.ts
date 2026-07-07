@@ -84,22 +84,40 @@ export const deleteCase = async (id: number): Promise<void> => {
 	await apiClient.delete(ENDPOINTS.CASES.DELETE(id));
 };
 
+/** A matched existing case returned by the police-reference check. */
+export interface MatchedCase {
+	id: number;
+	case_number: string;
+}
+
+/** Result of checking whether a police reference already identifies a case. */
+export interface CaseNumberCheckResult {
+	exists: boolean;
+	case: MatchedCase | null;
+}
+
 /**
- * Check whether a police reference (case number) already exists on another case.
- * Pass excludeId when editing an existing case so it doesn't match itself.
+ * Check whether a police reference (case number) already identifies a case.
+ * The comparison is case-insensitive and trims surrounding whitespace on the
+ * backend. Returns the matched case (id + number) so the caller can route the
+ * user to it. Pass excludeId when editing an existing case so it doesn't match
+ * itself.
  */
 export const checkCaseNumberExists = async (
 	caseNumber: string,
 	excludeId?: number | null
-): Promise<boolean> => {
+): Promise<CaseNumberCheckResult> => {
 	const params = new URLSearchParams({ case_number: caseNumber });
 	if (excludeId != null) {
 		params.append("exclude_id", String(excludeId));
 	}
-	const response = await apiClient.get<{ exists: boolean }>(
+	const response = await apiClient.get<CaseNumberCheckResult>(
 		`${ENDPOINTS.CASES.CHECK_NUMBER}?${params.toString()}`
 	);
-	return response.exists;
+	return {
+		exists: response.exists,
+		case: response.case ?? null,
+	};
 };
 
 /**

@@ -37,6 +37,7 @@ class ExtractedItem:
 class ExtractionResult:
     """Complete extraction result from a police form."""
 
+    police_reference: ExtractedField = field(default_factory=ExtractedField)
     date: ExtractedField = field(default_factory=ExtractedField)
     seizure_date: ExtractedField = field(default_factory=ExtractedField)
     security_movement_envelope: ExtractedField = field(default_factory=ExtractedField)

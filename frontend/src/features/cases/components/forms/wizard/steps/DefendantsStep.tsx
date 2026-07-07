@@ -141,16 +141,6 @@ export const DefendantsStep = ({
 								Add
 							</Button>
 						</div>
-						{isTouched && error && (
-							<p
-								id="defendants-error"
-								className="text-sm text-red-600"
-								role="alert"
-								aria-live="polite"
-							>
-								{error}
-							</p>
-						)}
 						<p className="text-xs text-muted-foreground">
 							Search for an existing defendant, or click Add to create a new
 							one.
@@ -202,7 +192,7 @@ export const DefendantsStep = ({
 												type="button"
 												variant="outline"
 												size="sm"
-												className="mt-3 border-amber-400 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+												className="mt-3 border-amber-400 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-900 dark:hover:bg-amber-950/30"
 												onClick={() => onDefendantUnknownChange(true)}
 											>
 												<UserX className="h-4 w-4 mr-2" />
@@ -258,6 +248,18 @@ export const DefendantsStep = ({
 							</div>
 						)}
 					</div>
+
+					{/* Validation error — shown at the bottom so users see the "Defendant is unknown" button above */}
+					{isTouched && error && (
+						<p
+							id="defendants-error"
+							className="text-sm text-red-600"
+							role="alert"
+							aria-live="polite"
+						>
+							{error}
+						</p>
+					)}
 				</div>
 			</SectionCard>
 

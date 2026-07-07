@@ -3,10 +3,10 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.exceptions import NotFound
+from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
+from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
 
 from users.permissions import HasAppAccess
@@ -17,55 +17,47 @@ from ..services import CertificateService
 from ..services.pdf_test_service import TestPDFService
 
 
-class AllCertificatesListView(ListCreateAPIView):
-    """
-    GET: List all certificates across all cases.
-    POST: Create a new certificate (requires submission ID in request body).
+class AllCertificatesListView(ListAPIView):
+    """GET: list all certificates across all cases.
+
+    Certificates are created by generating a form's certificate, not through
+    this endpoint. Supports a free-text search and optional case/form filters.
     """
 
     serializer_class = CertificateSerializer
     permission_classes = [HasAppAccess]
 
     def get_queryset(self):
-        queryset = Certificate.objects.select_related("submission").order_by(
+        queryset = Certificate.objects.select_related("form", "form__case").order_by(
             "-created_at"
         )
         search = self.request.query_params.get("search")
-        submission = self.request.query_params.get("submission")
+        case_id = self.request.query_params.get("case")
+        form_id = self.request.query_params.get("form")
         if search:
             queryset = queryset.filter(
                 Q(certificate_number__icontains=search)
-                | Q(submission__case_number__icontains=search)
+                | Q(form__case__case_number__icontains=search)
             )
-        if submission:
-            queryset = queryset.filter(submission_id=submission)
+        if case_id:
+            queryset = queryset.filter(form__case_id=case_id)
+        if form_id:
+            queryset = queryset.filter(form_id=form_id)
         return queryset
 
 
-class CertificateListView(ListCreateAPIView):
-    """
-    GET: List certificates for a case
-    POST: Create new certificate
-    """
+class CertificateListView(ListAPIView):
+    """GET: list the certificates for a case, reached through its forms."""
 
     serializer_class = CertificateSerializer
     permission_classes = [HasAppAccess]
 
     def get_queryset(self):
         pk = self.kwargs.get("pk")
-        return Certificate.objects.filter(submission_id=pk).order_by("-created_at")
-
-    def perform_create(self, serializer):
-        pk = self.kwargs.get("pk")
-        try:
-            submission = Case.objects.get(pk=pk)
-        except Case.DoesNotExist:
-            raise ValidationError("Case not found")
-
-        certificate = serializer.save(submission=submission)
-        settings.LOGGER.info(
-            f"User {self.request.user} created certificate "
-            f"{certificate.certificate_number}"
+        return (
+            Certificate.objects.filter(form__case_id=pk)
+            .select_related("form", "form__case")
+            .order_by("-created_at")
         )
 
 
@@ -78,7 +70,7 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
 
     serializer_class = CertificateSerializer
     permission_classes = [HasAppAccess]
-    queryset = Certificate.objects.all()
+    queryset = Certificate.objects.select_related("form", "form__case")
 
     def perform_update(self, serializer):
         certificate = serializer.save()
@@ -144,32 +136,6 @@ class GenerateTestCertificateView(APIView):
         return HttpResponse(pdf_bytes, content_type="application/pdf")
 
 
-class CertificateGenerateView(APIView):
-    """Generate certificate PDFs for a case (one per bag group, max 5 bags each).
-
-    POST /cases/{pk}/certificates/generate
-
-    Optional body: {"groups": [[bagId, ...], ...]} to control grouping.
-    Without groups, bags are auto-grouped into chunks of five.
-    """
-
-    permission_classes = [HasAppAccess]
-
-    def post(self, request, pk):
-        submission = get_object_or_404(Case, pk=pk)
-        groups = request.data.get("groups")
-        group_notes = request.data.get("group_notes")
-
-        certificates = CertificateService.generate_certificates(
-            submission, request.user, groups=groups, group_notes=group_notes
-        )
-
-        serializer = CertificateSerializer(
-            certificates, many=True, context={"request": request}
-        )
-        return Response(serializer.data, status=HTTP_201_CREATED)
-
-
 class CertificatePdfView(APIView):
     """Download a certificate PDF scoped to a case.
 
@@ -179,10 +145,8 @@ class CertificatePdfView(APIView):
     permission_classes = [HasAppAccess]
 
     def get(self, request, pk, certificate_id):
-        submission = get_object_or_404(Case, pk=pk)
-        certificate = get_object_or_404(
-            Certificate, pk=certificate_id, submission=submission
-        )
+        case = get_object_or_404(Case, pk=pk)
+        certificate = CertificateService.get_certificate_for_case(case, certificate_id)
         pdf_file, filename = _certificate_pdf(certificate)
         response = HttpResponse(pdf_file.read(), content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -198,10 +162,8 @@ class CertificateRegenerateView(APIView):
     permission_classes = [HasAppAccess]
 
     def post(self, request, pk, certificate_id):
-        submission = get_object_or_404(Case, pk=pk)
-        certificate = get_object_or_404(
-            Certificate, pk=certificate_id, submission=submission
-        )
+        case = get_object_or_404(Case, pk=pk)
+        certificate = CertificateService.get_certificate_for_case(case, certificate_id)
         certificate = CertificateService.regenerate_certificate_pdf(certificate)
         serializer = CertificateSerializer(certificate, context={"request": request})
         return Response(serializer.data, status=HTTP_200_OK)

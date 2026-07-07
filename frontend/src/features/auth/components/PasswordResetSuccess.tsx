@@ -75,7 +75,7 @@ export const PasswordResetSuccess = ({
 	};
 
 	return (
-		<Card className="w-full max-w-md">
+		<Card className="w-full max-w-lg px-4">
 			<CardHeader>
 				<CardTitle className="text-2xl text-center">
 					<CannabisLogo shouldAnimate />

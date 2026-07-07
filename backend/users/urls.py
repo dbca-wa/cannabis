@@ -49,6 +49,17 @@ urlpatterns = [
         views.InviteUserView.as_view(),
         name="invite_user",
     ),
+    # Invite management (admin)
+    path(
+        "invites",
+        views.InviteListView.as_view(),
+        name="invite_list",
+    ),
+    path(
+        "invites/<int:pk>/revoke",
+        views.InviteRevokeView.as_view(),
+        name="invite_revoke",
+    ),
     # Test invitation email (renders + sends a live invite without records)
     path(
         "auth/test-invite-email",

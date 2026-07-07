@@ -44,13 +44,14 @@ const PasswordUpdate = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const location = useLocation();
-	const { user, isAuthenticated } = useAuth();
+	const { user, isAuthenticated, isLoading } = useAuth();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Check if this is a first-time password setup (from invitation or reset)
 	const isFirstTime =
 		searchParams.get("firstTime") === "true" ||
 		searchParams.get("reset") === "true" ||
+		searchParams.get("fromReset") === "true" ||
 		location.state?.isFirstTime === true;
 
 	// Check if coming from invitation activation
@@ -58,7 +59,9 @@ const PasswordUpdate = () => {
 	const temporaryPassword = location.state?.temporaryPassword;
 
 	// Check if coming from reset code verification
-	const fromResetCode = location.state?.fromResetCode === true;
+	const fromResetCode =
+		searchParams.get("fromReset") === "true" ||
+		location.state?.fromResetCode === true;
 
 	const form = useForm<PasswordUpdateFormData>({
 		resolver: zodResolver(passwordUpdateSchema),
@@ -81,15 +84,15 @@ const PasswordUpdate = () => {
 		watchedConfirmPassword
 	);
 
-	// Redirect if not authenticated
+	// Redirect if not authenticated (but wait for auth state to load first)
 	useEffect(() => {
-		if (!isAuthenticated) {
+		if (!isLoading && !isAuthenticated) {
 			logger.warn(
 				"Unauthenticated user attempted to access password update page"
 			);
 			navigate("/auth/login");
 		}
-	}, [isAuthenticated, navigate]);
+	}, [isAuthenticated, isLoading, navigate]);
 
 	// Clear current password error when user changes the current password
 	useEffect(() => {
@@ -149,8 +152,9 @@ const PasswordUpdate = () => {
 			logger.info("Password updated successfully", { userId: user.id });
 			showSuccess("Password updated successfully!");
 
-			// Navigate to home page after successful password update
-			navigate("/");
+			// Hard navigation to force a fresh /whoami fetch — ensures the guard
+			// sees requires_password_change is now false after the update.
+			window.location.href = "/";
 		} catch (error) {
 			// Use enhanced error handling
 			errorHandlingService.handleError(error, {

@@ -48,24 +48,36 @@ export const ForgotPasswordForm = ({
 
 		try {
 			// Use proper API client (no auth required for forgot password)
-			await apiClient.postPublic<{ message: string }>(
-				ENDPOINTS.AUTH.FORGOT_PASSWORD,
-				{
-					email: values.email,
-				}
-			);
+			const response = await apiClient.postPublic<{
+				message: string;
+				is_duplicate?: boolean;
+			}>(ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+				email: values.email,
+			});
 
 			logger.info("Password reset code sent successfully", {
 				email: values.email,
+				isDuplicate: response.is_duplicate,
 			});
-			toast.success("Reset code sent! Redirecting...");
 
-			// Navigate to success page with email in state
-			navigate("/auth/reset-success", {
-				state: {
-					email: values.email,
-				},
-			});
+			if (response.is_duplicate) {
+				toast.success(
+					"A reset code was already sent. Redirecting to code entry..."
+				);
+				navigate("/auth/reset-code", {
+					state: {
+						email: values.email,
+						isDuplicate: true,
+					},
+				});
+			} else {
+				toast.success("Reset code sent! Redirecting...");
+				navigate("/auth/reset-success", {
+					state: {
+						email: values.email,
+					},
+				});
+			}
 
 			// Call success callback if provided (for modal usage)
 			onSuccess?.();

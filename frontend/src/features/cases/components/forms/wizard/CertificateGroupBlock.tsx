@@ -28,7 +28,6 @@ interface CertificateGroupBlockProps {
 	bags: DrugBag[];
 	/** Sizes of every group, used to gate move targets at the 5-bag cap */
 	groupSizes: number[];
-	allTags: string[];
 	onMoveBag: (bagId: number, targetIndex: number) => void;
 	onUpdateBag: (
 		bagId: number,
@@ -61,7 +60,6 @@ export const CertificateGroupBlock = ({
 	groupIndex,
 	bags,
 	groupSizes,
-	allTags,
 	onMoveBag,
 	onUpdateBag,
 	onCreateAssessment,
@@ -194,7 +192,6 @@ export const CertificateGroupBlock = ({
 						<div data-bag-card className="min-w-0 flex-1">
 							<BagCard
 								bag={bag}
-								allTags={allTags}
 								onUpdateBag={onUpdateBag}
 								onCreateAssessment={onCreateAssessment}
 								onUpdateAssessment={onUpdateAssessment}

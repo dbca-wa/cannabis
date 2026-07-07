@@ -20,28 +20,28 @@ const QUICKLINK_PHASES: QuicklinkPhase[] = [
 	{
 		key: "assessment",
 		label: "Assessment",
-		description: "Awaiting Assessment",
+		description: "Cases in assessment stage",
 		icon: FlaskConical,
 		accent: "from-emerald-500 to-teal-500",
 	},
 	{
 		key: "unsigned_generation",
 		label: "Unsigned Certificate",
-		description: "Awaiting Certificate",
+		description: "Cases awaiting certificate",
 		icon: FileText,
 		accent: "from-blue-500 to-indigo-500",
 	},
 	{
 		key: "batching",
 		label: "Batching",
-		description: "Ready for Batching",
+		description: "Cases ready for batching",
 		icon: Boxes,
 		accent: "from-violet-500 to-purple-500",
 	},
 	{
 		key: "in_batch",
 		label: "In Batch",
-		description: "Awaiting Invoice",
+		description: "Cases in a batch",
 		icon: PackageCheck,
 		accent: "from-amber-500 to-orange-500",
 	},
@@ -52,7 +52,7 @@ export const QuicklinkCards = () => {
 
 	if (isLoading) {
 		return (
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 				{Array.from({ length: 4 }).map((_, i) => (
 					<Skeleton key={i} className="h-[100px] w-full rounded-xl" />
 				))}
@@ -72,9 +72,16 @@ export const QuicklinkCards = () => {
 	}
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+		<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 			{QUICKLINK_PHASES.map((phase, index) => {
-				const count = data[phase.key as keyof typeof data] ?? 0;
+				const phaseData = data[phase.key as keyof typeof data] as
+					{ cases: number; forms: number } | number | undefined;
+				const caseCount =
+					typeof phaseData === "object"
+						? (phaseData?.cases ?? 0)
+						: (phaseData ?? 0);
+				const formCount =
+					typeof phaseData === "object" ? (phaseData?.forms ?? 0) : 0;
 				const Icon = phase.icon;
 
 				return (
@@ -101,13 +108,15 @@ export const QuicklinkCards = () => {
 								</div>
 								<div className="flex-1 min-w-0">
 									<div className="text-[32px] tracking-tight leading-none">
-										<CountUp to={count} />
+										<CountUp to={caseCount} />
 									</div>
 									<div className="text-[13px] font-medium mt-1">
 										{phase.label}
 									</div>
 									<div className="text-[11px] text-muted-foreground">
-										{phase.description}
+										{phase.description}. {formCount}{" "}
+										{formCount === 1 ? "form" : "forms"} belong to{" "}
+										{caseCount === 1 ? "this case" : "these cases"}.
 									</div>
 								</div>
 							</div>

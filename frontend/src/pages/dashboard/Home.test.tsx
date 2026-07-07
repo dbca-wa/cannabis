@@ -34,10 +34,10 @@ vi.mock("@/features/dash/hooks/useMonthlyThroughput", () => ({
 vi.mock("@/features/dash/hooks/usePhaseStats", () => ({
 	usePhaseStats: () => ({
 		data: {
-			assessment: 3,
-			unsigned_generation: 2,
-			batching: 1,
-			in_batch: 4,
+			assessment: { cases: 3, forms: 5 },
+			unsigned_generation: { cases: 2, forms: 3 },
+			batching: { cases: 1, forms: 2 },
+			in_batch: { cases: 4, forms: 6 },
 		},
 		isLoading: false,
 		isError: false,

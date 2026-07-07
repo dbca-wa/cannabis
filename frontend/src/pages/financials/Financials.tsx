@@ -4,24 +4,26 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Navigate } from "react-router";
 import SettingsContent from "@/features/admin/components/SettingsContent";
 
-const Financials = () => {
+const Settings = () => {
 	const { user } = useAuth();
-	useDocumentTitle("Financials");
+	useDocumentTitle("Settings");
 
-	// Access guard: staff or superuser only
-	if (!user?.is_staff && !user?.is_superuser) {
+	const hasAccess = !!(
+		user?.is_staff ||
+		user?.is_superuser ||
+		user?.role === "botanist" ||
+		user?.role === "finance"
+	);
+	if (!hasAccess) {
 		return <Navigate to="/" replace />;
 	}
 
 	return (
 		<>
-			<PageHeader
-				title="Financials"
-				subtitle="Cost settings and pricing configuration."
-			/>
+			<PageHeader title="Settings" subtitle="App-wide settings." />
 			<SettingsContent />
 		</>
 	);
 };
 
-export default Financials;
+export default Settings;

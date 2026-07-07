@@ -77,16 +77,11 @@ const AuthLayout = observer(() => {
 		<NavigationProvider>
 			<div
 				className={cn(
-					"flex h-screen w-screen items-center justify-center",
+					"flex min-h-screen w-screen items-center justify-center p-4",
 					"bg-[#fafbfb] dark:bg-background"
 				)}
 			>
-				<div
-					className={cn(
-						"w-full max-w-md p-8 space-y-8 rounded-xl bg-card dark:bg-card",
-						"border border-border shadow-lg"
-					)}
-				>
+				<div className="w-full max-w-xl">
 					<Outlet />
 				</div>
 			</div>

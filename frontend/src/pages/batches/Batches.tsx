@@ -460,7 +460,7 @@ const Batches = () => {
 													onClick={() => handleDownload(batch)}
 												>
 													<Download className="mr-2 h-4 w-4" />
-													Re-download package
+													Download package
 												</DropdownMenuItem>
 												<DropdownMenuItem
 													className="cursor-pointer text-red-600"
@@ -496,6 +496,58 @@ const Batches = () => {
 									{detailBatch.bag_count} bag(s)
 								</DialogDescription>
 							</DialogHeader>
+
+							{/* Primary actions for this batch */}
+							<div className="flex flex-wrap items-center gap-2 py-3 border-b">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => {
+										handleDownload(detailBatch);
+									}}
+								>
+									<Download className="mr-2 h-4 w-4" />
+									Download Package
+								</Button>
+								{detailBatch.invoice_raised_number ? (
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => {
+											setUnsetTarget(detailBatch);
+											setDetailBatch(null);
+										}}
+									>
+										<RotateCcw className="mr-2 h-4 w-4" />
+										Unset Invoice ({detailBatch.invoice_raised_number})
+									</Button>
+								) : (
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => {
+											setInvoiceBatch(detailBatch);
+											setInvoiceNumber("");
+											setDetailBatch(null);
+										}}
+									>
+										<Receipt className="mr-2 h-4 w-4" />
+										Set Invoice Number
+									</Button>
+								)}
+								<Button
+									size="sm"
+									variant="destructive"
+									onClick={() => {
+										setDeleteTarget(detailBatch);
+										setDetailBatch(null);
+									}}
+								>
+									<Trash2 className="mr-2 h-4 w-4" />
+									Delete Batch
+								</Button>
+							</div>
+
 							<BatchCostBreakdown batch={detailBatch} />
 							<div className="mt-4">
 								<p className="text-sm font-medium mb-1">Certificate numbers</p>

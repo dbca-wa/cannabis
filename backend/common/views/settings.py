@@ -54,16 +54,9 @@ class SystemSettingsView(APIView):
     throttle_classes = [SystemSettingsRateThrottle]
 
     def get(self, request):
-        # Check access — staff or superuser can view settings
-        if not (request.user.is_staff or request.user.is_superuser):
-            logger.warning(
-                f"Non-staff user {request.user.email} (ID: {request.user.id}) "
-                f"attempted to access system settings. "
-                f"is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}"
-            )
-            raise PermissionDenied(
-                "Only staff or admin users can access system settings."
-            )
+        # Any user with an app role can view settings (pricing info is needed
+        # on the financials page). Roleless users are already blocked by
+        # HasAppAccess on the permission_classes.
         settings = SystemSettings.load()
         environment = getattr(django_settings, "ENVIRONMENT", "local").lower()
 
@@ -71,6 +64,7 @@ class SystemSettingsView(APIView):
             "cost_per_certificate": str(settings.cost_per_certificate),
             "cost_per_bag": str(settings.cost_per_bag),
             "tax_percentage": str(settings.tax_percentage),
+            "certificate_counter": settings.certificate_counter,
             "ocr_enabled": settings.ocr_enabled,
             "environment": environment,
         }
@@ -272,6 +266,27 @@ class SystemSettingsView(APIView):
             old_values["ocr_enabled"] = settings.ocr_enabled
             settings.ocr_enabled = bool_value
             updated_fields.append("ocr_enabled")
+
+        # Validate certificate_counter field
+        if "certificate_counter" in request.data:
+            try:
+                counter_value = int(request.data["certificate_counter"])
+                if counter_value < 0:
+                    validation_errors["certificate_counter"] = (
+                        "Certificate counter must be 0 or greater"
+                    )
+                elif counter_value > 999999:
+                    validation_errors["certificate_counter"] = (
+                        "Certificate counter must not exceed 999999"
+                    )
+                else:
+                    old_values["certificate_counter"] = settings.certificate_counter
+                    settings.certificate_counter = counter_value
+                    updated_fields.append("certificate_counter")
+            except (ValueError, TypeError):
+                validation_errors["certificate_counter"] = (
+                    "Certificate counter must be a whole number"
+                )
 
         # Validate email_test_user field
         if "email_test_user" in request.data:

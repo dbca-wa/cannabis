@@ -27,3 +27,14 @@ export {
 	regenerateCertificate,
 	getCertificatePdfUrl,
 } from "./documents.service";
+export {
+	getCaseForms,
+	createCaseForm,
+	getFormById,
+	updateForm,
+	deleteForm,
+	addBagsToForm,
+	generateFormCertificate,
+	uploadFormScannedImage,
+	advanceFormPhase,
+} from "./forms.service";

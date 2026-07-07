@@ -34,25 +34,25 @@ export const WizardLayout = ({
 		);
 	}
 
+	// No preview panel — form takes full width at all breakpoints
+	if (!previewPanel) {
+		return (
+			<div className="h-full flex flex-col">
+				<div className="flex-1 overflow-y-auto">
+					<div className="max-w-4xl mx-auto">{formPanel}</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Both panels available — responsive split
 	return (
 		<div className="h-full flex flex-col">
-			{/* Main content area */}
 			<div className="flex-1 overflow-hidden">
 				{/* Ultra-wide: Side-by-side layout */}
 				<div className="hidden min-[1920px]:grid min-[1920px]:grid-cols-2 min-[1920px]:gap-8 h-full">
-					{/* Form panel — left column */}
 					<div className="overflow-y-auto pr-4">{formPanel}</div>
-
-					{/* Preview panel — right column */}
-					<div className="overflow-y-auto pl-4 border-l">
-						{/* <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 mb-4 border-b z-10">
-							<h3 className="text-lg font-semibold">Live Preview</h3>
-							<p className="text-sm text-muted-foreground">
-								See how your case will appear
-							</p>
-						</div> */}
-						{previewPanel}
-					</div>
+					<div className="overflow-y-auto pl-4 border-l">{previewPanel}</div>
 				</div>
 
 				{/* Standard: Toggle between form and preview */}
@@ -65,7 +65,6 @@ export const WizardLayout = ({
 					>
 						<div className="max-w-4xl mx-auto">{formPanel}</div>
 					</div>
-
 					<div
 						className={cn(
 							"transition-opacity duration-300",

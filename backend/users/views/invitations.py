@@ -23,6 +23,7 @@ from ..error_handlers import (
     UserFriendlyMessages,
     handle_network_errors,
 )
+from ..models import InviteRecord
 from ..permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
@@ -72,8 +73,10 @@ class ExternalUserSearchView(APIView):
 
             external_users = response.json()
 
-            # Get existing user emails to exclude them
-            existing_emails = set(User.objects.values_list("email", flat=True))
+            # Get existing user emails to exclude (only active users)
+            existing_emails = set(
+                User.objects.filter(is_active=True).values_list("email", flat=True)
+            )
 
             # Filter and format results
             filtered_results = []
@@ -180,8 +183,8 @@ class InviteUserView(APIView):
                 status_code=HTTP_400_BAD_REQUEST,
             )
 
-        # Check if user already exists
-        if User.objects.filter(email=email).exists():
+        # Check if user already exists (active users only)
+        if User.objects.filter(email=email, is_active=True).exists():
             return InvitationErrorHandler.handle_user_already_exists(email)
 
         # Check if there's already a valid invitation for this email
@@ -406,8 +409,8 @@ class InviteActivationView(APIView):
                         token_prefix, "invalid"
                     )
 
-            # Check if user already exists (safety check)
-            if User.objects.filter(email=invite_record.email).exists():
+            # Check if user already exists (safety check - active users only)
+            if User.objects.filter(email=invite_record.email, is_active=True).exists():
                 SecurityEventLogger.log_invitation_activation_failed(
                     email=invite_record.email,
                     reason="user_already_exists",
@@ -444,20 +447,38 @@ class InviteActivationView(APIView):
                 )
                 return ErrorResponseBuilder.build_internal_error_response()
 
-            # Create user account from stored external data
+            # Create user account from stored external data (or reactivate
+            # a previously soft-deleted user with the same email).
             external_data = invite_record.external_user_data
-            user = User.objects.create_user(
-                email=invite_record.email,
-                given_names=external_data.get("given_name", ""),
-                last_name=external_data.get("surname", ""),
-                role=invite_record.role,
-                password=temp_password,
-                employee_id=external_data.get("employee_id"),
-                it_asset_id=external_data.get("id"),
-                invited_by=invite_record.invited_by,
-                invitation_accepted_at=timezone.now(),
-                password_last_changed=timezone.now(),
-            )
+            existing_deleted = User.objects.filter(
+                email=invite_record.email, is_active=False
+            ).first()
+
+            if existing_deleted:
+                # Reactivate deactivated user
+                user = existing_deleted
+                user.is_active = True
+                user.given_names = external_data.get("given_name", "")
+                user.last_name = external_data.get("surname", "")
+                user.role = invite_record.role
+                user.set_password(temp_password)
+                user.employee_id = external_data.get("employee_id")
+                user.it_asset_id = external_data.get("id")
+                user.invited_by = invite_record.invited_by
+                user.password_last_changed = None
+                user.save()
+            else:
+                user = User.objects.create_user(
+                    email=invite_record.email,
+                    given_names=external_data.get("given_name", ""),
+                    last_name=external_data.get("surname", ""),
+                    role=invite_record.role,
+                    password=temp_password,
+                    employee_id=external_data.get("employee_id"),
+                    it_asset_id=external_data.get("id"),
+                    invited_by=invite_record.invited_by,
+                    invitation_accepted_at=timezone.now(),
+                )
 
             # Mark invitation as used
             invite_record.is_used = True
@@ -511,3 +532,94 @@ class InviteActivationView(APIView):
 
 
 # endregion
+
+
+class InviteListView(APIView):
+    """
+    GET: List all invitations (admin/staff only).
+    Returns pending, used, and expired invitations for management.
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request):
+        if not (request.user.is_staff or request.user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("Only administrators can view invitations.")
+
+        invites = InviteRecord.objects.select_related("invited_by").all()
+
+        data = []
+        for invite in invites:
+            data.append(
+                {
+                    "id": invite.id,
+                    "email": invite.email,
+                    "role": invite.role,
+                    "role_display": dict(User.RoleChoices.choices).get(
+                        invite.role, invite.role
+                    ),
+                    "invited_by": {
+                        "id": invite.invited_by.id,
+                        "email": invite.invited_by.email,
+                        "full_name": invite.invited_by.full_name,
+                    },
+                    "created_at": invite.created_at.isoformat(),
+                    "expires_at": invite.expires_at.isoformat(),
+                    "is_valid": invite.is_valid,
+                    "is_used": invite.is_used,
+                    "used_at": invite.used_at.isoformat() if invite.used_at else None,
+                    "is_expired": invite.is_expired,
+                    "status": (
+                        "used"
+                        if invite.is_used
+                        else (
+                            "expired"
+                            if invite.is_expired
+                            else ("revoked" if not invite.is_valid else "pending")
+                        )
+                    ),
+                }
+            )
+
+        return Response(data, status=HTTP_200_OK)
+
+
+class InviteRevokeView(APIView):
+    """
+    POST: Revoke a pending invitation (admin/staff only).
+    Sets is_valid=False so the token can no longer be used.
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def post(self, request, pk):
+        from rest_framework.exceptions import NotFound, PermissionDenied
+
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied("Only administrators can revoke invitations.")
+
+        try:
+            invite = InviteRecord.objects.get(pk=pk)
+        except InviteRecord.DoesNotExist:
+            raise NotFound("Invitation not found.")
+
+        if invite.is_used:
+            return Response(
+                {"error": "Cannot revoke an invitation that has already been used."},
+                status=HTTP_400_BAD_REQUEST,
+            )
+
+        invite.is_valid = False
+        invite.save(update_fields=["is_valid"])
+
+        logger.info(
+            f"Invitation {invite.id} for {invite.email} revoked by "
+            f"{request.user.email}"
+        )
+
+        return Response(
+            {"success": True, "message": f"Invitation for {invite.email} revoked."},
+            status=HTTP_200_OK,
+        )

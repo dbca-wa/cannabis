@@ -1,6 +1,6 @@
 from django.conf import settings
-from django.db.models import F, Q
-from django.utils import timezone
+from django.db.models import Case as CaseExpr
+from django.db.models import F, IntegerField, Min, Q, Value, When
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,15 +30,63 @@ VALID_ORDERINGS = {
     "-case_number",
     "received",
     "-received",
-    "phase",
-    "-phase",
+    "status_priority",
+    "-status_priority",
 } | _NULL_SAFE_ORDERINGS
 
 
+# Phase priority for sorting: lower number = shown first in default order.
+# Assessment (1) and Unsigned (2) are "active work" and appear at top.
+# Batching (3) and In Batch (4) are transitional.
+# Complete (5) is done. Legacy (6, via is_legacy flag) at the very bottom.
+_PHASE_PRIORITY = {
+    "assessment": 1,
+    "unsigned_generation": 2,
+    "batching": 3,
+    "in_batch": 4,
+    "complete": 5,
+}
+
+
+def _annotate_status_priority(queryset):
+    """Annotate each case with a numeric priority based on its forms' phases.
+
+    Uses the minimum phase priority across the case's forms (the least-advanced
+    form drives the case's position). Legacy cases always sort last.
+    """
+    phase_when_clauses = [
+        When(forms__phase=phase, then=Value(priority))
+        for phase, priority in _PHASE_PRIORITY.items()
+    ]
+    return queryset.annotate(
+        _form_priority=Min(
+            CaseExpr(
+                *phase_when_clauses,
+                default=Value(99),
+                output_field=IntegerField(),
+            )
+        ),
+        status_priority=CaseExpr(
+            When(is_legacy=True, then=Value(100)),
+            default="_form_priority",
+            output_field=IntegerField(),
+        ),
+    )
+
+
 def _apply_ordering(queryset, ordering):
-    """Apply validated ordering with null-safe FK sorting."""
+    """Apply validated ordering with null-safe FK sorting and status priority."""
     if ordering not in VALID_ORDERINGS:
-        return queryset.order_by("-received")
+        # Default: order by status priority (active cases first), then newest received
+        return _annotate_status_priority(queryset).order_by(
+            "status_priority", "-received"
+        )
+
+    if ordering in ("status_priority", "-status_priority"):
+        qs = _annotate_status_priority(queryset)
+        if ordering.startswith("-"):
+            return qs.order_by("-status_priority", "-received")
+        return qs.order_by("status_priority", "-received")
 
     if ordering in _NULL_SAFE_ORDERINGS:
         field = ordering.lstrip("-")
@@ -53,7 +101,8 @@ def _apply_filters(queryset, params):
     """Apply query parameter filters to the case queryset."""
     phase = params.get("phase")
     if phase:
-        queryset = queryset.filter(phase=phase)
+        # Cases with at least one form in the requested phase.
+        queryset = queryset.filter(forms__phase=phase).distinct()
 
     botanist_id = params.get("botanist")
     if botanist_id:
@@ -92,12 +141,12 @@ def _apply_filters(queryset, params):
             search_q = search_q | Q(pk=int(search))
         queryset = queryset.filter(search_q).distinct()
 
-    # Tag number search — filters cases that have bags matching the tag
+    # Tag number search — filters cases whose forms have bags matching the tag
     tag_search = params.get("tag_search")
     if tag_search:
         queryset = queryset.filter(
-            Q(bags__seal_tag_numbers__icontains=tag_search)
-            | Q(bags__new_seal_tag_numbers__icontains=tag_search)
+            Q(forms__bags__seal_tag_numbers__icontains=tag_search)
+            | Q(forms__bags__new_seal_tag_numbers__icontains=tag_search)
         ).distinct()
 
     return queryset
@@ -111,7 +160,10 @@ class CaseNumberCheckView(APIView):
       - case_number (required): the value to check
       - exclude_id (optional): a case pk to ignore (for editing an existing case)
 
-    Returns: {"exists": bool}
+    The comparison is case-insensitive and ignores leading/trailing whitespace,
+    so a duplicate reference is always detected and never creates a second case.
+
+    Returns: {"exists": bool, "case": {"id": int, "case_number": str} | null}
     """
 
     permission_classes = [HasAppAccess]
@@ -120,7 +172,7 @@ class CaseNumberCheckView(APIView):
         case_number = (request.query_params.get("case_number") or "").strip()
 
         if not case_number:
-            return Response({"exists": False})
+            return Response({"exists": False, "case": None})
 
         queryset = Case.objects.filter(case_number__iexact=case_number)
 
@@ -131,7 +183,16 @@ class CaseNumberCheckView(APIView):
             except (ValueError, TypeError):
                 pass
 
-        return Response({"exists": queryset.exists()})
+        match = queryset.first()
+        if match is None:
+            return Response({"exists": False, "case": None})
+
+        return Response(
+            {
+                "exists": True,
+                "case": {"id": match.id, "case_number": match.case_number},
+            }
+        )
 
 
 class CaseListView(ListCreateAPIView):
@@ -158,7 +219,7 @@ class CaseListView(ListCreateAPIView):
             "submitting_officer",
             "submitting_officer__station",
             "station",
-        ).prefetch_related("defendants", "bags", "certificates")
+        ).prefetch_related("defendants", "forms__bags", "forms__certificate")
 
         queryset = _apply_filters(queryset, self.request.query_params)
         ordering = self.request.query_params.get("ordering", "-received")
@@ -189,8 +250,8 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
             "submitting_officer",
         ).prefetch_related(
             "defendants",
-            "bags__assessment",
-            "certificates",
+            "forms__bags__assessment",
+            "forms__certificate",
         )
 
     def get_serializer_class(self):
@@ -200,34 +261,15 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         case_obj = self.get_object()
-        # Complete cases are read-only for non-admins (server-side guard).
+        # A fully-complete case is read-only for non-admins (server-side guard).
         from ..permissions import ensure_case_editable
 
         ensure_case_editable(case_obj, self.request.user)
 
-        old_phase = case_obj.phase
         case = serializer.save()
-        new_phase = case.phase
-
-        # Log phase changes
-        if old_phase != new_phase:
-            settings.LOGGER.info(
-                f"User {self.request.user} changed case {case.case_number} phase from {old_phase} to {new_phase}"
-            )
-
-            # Update workflow timestamps based on new phase
-            now = timezone.now()
-            if new_phase == Case.PhaseChoices.UNSIGNED_GENERATION:
-                case.certificates_generated_at = case.certificates_generated_at or now
-            elif new_phase == Case.PhaseChoices.COMPLETE:
-                case.completed_at = now
-
-            case.save(
-                update_fields=[
-                    "certificates_generated_at",
-                    "completed_at",
-                ]
-            )
+        settings.LOGGER.info(
+            f"User {self.request.user} updated case {case.case_number}"
+        )
 
     def perform_destroy(self, instance):
         settings.LOGGER.warning(f"User {self.request.user} deleted case: {instance}")

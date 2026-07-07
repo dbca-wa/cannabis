@@ -7,38 +7,35 @@ import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
 import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationWizardContainer } from "@/features/cases/components/forms/wizard/CaseCreationWizardContainer";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
-import { persistCaseExtras } from "@/features/cases/utils/persistCaseExtras";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 /**
- * Bridges the existing CaseFormStore data into the Record<string, unknown>
- * shape that WizardContainer expects as caseData.
+ * Bridges the CaseFormStore base data into the Record<string, unknown> shape
+ * the creation wizard expects as caseData. Creation captures base data only —
+ * the security movement envelope, drug bags, and scanned image belong to a
+ * Priority 3 form and are recorded when a form is added.
  */
 const buildCaseData = (
 	formStore: ReturnType<typeof useCaseFormStore>
 ): Record<string, unknown> => ({
 	case_number: formStore.formData.case_number,
 	received: formStore.formData.received,
-	security_movement_envelope: formStore.formData.security_movement_envelope,
 	requesting_officer: formStore.formData.requesting_officer_id,
 	submitting_officer: formStore.formData.submitting_officer_id,
 	station: formStore.formData.station_id,
-	bags: formStore.formData.bags,
 	defendants: formStore.formData.defendant_ids,
 	defendants_details: formStore.selectedDefendants,
 	requesting_officer_id: formStore.formData.requesting_officer_id ?? null,
 	submitting_officer_id: formStore.formData.submitting_officer_id ?? null,
 	station_id: formStore.formData.station_id ?? null,
+	approved_botanist_id: formStore.formData.approved_botanist_id ?? null,
 	requesting_officer_name:
 		formStore.selectedOfficers.requesting?.full_name ?? null,
 	submitting_officer_name:
 		formStore.selectedOfficers.submitting?.full_name ?? null,
 	approved_botanist_name: formStore.selectedBotanist?.full_name ?? null,
 	station_name: formStore.selectedStation?.name ?? null,
-	other_matters: formStore.getAutoPopulatedAdditionalNotes() || null,
-	certificate_number: null,
-	certification_date: null,
 });
 
 const CreateCaseContent = observer(() => {
@@ -102,29 +99,19 @@ const CreateCaseContent = observer(() => {
 	);
 
 	/**
-	 * Submit handler — creates the case via mutation, then navigates to process wizard.
-	 * On network error after successful creation, shows a toast with a manual link.
+	 * Submit handler — creates the case (base data only) via mutation, then
+	 * continues straight into the add-form flow so the operator records the
+	 * first Priority 3 form, its bags, and its certificate on the new case.
 	 */
 	const handleSubmit = useCallback(() => {
 		wizardStore.setSubmitting(true);
 		const submissionData = formStore.getCaseCreateRequest();
 
-		// Capture extras the create serializer doesn't accept (OCR-prefilled bags,
-		// the selected station, and the scanned police form) before the form is
-		// reset, so they can be persisted in follow-up calls.
-		const bags = [...formStore.formData.bags];
-		const stationId = formStore.formData.station_id;
-		const policeForm = ocrResultStore.uploadedFile;
-
 		createCase(submissionData, {
-			onSuccess: async (newCase) => {
-				// Persist follow-up data (best-effort — never blocks creation).
-				await persistCaseExtras(newCase.id, { bags, stationId, policeForm });
-
+			onSuccess: (newCase) => {
 				wizardStore.setSubmitting(false);
-				// New cases start in the Assessment phase — no phase advance needed.
-				// Navigate first, then clean up — prevents brief red flash
-				navigate(`/cases/${newCase.id}/process`);
+				// Navigate first, then clean up — prevents a brief red flash.
+				navigate(`/cases/${newCase.id}`);
 				void formStore.clearDraft();
 				formStore.resetForm();
 				ocrResultStore.clearAll();

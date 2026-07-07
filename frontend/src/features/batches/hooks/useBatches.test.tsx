@@ -69,11 +69,11 @@ describe("useBatches hooks", () => {
 			wrapper: createWrapper(),
 		});
 
-		result.current.mutate({ case_ids: [1, 2] });
+		result.current.mutate({ certificate_ids: [1, 2] });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(batchesService.createBatch).toHaveBeenCalledWith({
-			case_ids: [1, 2],
+			certificate_ids: [1, 2],
 		});
 	});
 });

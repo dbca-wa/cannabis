@@ -372,7 +372,7 @@
         <div class="certificate-content">
             <!-- Opening Statement -->
             <div class="opening-statement">
-                I, <strong>{{ approved_botanist }}</strong>, being an approved botanist
+                I, {{ approved_botanist }}, being an approved botanist
                 within the meaning of the
                 <a href="https://www.legislation.wa.gov.au/legislation/prod/filestore.nsf/FileURL/mrdoc_46172.pdf/$FILE/Misuse%20Of%20Drugs%20Act%201981%20-%20%5B08-f0-02%5D.pdf?OpenElement" class="legislation-link">Misuse of Drugs Act 1981</a>
                 and the
@@ -414,13 +414,13 @@
                     I identified the items as <em>{{ species_name }}</em>.
                     <br>
                     {% if quantity_of_bags == 1 %}
-                    The {{ description }} was sealed in a new drug movement bag, tag number
-                    <strong>{{ new_tag_numbers }}</strong>. This bag was handed over to
-                    <strong>{{ receiving_officer }}</strong> who was present during the examination.
+                    The {{ section_b_description }} was sealed in a new drug movement bag, tag number
+                    {{ new_tag_numbers }}. This bag was handed over to
+                    {{ receiving_officer }} who was present during the examination.
                     {% else %}
-                    The {{ description }} were sealed in new drug movement bags, tag numbers
-                    <strong>{{ new_tag_numbers }}</strong>. These bags were handed over to
-                    <strong>{{ receiving_officer }}</strong> who was present during the examination.
+                    The {{ section_b_description }} were sealed in new drug movement bags, tag numbers
+                    {{ new_tag_numbers }}. These bags were handed over to
+                    {{ receiving_officer }} who was present during the examination.
                     {% endif %}
                 </div>
             </div>

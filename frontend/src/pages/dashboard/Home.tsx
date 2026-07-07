@@ -49,12 +49,9 @@ const PLACEHOLDER_CHART_DATA = FY_MONTHS.map((month) => ({
 	certs: null,
 	bags: null,
 	revenue: null,
-	forecastCases: null,
-	forecastCerts: null,
-	forecastRevenue: null,
 }));
 
-/** Custom chart tooltip that filters out forecast data keys */
+/** Custom chart tooltip */
 const ChartTooltipContent = ({
 	active,
 	payload,
@@ -68,8 +65,7 @@ const ChartTooltipContent = ({
 		revenue: "Revenue",
 	};
 	const visible = payload.filter(
-		(p: Record<string, unknown>) =>
-			!String(p.dataKey).startsWith("forecast") && p.value != null
+		(p: Record<string, unknown>) => p.value != null
 	);
 	if (visible.length === 0) return null;
 	return (
@@ -110,15 +106,7 @@ const DashboardContent = () => {
 
 	const { data: throughputData } = useMonthlyThroughput();
 
-	// Build chart data from API response, falling back to placeholder
-	const chartData = throughputData
-		? throughputData.map((entry) => ({
-				...entry,
-				forecastCases: null,
-				forecastCerts: null,
-				forecastRevenue: null,
-			}))
-		: PLACEHOLDER_CHART_DATA;
+	const chartData = throughputData ?? PLACEHOLDER_CHART_DATA;
 
 	const isLoading = isLoadingRevenue;
 	const isError = isRevenueError;
@@ -337,40 +325,6 @@ const DashboardContent = () => {
 											fill="url(#rg)"
 											connectNulls={false}
 										/>
-										{/* Forecast lines — dashed, lower opacity, no fill */}
-										<Area
-											yAxisId="left"
-											type="monotone"
-											dataKey="forecastCases"
-											stroke="#10b981"
-											strokeWidth={2}
-											strokeDasharray="6 4"
-											strokeOpacity={0.5}
-											fill="none"
-											connectNulls={false}
-										/>
-										<Area
-											yAxisId="left"
-											type="monotone"
-											dataKey="forecastCerts"
-											stroke="#3b82f6"
-											strokeWidth={2}
-											strokeDasharray="6 4"
-											strokeOpacity={0.5}
-											fill="none"
-											connectNulls={false}
-										/>
-										<Area
-											yAxisId="right"
-											type="monotone"
-											dataKey="forecastRevenue"
-											stroke="#f59e0b"
-											strokeWidth={2}
-											strokeDasharray="6 4"
-											strokeOpacity={0.5}
-											fill="none"
-											connectNulls={false}
-										/>
 										{/* Current month indicator */}
 										<ReferenceLine
 											x={FY_MONTHS[CURRENT_FY_INDEX]}
@@ -403,10 +357,6 @@ const DashboardContent = () => {
 									<span className="flex items-center gap-1.5">
 										<span className="w-2 h-2 rounded-full bg-amber-500" />{" "}
 										Revenue
-									</span>
-									<span className="flex items-center gap-1.5 text-muted-foreground">
-										<span className="w-4 h-0 border-t-2 border-dashed border-muted-foreground/50" />{" "}
-										Forecast
 									</span>
 								</div>
 								<div className="flex items-center justify-center mt-3 pt-3 border-t border-border/40">

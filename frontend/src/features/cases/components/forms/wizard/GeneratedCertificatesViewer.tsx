@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/TextLayer.css";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { apiClient } from "@/shared/services/api";
 import { ENDPOINTS } from "@/shared/services/api/endpoints";
@@ -19,6 +20,8 @@ const SCALE_STEP = 0.1;
 interface GeneratedCertificatesViewerProps {
 	caseId: number;
 	certificates: Certificate[];
+	/** Increment to force a PDF refetch (e.g. after regeneration) */
+	refreshKey?: number;
 }
 
 /**
@@ -30,6 +33,7 @@ interface GeneratedCertificatesViewerProps {
 export const GeneratedCertificatesViewer = ({
 	caseId,
 	certificates,
+	refreshKey,
 }: GeneratedCertificatesViewerProps) => {
 	const [active, setActive] = useState(0);
 	const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
@@ -84,7 +88,7 @@ export const GeneratedCertificatesViewer = ({
 		return () => {
 			cancelled = true;
 		};
-	}, [caseId, activeCertId]);
+	}, [caseId, activeCertId, refreshKey]);
 
 	const pageWidth =
 		containerWidth > 0
@@ -194,7 +198,7 @@ export const GeneratedCertificatesViewer = ({
 										key={`${activeCertId}-${i}`}
 										pageNumber={i + 1}
 										width={pageWidth}
-										renderTextLayer={false}
+										renderTextLayer={true}
 										renderAnnotationLayer={false}
 										className="mb-4 bg-white shadow-md"
 									/>

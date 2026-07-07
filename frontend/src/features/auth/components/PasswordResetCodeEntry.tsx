@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 import {
@@ -53,11 +53,12 @@ interface VerifyResetCodeResponse {
 export const PasswordResetCodeEntry = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
+	const [searchParams] = useSearchParams();
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	// Get email and duplicate flag from location state
-	const email = location.state?.email;
+	// Get email from location state (in-app navigation) or URL param (email link)
+	const email = location.state?.email || searchParams.get("email");
 	const isDuplicate = location.state?.isDuplicate === true;
 
 	const form = useForm<ResetCodeFormData>({
@@ -126,13 +127,10 @@ export const PasswordResetCodeEntry = () => {
 
 			toast.success("Code verified! Redirecting to password update...");
 
-			// Navigate to password update page
-			navigate("/auth/password-update", {
-				state: {
-					isFirstTime: true,
-					fromResetCode: true,
-				},
-			});
+			// Use hard navigation (not React Router) to avoid the route guard
+			// race condition — tokens were just stored and the guard's async
+			// getCurrentUser() may not see them yet on a client-side transition.
+			window.location.href = "/auth/password-update?fromReset=true";
 		} catch (error) {
 			const errorMessage = getErrorMessage(error);
 			logger.error("Reset code verification failed", {

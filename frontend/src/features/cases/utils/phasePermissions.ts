@@ -184,14 +184,15 @@ export function getSendBackTargets(currentPhase: CasePhase): CasePhase[] {
 }
 
 /**
- * Check if user has any permissions for the case
+ * Check if user has any permissions for the case (uses derived_status since
+ * the phase now lives on individual forms, not the case itself).
  */
 export function hasAnyPermission(
 	caseObj: Case,
 	userRole: WorkflowUserRole,
 	isAdmin: boolean
 ): boolean {
-	const currentPhase = caseObj.phase;
+	const currentPhase = caseObj.derived_status;
 
 	return (
 		canAdvancePhase(currentPhase, userRole, isAdmin) ||

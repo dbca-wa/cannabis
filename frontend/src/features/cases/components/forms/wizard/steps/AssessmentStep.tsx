@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { observer } from "mobx-react-lite";
-import { Package, Plus, Layers, Save, Trash2 } from "lucide-react";
+import { Package, Plus, Layers, Save, Trash2, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
@@ -12,18 +12,13 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
-import {
-	useDrugBagWranglerStore,
-	useCertificateGroupingStore,
-} from "@/app/providers/store.provider";
-import type { CertGroup } from "@/app/stores/derived/certificate-grouping.store";
+import { useDrugBagWranglerStore } from "@/app/providers/store.provider";
 import type { BagValidationError } from "@/app/stores/derived/drug-bag-wrangler.store";
 import { SectionCard } from "../SectionCard";
 import { BagCard } from "../BagCard";
-import { CertificateGroupBlock } from "../CertificateGroupBlock";
 import { BulkAddBagsModal } from "../BulkAddBagsModal";
 import { useDrugBags } from "../../../../hooks/useDrugBags";
+import { addBagsToForm } from "../../../../services/forms.service";
 import {
 	createAssessment,
 	updateAssessment,
@@ -44,38 +39,11 @@ interface AssessmentStepProps {
 	isTouched: boolean;
 	/** Callback to persist field changes via mutation */
 	onFieldChange: (field: string, value: unknown) => void;
+	/** Callback to add a new Priority 3 form when none exists */
+	onAddForm?: () => void;
 }
 
 const MAX_BAGS = 5;
-
-/** Build certificate groups (bag ids + notes) from the grouping store, with a
- * fallback to auto-chunking by five before the store has been seeded. */
-const buildGroups = (
-	serverBags: DrugBag[],
-	storeGroups: CertGroup[]
-): CertGroup[] => {
-	const ids = serverBags.map((b) => b.id);
-	if (storeGroups.length > 0) {
-		const known = new Set(ids);
-		const groups: CertGroup[] = storeGroups
-			.map((g) => ({
-				bagIds: g.bagIds.filter((id) => known.has(id)),
-				notes: g.notes,
-			}))
-			.filter((g) => g.bagIds.length > 0);
-		const grouped = new Set(groups.flatMap((g) => g.bagIds));
-		const leftovers = ids.filter((id) => !grouped.has(id));
-		for (let i = 0; i < leftovers.length; i += MAX_BAGS) {
-			groups.push({ bagIds: leftovers.slice(i, i + MAX_BAGS), notes: "" });
-		}
-		return groups;
-	}
-	const groups: CertGroup[] = [];
-	for (let i = 0; i < ids.length; i += MAX_BAGS) {
-		groups.push({ bagIds: ids.slice(i, i + MAX_BAGS), notes: "" });
-	}
-	return groups;
-};
 
 /**
  * Map a backend batch-create error of the shape
@@ -109,28 +77,42 @@ const mapBatchErrorsToBags = (
 };
 
 /**
- * Assessment step — Approved Botanist selection, drug bags organised into
- * certificate groups (max five bags each, drag-and-drop or "Move to" between
- * certificates), and the case notes.
+ * Assessment step — Approved Botanist selection, form-scoped drug bags (max
+ * five per form producing one certificate), and internal comments.
  */
 export const AssessmentStep = observer(function AssessmentStep({
 	caseData,
 	caseId,
 	isTouched,
 	onFieldChange,
+	onAddForm,
 }: AssessmentStepProps) {
 	const [bulkModalOpen, setBulkModalOpen] = useState(false);
 	const wrangler = useDrugBagWranglerStore();
-	const grouping = useCertificateGroupingStore();
 	const queryClient = useQueryClient();
 
-	const {
-		createDrugBag,
-		updateDrugBag,
-		deleteDrugBag,
-		batchCreateDrugBags,
-		isBatchCreating,
-	} = useDrugBags(caseId || null);
+	const formId = caseData?.formId as number;
+
+	const { updateDrugBag, deleteDrugBag } = useDrugBags(caseId || null);
+
+	// Form-scoped batch creation mutation
+	const batchCreateMutation = useMutation({
+		mutationFn: (data: {
+			bags: Array<{
+				seal_tag_numbers: string;
+				new_seal_tag_numbers: string | null;
+				content_type: DrugBagContentType;
+				determination: BotanicalDetermination;
+			}>;
+		}) => addBagsToForm(formId, data),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["cases", "forms", formId],
+			});
+			await invalidateRelatedQueries(queryClient, "drugBags");
+			toast.success("Bags saved successfully");
+		},
+	});
 
 	// Assessment mutations (inline — no dedicated hook)
 	const createAssessmentMutation = useMutation({
@@ -167,34 +149,54 @@ export const AssessmentStep = observer(function AssessmentStep({
 		},
 	});
 
+	// Local state for textareas to avoid flicker during debounced PATCH
+	const serverNotes = (caseData?.additional_notes as string) ?? "";
+	const [localNotes, setLocalNotes] = useState(serverNotes);
+	useEffect(() => {
+		setLocalNotes(serverNotes);
+	}, [serverNotes, formId]);
+
+	const serverComments = (caseData?.internal_comments as string) ?? "";
+	const [localComments, setLocalComments] = useState(serverComments);
+	useEffect(() => {
+		setLocalComments(serverComments);
+	}, [serverComments]);
+
+	// ALL hooks above this line — early return AFTER all hooks
+	if (!formId) {
+		return (
+			<div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+				<Package className="mb-4 h-12 w-12 text-muted-foreground" />
+				<p className="mb-2 text-sm font-medium">
+					Add a Priority 3 form to begin recording drug bags.
+				</p>
+				<p className="mb-4 text-xs text-muted-foreground">
+					Each form holds up to 5 drug bags and produces one certificate.
+				</p>
+				{onAddForm && (
+					<Button type="button" onClick={onAddForm}>
+						<Plus className="mr-2 h-4 w-4" />
+						Add Priority 3 Form
+					</Button>
+				)}
+			</div>
+		);
+	}
+
 	// Derive data from caseData
 	const serverBags: DrugBag[] = Array.isArray(caseData?.bags)
 		? (caseData.bags as DrugBag[])
 		: [];
 
-	const approvedBotanistId =
-		(caseData?.approved_botanist_id as number | null) ?? null;
-	const internalComments =
-		typeof caseData?.internal_comments === "string"
-			? caseData.internal_comments
-			: "";
-
-	const allTags = [
-		...serverBags.map((b) => b.seal_tag_numbers),
-		...wrangler.state.bags.map((b) => b.seal_tag_numbers),
-	];
-
-	// Certificate groups of saved bags
-	const bagsById = new Map(serverBags.map((b) => [b.id, b]));
-	const groups = buildGroups(serverBags, grouping.state.groups);
-	const groupSizes = groups.map((g) => g.bagIds.length);
+	const totalBags = serverBags.length + wrangler.state.bags.length;
+	const capReached = totalBags >= MAX_BAGS;
 
 	const handleAddBag = () => wrangler.addBag();
 
 	// Persist every prepared (in-memory) bag in one validated batch request.
 	const handleAddAll = async () => {
-		if (!caseId) {
-			toast.error("Cannot save bags — case not loaded yet");
+		if (!formId) {
+			toast.error("Cannot save bags — form not loaded yet");
 			return;
 		}
 		const serverTags = serverBags.map((b) => b.seal_tag_numbers);
@@ -206,18 +208,15 @@ export const AssessmentStep = observer(function AssessmentStep({
 			return;
 		}
 		try {
-			await batchCreateDrugBags({
-				caseId,
-				data: {
-					bags: wrangler.state.bags.map((b) => ({
-						seal_tag_numbers: b.seal_tag_numbers,
-						new_seal_tag_numbers: b.new_seal_tag_numbers || null,
-						content_type: b.content_type,
-						determination: b.determination,
-					})),
-				},
+			await batchCreateMutation.mutateAsync({
+				bags: wrangler.state.bags.map((b) => ({
+					seal_tag_numbers: b.seal_tag_numbers,
+					new_seal_tag_numbers: b.new_seal_tag_numbers || null,
+					content_type: b.content_type,
+					determination: b.determination,
+				})),
 			});
-			wrangler.clearBags();
+			wrangler.clearBags(formId);
 		} catch (error) {
 			// Surface backend tag conflicts against the matching bag sections.
 			const mapped = mapBatchErrorsToBags(error, wrangler.state.bags);
@@ -241,8 +240,16 @@ export const AssessmentStep = observer(function AssessmentStep({
 			determination: BotanicalDetermination;
 		}>
 	) => {
+		const remaining = MAX_BAGS - serverBags.length - wrangler.state.bags.length;
+		const capped = bags.slice(0, Math.max(0, remaining));
+		if (capped.length < bags.length) {
+			toast.info(
+				`Only ${capped.length} of ${bags.length} bags added — this form holds at most ${MAX_BAGS} bags.`
+			);
+		}
+		if (capped.length === 0) return;
 		wrangler.addBags(
-			bags.map((b) => ({
+			capped.map((b) => ({
 				seal_tag_numbers: b.seal_tag_numbers,
 				new_seal_tag_numbers: b.new_seal_tag_numbers,
 				content_type: b.content_type,
@@ -269,9 +276,6 @@ export const AssessmentStep = observer(function AssessmentStep({
 	) => {
 		updateAssessmentMutation.mutate({ assessmentId, determination });
 	};
-	const handleMoveBag = (bagId: number, targetIndex: number) => {
-		grouping.moveBag(bagId, targetIndex);
-	};
 
 	const handleInMemoryUpdate = (
 		tempId: string,
@@ -292,30 +296,9 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 	return (
 		<div className="space-y-6">
-			{/* Approved Botanist Section */}
-			<SectionCard
-				title="Approved Botanist"
-				isComplete={!!approvedBotanistId}
-				isInvalid={isTouched && !approvedBotanistId}
-			>
-				<div className="space-y-2">
-					<Label htmlFor="approved_botanist">Approved Botanist</Label>
-					<UserSearchCombobox
-						value={approvedBotanistId}
-						onValueChange={(id) => onFieldChange("approved_botanist_id", id)}
-						placeholder="Select approved botanist..."
-						roleFilter="botanist"
-						lastUsedKey="botanist"
-					/>
-					<p className="text-xs text-muted-foreground">
-						The botanist who performed the botanical assessment
-					</p>
-				</div>
-			</SectionCard>
-
 			{/* Drug Bags Section */}
 			<SectionCard
-				title="Drug Bags & Certificates"
+				title="Priorty 3 Drug Bags"
 				isComplete={serverBags.length > 0}
 				isInvalid={isTouched && serverBags.length === 0}
 			>
@@ -329,44 +312,43 @@ export const AssessmentStep = observer(function AssessmentStep({
 				) : (
 					<div className="space-y-4">
 						<p className="text-sm text-muted-foreground">
-							{serverBags.length} saved bag
-							{serverBags.length !== 1 ? "s" : ""} across {groups.length}{" "}
-							certificate{groups.length !== 1 ? "s" : ""}
+							This form holds up to {MAX_BAGS} drug bags. All bags produce a
+							single certificate.
+							{serverBags.length > 0 &&
+								` ${serverBags.length} saved bag${serverBags.length !== 1 ? "s" : ""}`}
 							{wrangler.state.bags.length > 0 &&
 								`, ${wrangler.state.bags.length} unsaved`}
-							. Each certificate holds up to {MAX_BAGS} bags — drag a bag or use
-							its move control to regroup.
+							.
 						</p>
 
-						{/* Certificate group blocks (saved bags) */}
-						{groups.map((group, index) => (
-							<CertificateGroupBlock
-								key={index}
-								groupIndex={index}
-								bags={
-									group.bagIds
-										.map((id) => bagsById.get(id))
-										.filter(Boolean) as DrugBag[]
-								}
-								groupSizes={groupSizes}
-								allTags={allTags}
-								onMoveBag={handleMoveBag}
-								onUpdateBag={handleUpdateBag}
-								onCreateAssessment={handleCreateAssessment}
-								onUpdateAssessment={handleUpdateAssessment}
-								onDeleteBag={handleDeleteBag}
-								isActive={index === grouping.state.activeIndex}
-								onActivate={() => grouping.setActiveIndex(index)}
-								notes={group.notes}
-								onNotesChange={(v) => grouping.setNotes(index, v)}
-							/>
-						))}
+						{capReached && (
+							<p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+								This form can hold at most {MAX_BAGS} bags. Add a new Priorty 3
+								Form to add more.
+							</p>
+						)}
+
+						{/* Saved bags — flat list */}
+						{serverBags.length > 0 && (
+							<div className="space-y-3">
+								{serverBags.map((bag) => (
+									<BagCard
+										key={bag.id}
+										bag={bag}
+										onUpdateBag={handleUpdateBag}
+										onCreateAssessment={handleCreateAssessment}
+										onUpdateAssessment={handleUpdateAssessment}
+										onDeleteBag={handleDeleteBag}
+									/>
+								))}
+							</div>
+						)}
 
 						{/* Unsaved (in-memory) bags awaiting save */}
 						{wrangler.state.bags.length > 0 && (
 							<div className="space-y-3 rounded-xl border-2 border-dashed border-amber-300 p-4">
 								<p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-									Unsaved bags — added to a certificate once saved
+									Unsaved bags — saved to this form once confirmed
 								</p>
 								{wrangler.state.bags.map((memBag) => {
 									const bagErrors =
@@ -404,7 +386,6 @@ export const AssessmentStep = observer(function AssessmentStep({
 														updated_at: "",
 													} satisfies DrugBag
 												}
-												allTags={allTags}
 												onUpdateBag={(_id, data) => {
 													const updates = data as Record<string, unknown>;
 													for (const [key, val] of Object.entries(updates)) {
@@ -431,39 +412,27 @@ export const AssessmentStep = observer(function AssessmentStep({
 												}
 												onDeleteBag={() => handleInMemoryDelete(memBag.tempId)}
 												onConfirmUnsaved={async (data) => {
-													if (!caseId) {
+													if (!formId) {
 														toast.error(
-															"Cannot save bag — case not loaded yet"
+															"Cannot save bag — form not loaded yet"
 														);
 														return;
 													}
 													try {
-														const newBag = await createDrugBag({
-															case: caseId,
-															seal_tag_numbers: data.seal_tag_numbers,
-															new_seal_tag_numbers:
-																data.new_seal_tag_numbers || null,
-															content_type: data.content_type,
-														});
-														if (
-															data.determination &&
-															data.determination !== "pending" &&
-															newBag?.id
-														) {
-															try {
-																await createAssessmentMutation.mutateAsync({
-																	drugBagId: newBag.id,
+														await batchCreateMutation.mutateAsync({
+															bags: [
+																{
+																	seal_tag_numbers: data.seal_tag_numbers,
+																	new_seal_tag_numbers:
+																		data.new_seal_tag_numbers || null,
+																	content_type: data.content_type,
 																	determination: data.determination,
-																});
-															} catch {
-																toast.error(
-																	"Bag created but assessment failed — set determination manually"
-																);
-															}
-														}
+																},
+															],
+														});
 														wrangler.removeBag(memBag.tempId);
 													} catch {
-														// Bag creation error toast handled by mutation
+														// Error toast handled by mutation
 													}
 												}}
 												isUnsaved
@@ -490,6 +459,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 						variant="outline"
 						size="sm"
 						onClick={handleAddBag}
+						disabled={capReached}
 					>
 						<Plus className="mr-2 h-4 w-4" />
 						Add Bag
@@ -499,6 +469,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 						variant="outline"
 						size="sm"
 						onClick={() => setBulkModalOpen(true)}
+						disabled={capReached}
 					>
 						<Layers className="mr-2 h-4 w-4" />
 						Add Multiple
@@ -509,10 +480,10 @@ export const AssessmentStep = observer(function AssessmentStep({
 							variant="default"
 							size="sm"
 							onClick={handleAddAll}
-							disabled={isBatchCreating}
+							disabled={batchCreateMutation.isPending}
 						>
 							<Save className="mr-2 h-4 w-4" />
-							{isBatchCreating
+							{batchCreateMutation.isPending
 								? "Saving..."
 								: `Add All (${wrangler.state.bags.length})`}
 						</Button>
@@ -522,8 +493,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 							type="button"
 							variant="outline"
 							size="sm"
-							onClick={() => wrangler.clearBags()}
-							disabled={isBatchCreating}
+							onClick={() => wrangler.clearBags(formId)}
+							disabled={batchCreateMutation.isPending}
 							className="ml-auto text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
 						>
 							<Trash2 className="mr-2 h-4 w-4" />
@@ -533,9 +504,42 @@ export const AssessmentStep = observer(function AssessmentStep({
 				</div>
 			</SectionCard>
 
-			{/* Internal Comments — Section C notes are per certificate (above) */}
+			{/* Section C Notes (other matters for the certificate) */}
+			<SectionCard title="Section C Notes" isComplete={true} isInvalid={false}>
+				<div className="space-y-2">
+					<Label htmlFor="additional_notes">Other Matters (Section C)</Label>
+					<Textarea
+						id="additional_notes"
+						value={localNotes}
+						onChange={(e) => {
+							setLocalNotes(e.target.value);
+							onFieldChange("additional_notes", e.target.value);
+						}}
+						placeholder="Enter section C notes for the certificate (e.g. subsample details)..."
+						className="min-h-[100px] resize-y"
+						aria-describedby="additional-notes-hint"
+					/>
+					<div className="flex items-center gap-2">
+						{Boolean(caseData?._isSavingNotes) && (
+							<span className="flex items-center gap-1 text-xs text-amber-600">
+								<Loader2 className="h-3 w-3 animate-spin" />
+								Saving...
+							</span>
+						)}
+						<p
+							id="additional-notes-hint"
+							className="text-xs text-muted-foreground"
+						>
+							Shown on the certificate under &quot;Other Matters&quot;. Defaults
+							to &quot;None&quot; if left empty.
+						</p>
+					</div>
+				</div>
+			</SectionCard>
+
+			{/* Internal Comments */}
 			<SectionCard
-				title="Internal Comments"
+				title="Case Internal Comments"
 				isComplete={true}
 				isInvalid={false}
 			>
@@ -543,8 +547,11 @@ export const AssessmentStep = observer(function AssessmentStep({
 					<Label htmlFor="internal_comments">Internal Comments</Label>
 					<Textarea
 						id="internal_comments"
-						value={internalComments}
-						onChange={(e) => onFieldChange("internal_comments", e.target.value)}
+						value={localComments}
+						onChange={(e) => {
+							setLocalComments(e.target.value);
+							onFieldChange("internal_comments", e.target.value);
+						}}
 						placeholder="Add internal comments..."
 						className="min-h-[120px] resize-y"
 						aria-describedby="internal-comments-hint"
@@ -553,8 +560,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 						id="internal-comments-hint"
 						className="text-xs text-muted-foreground"
 					>
-						Not shown on the certificate. Section C notes are set per
-						certificate above.
+						Not shown on the certificate.
 					</p>
 				</div>
 			</SectionCard>
@@ -563,7 +569,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 			<BulkAddBagsModal
 				open={bulkModalOpen}
 				onOpenChange={setBulkModalOpen}
-				existingTags={allTags}
+				existingTags={[]}
+				existingBagsOnForm={totalBags}
 				onAddBags={handleBulkAdd}
 			/>
 		</div>

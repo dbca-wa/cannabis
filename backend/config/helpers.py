@@ -233,6 +233,12 @@ def send_email_with_embedded_image(
                 f"[CONSOLE MODE] Would send email: Subject='{subject}', "
                 f"To={msg_root['To']}"
             )
+            # Print the HTML body so activation links are visible in dev
+            import re
+
+            links = re.findall(r'href="([^"]*)"', html_content)
+            if links:
+                settings.LOGGER.info(f"[CONSOLE MODE] Links in email: {links[:5]}")
         else:
             email_host = getattr(settings, "EMAIL_HOST", "mail-relay.lan.fyi")
             email_port = getattr(settings, "EMAIL_PORT", 587)

@@ -95,7 +95,6 @@ const withCurrent = <T extends string>(
 
 interface BagCardProps {
 	bag: DrugBag;
-	allTags: string[];
 	onUpdateBag: (bagId: number, data: DrugBagUpdateRequest) => void;
 	onCreateAssessment: (
 		bagId: number,
@@ -117,7 +116,6 @@ interface BagCardProps {
 
 export const BagCard = ({
 	bag,
-	allTags,
 	onUpdateBag,
 	onCreateAssessment,
 	onUpdateAssessment,
@@ -154,11 +152,6 @@ export const BagCard = ({
 			setTagError(formatErr);
 			return false;
 		}
-		const otherTags = allTags.filter((tag) => tag !== bag.seal_tag_numbers);
-		if (value && otherTags.includes(value)) {
-			setTagError("This tag number is already in use");
-			return false;
-		}
 		setTagError(null);
 		return true;
 	};
@@ -177,10 +170,6 @@ export const BagCard = ({
 		const err = validateTagFormat(value, "New tag");
 		if (err) {
 			setNewTagError(err);
-		} else if (value && value !== originalTag && allTags.includes(value)) {
-			// A new tag equal to this bag's own original is allowed (same physical
-			// tag); only a value belonging to a different bag is a conflict.
-			setNewTagError("This tag number is already in use");
 		} else {
 			setNewTagError(null);
 		}

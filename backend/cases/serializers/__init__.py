@@ -26,6 +26,10 @@ from .dashboard import (  # noqa: F401
     PendingAttentionSerializer,
 )
 from .drafts import CaseDraftSerializer  # noqa: F401
+from .forms import (  # noqa: F401
+    Priority3FormSerializer,
+    Priority3FormTinySerializer,
+)
 from .update import CaseUpdateSerializer  # noqa: F401
 
 __all__ = [
@@ -47,6 +51,8 @@ __all__ = [
     "InvoiceRaisedSerializer",
     "PendingAttentionSerializer",
     "PoliceOfficerTinySerializer",
+    "Priority3FormSerializer",
+    "Priority3FormTinySerializer",
     "UserTinySerializer",
 ]
 

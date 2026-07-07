@@ -9,12 +9,14 @@ from .models import (
     CasePhaseHistory,
     Certificate,
     DrugBag,
+    Priority3Form,
 )
 
 PHASE_COLORS = {
     "assessment": "#17a2b8",
     "unsigned_generation": "#28a745",
     "batching": "#6f42c1",
+    "in_batch": "#fd7e14",
     "complete": "#10b981",
 }
 
@@ -25,7 +27,7 @@ PHASE_COLORS = {
 
 
 class DrugBagInline(admin.TabularInline):
-    """Inline for drug bags in case admin"""
+    """Inline for drug bags under a Priority 3 form"""
 
     model = DrugBag
     extra = 0
@@ -43,12 +45,22 @@ class BotanicalAssessmentInline(admin.StackedInline):
 
 
 class CertificateInline(admin.TabularInline):
-    """Inline for certificates in case admin"""
+    """Inline for a Priority 3 form's single certificate"""
 
     model = Certificate
     extra = 0
     fields = ("certificate_number", "certified_date", "pdf_generating", "pdf_file")
     readonly_fields = ("certificate_number", "created_at")
+
+
+class Priority3FormInline(admin.TabularInline):
+    """Inline for Priority 3 forms within a case"""
+
+    model = Priority3Form
+    extra = 0
+    fields = ("phase", "security_movement_envelope", "scanned_image")
+    readonly_fields = ("created_at",)
+    show_change_link = True
 
 
 class SubmissionPhaseHistoryInline(admin.TabularInline):
@@ -79,7 +91,7 @@ class SubmissionPhaseHistoryInline(admin.TabularInline):
 class CaseAdmin(admin.ModelAdmin):
     list_display = (
         "case_number",
-        "phase_colored",
+        "status_colored",
         "approved_botanist",
         "finance_officer",
         "bags_count",
@@ -87,15 +99,15 @@ class CaseAdmin(admin.ModelAdmin):
         "received",
     )
     list_filter = (
-        "phase",
         "approved_botanist",
         "finance_officer",
+        "is_legacy",
         "received",
         "created_at",
     )
     search_fields = (
         "case_number",
-        "security_movement_envelope",
+        "forms__security_movement_envelope",
         "requesting_officer__given_names",
         "requesting_officer__last_name",
         "defendants__given_names",
@@ -107,7 +119,7 @@ class CaseAdmin(admin.ModelAdmin):
         (
             "Case Information",
             {
-                "fields": ("case_number", "received", "security_movement_envelope"),
+                "fields": ("case_number", "received", "is_legacy"),
                 "classes": ("wide",),
             },
         ),
@@ -121,7 +133,7 @@ class CaseAdmin(admin.ModelAdmin):
         (
             "Police Officers",
             {
-                "fields": ("requesting_officer", "submitting_officer"),
+                "fields": ("requesting_officer", "submitting_officer", "station"),
                 "classes": ("wide",),
             },
         ),
@@ -130,14 +142,10 @@ class CaseAdmin(admin.ModelAdmin):
             {"fields": ("defendants",), "classes": ("wide",)},
         ),
         (
-            "Workflow",
-            {"fields": ("phase", "batch", "internal_comments"), "classes": ("wide",)},
-        ),
-        (
-            "Workflow Timestamps",
+            "Notes",
             {
-                "fields": ("certificates_generated_at", "completed_at"),
-                "classes": ("collapse",),
+                "fields": ("internal_comments", "additional_notes"),
+                "classes": ("wide",),
             },
         ),
         (
@@ -149,34 +157,33 @@ class CaseAdmin(admin.ModelAdmin):
     readonly_fields = (
         "created_at",
         "updated_at",
-        "certificates_generated_at",
-        "completed_at",
     )
 
     filter_horizontal = ("defendants",)
 
     inlines = [
-        DrugBagInline,
+        Priority3FormInline,
         SubmissionPhaseHistoryInline,
-        CertificateInline,
     ]
 
-    def phase_colored(self, obj):
-        color = PHASE_COLORS.get(obj.phase, "#6c757d")
+    def status_colored(self, obj):
+        status = obj.derived_status
+        color = PHASE_COLORS.get(status, "#6c757d")
+        label = dict(Case.PhaseChoices.choices).get(status, status)
         return format_html(
             '<span style="background: {}; color: white; padding: 2px 6px; '
             'border-radius: 3px; font-size: 11px;">{}</span>',
             color,
-            obj.get_phase_display(),
+            label,
         )
 
-    phase_colored.short_description = "Phase"
+    status_colored.short_description = "Status"
 
     def bags_count(self, obj):
         return format_html(
             '<span style="background: #e8f4fd; padding: 2px 6px; '
             'border-radius: 3px;">{} bags</span>',
-            obj.bags.count(),
+            obj.bag_count,
         )
 
     bags_count.short_description = "Bags"
@@ -204,7 +211,66 @@ class CaseAdmin(admin.ModelAdmin):
                 "requesting_officer",
                 "submitting_officer",
             )
-            .prefetch_related("defendants", "bags")
+            .prefetch_related("defendants", "forms__bags")
+        )
+
+
+@admin.register(Priority3Form)
+class Priority3FormAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "case_link",
+        "phase_colored",
+        "bags_count",
+        "security_movement_envelope",
+        "created_at",
+    )
+    list_filter = ("phase", "created_at")
+    search_fields = (
+        "case__case_number",
+        "security_movement_envelope",
+    )
+    ordering = ("case", "id")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "certificates_generated_at",
+        "completed_at",
+    )
+    inlines = [DrugBagInline, CertificateInline]
+
+    def case_link(self, obj):
+        url = reverse("admin:submissions_case_change", args=[obj.case.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.case.case_number)
+
+    case_link.short_description = "Case"
+
+    def phase_colored(self, obj):
+        color = PHASE_COLORS.get(obj.phase, "#6c757d")
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 6px; '
+            'border-radius: 3px; font-size: 11px;">{}</span>',
+            color,
+            obj.get_phase_display(),
+        )
+
+    phase_colored.short_description = "Phase"
+
+    def bags_count(self, obj):
+        return format_html(
+            '<span style="background: #e8f4fd; padding: 2px 6px; '
+            'border-radius: 3px;">{} bags</span>',
+            obj.bags.count(),
+        )
+
+    bags_count.short_description = "Bags"
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("case")
+            .prefetch_related("bags")
         )
 
 
@@ -212,27 +278,28 @@ class CaseAdmin(admin.ModelAdmin):
 class DrugBagAdmin(admin.ModelAdmin):
     list_display = (
         "seal_tag_numbers",
-        "submission_link",
+        "case_link",
         "content_type",
         "assessment_status",
         "created_at",
     )
-    list_filter = ("content_type", "submission__phase", "created_at")
+    list_filter = ("content_type", "form__phase", "created_at")
     search_fields = (
         "seal_tag_numbers",
         "new_seal_tag_numbers",
         "property_reference",
-        "submission__case_number",
+        "form__case__case_number",
     )
     ordering = ("-created_at",)
     readonly_fields = ("created_at", "updated_at")
     inlines = [BotanicalAssessmentInline]
 
-    def submission_link(self, obj):
-        url = reverse("admin:submissions_case_change", args=[obj.submission.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.submission.case_number)
+    def case_link(self, obj):
+        case = obj.form.case
+        url = reverse("admin:submissions_case_change", args=[case.pk])
+        return format_html('<a href="{}">{}</a>', url, case.case_number)
 
-    submission_link.short_description = "Case"
+    case_link.short_description = "Case"
 
     def assessment_status(self, obj):
         if hasattr(obj, "assessment") and obj.assessment.determination:
@@ -254,7 +321,7 @@ class DrugBagAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("submission")
+            .select_related("form", "form__case")
             .prefetch_related("assessment")
         )
 
@@ -265,7 +332,7 @@ class BotanicalAssessmentAdmin(admin.ModelAdmin):
     list_filter = ("determination", "assessment_date", "created_at")
     search_fields = (
         "drug_bag__seal_tag_numbers",
-        "drug_bag__submission__case_number",
+        "drug_bag__form__case__case_number",
         "botanist_notes",
     )
     ordering = ("-created_at",)
@@ -276,21 +343,23 @@ class BotanicalAssessmentAdmin(admin.ModelAdmin):
 class CertificateAdmin(admin.ModelAdmin):
     list_display = (
         "certificate_number",
-        "submission_link",
+        "case_link",
         "certified_date",
+        "batch",
         "pdf_status",
         "created_at",
     )
-    list_filter = ("pdf_generating", "created_at")
-    search_fields = ("certificate_number", "submission__case_number")
+    list_filter = ("pdf_generating", "batch", "created_at")
+    search_fields = ("certificate_number", "form__case__case_number")
     ordering = ("-created_at",)
     readonly_fields = ("certificate_number", "pdf_size", "created_at", "updated_at")
 
-    def submission_link(self, obj):
-        url = reverse("admin:submissions_case_change", args=[obj.submission.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.submission.case_number)
+    def case_link(self, obj):
+        case = obj.form.case
+        url = reverse("admin:submissions_case_change", args=[case.pk])
+        return format_html('<a href="{}">{}</a>', url, case.case_number)
 
-    submission_link.short_description = "Case"
+    case_link.short_description = "Case"
 
     def pdf_status(self, obj):
         if obj.pdf_generating:
@@ -309,6 +378,11 @@ class CertificateAdmin(admin.ModelAdmin):
         )
 
     pdf_status.short_description = "PDF Status"
+
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request).select_related("form", "form__case", "batch")
+        )
 
 
 @admin.register(Batch)
@@ -348,6 +422,7 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
 
     list_display = (
         "submission_link",
+        "form",
         "from_phase",
         "to_phase",
         "action",
@@ -364,6 +439,7 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
     ordering = ("-timestamp",)
     readonly_fields = (
         "submission",
+        "form",
         "from_phase",
         "to_phase",
         "action",
@@ -396,4 +472,6 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
     user_link.short_description = "User"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("submission", "user")
+        return (
+            super().get_queryset(request).select_related("submission", "form", "user")
+        )

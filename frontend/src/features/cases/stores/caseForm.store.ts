@@ -10,7 +10,6 @@ import { storage } from "@/shared/services/storage.service";
 import type {
 	CaseCreateRequest,
 	Case,
-	DrugBag,
 	DrugBagContentType,
 	BotanicalDetermination,
 	UserTiny,
@@ -584,14 +583,11 @@ export class CaseFormStore {
 					this.selectedOfficers =
 						(draft.selectedOfficers as CaseFormStore["selectedOfficers"]) || {};
 					this.selectedStation = draft.selectedStation as
-						| PoliceStationTiny
-						| undefined;
+						PoliceStationTiny | undefined;
 					this.selectedBotanist = draft.selectedBotanist as
-						| UserTiny
-						| undefined;
+						UserTiny | undefined;
 					this.selectedFinanceOfficer = draft.selectedFinanceOfficer as
-						| UserTiny
-						| undefined;
+						UserTiny | undefined;
 					this.selectedDefendants =
 						(draft.selectedDefendants as DefendantTiny[]) || [];
 					this.currentView = (draft.currentView as ViewMode) || "data-entry";
@@ -613,11 +609,11 @@ export class CaseFormStore {
 	loadFromCase = (caseObj: Case) => {
 		try {
 			runInAction(() => {
-				// Load basic form data
+				// Load basic form data. The security movement envelope and drug
+				// bags now live on the case's Priority 3 forms, so they are not
+				// loaded here — this store holds the case's shared base data.
 				this.formData.case_number = caseObj.case_number || "";
 				this.formData.received = caseObj.received || "";
-				this.formData.security_movement_envelope =
-					caseObj.security_movement_envelope || "";
 				this.formData.internal_comments = caseObj.internal_comments || "";
 
 				// Load officer IDs
@@ -633,27 +629,10 @@ export class CaseFormStore {
 				// Load defendant IDs
 				this.formData.defendant_ids = caseObj.defendants || [];
 
-				// Load assessment date (use first bag's assessment date if available)
-				const firstBagAssessmentDate =
-					caseObj.bags?.[0]?.assessment?.assessment_date;
-				this.formData.assessment_date =
-					firstBagAssessmentDate?.split("T")[0] ||
-					new Date().toISOString().split("T")[0];
-
-				// Load drug bags
-				this.formData.bags =
-					caseObj.bags?.map((bag: DrugBag) => ({
-						id: bag.id,
-						content_type: bag.content_type || "unknown",
-						seal_tag_numbers: bag.seal_tag_numbers || "",
-						new_seal_tag_numbers: bag.new_seal_tag_numbers || "",
-						property_reference: bag.property_reference || "",
-						gross_weight: bag.gross_weight || "",
-						net_weight: bag.net_weight || "",
-						determination: bag.assessment?.determination || "pending",
-						assessment_date: bag.assessment?.assessment_date || "",
-						botanist_notes: bag.assessment?.botanist_notes || "",
-					})) || [];
+				// Drug bags belong to the case's Priority 3 forms, not the case, so
+				// this base-data store starts with an empty bag list.
+				this.formData.assessment_date = new Date().toISOString().split("T")[0];
+				this.formData.bags = [];
 
 				// Load selected entities for display
 				if (caseObj.requesting_officer_details) {
@@ -903,9 +882,10 @@ export class CaseFormStore {
 		return {
 			case_number: this.formData.case_number,
 			received: this.formData.received,
-			security_movement_envelope: this.formData.security_movement_envelope,
 			requesting_officer: this.formData.requesting_officer_id || null,
 			submitting_officer: this.formData.submitting_officer_id || null,
+			station: this.formData.station_id || null,
+			approved_botanist: this.formData.approved_botanist_id || null,
 			defendants: this.formData.defendant_ids,
 		};
 	};

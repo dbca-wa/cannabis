@@ -66,15 +66,7 @@ export const CertificateDocument = ({
 
 	const description = formatContentDescription(bags);
 
-	const uniqueContentTypes = [
-		...new Set(bags.map((b) => b.content_type_display).filter(Boolean)),
-	];
-	const hasMultipleTypes = uniqueContentTypes.length > 1;
-	const itemReference = hasMultipleTypes
-		? "the items"
-		: uniqueContentTypes.length === 1
-			? `the ${uniqueContentTypes[0]!.toLowerCase()}`
-			: "the items";
+	const itemReference = bagCount === 1 ? "the item" : "the items";
 
 	const speciesName =
 		bags.find((b) => b.assessment?.determination_display)?.assessment
@@ -96,8 +88,12 @@ export const CertificateDocument = ({
 	const submittingOfficer = formatOfficerLegal(
 		caseData.submitting_officer_details as OfficerDetails | null | undefined
 	);
+	const requestingOfficerDetails = caseData.requesting_officer_id
+		? (caseData.requesting_officer_details as OfficerDetails | null | undefined)
+		: null;
 	const requestingOfficer = formatOfficerLegal(
-		caseData.requesting_officer_details as OfficerDetails | null | undefined
+		requestingOfficerDetails ??
+			(caseData.submitting_officer_details as OfficerDetails | null | undefined)
 	);
 
 	const receiptDate = formatCertificateDate(
@@ -112,12 +108,10 @@ export const CertificateDocument = ({
 
 	const bagWord = bagCount === 1 ? "bag" : "bags";
 	const tagWord = bagCount === 1 ? "number" : "numbers";
-	const contentTypeForText =
-		uniqueContentTypes.length === 1 ? uniqueContentTypes[0]! : "items";
 	const sealedPhrase =
 		bagCount === 1
-			? `The ${contentTypeForText} was sealed in a new drug movement bag, tag number`
-			: `The ${contentTypeForText} were sealed in new drug movement ${bagWord}, tag ${tagWord}`;
+			? `The item was sealed in a new drug movement bag, tag number`
+			: `The items were sealed in new drug movement ${bagWord}, tag ${tagWord}`;
 	const handoverPhrase = bagCount === 1 ? "This bag was" : "These bags were";
 	const certificationDate = formatCertificateDate(
 		certifiedDate ?? new Date().toISOString()
@@ -125,7 +119,7 @@ export const CertificateDocument = ({
 
 	return (
 		<div
-			className="mx-auto w-full max-w-[210mm] border border-border bg-white shadow-lg rounded-sm"
+			className="mx-auto w-full max-w-[210mm] select-text border border-border bg-white shadow-lg rounded-sm"
 			style={{
 				fontFamily: fonts.body,
 				fontSize: "12px",
@@ -231,13 +225,11 @@ export const CertificateDocument = ({
 			>
 				<p>
 					I,{" "}
-					<strong>
-						{approvedBotanist || (
-							<span style={{ color: "#888", fontStyle: "italic" }}>
-								[Pending]
-							</span>
-						)}
-					</strong>
+					{approvedBotanist || (
+						<span style={{ color: "#888", fontStyle: "italic" }}>
+							[Pending]
+						</span>
+					)}
 					, being an approved botanist within the meaning of the{" "}
 					<em
 						style={{
@@ -340,10 +332,8 @@ export const CertificateDocument = ({
 								.
 							</p>
 							<p style={{ marginTop: "8px" }}>
-								{sealedPhrase} <strong>{newTagNumbers}</strong>.{" "}
-								{handoverPhrase} handed over to{" "}
-								<strong>{requestingOfficer}</strong> who was present during the
-								examination.
+								{sealedPhrase} {newTagNumbers}. {handoverPhrase} handed over to{" "}
+								{requestingOfficer} who was present during the examination.
 							</p>
 						</>
 					) : (

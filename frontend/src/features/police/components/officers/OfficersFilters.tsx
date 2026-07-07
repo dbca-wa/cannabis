@@ -58,7 +58,8 @@ export const OfficersFilters = observer(() => {
 		if (store.state.searchTerm !== localSearch) {
 			setLocalSearch(store.state.searchTerm);
 		}
-	}, [store.state.searchTerm, localSearch]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [store.state.searchTerm]);
 
 	return (
 		<FilterContainer>

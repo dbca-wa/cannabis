@@ -290,8 +290,8 @@ class PasswordResetCodeService:
         """
         if user.password_last_changed:
             time_since_change = timezone.now() - user.password_last_changed
-            if time_since_change < timedelta(hours=1):
-                remaining_time = timedelta(hours=1) - time_since_change
+            if time_since_change < timedelta(minutes=5):
+                remaining_time = timedelta(minutes=5) - time_since_change
                 minutes_remaining = int(remaining_time.total_seconds() / 60)
                 return (
                     False,

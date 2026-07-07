@@ -1,5 +1,9 @@
 import { makeAutoObservable } from "mobx";
-import type { OcrExtractionResponse, OcrMatchesMap } from "../types/ocr.types";
+import type {
+	OcrExtractionResponse,
+	OcrMatchesMap,
+	OcrCaseMatch,
+} from "../types/ocr.types";
 
 /**
  * MobX store for OCR extraction metadata.
@@ -31,6 +35,9 @@ export class OcrResultStore {
 
 	/** Match candidates per entity type, for alternative selection. */
 	matchCandidates: OcrMatchesMap | null = null;
+
+	/** Case match result from police reference detection. */
+	caseMatch: OcrCaseMatch | null = null;
 
 	constructor() {
 		makeAutoObservable(this);
@@ -77,6 +84,7 @@ export class OcrResultStore {
 		this.error = null;
 		this.isProcessing = false;
 		this.matchCandidates = response.matches;
+		this.caseMatch = response.case_match ?? null;
 
 		// Build the per-field confidence map from the extraction data
 		this.fieldConfidence.clear();
@@ -137,6 +145,7 @@ export class OcrResultStore {
 		this.error = null;
 		this.fieldConfidence.clear();
 		this.matchCandidates = null;
+		this.caseMatch = null;
 	};
 }
 

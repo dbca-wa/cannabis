@@ -23,6 +23,8 @@ from .crud import (
 from .invitations import (
     ExternalUserSearchView,
     InviteActivationView,
+    InviteListView,
+    InviteRevokeView,
     InviteUserView,
     TestInviteEmailView,
 )
@@ -50,6 +52,8 @@ __all__ = [
     "ExternalUserSearchView",
     "InviteUserView",
     "InviteActivationView",
+    "InviteListView",
+    "InviteRevokeView",
     "TestInviteEmailView",
     # Preferences
     "UserProfileView",

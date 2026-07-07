@@ -99,7 +99,9 @@ export const WizardNavigation = ({
 							lockActions
 								? lockMessage
 								: !canContinue
-									? "Complete the required fields on this step to continue"
+									? isLastStep
+										? "Mark all forms as ready before finalising"
+										: "All forms must have at least one drug bag before proceeding"
 									: undefined
 						}
 						className={cn(
@@ -109,7 +111,7 @@ export const WizardNavigation = ({
 						)}
 					>
 						{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						{isLastStep ? "Finalise Case" : "Continue"}
+						{isLastStep ? "Finalise Case" : "Save and Continue"}
 					</Button>
 				</div>
 			</nav>

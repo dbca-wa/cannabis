@@ -100,9 +100,21 @@ class CaseFactory(DjangoModelFactory):
     class Meta:
         model = "submissions.Case"
         skip_postgeneration_save = True
+        exclude = ["phase", "security_movement_envelope"]
 
     case_number = factory.Sequence(lambda n: f"CANN{n:05d}")
     received = factory.LazyFunction(timezone.now)
+    # Legacy params accepted but not passed to model (phase is now on Priority3Form)
+    phase = "assessment"
+    security_movement_envelope = ""
+
+
+class Priority3FormFactory(DjangoModelFactory):
+    class Meta:
+        model = "submissions.Priority3Form"
+        skip_postgeneration_save = True
+
+    case = factory.SubFactory(CaseFactory)
     phase = "assessment"
     security_movement_envelope = factory.Sequence(lambda n: f"SME{n:05d}")
 
@@ -112,7 +124,7 @@ class DrugBagFactory(DjangoModelFactory):
         model = "submissions.DrugBag"
         skip_postgeneration_save = True
 
-    submission = factory.SubFactory(CaseFactory)
+    form = factory.SubFactory(Priority3FormFactory)
     content_type = "plant"
     seal_tag_numbers = factory.Sequence(lambda n: f"TAG{n:06d}")
 
@@ -132,7 +144,7 @@ class CertificateFactory(DjangoModelFactory):
         model = "submissions.Certificate"
         skip_postgeneration_save = True
 
-    submission = factory.SubFactory(CaseFactory)
+    form = factory.SubFactory(Priority3FormFactory)
     certified_date = factory.LazyFunction(lambda: timezone.now().date())
 
     @factory.post_generation

@@ -36,12 +36,14 @@ interface EditUserFormProps {
 	onCancel: () => void;
 	onSubmit: (data: EditUserFormData) => void;
 	isSubmitting?: boolean;
+	onDelete?: () => void;
 }
 
 const EditUserForm = ({
 	onCancel,
 	onSubmit,
 	isSubmitting = false,
+	onDelete,
 }: EditUserFormProps) => {
 	const { userId } = useParams<{ userId: string }>();
 	const {
@@ -458,6 +460,17 @@ const EditUserForm = ({
 
 			{/* Footer */}
 			<ResponsiveModalFooter>
+				{onDelete && (
+					<Button
+						type="button"
+						variant="destructive"
+						onClick={onDelete}
+						disabled={isSubmitting}
+						className="mr-auto cursor-pointer"
+					>
+						Delete User
+					</Button>
+				)}
 				<Button
 					type="button"
 					variant="outline"

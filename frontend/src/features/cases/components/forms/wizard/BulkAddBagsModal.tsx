@@ -48,6 +48,8 @@ interface BulkAddBagsModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	existingTags: string[];
+	/** Number of bags already on this form (used to cap at 5 total) */
+	existingBagsOnForm?: number;
 	onAddBags: (
 		bags: Array<{
 			seal_tag_numbers: string;
@@ -74,32 +76,11 @@ interface EntryError {
 }
 
 /**
- * Validate every entry together. Each non-blank tag value (original or new)
- * shares one namespace: it must be unique across the existing case tags and all
- * other entry tags. A bag may repeat the same value for its original and new
- * tag (that is a single tag for that entry, not a duplicate). Returns an errors
- * array aligned by index with the entries.
+ * Validate every entry's tag format. Seal tags have no uniqueness constraint —
+ * they may repeat across forms, cases, and even within a single form. Only
+ * character format is validated.
  */
-const computeEntryErrors = (
-	entries: BulkBagEntry[],
-	existingTags: string[]
-): EntryError[] => {
-	// Count how many times each non-blank value is claimed across existing tags
-	// and every entry's original + new tag. A new tag equal to its own original
-	// is the same physical tag for that entry, so it is not counted twice.
-	const counts = new Map<string, number>();
-	const bump = (value: string) => {
-		const v = value.trim();
-		if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
-	};
-	existingTags.forEach((t) => bump(t));
-	for (const e of entries) {
-		const orig = e.seal_tag_numbers.trim();
-		const neu = e.new_seal_tag_numbers.trim();
-		bump(orig);
-		if (neu && neu !== orig) bump(neu);
-	}
-
+const computeEntryErrors = (entries: BulkBagEntry[]): EntryError[] => {
 	return entries.map((e) => {
 		const orig = e.seal_tag_numbers.trim();
 		const neu = e.new_seal_tag_numbers.trim();
@@ -108,14 +89,10 @@ const computeEntryErrors = (
 
 		if (orig && !TAG_PATTERN.test(orig)) {
 			tagError = "Only letters, numbers, spaces, and hyphens allowed";
-		} else if (orig && (counts.get(orig) ?? 0) > 1) {
-			tagError = "This tag number is already in use";
 		}
 
 		if (neu && !TAG_PATTERN.test(neu)) {
 			newTagError = "Only letters, numbers, spaces, and hyphens allowed";
-		} else if (neu && neu !== orig && (counts.get(neu) ?? 0) > 1) {
-			newTagError = "This tag number is already in use";
 		}
 
 		return { tagError, newTagError };
@@ -125,10 +102,12 @@ const computeEntryErrors = (
 export const BulkAddBagsModal = ({
 	open,
 	onOpenChange,
-	existingTags,
+	existingTags: _existingTags,
+	existingBagsOnForm = 0,
 	onAddBags,
 }: BulkAddBagsModalProps) => {
 	const instanceId = useId();
+	const maxAllowed = Math.max(1, 5 - existingBagsOnForm);
 	const [count, setCount] = useState(1);
 	const [entries, setEntries] = useState<BulkBagEntry[]>([]);
 	// Controlled values for the two "set all" dropdowns, so they visibly reflect
@@ -174,7 +153,7 @@ export const BulkAddBagsModal = ({
 	);
 
 	const handleCountChange = (value: string) => {
-		const parsed = Math.min(50, Math.max(1, Number(value) || 1));
+		const parsed = Math.min(maxAllowed, Math.max(1, Number(value) || 1));
 		setCount(parsed);
 		regenerateEntries(parsed);
 	};
@@ -235,11 +214,8 @@ export const BulkAddBagsModal = ({
 		);
 	};
 
-	// Holistic validation across all entries + existing case tags.
-	const entryErrors = useMemo(
-		() => computeEntryErrors(entries, existingTags),
-		[entries, existingTags]
-	);
+	// Format validation across all entries.
+	const entryErrors = useMemo(() => computeEntryErrors(entries), [entries]);
 	const hasErrors = entryErrors.some(
 		(e) => e.tagError !== null || e.newTagError !== null
 	);
@@ -279,11 +255,20 @@ export const BulkAddBagsModal = ({
 							id={countInputId}
 							type="number"
 							min={1}
-							max={50}
+							max={maxAllowed}
 							value={count}
 							onChange={(e) => handleCountChange(e.target.value)}
+							onFocus={(e) => e.target.select()}
 						/>
 					</div>
+
+					{maxAllowed < 5 && (
+						<p className="text-xs text-amber-600 dark:text-amber-400">
+							This form already has {existingBagsOnForm} bag
+							{existingBagsOnForm !== 1 ? "s" : ""}. You can add up to{" "}
+							{maxAllowed} more (maximum 5 per form).
+						</p>
+					)}
 
 					{/* Set all content types */}
 					<div className="space-y-1">

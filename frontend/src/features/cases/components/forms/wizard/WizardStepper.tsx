@@ -2,11 +2,7 @@ import { Check, AlertTriangle } from "lucide-react";
 import { cn } from "@/shared/utils/style.utils";
 
 export type StepState =
-	| "active"
-	| "completed"
-	| "invalid"
-	| "inProgress"
-	| "future";
+	"active" | "completed" | "invalid" | "inProgress" | "future";
 
 interface WizardStepperProps {
 	currentStep: number;
@@ -16,6 +12,8 @@ interface WizardStepperProps {
 	stepDescriptions?: string[];
 	/** Custom step labels — defaults to the Process 2 steps if not provided */
 	stepLabels?: readonly string[];
+	/** Raw validity booleans — reserved for future use (e.g. connector colouring) */
+	stepValidities?: boolean[];
 }
 
 const DEFAULT_STEPS = ["Case Details", "Officers", "Assessment"] as const;
@@ -39,8 +37,14 @@ export const WizardStepper = ({
 	onStepClick,
 	stepDescriptions,
 	stepLabels,
+	stepValidities: _stepValidities,
 }: WizardStepperProps) => {
 	const STEPS = stepLabels ?? DEFAULT_STEPS;
+	/** Whether a step is effectively invalid — only fires for completed steps that regressed. */
+	const isEffectivelyInvalid = (index: number): boolean => {
+		return stepStates[index] === "invalid";
+	};
+
 	/**
 	 * Determine whether a step can be navigated to.
 	 * Blocked if any prior step is invalid, or if the step is the current one.
@@ -48,9 +52,9 @@ export const WizardStepper = ({
 	const isStepClickable = (index: number): boolean => {
 		if (index === currentStep) return false;
 
-		// Cannot click past an invalid step
+		// Cannot click past an effectively-invalid step (includes active but failing validation)
 		for (let i = 0; i < index; i++) {
-			if (stepStates[i] === "invalid") return false;
+			if (isEffectivelyInvalid(i)) return false;
 		}
 
 		// Future steps that haven't been reached yet are not clickable
@@ -94,7 +98,7 @@ export const WizardStepper = ({
 						const state = stepStates[index] ?? "future";
 						const nextState = stepStates[index + 1] ?? "future";
 						let connectorColor = "bg-gray-300";
-						if (state === "invalid" || nextState === "invalid") {
+						if (isEffectivelyInvalid(index)) {
 							connectorColor = "bg-red-500";
 						} else {
 							const leftDone = state === "completed" || state === "active";
@@ -294,7 +298,7 @@ export const WizardStepper = ({
 										(() => {
 											const nextState = stepStates[index + 1] ?? "future";
 											let mobileConnectorColor = "bg-gray-300";
-											if (state === "invalid" || nextState === "invalid") {
+											if (isEffectivelyInvalid(index)) {
 												mobileConnectorColor = "bg-red-500";
 											} else {
 												const leftDone =

@@ -10,6 +10,7 @@ import { DefendantSearchCombobox } from "@/shared/components/defendants";
 import { CreateDefendantModal } from "@/shared/components/defendants";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
+import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
 import { useDefendantById } from "@/features/defendants/hooks/useDefendants";
 import {
 	formatDefendantDisplayName,
@@ -63,6 +64,8 @@ export const CaseCreationSummaryStep = ({
 	const submittingOfficer =
 		(caseData?.submitting_officer_id as number | null) ?? null;
 	const station = (caseData?.station_id as number | null) ?? null;
+	const approvedBotanistId =
+		(caseData?.approved_botanist_id as number | null) ?? null;
 
 	// Fetch defendant when selected via combobox
 	const { data: defendantToAdd } = useDefendantById(selectedDefendantId);
@@ -313,6 +316,27 @@ export const CaseCreationSummaryStep = ({
 							showExternalAddButton
 						/>
 					</div>
+				</div>
+			</SectionCard>
+
+			{/* Approved Botanist Section */}
+			<SectionCard
+				title="Approved Botanist"
+				isComplete={!!approvedBotanistId}
+				isInvalid={isTouched && !approvedBotanistId}
+			>
+				<div className="space-y-2">
+					<Label htmlFor="approved_botanist">Approved Botanist</Label>
+					<UserSearchCombobox
+						value={approvedBotanistId}
+						onValueChange={(id) => onFieldChange("approved_botanist", id)}
+						placeholder="Select approved botanist..."
+						roleFilter="botanist"
+						lastUsedKey="botanist"
+					/>
+					<p className="text-xs text-muted-foreground">
+						The botanist assigned to this case
+					</p>
 				</div>
 			</SectionCard>
 

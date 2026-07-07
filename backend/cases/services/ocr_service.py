@@ -30,10 +30,13 @@ class OcrService:
             content_type: MIME type of the file.
 
         Returns:
-            A dict with 'extraction' and 'matches' keys.
+            A dict with 'extraction', 'matches', and 'case_match' keys.
+            'case_match' reports whether an existing case has the extracted
+            police reference ({"matched", "case_id", "case_number"}).
 
         Raises:
-            ValidationError: If no structured data is extracted.
+            ValidationError: If no structured data is extracted, or if the
+                police reference could not be read from the form.
             ServiceUnavailable: If OCR dependencies are missing.
         """
         try:
@@ -52,6 +55,15 @@ class OcrService:
 
             parser = PoliceFormParser()
             extraction = parser.parse(ocr_text, word_confidences)
+
+            # The police reference is required to detect and route to a case.
+            # Trim to mirror the check-number comparison rule.
+            raw_reference = extraction.police_reference.value
+            police_reference = str(raw_reference).strip() if raw_reference else ""
+            if not police_reference:
+                raise ValidationError(
+                    "The police reference could not be read from this form."
+                )
 
             matcher = EntityMatcher()
             matches = {
@@ -75,7 +87,24 @@ class OcrService:
                 ),
             }
 
-            return {"extraction": asdict(extraction), "matches": matches}
+            # Detect an existing case by police reference using the same
+            # case-insensitive, trimmed comparison as the check-number endpoint.
+            from cases.models import Case
+
+            matched_case = Case.objects.filter(
+                case_number__iexact=police_reference
+            ).first()
+            case_match = {
+                "matched": matched_case is not None,
+                "case_id": matched_case.pk if matched_case else None,
+                "case_number": matched_case.case_number if matched_case else None,
+            }
+
+            return {
+                "extraction": asdict(extraction),
+                "matches": matches,
+                "case_match": case_match,
+            }
 
         except FileNotFoundError:
             settings.LOGGER.error("Tesseract binary not found", exc_info=True)

@@ -100,17 +100,13 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 
 	// For auth routes, handle them first to avoid unnecessary auth checks
 	if (pathname.startsWith("/auth/")) {
-		// Special caseObj: password-update requires authentication
+		// Special caseObj: password-update — allow access without guard check.
+		// The component itself verifies auth state and redirects if needed.
+		// This avoids a race condition where tokens are stored but the guard's
+		// getCurrentUser() call hasn't resolved yet (freshly verified reset code).
 		if (pathname === "/auth/password-update") {
-			const { isAuthenticated } = await checkAuthStatus();
-			if (!isAuthenticated) {
-				logger.debug(
-					"[RootAuthGuard] Password update requires authentication, redirecting to login"
-				);
-				return redirect("/auth/login");
-			}
 			logger.debug(
-				"[RootAuthGuard] User authenticated, allowing access to password update"
+				"[RootAuthGuard] Password update page, allowing access (component handles auth)"
 			);
 			return null;
 		}
@@ -170,6 +166,16 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		return redirect("/auth/login");
 	}
 
+	// Force password change for invited users who haven't set their password
+	if (
+		user?.requires_password_change &&
+		pathname !== "/auth/password-update" &&
+		!pathname.startsWith("/auth/")
+	) {
+		logger.debug("[RootAuthGuard] User requires password change, redirecting");
+		return redirect("/auth/password-update?fromReset=true");
+	}
+
 	// Users without an app role (and not admin) may only access the dashboard.
 	const hasAppAccess = !!(
 		user?.is_superuser ||
@@ -186,8 +192,8 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 	}
 
 	// Check admin route protection - only superusers can access admin routes
-	if (pathname.startsWith("/admin")) {
-		const isAdmin = user?.is_superuser;
+	if (pathname.startsWith("/testing") || pathname.startsWith("/invites")) {
+		const isAdmin = user?.is_superuser || user?.is_staff;
 		if (!isAdmin) {
 			logger.warn(
 				"[RootAuthGuard] Non-admin user attempted to access admin route",
@@ -198,7 +204,7 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 					pathname,
 				}
 			);
-			return redirect("/"); // Redirect to home page
+			return redirect("/");
 		}
 		logger.debug("[RootAuthGuard] Admin user accessing admin route");
 	}

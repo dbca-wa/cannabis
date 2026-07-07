@@ -7,18 +7,18 @@ import {
 } from "@/shared/constants/phases.config";
 
 /**
- * Check if a case can be deleted (no associated certificates)
+ * Check if a case can be deleted (no associated certificates across its forms)
  */
 export const canDeleteCase = (caseObj: Case): boolean => {
-	return caseObj.certificates.length === 0;
+	return caseObj.certificates_count === 0;
 };
 
 /**
  * Get deletion warning message for a case
  */
 export const getDeletionWarningMessage = (caseObj: Case): string => {
-	if (caseObj.certificates.length > 0) {
-		return `Cannot delete case ${caseObj.case_number} because it has ${caseObj.certificates.length} associated certificate(s).`;
+	if (caseObj.certificates_count > 0) {
+		return `Cannot delete case ${caseObj.case_number} because it has ${caseObj.certificates_count} associated certificate(s).`;
 	}
 	return "";
 };
@@ -27,7 +27,7 @@ export const getDeletionWarningMessage = (caseObj: Case): string => {
  * Format case display name for UI
  */
 export const formatCaseDisplayName = (caseObj: Case | CaseTiny): string => {
-	return `${caseObj.case_number} - ${caseObj.phase_display}`;
+	return `${caseObj.case_number} - ${caseObj.derived_status_display}`;
 };
 
 /**

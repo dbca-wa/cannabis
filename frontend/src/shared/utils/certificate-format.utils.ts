@@ -114,8 +114,11 @@ export const formatOfficerLegal = (
 	const firstName = officer.given_names || "";
 	const org = officer.station_name || "";
 
-	let result = rank;
-	if (badge) result += ` ${badge}`;
+	let result = "";
+	if (rank && !["unknown", "other"].includes(rank.toLowerCase())) {
+		result = rank;
+	}
+	if (badge) result += result ? ` ${badge}` : badge;
 	if (surname) result += ` ${surname}`;
 	if (firstName) result += `, ${firstName}`;
 	if (org) result += ` of ${org}`;
@@ -135,5 +138,7 @@ export const formatContentDescription = (
 		...new Set(bags.map((b) => b.content_type_display).filter(Boolean)),
 	];
 	if (types.length === 0) return "quantity of [Pending]";
-	return `quantity of ${types.join(", ")}`;
+	if (types.length === 1) return `quantity of ${types[0]}`;
+	if (types.length === 2) return `quantity of ${types[0]} and ${types[1]}`;
+	return `quantity of ${types.slice(0, -1).join(", ")} and ${types[types.length - 1]}`;
 };

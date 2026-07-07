@@ -28,10 +28,14 @@ export const CASE_PROCESSING_STEPS: readonly CaseProcessingStep[] = [
 		description: "Case details",
 		phase: "details",
 	},
-	{ label: "Assessment", description: "Drug bags", phase: "assessment" },
 	{
-		label: "Certificate",
-		description: "Generate Certificate",
+		label: "Assessment",
+		description: "Forms & Drug Bags",
+		phase: "assessment",
+	},
+	{
+		label: "Certificates",
+		description: "Generate Certificates",
 		phase: "unsigned_generation",
 	},
 ] as const;
@@ -122,26 +126,36 @@ export class CaseProcessingWizardStore extends BaseStore<CaseProcessingWizardSto
 	/**
 	 * Set the initial active step based on which steps have valid data.
 	 * Finds the first step that is NOT valid (the one needing attention)
-	 * and sets it as the current step. All valid steps before it are marked completed.
+	 * and lands there. Only valid steps BEFORE the landing step are marked
+	 * as completed — the landing step itself stays out of completedSteps so
+	 * getStepState returns "active" (not "invalid") while the user is on it.
 	 */
 	initializeFromValidities = (stepValidities: boolean[]) => {
-		// Clear and rebuild completed steps
 		this.state.completedSteps.clear();
 
-		// Find the first invalid step — that's where the user should be
-		let firstIncompleteStep = stepValidities.length; // default: all complete
+		// Find the first invalid step — that's where the user lands.
+		let firstIncomplete = stepValidities.length;
 		for (let i = 0; i < stepValidities.length; i++) {
-			if (stepValidities[i]) {
-				this.state.completedSteps.add(i);
-			} else {
-				firstIncompleteStep = i;
+			if (!stepValidities[i]) {
+				firstIncomplete = i;
 				break;
 			}
 		}
 
-		// Set current step to the first incomplete one (clamped to max)
-		this.state.currentStep = Math.min(firstIncompleteStep, TOTAL_STEPS - 1);
-		this.state.highestStepReached = this.state.currentStep;
+		const landingStep = Math.min(firstIncomplete, TOTAL_STEPS - 1);
+
+		// Mark only VALID steps before the landing step as completed.
+		// The landing step itself is NOT completed — the user still needs to work on it.
+		// This means on a fresh case (landing on step 1), step 1 is NOT in completedSteps,
+		// so getStepState returns "active" (not "invalid") and the connector stays grey.
+		for (let i = 0; i < landingStep; i++) {
+			if (stepValidities[i]) {
+				this.state.completedSteps.add(i);
+			}
+		}
+
+		this.state.currentStep = landingStep;
+		this.state.highestStepReached = landingStep;
 		this.state.initialised = true;
 
 		logger.debug("Processing wizard initialised from data", {

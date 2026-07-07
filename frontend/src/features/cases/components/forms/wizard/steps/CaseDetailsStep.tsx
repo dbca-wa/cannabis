@@ -1,10 +1,12 @@
 import Calendar22 from "@/shared/components/ui/calendar-22";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/shared/utils";
+import { Button } from "@/shared/components/ui/button";
+import { ArrowRight, Info, Loader2 } from "lucide-react";
+import { Link } from "react-router";
 import { SectionCard } from "../SectionCard";
 import { OcrCaseDetailsPanel } from "../../ocr/OcrCaseDetailsPanel";
+import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
 import { useCaseNumberAvailability } from "../../../../hooks/useCaseNumberAvailability";
 
 interface CaseDetailsStepProps {
@@ -17,9 +19,12 @@ interface CaseDetailsStepProps {
 }
 
 /**
- * Step 0 of the case creation wizard — case details only.
- * Renders case_number, received date, and security_movement_envelope.
- * Defendants have their own dedicated step (DefendantsStep).
+ * Step 0 of the case creation wizard — base case details only.
+ * Renders the police reference and received date. The security movement
+ * envelope and drug bags now belong to a Priority 3 form and are captured when
+ * a form is added, not here. When the entered reference already identifies a
+ * case, a non-blocking notice offers to take the user to that case to add a
+ * form (the shared base data already lives there), rather than showing an error.
  */
 export const CaseDetailsStep = ({
 	caseData,
@@ -29,12 +34,12 @@ export const CaseDetailsStep = ({
 	// Derive field values from server data
 	const caseNumber = (caseData?.case_number as string) ?? "";
 	const received = (caseData?.received as string) ?? "";
-	const securityEnvelope =
-		(caseData?.security_movement_envelope as string) ?? "";
+	const approvedBotanist =
+		(caseData?.approved_botanist_id as number | null) ?? null;
 	const caseId = (caseData?.id as number | undefined) ?? null;
 
 	// Debounced uniqueness check for the police reference number
-	const { isChecking: isCheckingCaseNumber, alreadyExists: caseNumberTaken } =
+	const { isChecking: isCheckingCaseNumber, matchedCase } =
 		useCaseNumberAvailability(caseNumber, caseId);
 
 	// Compute validation errors (only shown when isTouched)
@@ -43,19 +48,20 @@ export const CaseDetailsStep = ({
 			? "Police reference number is required"
 			: undefined,
 		received: !received ? "Received date is required" : undefined,
+		approved_botanist: !approvedBotanist
+			? "Approved botanist is required"
+			: undefined,
 	};
 
-	// Duplicate error surfaces immediately (not gated behind touched)
-	const caseNumberError =
-		(isTouched && errors.case_number) ||
-		(caseNumberTaken
-			? "This police reference number already exists on another case"
-			: undefined);
+	// The only hard error on this field is the required check; a match is not an
+	// error but a redirect opportunity (shown as a notice below).
+	const caseNumberError = isTouched ? errors.case_number : undefined;
 
-	// Determine section completion state
+	// Determine section completion state (base data only)
 	const isCaseDetailsComplete =
-		!!caseNumber.trim() && !!received && !!securityEnvelope.trim();
-	const isCaseDetailsInvalid = isTouched && (!caseNumber.trim() || !received);
+		!!caseNumber.trim() && !!received && !!approvedBotanist;
+	const isCaseDetailsInvalid =
+		isTouched && (!caseNumber.trim() || !received || !approvedBotanist);
 
 	return (
 		<div className="space-y-6">
@@ -79,12 +85,7 @@ export const CaseDetailsStep = ({
 								value={caseNumber}
 								onChange={(e) => onFieldChange("case_number", e.target.value)}
 								placeholder="Enter police reference number"
-								className={cn(
-									caseNumberTaken && "border-red-500 focus-visible:ring-red-500"
-								)}
-								aria-invalid={
-									(isTouched && !!errors.case_number) || caseNumberTaken
-								}
+								aria-invalid={isTouched && !!errors.case_number}
 								aria-describedby={
 									caseNumberError ? "case_number-error" : undefined
 								}
@@ -105,6 +106,39 @@ export const CaseDetailsStep = ({
 							>
 								{caseNumberError}
 							</p>
+						)}
+						{matchedCase && (
+							<div
+								className="flex flex-col gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between"
+								role="status"
+								aria-live="polite"
+							>
+								<div className="flex items-start gap-2">
+									<Info
+										className="mt-0.5 h-4 w-4 shrink-0"
+										aria-hidden="true"
+									/>
+									<span>
+										A case with reference{" "}
+										<span className="font-semibold">
+											{matchedCase.case_number}
+										</span>{" "}
+										already exists. Add your Priority 3 form there — the shared
+										details are already recorded, so nothing needs re-entering.
+									</span>
+								</div>
+								<Button
+									asChild
+									variant="outline"
+									size="sm"
+									className="shrink-0 self-start sm:self-auto"
+								>
+									<Link to={`/cases/${matchedCase.id}`}>
+										Add a form to this case
+										<ArrowRight className="h-4 w-4" aria-hidden="true" />
+									</Link>
+								</Button>
+							</div>
 						)}
 						<p className="text-xs text-muted-foreground">
 							Police reference number for this case
@@ -140,21 +174,29 @@ export const CaseDetailsStep = ({
 						</p>
 					</div>
 
-					{/* Security Movement Envelope */}
+					{/* Approved Botanist */}
 					<div className="space-y-2">
-						<Label htmlFor="security_movement_envelope">
-							Security Movement Envelope Number
+						<Label htmlFor="approved_botanist" className="required">
+							Approved Botanist
 						</Label>
-						<Input
-							id="security_movement_envelope"
-							value={securityEnvelope}
-							onChange={(e) =>
-								onFieldChange("security_movement_envelope", e.target.value)
-							}
-							placeholder="Enter envelope number"
+						<UserSearchCombobox
+							value={(caseData?.approved_botanist_id as number | null) ?? null}
+							onValueChange={(id) => onFieldChange("approved_botanist_id", id)}
+							placeholder="Select approved botanist..."
+							roleFilter="botanist"
+							lastUsedKey="botanist"
 						/>
+						{isTouched && errors.approved_botanist && (
+							<p
+								id="approved_botanist-error"
+								className="text-sm text-red-600"
+								role="alert"
+							>
+								{errors.approved_botanist}
+							</p>
+						)}
 						<p className="text-xs text-muted-foreground">
-							Security envelope tracking number
+							The botanist assigned to assess this case
 						</p>
 					</div>
 				</div>

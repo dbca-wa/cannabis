@@ -4,7 +4,7 @@ from .batch_service import BatchService
 from .certificate_service import (
     CertificateService,
     build_certificate_context,
-    generate_certificates,
+    generate_certificate,
     regenerate_certificate_pdf,
 )
 from .dashboard_service import DashboardService
@@ -19,7 +19,7 @@ from .pdf_service import PDFService
 from .pdf_test_service import TestPDFService
 from .workflow_service import (
     WorkflowService,
-    advance_submission_phase,
+    advance_form_phase,
     get_phase_order,
     get_phase_transitions,
     validate_transition,
@@ -36,14 +36,14 @@ __all__ = [
     "ServiceUnavailable",
     "TestPDFService",
     "WorkflowService",
-    # Workflow (backward-compatible functions)
-    "advance_submission_phase",
+    # Workflow (module-level convenience functions)
+    "advance_form_phase",
     "get_phase_transitions",
     "get_phase_order",
     "validate_transition",
     # Certificates (backward-compatible functions)
     "build_certificate_context",
-    "generate_certificates",
+    "generate_certificate",
     "regenerate_certificate_pdf",
     # Drafts
     "get_user_draft",

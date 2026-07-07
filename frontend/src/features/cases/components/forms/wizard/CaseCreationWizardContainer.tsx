@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect } from "react";
 import { observer } from "mobx-react-lite";
+import { Loader2 } from "lucide-react";
 import { useCaseCreationWizardStore } from "@/app/providers/store.provider";
-import { CASE_CREATION_STEPS } from "@/app/stores/derived/case-creation-wizard.store";
-import type { StepState } from "@/app/stores/derived/case-processing-wizard.store";
-import { WizardStepper } from "./WizardStepper";
-import { WizardNavigation } from "./WizardNavigation";
+import { Button } from "@/shared/components/ui/button";
 import { CaseDetailsStep } from "./steps/CaseDetailsStep";
 import { DefendantsStep } from "./steps/DefendantsStep";
 import { OfficersStep } from "./steps/OfficersStep";
@@ -22,12 +20,8 @@ interface CaseCreationWizardContainerProps {
 }
 
 /**
- * Orchestrator for Process 1 — the case creation wizard.
- * A simple 3-step data-entry wizard with no preview panel.
- * Coordinates MobX UI state (step navigation, validation display) with
- * TanStack Query data passed in via props.
- *
- * Steps: Case Details (0) → Defendants (1) → Officers (2)
+ * Single-page case creation form. Renders all sections (Case Details,
+ * Defendants, Officers) in a scrollable layout with one "Create Case" action.
  */
 export const CaseCreationWizardContainer = observer(
 	({
@@ -37,210 +31,73 @@ export const CaseCreationWizardContainer = observer(
 		onDiscard,
 	}: CaseCreationWizardContainerProps) => {
 		const store = useCaseCreationWizardStore();
-		const contentRef = useRef<HTMLDivElement>(null);
 
-		// ============================================================================
-		// Step Validation (computed from caseData)
-		// ============================================================================
-
-		// Debounced uniqueness check for the police reference number — shared (and
-		// deduped) with the check rendered inside CaseDetailsStep.
-		const { isChecking: isCheckingCaseNumber, alreadyExists: caseNumberTaken } =
-			useCaseNumberAvailability(
-				(caseData?.case_number as string) ?? "",
-				(caseData?.id as number | undefined) ?? null
-			);
-
-		const isStep0Valid =
-			!!(
-				caseData &&
-				(caseData.case_number as string)?.trim() &&
-				(caseData.received as string)?.trim()
-			) &&
-			!caseNumberTaken &&
-			!isCheckingCaseNumber;
-
-		const isStep1Valid =
-			!!(
-				caseData &&
-				Array.isArray(caseData.defendants) &&
-				(caseData.defendants as unknown[]).length > 0
-			) || store.state.defendantUnknownAcknowledged;
-
-		const isStep2Valid = !!(caseData && caseData.submitting_officer_id);
-
-		const stepValidities = useMemo(
-			() => [isStep0Valid, isStep1Valid, isStep2Valid],
-			[isStep0Valid, isStep1Valid, isStep2Valid]
+		const { isChecking, matchedCase } = useCaseNumberAvailability(
+			(caseData?.case_number as string) ?? "",
+			(caseData?.id as number | undefined) ?? null
 		);
 
-		// Derive visual state for each step
-		const stepStates: StepState[] = CASE_CREATION_STEPS.map((_, index) =>
-			store.getStepState(index, stepValidities[index])
-		);
-
-		const stepDescriptions = CASE_CREATION_STEPS.map(
-			(step) => step.description
-		);
-
-		const stepLabels = CASE_CREATION_STEPS.map((step) => step.label);
-
-		// ============================================================================
-		// Auto-scroll to top on step change
-		// ============================================================================
-
+		const matchedCaseId = matchedCase?.id ?? null;
 		useEffect(() => {
-			contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-		}, [store.state.currentStep]);
+			store.setMatchedExistingCaseId(matchedCaseId);
+		}, [store, matchedCaseId]);
 
-		// ============================================================================
-		// Navigation Handlers
-		// ============================================================================
-
-		const scrollToTop = useCallback(() => {
-			contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-		}, []);
-
-		/**
-		 * Continue: mark step touched → validate → if valid mark completed + advance + scroll to top.
-		 */
-		const handleContinue = useCallback(() => {
-			const current = store.state.currentStep;
-			store.markStepTouched(current);
-
-			if (stepValidities[current]) {
-				store.markStepCompleted(current);
-				store.nextStep();
-				scrollToTop();
-			}
-		}, [store, stepValidities, scrollToTop]);
-
-		/**
-		 * Back: navigate to previous step + scroll to top.
-		 */
-		const handleBack = useCallback(() => {
-			store.previousStep();
-			scrollToTop();
-		}, [store, scrollToTop]);
-
-		/**
-		 * Final submit: validate all steps → navigate to first invalid → else call onSubmit.
-		 */
-		const handleFinalise = useCallback(() => {
-			// Mark all steps as touched so errors display
-			for (let i = 0; i < CASE_CREATION_STEPS.length; i++) {
-				store.markStepTouched(i);
-			}
-
-			// Find first invalid step
-			const firstInvalidIndex = stepValidities.findIndex((valid) => !valid);
-
-			if (firstInvalidIndex !== -1) {
-				store.goToStep(firstInvalidIndex);
-				scrollToTop();
-				return;
-			}
-
-			// All valid — submit
-			onSubmit();
-		}, [store, stepValidities, scrollToTop, onSubmit]);
-
-		/**
-		 * Handle Continue or Finalise based on current step position.
-		 */
-		const handleContinueOrFinalise = useCallback(() => {
-			if (store.isLastStep) {
-				handleFinalise();
-			} else {
-				handleContinue();
-			}
-		}, [store.isLastStep, handleContinue, handleFinalise]);
-
-		/**
-		 * Handle step click from stepper — navigate to the clicked step.
-		 */
-		const handleStepClick = useCallback(
-			(stepIndex: number) => {
-				store.goToStep(stepIndex);
-				scrollToTop();
-			},
-			[store, scrollToTop]
-		);
-
-		// ============================================================================
-		// Step Content Rendering
-		// ============================================================================
-
-		const renderStepContent = () => {
-			const isTouched = store.state.touchedSteps.has(store.state.currentStep);
-
-			switch (store.state.currentStep) {
-				case 0:
-					return (
-						<CaseDetailsStep
-							caseData={caseData}
-							isTouched={isTouched}
-							onFieldChange={onFieldChange}
-						/>
-					);
-				case 1:
-					return (
-						<DefendantsStep
-							caseData={caseData}
-							isTouched={isTouched}
-							onFieldChange={onFieldChange}
-							defendantUnknown={store.state.defendantUnknownAcknowledged}
-							onDefendantUnknownChange={store.setDefendantUnknownAcknowledged}
-						/>
-					);
-				case 2:
-					return (
-						<OfficersStep
-							caseData={caseData}
-							isTouched={isTouched}
-							onFieldChange={onFieldChange}
-						/>
-					);
-				default:
-					return null;
-			}
-		};
-
-		// ============================================================================
-		// Render
-		// ============================================================================
+		// Validation — minimum required fields before submission
+		const caseNumber = (caseData?.case_number as string) ?? "";
+		const received = (caseData?.received as string) ?? "";
+		const submittingOfficer = caseData?.submitting_officer_id;
+		const approvedBotanist = caseData?.approved_botanist_id;
+		const defendants = (caseData?.defendants as number[]) ?? [];
+		const hasDefendants =
+			defendants.length > 0 || store.state.defendantUnknownAcknowledged;
+		const isValid =
+			!!caseNumber.trim() &&
+			!!received &&
+			!!submittingOfficer &&
+			!!approvedBotanist &&
+			hasDefendants &&
+			!store.hasMatchedExistingCase &&
+			!isChecking;
 
 		return (
 			<div className="flex flex-col gap-6 h-full">
-				{/* Header */}
 				<h1 className="text-2xl font-bold tracking-tight">Create Case</h1>
 
-				{/* Stepper */}
-				<WizardStepper
-					currentStep={store.state.currentStep}
-					stepStates={stepStates}
-					onStepClick={handleStepClick}
-					stepDescriptions={stepDescriptions}
-					stepLabels={stepLabels}
-				/>
-
-				{/* Main content area with scroll container */}
-				<div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto">
-					{renderStepContent()}
+				<div className="flex-1 min-h-0 overflow-y-auto space-y-6">
+					<CaseDetailsStep
+						caseData={caseData}
+						isTouched={true}
+						onFieldChange={onFieldChange}
+					/>
+					<DefendantsStep
+						caseData={caseData}
+						isTouched={true}
+						onFieldChange={onFieldChange}
+						defendantUnknown={store.state.defendantUnknownAcknowledged}
+						onDefendantUnknownChange={store.setDefendantUnknownAcknowledged}
+					/>
+					<OfficersStep
+						caseData={caseData}
+						isTouched={false}
+						onFieldChange={onFieldChange}
+					/>
 				</div>
 
-				{/* Navigation */}
-				<WizardNavigation
-					currentStep={store.state.currentStep}
-					isLastStep={store.isLastStep}
-					isSubmitting={store.state.isSubmitting}
-					canContinue={
-						store.isLastStep || stepValidities[store.state.currentStep]
-					}
-					onBack={handleBack}
-					onContinue={handleContinueOrFinalise}
-					onDiscard={onDiscard}
-				/>
+				<div className="flex items-center justify-between gap-3">
+					<Button variant="destructive" onClick={onDiscard}>
+						Discard
+					</Button>
+					<Button
+						onClick={onSubmit}
+						disabled={!isValid || store.state.isSubmitting}
+						className="bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
+					>
+						{store.state.isSubmitting ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : null}
+						{store.state.isSubmitting ? "Creating..." : "Create Case"}
+					</Button>
+				</div>
 			</div>
 		);
 	}

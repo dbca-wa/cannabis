@@ -324,6 +324,27 @@ class PoliceFormParser:
 
         return items
 
+    def _derive_police_reference(self, items: list[ExtractedItem]) -> ExtractedField:
+        """Derive the police reference from an item's Property Reference.
+
+        The Property Reference column reads like "123456 7890 12345/6789";
+        the trailing "/6789" is the bag number and is not part of the police
+        reference, so it is removed. The first item with a readable property
+        reference supplies the value and its confidence. Returns an empty
+        field with zero confidence when no property reference is readable.
+        """
+        for item in items:
+            raw_value = item.property_reference.value
+            if raw_value and str(raw_value).strip():
+                raw = str(raw_value).strip()
+                police_ref = re.sub(r"\s*/\s*\d+\s*$", "", raw).strip()
+                return ExtractedField(
+                    value=police_ref or None,
+                    raw_text=item.property_reference.raw_text,
+                    confidence=item.property_reference.confidence,
+                )
+        return ExtractedField()
+
     def parse(self, ocr_text: str, word_confidences: list[dict]) -> ExtractionResult:
         """Extract all structured fields from OCR text output.
 
@@ -403,6 +424,7 @@ class PoliceFormParser:
         items = self._extract_items_table(ocr_text, word_confidences)
 
         return ExtractionResult(
+            police_reference=self._derive_police_reference(items),
             date=date_field,
             seizure_date=date_field,
             security_movement_envelope=envelope_field,

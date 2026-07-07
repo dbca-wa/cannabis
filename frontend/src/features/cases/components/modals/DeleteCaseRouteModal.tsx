@@ -14,7 +14,7 @@ import { formatDate } from "@/shared/utils/date.utils";
 
 export const DeleteCaseRouteModal = () => {
 	const navigate = useNavigate();
-	const { submissionId } = useParams();
+	const { id } = useParams();
 	const { deleteCase, isDeleting } = useCases();
 
 	// Fetch case data
@@ -22,18 +22,18 @@ export const DeleteCaseRouteModal = () => {
 		data: caseObj,
 		isLoading,
 		error,
-	} = useCaseById(submissionId ? parseInt(submissionId) : null);
+	} = useCaseById(id ? parseInt(id) : null);
 
 	const handleClose = () => {
 		navigate("/cases");
 	};
 
 	const handleDelete = async () => {
-		if (!submissionId) return;
+		if (!id) return;
 
 		try {
 			await new Promise<void>((resolve, reject) => {
-				deleteCase(parseInt(submissionId), {
+				deleteCase(parseInt(id), {
 					onSuccess: () => {
 						resolve();
 						handleClose();
@@ -80,9 +80,9 @@ export const DeleteCaseRouteModal = () => {
 
 	// A case can be deleted while it is still being processed. Once it has been
 	// batched or completed it forms part of finance records and must be retained.
-	const canDelete = caseObj.phase !== "complete" && caseObj.batch_id == null;
+	const canDelete = caseObj.derived_status !== "complete";
 	const warningMessage = !canDelete
-		? "This case cannot be deleted because it has been batched or completed. Cases become part of finance records once batched."
+		? "This case cannot be deleted because it has been completed. Cases become part of finance records once batched."
 		: null;
 
 	return (
@@ -158,20 +158,20 @@ export const DeleteCaseRouteModal = () => {
 						<div className="flex items-center gap-2">
 							<User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
 							<span className="font-medium text-gray-900 dark:text-gray-100">
-								Phase:
+								Status:
 							</span>
-							<Badge className={getPhaseBadgeClass(caseObj.phase)}>
-								{caseObj.phase_display}
+							<Badge className={getPhaseBadgeClass(caseObj.derived_status)}>
+								{caseObj.derived_status_display}
 							</Badge>
 						</div>
 
-						{caseObj.bags && caseObj.bags.length > 0 && (
+						{caseObj.bags_count > 0 && (
 							<div className="flex items-center gap-2">
 								<span className="font-medium text-gray-900 dark:text-gray-100">
 									Drug Bags:
 								</span>
 								<span className="text-gray-700 dark:text-gray-300">
-									{caseObj.bags.length} bag(s)
+									{caseObj.bags_count} bag(s)
 								</span>
 							</div>
 						)}

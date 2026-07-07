@@ -101,6 +101,8 @@ export const UserSearchCombobox = React.forwardRef<
 			exclude,
 			enabled: open,
 			loadInitialData: true,
+			limit: 50,
+			initialDataLimit: 50,
 		});
 
 		const { data: selectedUser, isLoading: isLoadingSelectedUser } =
@@ -194,13 +196,53 @@ export const UserSearchCombobox = React.forwardRef<
 		// "Last used" shortcut: shown only in the default (non-search) state. The
 		// pinned user is filtered out of the main list to avoid duplication.
 		const rawResults = searchResults?.results ?? [];
+
+		// Sort results alphabetically by first name
+		const sortedResults = [...rawResults].sort((a, b) => {
+			const nameA = (a.given_names ?? a.full_name ?? "").toLowerCase();
+			const nameB = (b.given_names ?? b.full_name ?? "").toLowerCase();
+			return nameA.localeCompare(nameB);
+		});
+
+		// Validate the cached last-used user against fresh results. Only runs when
+		// the dropdown is open and results have loaded. If the cached ID isn't found
+		// in this result set we don't clear the cache — the user may be valid but
+		// simply not in the current page of results.
+		useEffect(() => {
+			if (!lastUsedKey || !lastUsedUser || !open || sortedResults.length === 0)
+				return;
+			const freshMatch = sortedResults.find((u) => u.id === lastUsedUser.id);
+			if (freshMatch) {
+				// ID still valid — update the cached object if stale
+				if (
+					freshMatch.email !== lastUsedUser.email ||
+					freshMatch.full_name !== lastUsedUser.full_name
+				) {
+					setLastUsedUser(freshMatch);
+				}
+				return;
+			}
+			// ID not found in results — try matching by email
+			const emailMatch = sortedResults.find(
+				(u) =>
+					u.email.toLowerCase() === (lastUsedUser.email ?? "").toLowerCase()
+			);
+			if (emailMatch) {
+				setLastUsedUser(emailMatch); // Update cache with correct current ID
+			}
+			// Don't clear — the user might be valid but just not in this result set
+		}, [sortedResults, lastUsedUser, lastUsedKey, setLastUsedUser, open]);
+
 		const showLastUsed =
-			!!lastUsedKey && !!lastUsedUser && !searchQuery.trim() && !searchError;
-		const mainResults = (
+			!!lastUsedKey &&
+			!!lastUsedUser &&
+			!searchQuery.trim() &&
+			!searchError &&
+			sortedResults.some((u) => u.id === lastUsedUser.id);
+		const mainResults =
 			showLastUsed && lastUsedUser
-				? rawResults.filter((u) => u.id !== lastUsedUser.id)
-				: rawResults
-		).slice(0, 6);
+				? sortedResults.filter((u) => u.id !== lastUsedUser.id)
+				: sortedResults;
 
 		const comboboxElement = (
 			<Popover open={open} onOpenChange={setOpen}>
@@ -288,7 +330,7 @@ export const UserSearchCombobox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{initialData?.slice(0, 6).map(renderUserItem)}
+											{initialData?.map(renderUserItem)}
 										</CommandGroup>
 									</>
 								) : !searchResults?.results?.length ? (

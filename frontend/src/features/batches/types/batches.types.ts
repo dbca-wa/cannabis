@@ -38,7 +38,7 @@ export interface BatchDetail extends Batch {
 }
 
 export interface CreateBatchRequest {
-	case_ids: number[];
+	certificate_ids: number[];
 }
 
 export interface RecordInvoiceRaisedRequest {

@@ -14,14 +14,40 @@ urlpatterns = [
     ),
     path("<int:pk>", views.CaseDetailView.as_view(), name="case_detail"),
     path(
-        "<int:pk>/workflow",
-        views.CaseWorkflowView.as_view(),
-        name="case_workflow",
-    ),
-    path(
         "<int:pk>/phase-history",
         views.CasePhaseHistoryView.as_view(),
         name="case_phase_history",
+    ),
+    # Priority 3 form endpoints
+    path(
+        "<int:pk>/forms",
+        views.CaseFormListCreateView.as_view(),
+        name="case_forms",
+    ),
+    path(
+        "forms/<int:pk>",
+        views.FormDetailView.as_view(),
+        name="form_detail",
+    ),
+    path(
+        "forms/<int:pk>/workflow",
+        views.FormWorkflowView.as_view(),
+        name="form_workflow",
+    ),
+    path(
+        "forms/<int:pk>/bags/batch",
+        views.DrugBagBatchCreateView.as_view(),
+        name="drugbag_batch_create",
+    ),
+    path(
+        "forms/<int:pk>/certificate/generate",
+        views.FormCertificateGenerateView.as_view(),
+        name="form_certificate_generate",
+    ),
+    path(
+        "forms/<int:pk>/scanned-image",
+        views.FormScannedImageUploadView.as_view(),
+        name="form_scanned_image",
     ),
     # Batch endpoints
     path("batches", views.BatchListCreateView.as_view(), name="batch_list_create"),
@@ -42,11 +68,6 @@ urlpatterns = [
         "<int:pk>/bags",
         views.DrugBagListView.as_view(),
         name="drugbag_list",
-    ),
-    path(
-        "<int:pk>/bags/batch",
-        views.DrugBagBatchCreateView.as_view(),
-        name="drugbag_batch_create",
     ),
     path("bags/<int:pk>", views.DrugBagDetailView.as_view(), name="drugbag_detail"),
     # Botanical assessment endpoints
@@ -71,11 +92,6 @@ urlpatterns = [
         "<int:pk>/certificates",
         views.CertificateListView.as_view(),
         name="certificate_list",
-    ),
-    path(
-        "<int:pk>/certificates/generate",
-        views.CertificateGenerateView.as_view(),
-        name="certificate_generate",
     ),
     path(
         "<int:pk>/certificates/<int:certificate_id>/pdf",
@@ -138,11 +154,5 @@ urlpatterns = [
         "ocr-upload",
         views.OcrUploadView.as_view(),
         name="ocr_upload",
-    ),
-    # Police Priority 3 form storage (optional, per case)
-    path(
-        "<int:pk>/police-form",
-        views.PoliceFormUploadView.as_view(),
-        name="police_form_upload",
     ),
 ]

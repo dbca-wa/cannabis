@@ -9,57 +9,74 @@ import { CasesFilters } from "@/features/cases/components/CasesFilters";
 import { CasesTable } from "@/features/cases/components/CasesTable";
 import { useCreateBatch } from "@/features/batches";
 import type { CaseTiny } from "@/shared/types/backend-api.types";
+import type { Certificate } from "@/features/certificates/types/certificates.types";
+
+/** Extract all batch-eligible certificate IDs from a case's forms. */
+const getEligibleCertificateIds = (caseObj: CaseTiny): number[] =>
+	caseObj.forms
+		.map((f) => f.certificate)
+		.filter((c): c is Certificate => c !== null && c.is_batch_eligible)
+		.map((c) => c.id);
 
 const Cases = () => {
 	const navigate = useNavigate();
 	const [totalCount, setTotalCount] = useState<number | undefined>(undefined);
-	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [selectedCertificateIds, setSelectedCertificateIds] = useState<
+		Set<number>
+	>(new Set());
 
 	const createBatch = useCreateBatch();
 
+	// Toggle all eligible certificate IDs for a given case row.
 	const toggleSelect = useCallback((caseObj: CaseTiny) => {
-		setSelectedIds((prev) => {
+		const certIds = getEligibleCertificateIds(caseObj);
+		if (certIds.length === 0) return;
+
+		setSelectedCertificateIds((prev) => {
 			const next = new Set(prev);
-			if (next.has(caseObj.id)) {
-				next.delete(caseObj.id);
+			const allSelected = certIds.every((id) => next.has(id));
+			if (allSelected) {
+				certIds.forEach((id) => next.delete(id));
 			} else {
-				next.add(caseObj.id);
+				certIds.forEach((id) => next.add(id));
 			}
 			return next;
 		});
 	}, []);
 
-	// Select (or clear) every batching-eligible case currently shown.
+	// Toggle all eligible certificate IDs from all shown eligible cases.
 	const toggleSelectAll = useCallback((eligible: CaseTiny[]) => {
-		setSelectedIds((prev) => {
+		setSelectedCertificateIds((prev) => {
+			const allCertIds = eligible.flatMap(getEligibleCertificateIds);
 			const allSelected =
-				eligible.length > 0 && eligible.every((c) => prev.has(c.id));
+				allCertIds.length > 0 && allCertIds.every((id) => prev.has(id));
 			const next = new Set(prev);
 			if (allSelected) {
-				eligible.forEach((c) => next.delete(c.id));
+				allCertIds.forEach((id) => next.delete(id));
 			} else {
-				eligible.forEach((c) => next.add(c.id));
+				allCertIds.forEach((id) => next.add(id));
 			}
 			return next;
 		});
 	}, []);
 
 	const handleCreateBatch = useCallback(async () => {
-		if (selectedIds.size === 0) return;
+		if (selectedCertificateIds.size === 0) return;
 		try {
-			await createBatch.mutateAsync({ case_ids: Array.from(selectedIds) });
-			setSelectedIds(new Set());
+			await createBatch.mutateAsync({
+				certificate_ids: Array.from(selectedCertificateIds),
+			});
+			setSelectedCertificateIds(new Set());
 			navigate("/batches");
 		} catch {
 			// error toast handled by the mutation
 		}
-	}, [selectedIds, createBatch, navigate]);
+	}, [selectedCertificateIds, createBatch, navigate]);
 
 	// Hide the table when viewing a full-page child route
 	const isAddPage = useMatch("/cases/add");
-	const isEditPage = useMatch("/cases/:submissionId");
-	const isProcessPage = useMatch("/cases/:id/process");
-	const isFullPageChild = isAddPage || isEditPage || isProcessPage;
+	const isCasePage = useMatch("/cases/:id");
+	const isFullPageChild = isAddPage || isCasePage;
 
 	useDocumentTitle("Cases");
 
@@ -75,10 +92,12 @@ const Cases = () => {
 								<button
 									type="button"
 									onClick={handleCreateBatch}
-									disabled={createBatch.isPending || selectedIds.size === 0}
+									disabled={
+										createBatch.isPending || selectedCertificateIds.size === 0
+									}
 									title={
-										selectedIds.size === 0
-											? "Select one or more cases in the Batching state to create a batch"
+										selectedCertificateIds.size === 0
+											? "Select one or more cases with eligible certificates to create a batch"
 											: undefined
 									}
 									className="relative inline-flex items-center gap-2 rounded-xl text-white shadow-md ring-1 ring-white/10 overflow-hidden bg-gradient-to-b from-violet-500 to-violet-700 dark:from-violet-600 dark:to-violet-800 px-6 py-3.5 text-base font-semibold cursor-pointer hover:from-violet-400 hover:to-violet-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-violet-500 disabled:hover:to-violet-700"
@@ -87,8 +106,8 @@ const Cases = () => {
 									<span className="tracking-tight whitespace-nowrap">
 										{createBatch.isPending
 											? "Creating..."
-											: selectedIds.size > 0
-												? `Create Batch (${selectedIds.size})`
+											: selectedCertificateIds.size > 0
+												? `Create Batch (${selectedCertificateIds.size} cert${selectedCertificateIds.size === 1 ? "" : "s"})`
 												: "Create Batch"}
 									</span>
 								</button>
@@ -100,7 +119,7 @@ const Cases = () => {
 						<CasesFilters />
 						<CasesTable
 							onCountChange={setTotalCount}
-							selectedIds={selectedIds}
+							selectedCertificateIds={selectedCertificateIds}
 							onToggleSelect={toggleSelect}
 							onToggleSelectAll={toggleSelectAll}
 						/>

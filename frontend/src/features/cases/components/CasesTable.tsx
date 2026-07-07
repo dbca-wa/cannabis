@@ -34,20 +34,31 @@ import { useCases } from "../hooks/useCases";
 import { getPhaseBadgeClass } from "../utils/cases.utils";
 import { formatDate } from "@/shared/utils/date.utils";
 
+import type { Certificate } from "@/features/certificates/types/certificates.types";
 import type { CaseTiny, CasePhase } from "@/shared/types/backend-api.types";
+
+/** Return the IDs of all batch-eligible certificates across a case's forms. */
+export const getEligibleCertIds = (c: CaseTiny): number[] =>
+	c.forms
+		.map((f) => f.certificate)
+		.filter(
+			(cert): cert is Certificate => cert !== null && cert.is_batch_eligible
+		)
+		.map((cert) => cert.id);
 
 export const CasesTable = observer(
 	({
 		onCountChange,
-		selectedIds,
+		selectedCertificateIds,
 		onToggleSelect,
 		onToggleSelectAll,
 	}: {
 		onCountChange?: (count: number) => void;
-		/** When provided, an eligibility-gated selection checkbox column is shown. */
-		selectedIds?: Set<number>;
+		/** When provided, an eligibility-gated selection checkbox column is shown. Holds certificate IDs. */
+		selectedCertificateIds?: Set<number>;
+		/** Toggle all eligible cert IDs for a given case row. */
 		onToggleSelect?: (caseObj: CaseTiny) => void;
-		/** Toggle selection of every batching-eligible case currently shown. */
+		/** Toggle selection of every eligible cert ID from all shown eligible cases. */
 		onToggleSelectAll?: (eligible: CaseTiny[]) => void;
 	}) => {
 		const navigate = useNavigate();
@@ -57,8 +68,8 @@ export const CasesTable = observer(
 		const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
 		// Sort state (local — not part of filter persistence)
-		const [sortField, setSortField] = useState("received");
-		const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+		const [sortField, setSortField] = useState("status_priority");
+		const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
 		// Server-side pagination — keep for pageSize management via global preference
 		const pagination = useServerPagination({
@@ -95,16 +106,20 @@ export const CasesTable = observer(
 			refetch: refetchCases,
 		} = useCases(searchParams);
 
-		// Batching selection: which of the shown cases can be batched, and whether
-		// they are all currently selected (drives the header select-all checkbox).
+		// Batching selection: cases with at least one eligible certificate, and
+		// whether all eligible cert IDs are currently selected.
 		const eligibleCases = useMemo(
-			() => cases.filter((c) => c.is_batch_eligible),
+			() => cases.filter((c) => getEligibleCertIds(c).length > 0),
 			[cases]
 		);
+		const allEligibleCertIds = useMemo(
+			() => eligibleCases.flatMap(getEligibleCertIds),
+			[eligibleCases]
+		);
 		const allEligibleSelected =
-			!!selectedIds &&
-			eligibleCases.length > 0 &&
-			eligibleCases.every((c) => selectedIds.has(c.id));
+			!!selectedCertificateIds &&
+			allEligibleCertIds.length > 0 &&
+			allEligibleCertIds.every((id) => selectedCertificateIds.has(id));
 
 		useEffect(() => {
 			if (totalCount !== undefined) {
@@ -185,19 +200,19 @@ export const CasesTable = observer(
 						<TableHeader>
 							<TableRow>
 								{/* Selection checkbox column (only when selecting for batch) */}
-								{selectedIds && (
+								{selectedCertificateIds && (
 									<TableHead
 										className="w-16 text-center"
-										title="Select all batchable cases (in the Batching state, not yet batched)"
+										title="Select all eligible certificates for batching"
 									>
 										<div className="flex items-center justify-center">
 											<Checkbox
 												checked={allEligibleSelected}
-												disabled={eligibleCases.length === 0}
+												disabled={allEligibleCertIds.length === 0}
 												onCheckedChange={() =>
 													onToggleSelectAll?.(eligibleCases)
 												}
-												aria-label="Select all batchable cases"
+												aria-label="Select all eligible certificates for batching"
 												className="cursor-pointer disabled:cursor-not-allowed"
 											/>
 										</div>
@@ -291,18 +306,18 @@ export const CasesTable = observer(
 									</TableHead>
 								)}
 
-								{/* State Column */}
+								{/* State Column — sortable by workflow priority */}
 								<TableHead
 									className="text-center"
-									title="Current workflow phase"
+									title="Current workflow state"
 								>
 									<button
 										type="button"
-										onClick={() => handleSort("phase")}
+										onClick={() => handleSort("status_priority")}
 										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
 									>
 										<span>State</span>
-										{getSortIcon("phase")}
+										{getSortIcon("status_priority")}
 									</button>
 								</TableHead>
 							</TableRow>
@@ -311,7 +326,7 @@ export const CasesTable = observer(
 							{isLoading ? (
 								Array.from({ length: 5 }).map((_, i) => (
 									<TableRow key={i}>
-										{selectedIds && (
+										{selectedCertificateIds && (
 											<TableCell className="text-center">
 												<div className="flex items-center justify-center">
 													<Skeleton className="h-4 w-4 rounded" />
@@ -361,7 +376,9 @@ export const CasesTable = observer(
 							) : error ? (
 								<TableRow>
 									<TableCell
-										colSpan={(isMobile ? 3 : 7) + (selectedIds ? 1 : 0)}
+										colSpan={
+											(isMobile ? 3 : 7) + (selectedCertificateIds ? 1 : 0)
+										}
 										className="h-48 text-center"
 									>
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
@@ -386,7 +403,9 @@ export const CasesTable = observer(
 							) : cases.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={(isMobile ? 3 : 7) + (selectedIds ? 1 : 0)}
+										colSpan={
+											(isMobile ? 3 : 7) + (selectedCertificateIds ? 1 : 0)
+										}
 										className="h-48 text-center"
 									>
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
@@ -436,27 +455,30 @@ export const CasesTable = observer(
 											key={caseObj.id}
 											className="cursor-pointer"
 											onClick={(e) => {
+												const target = `/cases/${caseObj.id}`;
 												if (e.ctrlKey || e.metaKey) {
-													window.open(`/cases/${caseObj.id}/process`, "_blank");
+													window.open(target, "_blank");
 												} else {
-													navigate(`/cases/${caseObj.id}/process`);
+													navigate(target);
 												}
 											}}
 										>
-											{/* Selection checkbox — only for eligible cases */}
-											{selectedIds && (
+											{/* Selection checkbox — only for cases with eligible certificates */}
+											{selectedCertificateIds && (
 												<TableCell
 													className="text-center"
 													onClick={(e) => e.stopPropagation()}
 												>
-													{caseObj.is_batch_eligible ? (
+													{getEligibleCertIds(caseObj).length > 0 ? (
 														<div className="flex items-center justify-center">
 															<Checkbox
-																checked={selectedIds.has(caseObj.id)}
+																checked={getEligibleCertIds(caseObj).every(
+																	(id) => selectedCertificateIds.has(id)
+																)}
 																onCheckedChange={() =>
 																	onToggleSelect?.(caseObj)
 																}
-																aria-label={`Select case ${caseObj.case_number} for batching`}
+																aria-label={`Select case ${caseObj.case_number} certificates for batching`}
 																className="cursor-pointer"
 															/>
 														</div>
@@ -470,7 +492,7 @@ export const CasesTable = observer(
 											<TableCell>
 												<div className="flex items-center gap-2">
 													<Link
-														to={`/cases/${caseObj.id}/process`}
+														to={`/cases/${caseObj.id}`}
 														onClick={(e) => e.stopPropagation()}
 														className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:underline underline-offset-2 transition-colors text-[14px] cursor-pointer"
 													>
@@ -606,19 +628,11 @@ export const CasesTable = observer(
 
 											{/* State */}
 											<TableCell className="text-center">
-												<div className="flex flex-col items-center gap-1">
-													<Badge
-														className={`${getPhaseBadgeClass(caseObj.phase)} pointer-events-none`}
-													>
-														{caseObj.phase_display}
-													</Badge>
-													{caseObj.phase === "complete" &&
-														caseObj.batch_invoice_raised_number && (
-															<span className="text-[11px] tabular-nums text-muted-foreground">
-																Invoice {caseObj.batch_invoice_raised_number}
-															</span>
-														)}
-												</div>
+												<Badge
+													className={`${getPhaseBadgeClass(caseObj.derived_status)} pointer-events-none`}
+												>
+													{caseObj.derived_status_display}
+												</Badge>
 											</TableCell>
 										</TableRow>
 									);

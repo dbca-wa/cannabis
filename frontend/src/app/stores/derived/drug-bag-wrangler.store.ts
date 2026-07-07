@@ -47,6 +47,9 @@ const INITIAL_STATE: DrugBagWranglerStoreState = {
 };
 
 export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
+	/** Per-form stash of unsaved bags, keyed by formId */
+	private formBagStash = new Map<number, InMemoryBag[]>();
+
 	constructor() {
 		super({ ...INITIAL_STATE });
 
@@ -57,6 +60,11 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 			updateBag: action,
 			removeBag: action,
 			clearBags: action,
+
+			// Per-form stash actions
+			stashForForm: action,
+			restoreForForm: action,
+			clearStashForForm: action,
 
 			// Validation
 			validate: action,
@@ -138,9 +146,31 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 	};
 
 	/** Clear all in-memory bags (after successful persist) */
-	clearBags = () => {
+	clearBags = (formId?: number) => {
 		this.state.bags = [];
 		this.state.validationErrors = [];
+		if (formId) this.formBagStash.delete(formId);
+	};
+
+	/** Stash the current bags for a form (called before switching away) */
+	stashForForm = (formId: number) => {
+		if (formId && this.state.bags.length > 0) {
+			this.formBagStash.set(formId, [...this.state.bags]);
+		} else if (formId) {
+			this.formBagStash.delete(formId);
+		}
+	};
+
+	/** Restore bags from the stash for a form (called when switching to it) */
+	restoreForForm = (formId: number) => {
+		const stashed = this.formBagStash.get(formId);
+		this.state.bags = stashed ? [...stashed] : [];
+		this.state.validationErrors = [];
+	};
+
+	/** Clear the stash for a specific form (called after successful save) */
+	clearStashForForm = (formId: number) => {
+		this.formBagStash.delete(formId);
 	};
 
 	// ============================================================================
@@ -150,68 +180,27 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 	/**
 	 * Validate all in-memory bags against rules:
 	 * - No empty original tag
-	 * - No duplicate original tags (within in-memory AND against server tags)
-	 * - Original tag !== new tag on same bag
 	 * - Content type must be set (not empty)
 	 * - Determination must be set (not "pending")
 	 *
-	 * @param serverTags - existing tag numbers from server-persisted bags
+	 * Seal tags have no uniqueness constraint — they may repeat freely.
+	 *
+	 * @param _serverTags - unused, kept for API compatibility
 	 * @returns true if all bags are valid
 	 */
-	validate = (serverTags: string[]): boolean => {
+	validate = (_serverTags: string[]): boolean => {
 		const errors: BagValidationError[] = [];
 
-		// Build a claimed-tag count across server tags plus every in-memory bag's
-		// original and new tag. Original and new tags share one namespace — any
-		// value used more than once is a conflict. A bag whose new tag equals its
-		// own original is reported separately (so we don't double-count it).
-		const counts = new Map<string, number>();
-		const bump = (value: string) => {
-			const v = (value ?? "").trim();
-			if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
-		};
-		serverTags.forEach((t) => bump(t));
 		for (const bag of this.state.bags) {
 			const orig = bag.seal_tag_numbers.trim();
-			const neu = bag.new_seal_tag_numbers.trim();
-			bump(orig);
-			if (neu && neu !== orig) bump(neu);
-		}
 
-		for (const bag of this.state.bags) {
-			const orig = bag.seal_tag_numbers.trim();
-			const neu = bag.new_seal_tag_numbers.trim();
-
-			// Original tag — required and unique across the namespace.
+			// Original tag — required.
 			if (!orig) {
 				errors.push({
 					tempId: bag.tempId,
 					field: "seal_tag_numbers",
 					message: "Original tag is required",
 				});
-			} else if ((counts.get(orig) ?? 0) > 1) {
-				errors.push({
-					tempId: bag.tempId,
-					field: "seal_tag_numbers",
-					message: "Tag already in use (duplicate or exists on this case)",
-				});
-			}
-
-			// New tag — optional, but must differ from the original and be unique.
-			if (neu) {
-				if (neu === orig) {
-					errors.push({
-						tempId: bag.tempId,
-						field: "new_seal_tag_numbers",
-						message: "New tag must differ from original",
-					});
-				} else if ((counts.get(neu) ?? 0) > 1) {
-					errors.push({
-						tempId: bag.tempId,
-						field: "new_seal_tag_numbers",
-						message: "Tag already in use (duplicate or exists on this case)",
-					});
-				}
 			}
 
 			// Content type must be set (shouldn't happen with select, but safety).
@@ -295,6 +284,7 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 		this.state.loading = false;
 		this.state.error = null;
 		this.state.initialised = false;
+		this.formBagStash.clear();
 		logger.info("DrugBagWranglerStore reset");
 	}
 }

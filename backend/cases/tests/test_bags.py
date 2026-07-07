@@ -8,7 +8,7 @@ bags — a different bag may not reuse it as either its original or new tag.
 import pytest
 from django.urls import reverse
 
-from common.tests.factories import CaseFactory, DrugBagFactory
+from common.tests.factories import CaseFactory, DrugBagFactory, Priority3FormFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -16,8 +16,9 @@ pytestmark = pytest.mark.django_db
 class TestBatchCreateTagRule:
     def test_same_original_and_new_allowed_for_one_bag(self, finance_client):
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
-            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            reverse("drugbag_batch_create", kwargs={"pk": form.pk}),
             {
                 "bags": [
                     {
@@ -33,11 +34,12 @@ class TestBatchCreateTagRule:
         assert resp.data[0]["seal_tag_numbers"] == "123"
         assert resp.data[0]["new_seal_tag_numbers"] == "123"
 
-    def test_new_tag_reusing_another_bags_tag_is_rejected(self, finance_client):
-        # DB A: 123/123 (fine). DB B: 1234/123 — 123 belongs to A → rejected.
+    def test_new_tag_reusing_another_bags_tag_is_allowed(self, finance_client):
+        # Tags are free-text with no uniqueness constraint across bags/forms.
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
-            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            reverse("drugbag_batch_create", kwargs={"pk": form.pk}),
             {
                 "bags": [
                     {
@@ -54,15 +56,14 @@ class TestBatchCreateTagRule:
             },
             format="json",
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 201
 
-    def test_value_reused_as_original_and_new_across_bags_rejected(
-        self, finance_client
-    ):
-        # 456 appears as A's new tag and B's original tag → collision.
+    def test_value_reused_as_original_and_new_across_bags_allowed(self, finance_client):
+        # Tags are free-text with no uniqueness constraint.
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
-            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            reverse("drugbag_batch_create", kwargs={"pk": form.pk}),
             {
                 "bags": [
                     {
@@ -79,12 +80,13 @@ class TestBatchCreateTagRule:
             },
             format="json",
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 201
 
     def test_distinct_tags_allowed(self, finance_client):
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
-            reverse("drugbag_batch_create", kwargs={"pk": case.pk}),
+            reverse("drugbag_batch_create", kwargs={"pk": form.pk}),
             {
                 "bags": [
                     {
@@ -108,10 +110,11 @@ class TestBatchCreateTagRule:
 class TestSingleCreateTagRule:
     def test_same_original_and_new_allowed(self, finance_client):
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
             reverse("drugbag_list", kwargs={"pk": case.pk}),
             {
-                "submission": case.pk,
+                "form": form.pk,
                 "seal_tag_numbers": "555",
                 "new_seal_tag_numbers": "555",
                 "content_type": "plant",
@@ -120,27 +123,31 @@ class TestSingleCreateTagRule:
         )
         assert resp.status_code == 201
 
-    def test_new_tag_colliding_with_existing_bag_rejected(self, finance_client):
+    def test_new_tag_matching_existing_bag_allowed(self, finance_client):
+        # Tags are free-text with no uniqueness constraint across bags/forms.
         other_case = CaseFactory()
-        DrugBagFactory(submission=other_case, seal_tag_numbers="999")
+        other_form = Priority3FormFactory(case=other_case)
+        DrugBagFactory(form=other_form, seal_tag_numbers="999")
         case = CaseFactory()
+        form = Priority3FormFactory(case=case)
         resp = finance_client.post(
             reverse("drugbag_list", kwargs={"pk": case.pk}),
             {
-                "submission": case.pk,
+                "form": form.pk,
                 "seal_tag_numbers": "888",
                 "new_seal_tag_numbers": "999",
                 "content_type": "plant",
             },
             format="json",
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 201
 
 
 class TestUpdateTagRule:
     def test_new_tag_equal_to_own_original_allowed(self, finance_client):
         case = CaseFactory()
-        bag = DrugBagFactory(submission=case, seal_tag_numbers="777")
+        form = Priority3FormFactory(case=case)
+        bag = DrugBagFactory(form=form, seal_tag_numbers="777")
         resp = finance_client.patch(
             reverse("drugbag_detail", kwargs={"pk": bag.pk}),
             {"new_seal_tag_numbers": "777"},

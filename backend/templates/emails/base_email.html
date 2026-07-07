@@ -1,185 +1,96 @@
-<!DOCTYPE html>
-<html lang="en">
+{% comment %}
+Cannabis email base template — table-based layout for maximum email client
+compatibility. Mirrors the SPMS email structure with cannabis branding.
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+Required context:
+  - cannabis_svg: CID reference to the cannabis logo (e.g. "cid:cannabis-logo")
+  - recipient_name: name of the intended recipient (for the footer)
+  - current_year: for the copyright line
+{% endcomment %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
     <title>{% block title %}Cannabis{% endblock %}</title>
     <style>
-        body {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f8faf9;
-            padding: 20px;
-        }
-
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background-color: #0f172a;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .logo {
-            width: 50px;
-            height: 50px;
-            margin: 0 auto 20px;
-        }
-
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .system-name {
-            font-weight: 700;
-            color: #ffffff;
-            font-size: 24px;
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .footer {
-            background: #f8fafc;
-            padding: 25px 30px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-        }
-
-        .footer-logo {
-            width: 100px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 20px;
-            flex-shrink: 0;
-            border-radius: 15px;
-        }
-
-        .footer-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 15px;
-        }
-
-        .footer-text {
-            flex: 1;
-        }
-
-        .disclaimer {
-            font-size: 12px;
-            color: #64748b;
-            line-height: 1.5;
-            margin-bottom: 8px;
-        }
-
-        .copyright {
-            display: flex;
-            font-size: 11px;
-            color: #94a3b8;
-            gap: 4px;
-        }
-
-        @media (max-width: 600px) {
-            .email-container {
-                margin: 10px;
-                border-radius: 12px;
-            }
-
-            .header,
-            .content,
-            .footer {
-                padding: 25px 20px;
-            }
-
-            .system-name {
-                font-size: 20px;
-            }
-
-            .footer {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .footer-logo {
-                width: 90px;
-                height: 90px;
-                border-radius: 15px;
-                overflow: hidden;
-                margin-right: 0;
-                margin-bottom: 15px;
-            }
-
-            .footer-logo img {
-                border-radius: 15px;
-            }
-
-            .copyright {
-                flex-direction: column;
-            }
-        }
-
-        {% block extra_styles %}
-        {% endblock %}
+      :root { color-scheme: light only; }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #f5f7fa !important; color: #000000 !important; }
+        .email-card { background-color: #ffffff !important; }
+      }
     </style>
-</head>
+  </head>
+  <body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; min-height: 100vh;">
+    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);" class="email-card">
+      <tbody>
+        <!-- Top accent bar (cannabis green gradient) -->
+        <tr>
+          <td style="height: 6px; background-color: #16a34a; background-image: linear-gradient(90deg, #166534 0%, #16a34a 50%, #22c55e 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="padding: 0 40px;">
 
-<body>
-    <div class="email-container">
-        <div class="header">
+            <!-- Logo -->
             {% if cannabis_svg %}
-            <div class="logo">
-                <img src="{{ cannabis_svg }}" alt="Cannabis Logo">
-            </div>
-            {% endif %}
-            <h1 class="system-name">Cannabis</h1>
-        </div>
-
-        <div class="content">
-            {% block content %}
-            <!-- Child templates will insert content here -->
-            {% endblock %}
-        </div>
-
-        <div class="footer">
-            {% if dbca_image_path %}
-            <div class="footer-logo">
-                <img src="{{ dbca_image_path }}" alt="DBCA Logo">
-            </div>
+            <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="padding-top: 32px;">
+              <tbody>
+                <tr>
+                  <td align="center" style="text-align: center;">
+                    <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+                      <tr>
+                        <td align="center">
+                          <img alt="Cannabis Management System" width="100" height="100" src="{{ cannabis_svg }}" style="display: block; outline: none; border: none; text-decoration: none; width: 100px; height: 100px; margin: 0 auto;" />
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
             {% endif %}
 
-            <div class="footer-text">
-                <div class="disclaimer">
-                    This email was intended for {{ first_name }} {{ last_name }}. If you have
-                    received this email by mistake, please disregard it.
-                </div>
+            <!-- Title -->
+            <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; padding: 0; margin-top: 16px; margin-bottom: 24px; margin-left: 0; margin-right: 0; letter-spacing: -0.5px;">
+              {% block email_title %}Cannabis Management System{% endblock %}
+            </h1>
 
-                <div class="copyright">
-                    <span>© {{ current_year|default:"2025" }} Department of Biodiversity,
-                        Conservation and Attractions.</span>
-                    <span>All rights reserved.</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
+            <!-- Content -->
+            {% block content %}{% endblock %}
 
+            <!-- Footer divider -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-top: 32px;">
+              <tr>
+                <td style="height: 1px; background-color: #e5e7eb; font-size: 0; line-height: 0;">&nbsp;</td>
+              </tr>
+            </table>
+
+            <!-- Footer text -->
+            <p style="font-size: 12px; line-height: 20px; margin: 16px 0 0 0; padding-bottom: 32px; color: #6b7280;">
+              {% if recipient_name %}This automated message was intended for <span style="color: #000000; font-weight: 500;">{{ recipient_name }}</span>. If you believe this was sent by mistake, you can ignore this email.{% else %}This is an automated message from Cannabis Management System. If you believe this was sent by mistake, you can ignore this email.{% endif %}
+            </p>
+
+          </td>
+        </tr>
+        <!-- DBCA 4-colour bar -->
+        <tr>
+          <td style="padding: 0 20px; font-size: 0; line-height: 0; background-color: #ffffff;">
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-spacing: 6px 0; margin: 0 -6px;">
+              <tr>
+                <td style="width: 25%; height: 4px; background-color: #2A6096; border-radius: 2px;">&nbsp;</td>
+                <td style="width: 25%; height: 4px; background-color: #01A7B2; border-radius: 2px;">&nbsp;</td>
+                <td style="width: 25%; height: 4px; background-color: #FFC530; border-radius: 2px;">&nbsp;</td>
+                <td style="width: 25%; height: 4px; background-color: #1E5456; border-radius: 2px;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Bottom padding -->
+        <tr>
+          <td style="height: 12px; font-size: 0; line-height: 0;">&nbsp;</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
 </html>

@@ -212,17 +212,50 @@ class ForgotPasswordView(APIView):
             try:
                 reset_code = PasswordResetCodeService.generate_reset_code(user)
                 plain_code = reset_code._plain_code
-            except ValueError:
-                return ErrorResponseBuilder.build_error_response(
-                    error_code=ErrorCodes.DUPLICATE_REQUEST,
-                    message=UserFriendlyMessages.DUPLICATE_REQUEST,
-                    status_code=HTTP_400_BAD_REQUEST,
-                )
 
-            # Build the reset-page link from configuration (absolute, scheme-safe)
+                # Local dev: show the code in the console so you don't need email
+                if settings.DEBUG:
+                    logger.info(f"[DEV] Reset code for {email}: {plain_code}")
+            except ValueError:
+                # Code already exists and is active.
+                if settings.DEBUG:
+                    # In dev mode: delete old code and regenerate so we can log it
+                    from ..models import PasswordResetCode
+
+                    PasswordResetCode.objects.filter(user=user, is_used=False).delete()
+                    reset_code = PasswordResetCodeService.generate_reset_code(user)
+                    plain_code = reset_code._plain_code
+                    logger.info(
+                        f"[DEV] Reset code for {email} (regenerated): {plain_code}"
+                    )
+                else:
+                    # Production: direct user to enter existing code
+                    from urllib.parse import urlencode
+
+                    from common.utils import get_frontend_url
+
+                    existing_url = get_frontend_url(
+                        f"/auth/reset-code?{urlencode({'email': email})}"
+                    )
+                    return Response(
+                        {
+                            "success": True,
+                            "message": "A reset code was already sent to your email. Please check your inbox.",
+                            "redirect_url": existing_url,
+                            "is_duplicate": True,
+                        },
+                        status=HTTP_200_OK,
+                    )
+
+            # Build the reset-page link with the user's email embedded so the
+            # link from the email is self-contained (no location.state needed).
+            from urllib.parse import urlencode
+
             from common.utils import get_frontend_url
 
-            reset_page_url = get_frontend_url("/auth/reset-code")
+            reset_page_url = get_frontend_url(
+                f"/auth/reset-code?{urlencode({'email': email})}"
+            )
 
             # Prepare email context
             context = {
@@ -399,9 +432,6 @@ class VerifyResetCodeView(APIView):
 
             tokens = AuthService.generate_tokens_for_user(user)
 
-            # Update password change timestamp
-            PasswordResetCodeService.update_password_change_timestamp(user)
-
             # Clear failed attempts after successful verification
             BruteForceProtectionThrottle.clear_failed_attempts(email, client_ip)
 
@@ -520,6 +550,13 @@ class PasswordUpdateView(APIView):
             user.set_password(new_password)
             user.password_last_changed = timezone.now()
             user.save()
+
+            # Invalidate any pending invitation for this user
+            from ..models import InviteRecord
+
+            InviteRecord.objects.filter(
+                email=user.email, is_valid=True, is_used=False
+            ).update(is_valid=False)
 
             # Log the password change
             SecurityEventLogger.log_password_update_success(user.email, is_first_time)
