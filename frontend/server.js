@@ -4,6 +4,7 @@ import { serve } from "bun";
 const mimeTypes = {
 	".html": "text/html",
 	".js": "application/javascript",
+	".mjs": "application/javascript",
 	".css": "text/css",
 	".json": "application/json",
 	".png": "image/png",
@@ -48,7 +49,9 @@ const server = serve({
 
 				// Add caching headers for static assets
 				if (
-					filePath.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|webp)$/)
+					filePath.match(
+						/\.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|webp)$/
+					)
 				) {
 					headers["Cache-Control"] = "public, max-age=31536000, immutable";
 				} else {
