@@ -15,9 +15,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from cases.models import (
-    Submission,
-)
+from cases.models import Case as Submission
 
 from .etl_modules.data_mapper import CannabisDataMapper
 from .etl_modules.data_preprocessor import DataPreprocessor
@@ -268,16 +266,19 @@ class Command(BaseCommand):
         factory = ModelFactory(preprocessed_data, error_handler)
 
         # Map all data
-        submission_data = mapper.map_submission_data(test_record)
+        submission_data, form_data = mapper.map_submission_data(test_record)
 
         # Create submission with preprocessed entities
         submission = factory.create_or_update_submission(submission_data)
         assert submission, "Failed to create submission in end-to-end test"
 
+        # Create Priority3Form for the case
+        form = factory.create_priority3_form(submission, form_data)
+
         # Create single drug bag with array handling
         drug_bag_data = mapper.map_drug_bag_data(test_record)
 
-        drug_bag = factory.create_drug_bag(drug_bag_data, submission)
+        drug_bag = factory.create_drug_bag(drug_bag_data, form)
         assert drug_bag, f"Failed to create drug bag {drug_bag_data.seal_tag_numbers}"
 
         # Create botanical assessments with enhanced fields

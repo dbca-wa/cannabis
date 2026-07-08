@@ -57,6 +57,11 @@ export const downloadBatchZip = async (id: number): Promise<Blob> => {
 	return apiClient.getBlob(ENDPOINTS.BATCHES.DOWNLOAD(id));
 };
 
+/** Rebuild the batch package with latest templates. */
+export const repackageBatch = async (id: number): Promise<void> => {
+	await apiClient.post(ENDPOINTS.BATCHES.REPACKAGE(id), {});
+};
+
 /** Absolute URL for the batches CSV export. */
 export const getBatchExportUrl = (): string =>
 	`${API_CONFIG.BASE_URL}${ENDPOINTS.BATCHES.EXPORT}`;

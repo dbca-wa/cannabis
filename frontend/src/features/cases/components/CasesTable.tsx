@@ -466,7 +466,7 @@ export const CasesTable = observer(
 											{/* Selection checkbox — only for cases with eligible certificates */}
 											{selectedCertificateIds && (
 												<TableCell
-													className="text-center"
+													className="text-center align-middle"
 													onClick={(e) => e.stopPropagation()}
 												>
 													{getEligibleCertIds(caseObj).length > 0 ? (

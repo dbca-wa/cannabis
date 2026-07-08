@@ -9,14 +9,17 @@ import {
 	ChevronUp,
 	ChevronDown,
 	Hash,
+	RefreshCw,
 } from "lucide-react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { collapseCertRanges } from "@/shared/utils/certificate-range.utils";
 import {
 	useBatches,
 	useDeleteBatch,
 	useRecordInvoiceRaised,
 	useUnsetInvoiceRaised,
 	downloadBatchZip,
+	repackageBatch,
 	getBatchExportUrl,
 	type Batch,
 	type BatchOrdering,
@@ -200,6 +203,15 @@ const Batches = () => {
 			document.body.removeChild(link);
 		} catch {
 			toast.error("Failed to download batch package");
+		}
+	};
+
+	const handleRepackage = async (batch: Batch) => {
+		try {
+			await repackageBatch(batch.id);
+			toast.success("Package rebuilt with latest data");
+		} catch {
+			toast.error("Failed to rebuild package");
 		}
 	};
 
@@ -390,11 +402,13 @@ const Batches = () => {
 									<TableCell className="align-top">
 										{batch.certificate_numbers.length > 0 ? (
 											<div className="space-y-0.5 tabular-nums">
-												{batch.certificate_numbers.map((number, i) => (
-													<div key={i} className="whitespace-nowrap">
-														{number}
-													</div>
-												))}
+												{collapseCertRanges(batch.certificate_numbers).map(
+													(entry, i) => (
+														<div key={i} className="whitespace-nowrap">
+															{entry}
+														</div>
+													)
+												)}
 											</div>
 										) : (
 											"—"
@@ -463,6 +477,13 @@ const Batches = () => {
 													Download package
 												</DropdownMenuItem>
 												<DropdownMenuItem
+													className="cursor-pointer"
+													onClick={() => handleRepackage(batch)}
+												>
+													<RefreshCw className="mr-2 h-4 w-4" />
+													Re-package
+												</DropdownMenuItem>
+												<DropdownMenuItem
 													className="cursor-pointer text-red-600"
 													onClick={() => setDeleteTarget(batch)}
 												>
@@ -509,6 +530,16 @@ const Batches = () => {
 									<Download className="mr-2 h-4 w-4" />
 									Download Package
 								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => {
+										handleRepackage(detailBatch);
+									}}
+								>
+									<RefreshCw className="mr-2 h-4 w-4" />
+									Re-package
+								</Button>
 								{detailBatch.invoice_raised_number ? (
 									<Button
 										size="sm"
@@ -553,9 +584,11 @@ const Batches = () => {
 								<p className="text-sm font-medium mb-1">Certificate numbers</p>
 								{detailBatch.certificate_numbers.length > 0 ? (
 									<div className="text-sm text-muted-foreground tabular-nums space-y-0.5">
-										{detailBatch.certificate_numbers.map((number, i) => (
-											<div key={i}>{number}</div>
-										))}
+										{collapseCertRanges(detailBatch.certificate_numbers).map(
+											(entry, i) => (
+												<div key={i}>{entry}</div>
+											)
+										)}
 									</div>
 								) : (
 									<p className="text-sm text-muted-foreground">—</p>

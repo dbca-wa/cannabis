@@ -177,6 +177,7 @@ class CaseSerializer(serializers.ModelSerializer):
     submitting_officer_details = PoliceOfficerTinySerializer(
         source="submitting_officer", read_only=True
     )
+    station_details = serializers.SerializerMethodField()
 
     # Related objects
     defendants_details = DefendantTinySerializer(
@@ -210,6 +211,11 @@ class CaseSerializer(serializers.ModelSerializer):
     def get_certificates_count(self, obj):
         return Certificate.objects.filter(form__case=obj).count()
 
+    def get_station_details(self, obj):
+        if not obj.station:
+            return None
+        return {"id": obj.station.pk, "name": obj.station.name}
+
     class Meta:
         model = Case
         fields = [
@@ -228,6 +234,8 @@ class CaseSerializer(serializers.ModelSerializer):
             "requesting_officer_details",
             "submitting_officer",
             "submitting_officer_details",
+            "station",
+            "station_details",
             # Defendants
             "defendants",
             "defendants_details",

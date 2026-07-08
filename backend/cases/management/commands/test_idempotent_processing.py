@@ -134,7 +134,7 @@ class Command(BaseCommand):
             actual_case_number == expected_case_number
         ), f"Case number not updated: expected '{expected_case_number}', got '{actual_case_number}'"
         assert (
-            "ETL_UPDATE:" in updated_submission.assessment_notes
+            "ETL_UPDATE:" in updated_submission.internal_comments
         ), "Audit trail not preserved in notes"
 
         self.stdout.write(self.style.SUCCESS("✓ Audit trail preservation test passed"))

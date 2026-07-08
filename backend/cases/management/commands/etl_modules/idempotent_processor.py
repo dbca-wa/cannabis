@@ -15,7 +15,10 @@ from typing import Any, Dict, List, Optional
 from django.db import transaction
 from django.utils import timezone
 
-from cases.models import BotanicalAssessment, Submission
+# Import Case (renamed from Submission) with backward-compat alias
+from cases.models import BotanicalAssessment
+from cases.models import Case as Submission
+from cases.models import DrugBag, Priority3Form
 
 from .error_handler import ErrorHandler
 
@@ -214,9 +217,11 @@ class IdempotentProcessor:
 
             # Check if drug bag data has changed
             json_quantity = json_record.get("quantity_of_bags", 1)
-            existing_bags = existing_submission.bags.all()
+            existing_bag_count = DrugBag.objects.filter(
+                form__case=existing_submission
+            ).count()
 
-            if len(existing_bags) == 0 and json_quantity > 0:
+            if existing_bag_count == 0 and json_quantity > 0:
                 logger.info(
                     f"Drug bags missing for legacy_id {existing_submission.legacy_id}"
                 )
@@ -243,8 +248,8 @@ class IdempotentProcessor:
         Returns:
             AuditTrail: Preserved audit information
         """
-        # Get existing audit trail from submission notes or create new one
-        existing_notes = existing_submission.assessment_notes or ""
+        # Get existing audit trail from internal_comments or create new one
+        existing_notes = existing_submission.internal_comments or ""
         processing_notes = []
 
         # Parse existing audit trail if present
@@ -304,7 +309,7 @@ class IdempotentProcessor:
                 factory = ModelFactory(self.error_handler)
 
                 # Map the new data
-                submission_data = mapper.map_submission_data(json_record)
+                submission_data, _ = mapper.map_submission_data(json_record)
 
                 # Update submission fields
                 existing_submission.case_number = submission_data.case_number
@@ -336,14 +341,14 @@ class IdempotentProcessor:
                 )
 
                 # Preserve original notes and add audit trail
-                original_notes = existing_submission.assessment_notes or ""
+                original_notes = existing_submission.internal_comments or ""
                 if original_notes and not original_notes.endswith("\n"):
                     original_notes += "\n"
 
                 audit_notes = "\n".join(
                     audit_trail.processing_notes[-3:]
                 )  # Keep last 3 updates
-                existing_submission.assessment_notes = original_notes + audit_notes
+                existing_submission.internal_comments = original_notes + audit_notes
 
                 existing_submission.save()
 
@@ -430,86 +435,122 @@ class IdempotentProcessor:
         self, submission: Submission, json_record: Dict[str, Any], factory, mapper
     ) -> None:
         """
-        Update drug bags for an existing submission, handling existing bags carefully.
+        Update drug bags for an existing case, handling existing bags via form traversal.
 
         Args:
-            submission: Existing Submission instance
+            submission: Existing Case instance
             json_record: New JSON record data
             factory: ModelFactory instance
             mapper: CannabisDataMapper instance
         """
         try:
-            # Get existing drug bags
-            existing_bags = {bag.seal_tag_number: bag for bag in submission.bags.all()}
+            pass
+
+            # Get existing drug bags across all forms for this case
+            existing_bags = {
+                bag.seal_tag_numbers: bag
+                for bag in DrugBag.objects.filter(form__case=submission)
+            }
 
             # Map new drug bag data
-            drug_bags_data = mapper.map_drug_bag_data(json_record)
+            drug_bags_data = mapper.map_drug_bags_data(json_record)
 
-            # Process each new bag
+            # Separate bags into "update existing" vs "create new"
+            bags_to_update = []
+            bags_to_create = []
+
             for bag_data in drug_bags_data:
-                if bag_data.seal_tag_number in existing_bags:
-                    # Update existing bag
-                    existing_bag = existing_bags[bag_data.seal_tag_number]
-                    existing_bag.content_type = bag_data.content_type
-                    existing_bag.quantity = bag_data.quantity or 1
-                    existing_bag.suspected_as = bag_data.suspected_as or "Cannabis"
-                    existing_bag.new_seal_tag_number = bag_data.new_seal_tag_number
-                    existing_bag.property_reference = bag_data.property_reference or ""
-                    if bag_data.gross_weight:
-                        existing_bag.gross_weight = bag_data.gross_weight
-                    if bag_data.net_weight:
-                        existing_bag.net_weight = bag_data.net_weight
-                    existing_bag.save()
-
-                    # Update botanical assessment if needed
-                    try:
-                        assessment = existing_bag.assessment
-                        result_json = json_record.get("result", {})
-                        cert_date_json = json_record.get("cert_date", {})
-                        assessment_data = mapper.map_botanical_assessment_data(
-                            result_json, cert_date_json
-                        )
-
-                        if assessment_data.determination:
-                            assessment.determination = assessment_data.determination
-                        if assessment_data.assessment_date:
-                            assessment.assessment_date = assessment_data.assessment_date
-                        if assessment_data.botanist_notes:
-                            assessment.botanist_notes = assessment_data.botanist_notes
-                        assessment.save()
-
-                    except BotanicalAssessment.DoesNotExist:
-                        # Create new assessment if it doesn't exist
-                        result_json = json_record.get("result", {})
-                        cert_date_json = json_record.get("cert_date", {})
-                        assessment_data = mapper.map_botanical_assessment_data(
-                            result_json, cert_date_json
-                        )
-                        factory.create_botanical_assessment(
-                            assessment_data, existing_bag
-                        )
-
-                    logger.debug(
-                        f"Updated existing drug bag {bag_data.seal_tag_number}"
+                if bag_data.seal_tag_numbers in existing_bags:
+                    bags_to_update.append(
+                        (bag_data, existing_bags[bag_data.seal_tag_numbers])
                     )
                 else:
-                    # Create new bag
-                    new_bag = factory.create_drug_bag(bag_data, submission)
-                    if new_bag:
-                        # Create botanical assessment for new bag
-                        result_json = json_record.get("result", {})
-                        cert_date_json = json_record.get("cert_date", {})
-                        assessment_data = mapper.map_botanical_assessment_data(
-                            result_json, cert_date_json
-                        )
-                        factory.create_botanical_assessment(assessment_data, new_bag)
-                        logger.debug(f"Created new drug bag {bag_data.seal_tag_number}")
+                    bags_to_create.append(bag_data)
+
+            # Update existing bags in place
+            for bag_data, existing_bag in bags_to_update:
+                existing_bag.content_type = bag_data.content_type
+                existing_bag.new_seal_tag_numbers = bag_data.new_seal_tag_numbers
+                existing_bag.property_reference = bag_data.property_reference or ""
+                if bag_data.gross_weight:
+                    existing_bag.gross_weight = bag_data.gross_weight
+                if bag_data.net_weight:
+                    existing_bag.net_weight = bag_data.net_weight
+                existing_bag.save()
+
+                # Update botanical assessment if needed
+                try:
+                    assessment = existing_bag.assessment
+                    result_json = json_record.get("result", {})
+                    cert_date_json = json_record.get("cert_date", {})
+                    assessment_data = mapper.map_botanical_assessment_data(
+                        result_json, cert_date_json
+                    )
+
+                    if assessment_data.determination:
+                        assessment.determination = assessment_data.determination
+                    if assessment_data.assessment_date:
+                        assessment.assessment_date = assessment_data.assessment_date
+                    if assessment_data.botanist_notes:
+                        assessment.botanist_notes = assessment_data.botanist_notes
+                    assessment.save()
+
+                except BotanicalAssessment.DoesNotExist:
+                    result_json = json_record.get("result", {})
+                    cert_date_json = json_record.get("cert_date", {})
+                    assessment_data = mapper.map_botanical_assessment_data(
+                        result_json, cert_date_json
+                    )
+                    factory.create_botanical_assessment(assessment_data, existing_bag)
+
+                logger.debug(f"Updated existing drug bag {bag_data.seal_tag_numbers}")
+
+            # Create new bags, respecting the 5-bag-per-form limit
+            if bags_to_create:
+                _, form_data = mapper.map_submission_data(json_record)
+
+                # Group new bags into chunks of 5 and create forms as needed
+                bag_groups = factory._group_bags_into_forms(
+                    bags_to_create, max_per_form=5
+                )
+
+                for bag_group in bag_groups:
+                    # Find or create a form with capacity
+                    form = self._get_form_with_capacity(submission, factory, form_data)
+
+                    for bag_data in bag_group:
+                        new_bag = factory.create_drug_bag(bag_data, form)
+                        if new_bag:
+                            result_json = json_record.get("result", {})
+                            cert_date_json = json_record.get("cert_date", {})
+                            assessment_data = mapper.map_botanical_assessment_data(
+                                result_json, cert_date_json
+                            )
+                            factory.create_botanical_assessment(
+                                assessment_data, new_bag
+                            )
+                            logger.debug(
+                                f"Created new drug bag {bag_data.seal_tag_numbers}"
+                            )
 
         except Exception as e:
             logger.error(
-                f"Error updating drug bags for submission {submission.legacy_id}: {e}"
+                f"Error updating drug bags for case {submission.legacy_id}: {e}"
             )
             raise
+
+    def _get_form_with_capacity(
+        self, submission: Submission, factory, form_data
+    ) -> "Priority3Form":
+        """Find an existing form with room for bags, or create a new one."""
+        existing_forms = list(submission.forms.all())
+        for form in existing_forms:
+            bag_count = DrugBag.objects.filter(form=form).count()
+            if bag_count < Priority3Form.MAX_BAGS:
+                return form
+
+        # All forms full — create a new one
+        return factory.create_priority3_form(submission, form_data)
 
     def save_processing_state(self, state: ProcessingState) -> bool:
         """
