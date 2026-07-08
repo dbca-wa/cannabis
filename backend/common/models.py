@@ -195,10 +195,17 @@ class SystemSettings(models.Model):
     def get_next_certificate_number(self):
         """Generate and return the next certificate number in R{nnnnnn} format.
 
-        Always 6 digits zero-padded (e.g., R000001, R000032, R005000).
+        Uses F() expression for atomic increment to prevent race conditions
+        when multiple certificates are generated concurrently.
         """
-        self.certificate_counter += 1
-        self.save(update_fields=["certificate_counter"])
+        from django.db.models import F
+
+        # Atomic increment — prevents two concurrent requests getting the same number
+        SystemSettings.objects.filter(pk=self.pk).update(
+            certificate_counter=F("certificate_counter") + 1
+        )
+        # Refresh to get the new value
+        self.refresh_from_db(fields=["certificate_counter"])
         return f"R{self.certificate_counter:06d}"
 
     def get_next_batch_number(self):

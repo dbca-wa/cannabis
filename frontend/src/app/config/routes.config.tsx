@@ -16,6 +16,7 @@ const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import("@/pages/dashboard/Home"));
+const GuidePage = lazy(() => import("@/pages/guide/Guide"));
 const CasesPage = lazy(() => import("@/pages/cases/Cases"));
 const BatchesPage = lazy(() => import("@/pages/batches/Batches"));
 const StaffPage = lazy(() => import("@/pages/users/Staff"));
@@ -350,6 +351,16 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		showInSidebar: true,
 		element: AdminPage,
 	},
+	{
+		name: "How To",
+		path: "/guide",
+		icon: <Home size={20} />,
+		activeIcon: <Home size={20} />,
+		tooltipContent: <p>How to use the Cannabis Identification System</p>,
+		adminOnly: false,
+		showInSidebar: false,
+		element: GuidePage,
+	},
 ];
 
 // Loading fallback component
@@ -481,6 +492,7 @@ export const getSidebarItemFromRoute = (pathname: string): string => {
 	if (pathname.startsWith("/testing")) return "Testing";
 	if (pathname.startsWith("/defendants")) return "Defendants";
 	if (pathname.startsWith("/change-password")) return "Change Password";
+	if (pathname.startsWith("/guide")) return "How To";
 
 	return "Home";
 };

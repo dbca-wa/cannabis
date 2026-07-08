@@ -259,8 +259,6 @@ class Command(BaseCommand):
             case_number="TEST001",
             received=None,  # Invalid - None
             approved_botanist=None,
-            assessment_notes=None,
-            security_movement_envelope=None,
         )
 
         submission = factory.create_or_update_submission(invalid_data)

@@ -11,6 +11,7 @@ import {
 	Settings,
 	Package,
 	TestTube,
+	BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
@@ -46,6 +47,7 @@ export const navGroups: NavGroup[] = [
 				adminOnly: true,
 				devOnly: true,
 			},
+			{ to: "/guide", label: "How To", icon: BookOpen },
 		],
 	},
 	{

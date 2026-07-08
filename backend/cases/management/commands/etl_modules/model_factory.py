@@ -15,8 +15,9 @@ from django.db import DatabaseError, IntegrityError, transaction
 
 from cases.models import (
     BotanicalAssessment,
+    Case,
     DrugBag,
-    Submission,
+    Priority3Form,
 )
 from defendants.models import Defendant
 from police.models import PoliceOfficer, PoliceStation
@@ -25,10 +26,14 @@ from .data_mapper import (
     BotanicalAssessmentData,
     DefendantData,
     DrugBagData,
+    FormData,
     PoliceOfficerData,
     SubmissionData,
 )
 from .error_handler import ErrorHandler
+
+# Backward-compat alias used throughout this module
+Submission = Case
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -99,30 +104,63 @@ class ModelFactory:
                         "received date is required for submission creation"
                     )
 
-                # Look up approved botanist by name if provided
+                # Look up or create approved botanist by name
                 approved_botanist = None
                 if data.approved_botanist:
-                    try:
-                        approved_botanist = User.objects.get(
-                            given_names__icontains=data.approved_botanist.split()[0],
-                            role="botanist",
+                    full_name_parts = data.approved_botanist.strip().split()
+                    if full_name_parts:
+                        given = full_name_parts[0]
+                        last = (
+                            " ".join(full_name_parts[1:])
+                            if len(full_name_parts) > 1
+                            else ""
                         )
-                    except User.DoesNotExist:
-                        logger.warning(f"Botanist '{data.approved_botanist}' not found")
-                    except User.MultipleObjectsReturned:
-                        # Try exact match
+
+                        # Try finding by first name + role
                         try:
-                            full_name_parts = data.approved_botanist.split()
-                            if len(full_name_parts) >= 2:
+                            approved_botanist = User.objects.get(
+                                given_names__iexact=given,
+                                last_name__iexact=last,
+                                role="botanist",
+                            )
+                        except User.DoesNotExist:
+                            # Try partial match on given_names
+                            try:
                                 approved_botanist = User.objects.get(
-                                    given_names__iexact=full_name_parts[0],
-                                    last_name__iexact=" ".join(full_name_parts[1:]),
+                                    given_names__icontains=given,
                                     role="botanist",
                                 )
-                        except User.DoesNotExist:
-                            logger.warning(
-                                f"Multiple botanists found for '{data.approved_botanist}', using none"
-                            )
+                            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                                # Create the botanist user
+                                email_slug = (
+                                    data.approved_botanist.lower()
+                                    .replace(" ", ".")
+                                    .replace("'", "")
+                                )
+                                approved_botanist, created = User.objects.get_or_create(
+                                    email=f"{email_slug}@dbca.wa.gov.au",
+                                    defaults={
+                                        "given_names": given,
+                                        "last_name": last,
+                                        "role": "botanist",
+                                        "is_staff": True,
+                                        "is_active": True,
+                                    },
+                                )
+                                if created:
+                                    logger.info(
+                                        f"Created botanist user: {data.approved_botanist} ({approved_botanist.email})"
+                                    )
+                                else:
+                                    logger.info(
+                                        f"Found existing botanist by email: {approved_botanist.email}"
+                                    )
+                        except User.MultipleObjectsReturned:
+                            # Multiple matches — use the first one
+                            approved_botanist = User.objects.filter(
+                                given_names__icontains=given,
+                                role="botanist",
+                            ).first()
 
                 # Get or create submission using legacy_id
                 with transaction.atomic():
@@ -135,9 +173,6 @@ class ModelFactory:
                             "submitting_officer": submitting_officer,
                             "requesting_officer": requesting_officer,
                             "internal_comments": data.internal_comments,
-                            "security_movement_envelope": data.security_movement_envelope
-                            or f"SME-{data.legacy_id}",
-                            "phase": Submission.PhaseChoices.COMPLETE,
                             "is_legacy": True,
                         },
                     )
@@ -150,10 +185,6 @@ class ModelFactory:
                         submission.requesting_officer = requesting_officer
                         if data.internal_comments:
                             submission.internal_comments = data.internal_comments
-                        if data.security_movement_envelope:
-                            submission.security_movement_envelope = (
-                                data.security_movement_envelope
-                            )
                         submission.save()
 
                     # Link defendants if provided
@@ -304,11 +335,16 @@ class ModelFactory:
 
             # Try to find by name if no badge number match
             if data.given_names and data.last_name:
+                lookup_kwargs = {
+                    "given_names__iexact": data.given_names,
+                    "last_name__iexact": data.last_name,
+                }
+                # Include station in the lookup for better dedup
+                if station:
+                    lookup_kwargs["station"] = station
+
                 try:
-                    officer = PoliceOfficer.objects.get(
-                        given_names__iexact=data.given_names,
-                        last_name__iexact=data.last_name,
-                    )
+                    officer = PoliceOfficer.objects.get(**lookup_kwargs)
                     # Update existing officer
                     if data.badge_number:
                         officer.badge_number = data.badge_number
@@ -319,12 +355,85 @@ class ModelFactory:
                     logger.debug(f"Updated officer {officer.full_name} by name")
                     return officer
                 except PoliceOfficer.DoesNotExist:
-                    pass
+                    # If station-scoped lookup found nothing, try without station
+                    if station:
+                        try:
+                            officer = PoliceOfficer.objects.get(
+                                given_names__iexact=data.given_names,
+                                last_name__iexact=data.last_name,
+                            )
+                            # Update existing officer
+                            if data.badge_number:
+                                officer.badge_number = data.badge_number
+                            officer.rank = rank
+                            if station:
+                                officer.station = station
+                            officer.save()
+                            logger.debug(
+                                f"Updated officer {officer.full_name} by name (no station match)"
+                            )
+                            return officer
+                        except PoliceOfficer.DoesNotExist:
+                            pass
+                        except PoliceOfficer.MultipleObjectsReturned:
+                            logger.warning(
+                                f"Multiple officers found with name {data.given_names} {data.last_name}"
+                            )
                 except PoliceOfficer.MultipleObjectsReturned:
-                    # Multiple officers with same name, create new one
+                    # Multiple officers with same name at same station, create new one
                     logger.warning(
                         f"Multiple officers found with name {data.given_names} {data.last_name}"
                     )
+
+            # Handle last-name-only case (no given names) with station-based dedup
+            elif data.last_name and not data.given_names:
+                lookup_kwargs = {
+                    "last_name__iexact": data.last_name,
+                    "given_names__isnull": True,
+                }
+                if station:
+                    lookup_kwargs["station"] = station
+
+                try:
+                    officer = PoliceOfficer.objects.get(**lookup_kwargs)
+                    if data.badge_number:
+                        officer.badge_number = data.badge_number
+                    officer.rank = rank
+                    if station:
+                        officer.station = station
+                    officer.save()
+                    logger.debug(
+                        f"Updated officer {officer.last_name} by last_name + station"
+                    )
+                    return officer
+                except PoliceOfficer.DoesNotExist:
+                    # Also try with empty string given_names
+                    lookup_kwargs_empty = {
+                        "last_name__iexact": data.last_name,
+                        "given_names": "",
+                    }
+                    if station:
+                        lookup_kwargs_empty["station"] = station
+                    try:
+                        officer = PoliceOfficer.objects.get(**lookup_kwargs_empty)
+                        if data.badge_number:
+                            officer.badge_number = data.badge_number
+                        officer.rank = rank
+                        if station:
+                            officer.station = station
+                        officer.save()
+                        return officer
+                    except (
+                        PoliceOfficer.DoesNotExist,
+                        PoliceOfficer.MultipleObjectsReturned,
+                    ):
+                        pass
+                except PoliceOfficer.MultipleObjectsReturned:
+                    logger.debug(
+                        f"Multiple last-name-only officers '{data.last_name}' at station, using first"
+                    )
+                    officer = PoliceOfficer.objects.filter(**lookup_kwargs).first()
+                    return officer
 
             # Create new officer
             officer = PoliceOfficer.objects.create(
@@ -346,6 +455,10 @@ class ModelFactory:
         """
         Create or update a PoliceStation record by name.
 
+        Normalises station names by stripping trailing " Police" suffix
+        (e.g., "Augusta Police" → "Augusta") while preserving specialist
+        unit names like "Armadale Detectives".
+
         Args:
             name: Station name
 
@@ -358,7 +471,20 @@ class ModelFactory:
 
             name = name.strip()
 
-            # Get or create station
+            # Normalise: strip trailing " Police" suffix
+            # Keep specialist units (Detectives, Tactical, etc.) as-is
+            if name.lower().endswith(" police"):
+                name = name[: -len(" Police")].strip()
+
+            # Also strip " Police Station" if it somehow appears
+            if name.lower().endswith(" police station"):
+                name = name[: -len(" Police Station")].strip()
+
+            # Guard against over-stripping
+            if len(name) < 2:
+                return None
+
+            # Get or create station (case-insensitive lookup)
             station, created = PoliceStation.objects.get_or_create(
                 name__iexact=name, defaults={"name": name}
             )
@@ -595,7 +721,23 @@ class ModelFactory:
             )
             raise
 
-    def create_drug_bag(self, data: DrugBagData, submission: Submission) -> DrugBag:
+    def create_priority3_form(self, case: Case, form_data: FormData) -> Priority3Form:
+        """Create a Priority3Form for a given case with form-level fields."""
+        form = Priority3Form.objects.create(
+            case=case,
+            security_movement_envelope=form_data.security_movement_envelope or "",
+            additional_notes=form_data.additional_notes,
+            phase=Case.PhaseChoices.COMPLETE,
+        )
+        logger.info(f"Created Priority3Form {form.pk} for case {case.case_number}")
+        return form
+
+    @staticmethod
+    def _group_bags_into_forms(bags: List, max_per_form: int = 5) -> List[List]:
+        """Split bags into groups of max_per_form for Priority3Form assignment."""
+        return [bags[i : i + max_per_form] for i in range(0, len(bags), max_per_form)]
+
+    def create_drug_bag(self, data: DrugBagData, form: Priority3Form) -> DrugBag:
         """
         Create a DrugBag instance from JSON data.
 
@@ -605,7 +747,7 @@ class ModelFactory:
 
         Args:
             data: DrugBagData containing bag information
-            submission: Parent Submission instance
+            form: Parent Priority3Form instance
 
         Returns:
             DrugBag: Created or updated drug bag instance
@@ -630,7 +772,7 @@ class ModelFactory:
 
             # Get or create the drug bag with proper field mapping
             drug_bag, created = DrugBag.objects.get_or_create(
-                submission=submission,
+                form=form,
                 seal_tag_numbers=data.seal_tag_numbers,  # Unique constraint key
                 defaults={
                     "content_type": data.content_type,
@@ -655,14 +797,12 @@ class ModelFactory:
             action = "Created" if created else "Updated"
             logger.debug(
                 f"{action} drug bag {drug_bag.seal_tag_numbers} (content_type: {data.content_type}) "
-                f"for submission {submission.case_number}"
+                f"for form {form.pk} (case {form.case.case_number})"
             )
             return drug_bag
 
         except Exception as e:
-            logger.error(
-                f"Error creating drug bag for submission {submission.case_number}: {e}"
-            )
+            logger.error(f"Error creating drug bag for form {form.pk}: {e}")
             raise
 
     def create_botanical_assessment(
@@ -729,7 +869,7 @@ class ModelFactory:
         self, json_record: dict
     ) -> Optional[Submission]:
         """
-        Create a complete submission with all related objects from a JSON record.
+        Create a complete case with Priority3Forms and all related objects from a JSON record.
         Includes comprehensive error handling and rollback capabilities.
 
         This is the main orchestration method that coordinates all model creation.
@@ -738,7 +878,7 @@ class ModelFactory:
             json_record: Complete JSON record from cannabis_final.json
 
         Returns:
-            Optional[Submission]: Created submission with all related objects, or None if failed
+            Optional[Submission]: Created case with all related objects, or None if failed
         """
         from .data_mapper import CannabisDataMapper
 
@@ -750,7 +890,7 @@ class ModelFactory:
 
             # Map all data structures with error handling
             try:
-                submission_data = mapper.map_submission_data(json_record)
+                submission_data, form_data = mapper.map_submission_data(json_record)
             except Exception as e:
                 self.error_handler.handle_validation_error(
                     record_id, e, context={"operation": "map_submission_data"}
@@ -809,7 +949,7 @@ class ModelFactory:
                 )
                 # Continue without defendants rather than failing completely
 
-            # Create submission with comprehensive error handling
+            # Create case with comprehensive error handling
             submission = self.create_or_update_submission(
                 submission_data,
                 submitting_officer=submitting_officer,
@@ -822,7 +962,7 @@ class ModelFactory:
                     self.error_handler.rollback_to_point(savepoint_id)
                 return None
 
-            # Map and create drug bags (one per physical tag) with error handling
+            # Map drug bags and group into forms
             try:
                 drug_bags_data = mapper.map_drug_bags_data(json_record)
                 result_json = json_record.get("result", {})
@@ -831,25 +971,33 @@ class ModelFactory:
                     result_json, cert_date_raw
                 )
 
-                for bag_data in drug_bags_data:
-                    drug_bag = self.create_drug_bag_with_error_handling(
-                        bag_data, submission, record_id
-                    )
-                    if drug_bag:
-                        try:
-                            self.create_botanical_assessment_with_error_handling(
-                                assessment_data, drug_bag, record_id
-                            )
-                        except Exception as e:
-                            logger.warning(
-                                f"Error creating botanical assessment for bag "
-                                f"{bag_data.seal_tag_numbers} in record {record_id}: {e}"
-                            )
-                    else:
-                        logger.warning(
-                            f"No drug bag created for tag {bag_data.seal_tag_numbers} "
-                            f"in record {record_id}"
+                # Group bags into chunks of 5
+                bag_groups = self._group_bags_into_forms(drug_bags_data)
+
+                for bag_group in bag_groups:
+                    # Create a Priority3Form for each group
+                    form = self.create_priority3_form(submission, form_data)
+
+                    # Assign bags to this form
+                    for bag_data in bag_group:
+                        drug_bag = self.create_drug_bag_with_error_handling(
+                            bag_data, form, record_id
                         )
+                        if drug_bag:
+                            try:
+                                self.create_botanical_assessment_with_error_handling(
+                                    assessment_data, drug_bag, record_id
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Error creating botanical assessment for bag "
+                                    f"{bag_data.seal_tag_numbers} in record {record_id}: {e}"
+                                )
+                        else:
+                            logger.warning(
+                                f"No drug bag created for tag {bag_data.seal_tag_numbers} "
+                                f"in record {record_id}"
+                            )
 
             except Exception as e:
                 logger.warning(
@@ -859,8 +1007,6 @@ class ModelFactory:
             # Link station to the case if resolved from police officer data
             try:
                 if submission_data.station_name and not submission.station:
-                    pass
-
                     station = self.create_or_update_police_station(
                         submission_data.station_name
                     )
@@ -1061,21 +1207,21 @@ class ModelFactory:
         return defendants
 
     def create_drug_bag_with_error_handling(
-        self, data: DrugBagData, submission: Submission, record_id: str
+        self, data: DrugBagData, form: Priority3Form, record_id: str
     ) -> Optional[DrugBag]:
         """
         Create drug bag with comprehensive error handling.
 
         Args:
             data: DrugBagData containing bag information
-            submission: Parent Submission instance
+            form: Parent Priority3Form instance
             record_id: Record identifier for error tracking
 
         Returns:
             Optional[DrugBag]: Created drug bag or None if failed
         """
         try:
-            return self.create_drug_bag(data, submission)
+            return self.create_drug_bag(data, form)
         except ValidationError as e:
             self.error_handler.handle_validation_error(
                 record_id,
@@ -1100,7 +1246,7 @@ class ModelFactory:
             if should_continue:
                 try:
                     existing = DrugBag.objects.get(
-                        submission=submission, seal_tag_numbers=data.seal_tag_numbers
+                        form=form, seal_tag_numbers=data.seal_tag_numbers
                     )
                     return existing
                 except DrugBag.DoesNotExist:

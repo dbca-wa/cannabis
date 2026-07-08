@@ -26,11 +26,12 @@ import {
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import type { EditUserFormData, Role } from "@/features/user/types/users.types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSendResetEmail } from "@/features/user/hooks/useUsers";
 import { determineUserRole } from "@/features/user/utils/userDisplay.utils";
 import { formatDate } from "@/shared/utils/date.utils";
 import { Spinner } from "@/shared/components/feedback/Spinner";
 import { logger } from "@/shared/services/logger.service";
-import { AlertCircle, User, Calendar, Loader2 } from "lucide-react";
+import { AlertCircle, User, Calendar, Loader2, Mail } from "lucide-react";
 
 interface EditUserFormProps {
 	onCancel: () => void;
@@ -53,6 +54,7 @@ const EditUserForm = ({
 		refetch,
 	} = useUserById(Number(userId!));
 	const { user: currentUser } = useAuth();
+	const sendResetEmail = useSendResetEmail();
 	const [formInitialised, setFormInitialised] = useState(false);
 
 	// React Hook Form setup
@@ -471,6 +473,24 @@ const EditUserForm = ({
 						Delete User
 					</Button>
 				)}
+				{(currentUser?.is_staff || currentUser?.is_superuser) &&
+					currentUser?.id !== user?.id && (
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => sendResetEmail.mutate(Number(userId))}
+							disabled={sendResetEmail.isPending || isSubmitting}
+							className="cursor-pointer"
+							aria-label="Send password reset email to this user"
+						>
+							{sendResetEmail.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Mail className="mr-2 h-4 w-4" />
+							)}
+							{sendResetEmail.isPending ? "Sending..." : "Send Password Reset"}
+						</Button>
+					)}
 				<Button
 					type="button"
 					variant="outline"

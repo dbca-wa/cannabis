@@ -8,6 +8,9 @@ az-aks-oim03.yaml
 aks-bcs-prod-01.yaml
 aks-cannabis-prod.yaml
 
+# Local ETL runner scripts (contain cluster-specific paths)
+backend/scripts/
+
 # Custom Redeploy script
 redeploy.sh
 

@@ -63,6 +63,11 @@ urlpatterns = [
         views.BatchDownloadView.as_view(),
         name="batch_download",
     ),
+    path(
+        "batches/<int:pk>/repackage",
+        views.BatchRepackageView.as_view(),
+        name="batch_repackage",
+    ),
     # Drug bag endpoints
     path(
         "<int:pk>/bags",

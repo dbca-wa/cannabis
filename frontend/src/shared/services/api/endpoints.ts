@@ -131,6 +131,7 @@ export const ENDPOINTS = {
 		INVOICE_RAISED: (id: string | number) =>
 			`/cases/batches/${id}/invoice-raised`,
 		DOWNLOAD: (id: string | number) => `/cases/batches/${id}/download`,
+		REPACKAGE: (id: string | number) => `/cases/batches/${id}/repackage`,
 	},
 
 	// Certificates endpoints

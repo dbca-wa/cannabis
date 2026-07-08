@@ -105,3 +105,15 @@ export const inviteUser = async (
 	}
 	return result.data;
 };
+
+/**
+ * Admin-triggered password reset email for a specific user.
+ */
+export const sendResetEmail = async (
+	userId: number
+): Promise<{ success: boolean; message: string }> => {
+	return apiClient.post<{ success: boolean; message: string }>(
+		`/users/${userId}/send-reset-email`,
+		{}
+	);
+};

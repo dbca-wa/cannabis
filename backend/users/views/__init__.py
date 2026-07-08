@@ -15,6 +15,7 @@ from .auth import (
     WhoAmI,
 )
 from .crud import (
+    AdminSendResetEmailView,
     UserCSVExportView,
     UserDetailView,
     UserExportView,
@@ -44,6 +45,7 @@ __all__ = [
     "VerifyResetCodeView",
     "PasswordUpdateView",
     # CRUD
+    "AdminSendResetEmailView",
     "UserListView",
     "UserDetailView",
     "UserExportView",

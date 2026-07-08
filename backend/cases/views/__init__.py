@@ -17,6 +17,7 @@ from .batches import (  # noqa: F401
     BatchExportView,
     BatchInvoiceRaisedView,
     BatchListCreateView,
+    BatchRepackageView,
 )
 from .certificates import (  # noqa: F401
     AllCertificatesListView,
@@ -63,6 +64,7 @@ __all__ = [
     "BatchDownloadView",
     "BatchInvoiceRaisedView",
     "BatchExportView",
+    "BatchRepackageView",
     # certificates
     "AllCertificatesListView",
     "CertificateDetailView",

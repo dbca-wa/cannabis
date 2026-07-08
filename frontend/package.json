@@ -57,6 +57,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@tailwindcss/typography": "^0.5.20",
 		"@tanstack/eslint-plugin-query": "^5.101.2",
 		"@tanstack/react-query-devtools": "^5.101.2",
 		"@testing-library/jest-dom": "^6.9.1",

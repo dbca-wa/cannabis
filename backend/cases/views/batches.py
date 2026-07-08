@@ -103,7 +103,7 @@ class BatchInvoiceRaisedView(APIView):
 
 
 class BatchDownloadView(APIView):
-    """GET: stream the batch ZIP (rebuilding it if missing)."""
+    """GET: stream the stored batch ZIP (rebuilding only if missing)."""
 
     permission_classes = [HasAppAccess]
 
@@ -111,6 +111,7 @@ class BatchDownloadView(APIView):
         batch = BatchService.get_batch(pk)
         if not batch.zip_file:
             BatchService.rebuild_zip(batch)
+            batch.refresh_from_db(fields=["zip_file"])
         batch.zip_file.open("rb")
         data = batch.zip_file.read()
         batch.zip_file.close()
@@ -119,6 +120,17 @@ class BatchDownloadView(APIView):
             f'attachment; filename="{batch.batch_number}.zip"'
         )
         return response
+
+
+class BatchRepackageView(APIView):
+    """POST: rebuild the batch ZIP with latest templates and certificate PDFs."""
+
+    permission_classes = [HasAppAccess]
+
+    def post(self, request, pk):
+        batch = BatchService.get_batch(pk)
+        BatchService.rebuild_zip(batch)
+        return Response({"status": "repackaged"}, status=HTTP_200_OK)
 
 
 class BatchExportView(APIView):

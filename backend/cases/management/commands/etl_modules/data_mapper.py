@@ -34,9 +34,15 @@ class SubmissionData:
     received: datetime
     approved_botanist: Optional[str] = None
     internal_comments: Optional[str] = None
-    additional_notes: Optional[str] = None
-    security_movement_envelope: Optional[str] = None
     station_name: Optional[str] = None
+
+
+@dataclass
+class FormData:
+    """Structured data for Priority3Form-level fields."""
+
+    security_movement_envelope: Optional[str] = None
+    additional_notes: Optional[str] = None
 
 
 @dataclass
@@ -148,8 +154,10 @@ class CannabisDataMapper:
     # Main mapping methods
     # ------------------------------------------------------------------
 
-    def map_submission_data(self, json_record: Dict[str, Any]) -> SubmissionData:
-        """Map a JSON record to SubmissionData."""
+    def map_submission_data(
+        self, json_record: Dict[str, Any]
+    ) -> tuple[SubmissionData, FormData]:
+        """Map a JSON record to SubmissionData and FormData."""
         try:
             legacy_id = str(json_record.get("row_id", ""))
             if not legacy_id:
@@ -180,8 +188,9 @@ class CannabisDataMapper:
             # Optional botanist
             approved_botanist = json_record.get("approved_botanist")
 
-            # Security movement envelope
-            security_movement_envelope = f"SME-{cert_number}"
+            # Security movement envelope (goes to FormData)
+            # Truncate to 20 chars to fit CharField(max_length=20)
+            security_movement_envelope = f"SME-{cert_number}"[:20]
 
             # Unwrap comments into their correct slots
             additional_notes = self._get_additional_notes(json_record)
@@ -190,16 +199,21 @@ class CannabisDataMapper:
             # Extract station from police_officer organisation
             station_name = self._get_station_name(json_record)
 
-            return SubmissionData(
+            submission_data = SubmissionData(
                 legacy_id=legacy_id,
                 case_number=case_number,
                 received=received,
                 approved_botanist=approved_botanist,
                 internal_comments=internal_comments,
-                additional_notes=additional_notes,
-                security_movement_envelope=security_movement_envelope,
                 station_name=station_name,
             )
+
+            form_data = FormData(
+                security_movement_envelope=security_movement_envelope,
+                additional_notes=additional_notes,
+            )
+
+            return submission_data, form_data
         except Exception as e:
             logger.error(
                 f"Error mapping submission data for row_id {json_record.get('row_id')}: {e}"
@@ -294,7 +308,8 @@ class CannabisDataMapper:
         try:
             tag_numbers = json_record.get("tag_numbers", [])
             descriptions = json_record.get("description", [])
-            property_reference = json_record.get("police_reference_number", "")
+            # Truncate to 20 chars to fit property_reference CharField(max_length=20)
+            property_reference = json_record.get("police_reference_number", "")[:20]
 
             result_section = json_record.get("result", {})
             new_tag_numbers = result_section.get("new_tag_numbers", [])

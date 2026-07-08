@@ -54,6 +54,55 @@ class BatchService:
         return sorted(n for n in numbers if n)
 
     @staticmethod
+    def _collapse_cert_ranges(numbers):
+        """Collapse sequential R{nnnnnn} certificate numbers into ranges.
+
+        Input: ["R000001", "R000002", "R000003", "R000005"]
+        Output: ["R000001-R000003", "R000005"]
+        """
+        import re
+
+        if len(numbers) <= 1:
+            return numbers
+
+        parsed = []
+        non_r = []
+        for n in numbers:
+            match = re.match(r"^R(\d+)$", n)
+            if match:
+                parsed.append((n, int(match.group(1))))
+            else:
+                non_r.append(n)
+
+        parsed.sort(key=lambda x: x[1])
+
+        result = []
+        range_start = None
+        range_end = None
+
+        for original, num in parsed:
+            if range_start is None:
+                range_start = (original, num)
+                range_end = (original, num)
+            elif num == range_end[1] + 1:
+                range_end = (original, num)
+            else:
+                if range_start[1] == range_end[1]:
+                    result.append(range_start[0])
+                else:
+                    result.append(f"{range_start[0]}-{range_end[0]}")
+                range_start = (original, num)
+                range_end = (original, num)
+
+        if range_start:
+            if range_start[1] == range_end[1]:
+                result.append(range_start[0])
+            else:
+                result.append(f"{range_start[0]}-{range_end[0]}")
+
+        return result + non_r
+
+    @staticmethod
     def _certificate_number_range(certificates):
         """Build a comma-separated string of every certificate number given."""
         return ", ".join(BatchService._certificate_numbers(certificates))
@@ -181,7 +230,9 @@ class BatchService:
             "tax_amount": float(batch.tax_amount),
             "total": float(batch.total),
             "certificate_number_range": batch.certificate_number_range,
-            "certificate_numbers": BatchService._certificate_numbers(certificates),
+            "certificate_numbers": BatchService._collapse_cert_ranges(
+                BatchService._certificate_numbers(certificates)
+            ),
             "cases": cases,
             "dbca_org_data": {
                 "name": "Department of Biodiversity, Conservation and Attractions",

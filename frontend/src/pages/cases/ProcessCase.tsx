@@ -424,6 +424,28 @@ const ProcessCaseContent = observer(() => {
 				return;
 			}
 
+			// Defendants M2M — add or set the full list of IDs
+			if (field === "add_defendant") {
+				const defendant = value as { id: number };
+				const currentIds = (caseData?.defendants as number[]) ?? [];
+				if (!currentIds.includes(defendant.id)) {
+					const newIds = [...currentIds, defendant.id];
+					updateCase({ id: parsedId, data: { defendants: newIds } });
+					queryClient.invalidateQueries({
+						queryKey: ["cases", "detail", parsedId],
+					});
+				}
+				return;
+			}
+			if (field === "defendants") {
+				// value is the updated array of defendant IDs (after removal)
+				updateCase({ id: parsedId, data: { defendants: value as number[] } });
+				queryClient.invalidateQueries({
+					queryKey: ["cases", "detail", parsedId],
+				});
+				return;
+			}
+
 			// Text fields: debounce the save to avoid a PATCH on every keystroke
 			if (typeof value === "string") {
 				if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current);
@@ -434,7 +456,15 @@ const ProcessCaseContent = observer(() => {
 			}
 
 			// Non-text fields (selects, IDs): save immediately
-			updateCase({ id: parsedId, data: { [field]: value } });
+			// Map frontend field names (with _id suffix) to backend serializer field names
+			const fieldMap: Record<string, string> = {
+				requesting_officer_id: "requesting_officer",
+				submitting_officer_id: "submitting_officer",
+				station_id: "station",
+				approved_botanist_id: "approved_botanist",
+			};
+			const apiField = fieldMap[field] ?? field;
+			updateCase({ id: parsedId, data: { [apiField]: value } });
 		},
 		[parsedId, activeFormId, updateCase, queryClient]
 	);

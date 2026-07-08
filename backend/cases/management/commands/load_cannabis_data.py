@@ -19,7 +19,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import DatabaseError, transaction
 from django.db.utils import IntegrityError, OperationalError
 
-from cases.models import BotanicalAssessment, DrugBag, Submission
+from cases.models import BotanicalAssessment
+from cases.models import Case as Submission
+from cases.models import DrugBag
 from defendants.models import Defendant
 from police.models import PoliceOfficer, PoliceStation
 
@@ -607,9 +609,7 @@ class Command(BaseCommand):
                     # Critical error - rollback entire batch
                     if batch_savepoint:
                         error_handler.rollback_to_point(batch_savepoint)
-                    logger.error(
-                        "Critical database error in batch, rolling back batch"
-                    )
+                    logger.error("Critical database error in batch, rolling back batch")
                     break
 
             except Exception as e:
@@ -765,9 +765,7 @@ class Command(BaseCommand):
                     # Critical error - rollback entire batch
                     if batch_savepoint:
                         error_handler.rollback_to_point(batch_savepoint)
-                    logger.error(
-                        "Critical database error in batch, rolling back batch"
-                    )
+                    logger.error("Critical database error in batch, rolling back batch")
                     break
 
             except Exception as e:
