@@ -10,4 +10,5 @@ exclude =
     build,
     dist,
     _run_etl.py,
-    _etl_*
+    _etl_*,
+    scripts/

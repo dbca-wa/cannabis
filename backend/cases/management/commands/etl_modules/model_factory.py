@@ -104,30 +104,63 @@ class ModelFactory:
                         "received date is required for submission creation"
                     )
 
-                # Look up approved botanist by name if provided
+                # Look up or create approved botanist by name
                 approved_botanist = None
                 if data.approved_botanist:
-                    try:
-                        approved_botanist = User.objects.get(
-                            given_names__icontains=data.approved_botanist.split()[0],
-                            role="botanist",
+                    full_name_parts = data.approved_botanist.strip().split()
+                    if full_name_parts:
+                        given = full_name_parts[0]
+                        last = (
+                            " ".join(full_name_parts[1:])
+                            if len(full_name_parts) > 1
+                            else ""
                         )
-                    except User.DoesNotExist:
-                        logger.warning(f"Botanist '{data.approved_botanist}' not found")
-                    except User.MultipleObjectsReturned:
-                        # Try exact match
+
+                        # Try finding by first name + role
                         try:
-                            full_name_parts = data.approved_botanist.split()
-                            if len(full_name_parts) >= 2:
+                            approved_botanist = User.objects.get(
+                                given_names__iexact=given,
+                                last_name__iexact=last,
+                                role="botanist",
+                            )
+                        except User.DoesNotExist:
+                            # Try partial match on given_names
+                            try:
                                 approved_botanist = User.objects.get(
-                                    given_names__iexact=full_name_parts[0],
-                                    last_name__iexact=" ".join(full_name_parts[1:]),
+                                    given_names__icontains=given,
                                     role="botanist",
                                 )
-                        except User.DoesNotExist:
-                            logger.warning(
-                                f"Multiple botanists found for '{data.approved_botanist}', using none"
-                            )
+                            except (User.DoesNotExist, User.MultipleObjectsReturned):
+                                # Create the botanist user
+                                email_slug = (
+                                    data.approved_botanist.lower()
+                                    .replace(" ", ".")
+                                    .replace("'", "")
+                                )
+                                approved_botanist, created = User.objects.get_or_create(
+                                    email=f"{email_slug}@dbca.wa.gov.au",
+                                    defaults={
+                                        "given_names": given,
+                                        "last_name": last,
+                                        "role": "botanist",
+                                        "is_staff": True,
+                                        "is_active": True,
+                                    },
+                                )
+                                if created:
+                                    logger.info(
+                                        f"Created botanist user: {data.approved_botanist} ({approved_botanist.email})"
+                                    )
+                                else:
+                                    logger.info(
+                                        f"Found existing botanist by email: {approved_botanist.email}"
+                                    )
+                        except User.MultipleObjectsReturned:
+                            # Multiple matches — use the first one
+                            approved_botanist = User.objects.filter(
+                                given_names__icontains=given,
+                                role="botanist",
+                            ).first()
 
                 # Get or create submission using legacy_id
                 with transaction.atomic():
