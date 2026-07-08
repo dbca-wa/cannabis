@@ -20,7 +20,6 @@ import {
 	useUnsetInvoiceRaised,
 	downloadBatchZip,
 	repackageBatch,
-	getBatchExportUrl,
 	type Batch,
 	type BatchOrdering,
 } from "@/features/batches";
@@ -253,14 +252,6 @@ const Batches = () => {
 			<PageHeader
 				title={`Batches${!isLoading ? ` (${batches.length})` : ""}`}
 				subtitle="Packaged certificate batches and their cost summaries."
-				actions={
-					<Button asChild variant="outline">
-						<a href={getBatchExportUrl()}>
-							<Download className="mr-2 h-4 w-4" />
-							Export
-						</a>
-					</Button>
-				}
 			/>
 
 			{/* Search / filter */}

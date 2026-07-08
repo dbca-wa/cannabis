@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Loader2 } from "lucide-react";
 import { useCaseCreationWizardStore } from "@/app/providers/store.provider";
@@ -15,8 +15,8 @@ interface CaseCreationWizardContainerProps {
 	onFieldChange: (field: string, value: unknown) => void;
 	/** Callback to finalise and submit the case */
 	onSubmit: () => void;
-	/** Callback to discard the draft case */
-	onDiscard: () => void;
+	/** Callback to discard the draft case (kept for API compat) */
+	onDiscard?: () => void;
 }
 
 /**
@@ -24,13 +24,9 @@ interface CaseCreationWizardContainerProps {
  * Defendants, Officers) in a scrollable layout with one "Create Case" action.
  */
 export const CaseCreationWizardContainer = observer(
-	({
-		caseData,
-		onFieldChange,
-		onSubmit,
-		onDiscard,
-	}: CaseCreationWizardContainerProps) => {
+	({ caseData, onFieldChange, onSubmit }: CaseCreationWizardContainerProps) => {
 		const store = useCaseCreationWizardStore();
+		const [touched, setTouched] = useState(false);
 
 		const { isChecking, matchedCase } = useCaseNumberAvailability(
 			(caseData?.case_number as string) ?? "",
@@ -66,30 +62,30 @@ export const CaseCreationWizardContainer = observer(
 				<div className="flex-1 min-h-0 overflow-y-auto space-y-6">
 					<CaseDetailsStep
 						caseData={caseData}
-						isTouched={true}
+						isTouched={touched}
 						onFieldChange={onFieldChange}
 					/>
 					<DefendantsStep
 						caseData={caseData}
-						isTouched={true}
+						isTouched={touched}
 						onFieldChange={onFieldChange}
 						defendantUnknown={store.state.defendantUnknownAcknowledged}
 						onDefendantUnknownChange={store.setDefendantUnknownAcknowledged}
 					/>
 					<OfficersStep
 						caseData={caseData}
-						isTouched={false}
+						isTouched={touched}
 						onFieldChange={onFieldChange}
 					/>
 				</div>
 
-				<div className="flex items-center justify-between gap-3">
-					<Button variant="destructive" onClick={onDiscard}>
-						Discard
-					</Button>
+				<div className="flex items-center justify-end gap-3">
 					<Button
-						onClick={onSubmit}
-						disabled={!isValid || store.state.isSubmitting}
+						onClick={() => {
+							setTouched(true);
+							if (isValid) onSubmit();
+						}}
+						disabled={store.state.isSubmitting}
 						className="bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
 					>
 						{store.state.isSubmitting ? (
