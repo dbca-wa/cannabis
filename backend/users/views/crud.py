@@ -1,5 +1,5 @@
 """
-User CRUD views: list, detail, export, and CSV export.
+User CRUD views: list, detail, export, CSV export, and admin password reset.
 """
 
 import csv
@@ -13,7 +13,8 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..permissions import HasAppAccess
@@ -553,6 +554,88 @@ class UserCSVExportView(APIView):
         except Exception as e:
             settings.LOGGER.error(f"CSV export failed: {str(e)}")
             raise
+
+
+class AdminSendResetEmailView(APIView):
+    """POST: Admin-only — send a password reset email to a user.
+
+    Clears any existing reset codes/timeouts and sends a fresh one
+    so the user can reset their password immediately.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from urllib.parse import urlencode
+
+        from common.models import SystemSettings
+        from common.services import EmailService
+        from common.utils import get_frontend_url
+
+        from ..models import PasswordResetCode
+        from ..services import PasswordResetCodeService
+
+        # Admin only
+        if not (request.user.is_superuser or request.user.is_staff):
+            return Response(
+                {"detail": "Only administrators can send reset emails."},
+                status=403,
+            )
+
+        try:
+            target_user = User.objects.get(pk=pk, is_active=True)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+        # Clear any existing reset codes for this user
+        PasswordResetCode.objects.filter(user=target_user).delete()
+
+        # Generate a fresh reset code
+        reset_code = PasswordResetCodeService.generate_reset_code(target_user)
+        plain_code = reset_code._plain_code
+
+        # Build the reset page URL
+        reset_page_url = get_frontend_url(
+            f"/auth/reset-code?{urlencode({'email': target_user.email})}"
+        )
+
+        # Prepare email context
+        context = {
+            "user": target_user,
+            "reset_code": plain_code,
+            "frontend_url": reset_page_url,
+            "site_name": "Cannabis Management System",
+            "expires_at": reset_code.expires_at,
+            "max_attempts": reset_code.max_attempts,
+        }
+
+        # Determine recipient based on system settings
+        system_settings = SystemSettings.load()
+        if system_settings.send_emails_to_self:
+            recipient_list = [system_settings.forward_certificate_emails_to]
+        else:
+            recipient_list = [target_user.email]
+
+        # Send the email
+        EmailService.send_template_email(
+            template_name="emails/password_reset_email.html",
+            recipient_email=recipient_list,
+            subject="Password Reset Code - Cannabis Management System",
+            context=context,
+        )
+
+        logger.info(
+            f"Admin {request.user.email} triggered password reset email "
+            f"for user {target_user.email}"
+        )
+
+        return Response(
+            {
+                "success": True,
+                "message": f"Password reset email sent to {target_user.email}.",
+            },
+            status=200,
+        )
 
 
 # endregion

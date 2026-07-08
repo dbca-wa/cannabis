@@ -8,6 +8,7 @@ import {
 	updateUser as updateUserService,
 	deleteUser as deleteUserService,
 	inviteUser as inviteUserService,
+	sendResetEmail as sendResetEmailService,
 } from "../services/users.service";
 import {
 	type IUser,
@@ -275,4 +276,20 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		// Raw query for advanced usage
 		query: usersQuery,
 	};
+};
+
+/**
+ * Standalone mutation hook for admin-triggered password reset emails.
+ */
+export const useSendResetEmail = () => {
+	return useMutation({
+		mutationFn: (userId: number) => sendResetEmailService(userId),
+		onSuccess: () => {
+			toast.success("Password reset email sent");
+		},
+		onError: (error: unknown) => {
+			const errorMessage = getErrorMessage(error);
+			toast.error(`Failed to send reset email: ${errorMessage}`);
+		},
+	});
 };

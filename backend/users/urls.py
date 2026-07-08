@@ -75,4 +75,9 @@ urlpatterns = [
     # User management endpoints (admin/staff operations)
     path("list", views.UserListView.as_view(), name="user_list"),
     path("<int:pk>", views.UserDetailView.as_view(), name="user_detail"),
+    path(
+        "<int:pk>/send-reset-email",
+        views.AdminSendResetEmailView.as_view(),
+        name="admin_send_reset_email",
+    ),
 ]
