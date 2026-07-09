@@ -19,15 +19,12 @@ spec:
             - secretRef:
                 name: cannabis-env-prod
           volumeMounts:
-            - name: cannabis-media-blob-prod
-              mountPath: /usr/src/app/backend/files
             - name: prince2-license-prod
               mountPath: /usr/lib/prince/license
               readOnly: true
+        - name: cannabis-frontend
+          imagePullPolicy: IfNotPresent
       volumes:
-        - name: cannabis-media-blob-prod
-          persistentVolumeClaim:
-            claimName: pvc-cannabis-media-data-blob-prod
         - name: prince2-license-prod
           configMap:
             defaultMode: 420
