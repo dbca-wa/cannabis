@@ -604,9 +604,19 @@ class Certificate(AuditModel):
 
     @property
     def is_batch_eligible(self):
-        """Eligible for batching once its form has reached the Batching phase
-        and the certificate is not already attached to a batch."""
-        return self.form.phase == Case.PhaseChoices.BATCHING and self.batch_id is None
+        """Eligible for batching once ALL forms on the case have reached the
+        Batching phase (or beyond) and this certificate is not already batched."""
+        if self.batch_id is not None:
+            return False
+        # All forms on the case must be at batching or later
+        non_batching_forms = self.form.case.forms.exclude(
+            phase__in=[
+                Case.PhaseChoices.BATCHING,
+                Case.PhaseChoices.IN_BATCH,
+                Case.PhaseChoices.COMPLETE,
+            ]
+        ).exists()
+        return not non_batching_forms
 
     def save(self, *args, **kwargs):
         """Auto-generate certificate number on creation using R{counter} format.
