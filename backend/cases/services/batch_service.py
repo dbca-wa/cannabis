@@ -260,7 +260,7 @@ class BatchService:
                 pdf.open("rb")
                 data = pdf.read()
                 pdf.close()
-                archive.writestr(f"certificates/{cert.certificate_number}.pdf", data)
+                archive.writestr(f"{cert.certificate_number}.pdf", data)
 
         zip_bytes = buffer.getvalue()
         if batch.zip_file:
