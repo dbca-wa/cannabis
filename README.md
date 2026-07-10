@@ -21,17 +21,27 @@ The Cannabis system is a digital platform developed for DBCA's Herbarium. This a
 
 ### Workflow Process
 
-The overall process is submission, determination, and certification. Here is a detailed breakdown:
+The primary purpose of this application is certificate generation from determination results. Approved Botanists perform their assessments on-site at police stations using Priority 3 forms, then the results are entered into this system for processing.
 
-1. **Police Collection** (👮): Law enforcement officers collect suspected cannabis samples during operations
-2. **Case Initiation** (📞): Officers contact DBCA Herbarium to initiate the identification process
-3. **Scientist Assignment** (👩‍🔬): Approved Botanists within the meaning of Acts\* are assigned to the case
-4. **Appointment Set** (📅): A time and location is set for the Approved Botanist to travel to and assess the specimens
-5. **Laboratory Analysis** (🔬): Approved Botanist examines the product at the specified location, marking determintions on a police form with bag identification tags
-6. **Digital Processing** (💻): Form passed on to BCS Finance Officers. Results are entered into the system's secure database, along with any attachments
-7. **Certificate Generation** (📄): System saves and outputs unsigned certificate/s, which are printed and provided to Approved Botanist (If erroneous, Approved Botanist uses system to request changes)
-8. **Final Sign Off** (✅): Approved Botanist signs and provides copies to Finance Officers to scan back into our system and send automated email of certificate and police form attached
-9. **Court Proceedings** (🏛️): Endorsed Certificate/s hand-delivered back to police to serve as legal evidence for prosecution
+#### External Process (before the app)
+
+1. Law enforcement officers collect suspected cannabis samples during operations
+2. Officers contact DBCA Herbarium to arrange an assessment
+3. An Approved Botanist\* travels to the police station, examines the specimens, and records determinations on a Priority 3 form with bag identification tags
+
+#### In-App Process
+
+1. **Case Creation** -- Finance Officer creates a case, entering details from the completed Priority 3 form (officer, defendant, and bag information)
+2. **Assessment Entry** -- Determination results from the physical form are entered per bag (species, weight, determination outcome)
+3. **Certificate Generation** -- The system generates unsigned PDF certificates from the entered data, ready for printing
+4. **Batching** -- Completed cases are grouped into batches for invoicing and cost tracking and provided to finance officers via a zip file
+5. **Completion** -- Certificates are printed and provided to the Approved Botanist for signing. After invoices are raised externally, the invoice number is recorded in-app
+
+#### External Process (after the app)
+
+1. Approved Botanist signs the printed certificates
+2. Finance Officers scan signed certificates back into the system and send automated emails with certificate and police form attached
+3. Endorsed certificates are delivered to police to serve as legal evidence for prosecution
 
 ## Technical Architecture
 
