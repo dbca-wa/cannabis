@@ -1,13 +1,16 @@
 /* eslint-disable react-hooks/incompatible-library */
 import { Button } from "@/shared/components/ui/button";
 import { ResponsiveModalFooter } from "@/shared/components/layout/ResponsiveModal";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import { Label } from "@/shared/components/ui/label";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { ModalSection } from "@/shared/components/layout/ModalSection";
 import { logger } from "@/shared/services/logger.service";
 import { useState } from "react";
 import { UserInviteSection } from "./UserInviteSection";
 import { RolePermissionsSection } from "./RolePermissionsSection";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { ExternalUser } from "@/shared/types/backend-api.types";
 import { z } from "zod";
 
@@ -15,6 +18,7 @@ import { z } from "zod";
 const inviteUserSchema = z.object({
 	external_user_email: z.string().email("Valid email is required"),
 	role: z.enum(["botanist", "finance", "none"]),
+	is_staff: z.boolean(),
 });
 
 export type InviteUserFormData = z.infer<typeof inviteUserSchema>;
@@ -40,6 +44,7 @@ const InviteUserForm = ({
 	const [selectedUserData, setSelectedUserData] = useState<ExternalUser | null>(
 		null
 	);
+	const { isAdmin } = useAuth();
 
 	// React Hook Form setup
 
@@ -55,6 +60,7 @@ const InviteUserForm = ({
 		defaultValues: {
 			external_user_email: "",
 			role: (lockedRole || "none") as "botanist" | "finance" | "none",
+			is_staff: false,
 		},
 	});
 
@@ -112,6 +118,41 @@ const InviteUserForm = ({
 					lockedRole={lockedRole}
 				/>
 			</ModalSection>
+
+			{/* Admin Access — only visible to admins */}
+			{isAdmin && (
+				<ModalSection title="Admin Access">
+					<div className="space-y-3">
+						<div className="flex items-start gap-3">
+							<Controller
+								name="is_staff"
+								control={control}
+								render={({ field }) => (
+									<Checkbox
+										id="is_staff"
+										checked={field.value}
+										onCheckedChange={field.onChange}
+										className="mt-0.5"
+									/>
+								)}
+							/>
+							<div>
+								<Label
+									htmlFor="is_staff"
+									className="text-sm font-medium cursor-pointer"
+								>
+									Invite as Administrator
+								</Label>
+								<p className="text-xs text-muted-foreground mt-0.5">
+									This user will have full admin access including user
+									management, system settings, and the ability to promote other
+									users.
+								</p>
+							</div>
+						</div>
+					</div>
+				</ModalSection>
+			)}
 
 			{/* Footer */}
 			<ResponsiveModalFooter>

@@ -157,6 +157,18 @@ class InviteUserView(APIView):
         # Validate request data
         external_user_data = request.data.get("external_user_data", {})
         role = request.data.get("role", "none")
+        invite_as_admin = request.data.get("is_staff", False)
+
+        # Only admins can invite as admin
+        if invite_as_admin and not (request.user.is_staff or request.user.is_superuser):
+            return ErrorResponseBuilder.build_error_response(
+                error_code=ErrorCodes.INVALID_ROLE,
+                message="Only administrators can invite users as admin.",
+                field_errors={
+                    "is_staff": ["Only administrators can grant admin access"]
+                },
+                status_code=HTTP_400_BAD_REQUEST,
+            )
 
         # Validate external user data
         if not external_user_data or not external_user_data.get("email"):
@@ -215,6 +227,7 @@ class InviteUserView(APIView):
                 token=token,
                 expires_at=expires_at,
                 external_user_data=external_user_data,
+                is_staff=bool(invite_as_admin),
             )
 
             # Build the activation link from configuration; no trailing slash so
@@ -461,6 +474,7 @@ class InviteActivationView(APIView):
                 user.given_names = external_data.get("given_name", "")
                 user.last_name = external_data.get("surname", "")
                 user.role = invite_record.role
+                user.is_staff = invite_record.is_staff
                 user.set_password(temp_password)
                 user.employee_id = external_data.get("employee_id")
                 user.it_asset_id = external_data.get("id")
@@ -473,6 +487,7 @@ class InviteActivationView(APIView):
                     given_names=external_data.get("given_name", ""),
                     last_name=external_data.get("surname", ""),
                     role=invite_record.role,
+                    is_staff=invite_record.is_staff,
                     password=temp_password,
                     employee_id=external_data.get("employee_id"),
                     it_asset_id=external_data.get("id"),

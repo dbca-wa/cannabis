@@ -25,6 +25,7 @@ export const ENDPOINTS = {
 		DETAIL: (id: string | number) => `/users/${id}`,
 		UPDATE: (id: string | number) => `/users/${id}`,
 		DELETE: (id: string | number) => `/users/${id}`,
+		ADMIN_STATUS: (id: string | number) => `/users/${id}/admin`,
 		PREFERENCES: "/users/preferences", // Dedicated preferences endpoint
 		EXTERNAL_SEARCH: "/users/external-search", // External user search for invitations
 		INVITE: "/users/invite", // Send user invitation

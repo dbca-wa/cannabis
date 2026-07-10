@@ -31,7 +31,19 @@ import { determineUserRole } from "@/features/user/utils/userDisplay.utils";
 import { formatDate } from "@/shared/utils/date.utils";
 import { Spinner } from "@/shared/components/feedback/Spinner";
 import { logger } from "@/shared/services/logger.service";
-import { AlertCircle, User, Calendar, Loader2, Mail } from "lucide-react";
+import {
+	AlertCircle,
+	User,
+	Calendar,
+	Loader2,
+	Mail,
+	ShieldCheck,
+	ShieldOff,
+} from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateAdminStatus } from "@/features/user/services/users.service";
+import { toast } from "sonner";
+import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 
 interface EditUserFormProps {
 	onCancel: () => void;
@@ -56,6 +68,30 @@ const EditUserForm = ({
 	const { user: currentUser } = useAuth();
 	const sendResetEmail = useSendResetEmail();
 	const [formInitialised, setFormInitialised] = useState(false);
+	const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
+	const queryClient = useQueryClient();
+
+	// Admin promote/demote mutation
+	const adminStatusMutation = useMutation({
+		mutationFn: ({
+			userId,
+			action,
+		}: {
+			userId: number;
+			action: "promote" | "demote";
+		}) => updateAdminStatus(userId, action),
+		onSuccess: async (response) => {
+			toast.success(response.message);
+			await invalidateRelatedQueries(queryClient, "users");
+			setShowPromoteConfirm(false);
+			// Reset form to reflect new is_staff value
+			setFormInitialised(false);
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "Failed to update admin status");
+			setShowPromoteConfirm(false);
+		},
+	});
 
 	// React Hook Form setup
 
@@ -84,7 +120,6 @@ const EditUserForm = ({
 	// Watch role to conditionally show role descriptions
 	const selectedRole = watch("role");
 	const watchedIsActive = watch("is_active");
-	const watchedIsStaff = watch("is_staff");
 
 	useEffect(() => {
 		if (user && !isLoading && !formInitialised) {
@@ -391,33 +426,112 @@ const EditUserForm = ({
 
 					{/* Permission Checkboxes */}
 					<div className="space-y-3">
-						<div className="flex items-center space-x-2">
-							<Controller
-								name="is_staff"
-								control={control}
-								render={({ field }) => (
-									<Checkbox
-										id="is_staff"
-										checked={field.value}
-										onCheckedChange={field.onChange}
-										disabled={user?.is_superuser} // Can't remove staff from superuser
-									/>
-								)}
-							/>
-							<Label htmlFor="is_staff" className="text-sm">
-								Staff Member
-							</Label>
-							{watchedIsStaff && (
-								<Badge variant="secondary" className="text-xs">
-									Admin Access
-								</Badge>
+						{/* Admin Status — Promote/Demote button for admins */}
+						{(currentUser?.is_staff || currentUser?.is_superuser) &&
+							currentUser?.id !== user?.id &&
+							!user?.is_superuser && (
+								<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md space-y-2">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											{user?.is_staff ? (
+												<ShieldCheck className="h-4 w-4 text-emerald-600" />
+											) : (
+												<ShieldOff className="h-4 w-4 text-muted-foreground" />
+											)}
+											<span className="text-sm font-medium">
+												Admin Status:{" "}
+												{user?.is_staff ? (
+													<Badge variant="secondary" className="text-xs ml-1">
+														Admin
+													</Badge>
+												) : (
+													<span className="text-muted-foreground">
+														Not an admin
+													</span>
+												)}
+											</span>
+										</div>
+										{!showPromoteConfirm && (
+											<Button
+												type="button"
+												variant={user?.is_staff ? "outline" : "default"}
+												size="sm"
+												onClick={() => setShowPromoteConfirm(true)}
+												disabled={adminStatusMutation.isPending}
+												className="cursor-pointer"
+											>
+												{user?.is_staff
+													? "Demote from Admin"
+													: "Promote to Admin"}
+											</Button>
+										)}
+									</div>
+
+									{showPromoteConfirm && (
+										<div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+											<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+											<div className="flex-1">
+												<p className="text-sm text-amber-800 dark:text-amber-200">
+													{user?.is_staff
+														? `Are you sure you want to demote ${user.full_name} from admin? They will lose access to admin features.`
+														: `Are you sure you want to promote ${user?.full_name} to admin? They will gain full admin access.`}
+												</p>
+												<div className="flex gap-2 mt-2">
+													<Button
+														type="button"
+														variant={user?.is_staff ? "destructive" : "default"}
+														size="sm"
+														onClick={() =>
+															adminStatusMutation.mutate({
+																userId: user!.id,
+																action: user!.is_staff ? "demote" : "promote",
+															})
+														}
+														disabled={adminStatusMutation.isPending}
+														className="cursor-pointer"
+													>
+														{adminStatusMutation.isPending ? (
+															<Loader2 className="mr-1 h-3 w-3 animate-spin" />
+														) : null}
+														{user?.is_staff
+															? "Confirm Demote"
+															: "Confirm Promote"}
+													</Button>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={() => setShowPromoteConfirm(false)}
+														disabled={adminStatusMutation.isPending}
+														className="cursor-pointer"
+													>
+														Cancel
+													</Button>
+												</div>
+											</div>
+										</div>
+									)}
+								</div>
 							)}
-						</div>
-						<p className="text-xs text-gray-500 ml-6">
-							Staff members have access to administrative features and can
-							manage other users.
-							{user?.is_superuser && " (Cannot be disabled for super admin)"}
-						</p>
+
+						{/* Super admin notice */}
+						{user?.is_superuser && (
+							<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+								<div className="flex items-center gap-2">
+									<ShieldCheck className="h-4 w-4 text-red-600" />
+									<span className="text-sm font-medium">
+										Super Administrator
+									</span>
+									<Badge variant="destructive" className="text-xs">
+										Cannot be changed
+									</Badge>
+								</div>
+								<p className="text-xs text-muted-foreground mt-1 ml-6">
+									Super admin status can only be changed via the database
+									directly.
+								</p>
+							</div>
+						)}
 
 						<div className="flex items-center space-x-2">
 							<Controller

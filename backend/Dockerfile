@@ -2,7 +2,7 @@
 # Multi-stage production Dockerfile for Django backend with Prince XML
 
 # ====================== BUILD STAGE ======================
-FROM python:3.14-slim-bookworm AS builder
+FROM python:3.14-slim-trixie AS builder
 
 # Build environment variables
 ENV PYTHONUNBUFFERED=1
@@ -31,9 +31,9 @@ ENV PATH="${PATH}:/etc/poetry/bin"
 RUN DEB_FILE=prince.deb \
     && ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "arm64" ]; then \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian12_arm64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_arm64.deb"; \
     else \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian12_amd64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_amd64.deb"; \
     fi \
     && wget -O ${DEB_FILE} $PRINCE_URL \
     && yes | gdebi ${DEB_FILE} \
@@ -95,7 +95,7 @@ RUN echo "Removing development artifacts..." \
     && rm -f entrypoint.sh 2>/dev/null || true
 
 # ====================== PRODUCTION STAGE ======================
-FROM python:3.14-slim-bookworm AS production
+FROM python:3.14-slim-trixie AS production
 
 # Production environment variables
 ENV PYTHONUNBUFFERED=1
@@ -112,7 +112,7 @@ RUN echo "Installing Runtime Dependencies." && apt-get update && apt-get install
     fontconfig fonts-dejavu-core \
     libgif7 \
     libwebp7 libwebpdemux2 \
-    libavif15 \
+    libavif16 \
     postgresql-client \
     && apt-get upgrade -y \
     && apt-get clean \
@@ -126,9 +126,9 @@ WORKDIR /usr/src/app
 RUN DEB_FILE=prince.deb \
     && ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "arm64" ]; then \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian12_arm64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_arm64.deb"; \
     else \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian12_amd64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_amd64.deb"; \
     fi \
     && wget -O ${DEB_FILE} $PRINCE_URL \
     && yes | gdebi ${DEB_FILE} \

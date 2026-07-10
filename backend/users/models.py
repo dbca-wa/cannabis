@@ -384,6 +384,10 @@ class InviteRecord(models.Model):
     external_user_data = models.JSONField(
         help_text="External user data from IT Assets API"
     )
+    is_staff = models.BooleanField(
+        default=False,
+        help_text="Whether the invited user should be granted admin (staff) access",
+    )
 
     class Meta:
         db_table = "user_invite_records"

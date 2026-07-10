@@ -1,0 +1,47 @@
+# Grype vulnerability ignore rules for the Cannabis backend container image.
+# Each entry documents why the CVE is not actionable for this application.
+#
+# Review these rules periodically — when upstream patches land, remove the
+# corresponding ignore entry and rebuild the image.
+
+ignore:
+  # ─── Python stdlib: tarfile path traversal ───────────────────────────────────
+  # These affect tarfile extraction with crafted symlinks/hardlinks.
+  # Our application never extracts untrusted tar archives.
+  - vulnerability: "CVE-2026-11940"
+  - vulnerability: "CVE-2026-7774"
+
+  # ─── Python stdlib: unicodedata normalize() CPU exhaustion ───────────────────
+  # Requires specially crafted Unicode input with long combining character runs.
+  # Low real-world risk for an authenticated Django API. Awaiting upstream patch.
+  - vulnerability: "CVE-2026-3276"
+
+  # ─── Python stdlib: base64 non-strict decoding ──────────────────────────────
+  # Non-strict base64 accepts slightly malformed input. Not a security issue for
+  # this application. Use validate=True where strict parsing is needed.
+  - vulnerability: "CVE-2026-3446"
+
+  # ─── Python stdlib: webbrowser module leading dashes ─────────────────────────
+  # Only relevant if webbrowser.open() is called. Server containers do not open
+  # browsers. Not exploitable in this context.
+  - vulnerability: "CVE-2026-4519"
+
+  # ─── Python stdlib: http.cookies value injection ─────────────────────────────
+  # Django uses its own cookie middleware, not the stdlib http.cookies module.
+  # Awaiting upstream backport.
+  - vulnerability: "CVE-2026-6019"
+
+  # ─── Python: Windows-only vulnerability ─────────────────────────────────────
+  # This container runs on Linux. Not applicable.
+  - vulnerability: "CVE-2026-3087"
+
+  # ─── Python stdlib: libexpat XML parsing (if flagged) ────────────────────────
+  # Upstream Debian/CPython issue. No fix available in current repos.
+  # Our API does not parse untrusted XML directly.
+  - vulnerability: "CVE-2026-7210"
+
+  # ─── Legacy Python 3.11 system library (bookworm remnant) ───────────────────
+  # After migration to trixie this should no longer appear. If a transitive
+  # dependency still pulls in libpython3.11, suppress it — the app runs on 3.14.
+  - package:
+      name: "libpython3.11*"

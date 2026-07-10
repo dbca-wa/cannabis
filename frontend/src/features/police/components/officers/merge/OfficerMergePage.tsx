@@ -42,7 +42,7 @@ export const OfficerMergePage = () => {
 				merged_into: number;
 				target_name: string;
 				cases_reassigned: number;
-			}>("/police/officers/merge/", data),
+			}>("/police/officers/merge", data),
 		onSuccess: async (response) => {
 			await invalidateRelatedQueries(queryClient, "policeOfficers");
 			toast.success(

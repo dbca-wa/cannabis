@@ -117,3 +117,17 @@ export const sendResetEmail = async (
 		{}
 	);
 };
+
+/**
+ * Promote or demote a user's admin status.
+ */
+export const updateAdminStatus = async (
+	userId: number,
+	action: "promote" | "demote"
+): Promise<{ success: boolean; message: string; is_staff: boolean }> => {
+	return apiClient.patch<{
+		success: boolean;
+		message: string;
+		is_staff: boolean;
+	}>(ENDPOINTS.USERS.ADMIN_STATUS(userId), { action });
+};

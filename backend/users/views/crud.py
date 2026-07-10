@@ -638,4 +638,70 @@ class AdminSendResetEmailView(APIView):
         )
 
 
+class UserAdminStatusView(APIView):
+    """
+    PATCH: Promote or demote a user's admin status.
+    Only admins (is_staff or is_superuser) can use this endpoint.
+    An admin cannot change their own admin status.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        # Only admins can promote/demote
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {"detail": "Only administrators can promote or demote users."},
+                status=403,
+            )
+
+        # Cannot change own admin status
+        if request.user.pk == pk:
+            return Response(
+                {"detail": "You cannot change your own admin status."},
+                status=400,
+            )
+
+        try:
+            target_user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=404)
+
+        action = request.data.get("action")
+        if action not in ("promote", "demote"):
+            return Response(
+                {"detail": "Action must be 'promote' or 'demote'."},
+                status=400,
+            )
+
+        if action == "promote":
+            target_user.is_staff = True
+            target_user.save(update_fields=["is_staff"])
+            logger.info(
+                f"Admin {request.user.email} promoted {target_user.email} to admin"
+            )
+            return Response(
+                {
+                    "success": True,
+                    "message": f"{target_user.full_name} has been promoted to admin.",
+                    "is_staff": True,
+                },
+                status=200,
+            )
+        else:
+            target_user.is_staff = False
+            target_user.save(update_fields=["is_staff"])
+            logger.info(
+                f"Admin {request.user.email} demoted {target_user.email} from admin"
+            )
+            return Response(
+                {
+                    "success": True,
+                    "message": f"{target_user.full_name} has been demoted from admin.",
+                    "is_staff": False,
+                },
+                status=200,
+            )
+
+
 # endregion
