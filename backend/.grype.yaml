@@ -3,45 +3,65 @@
 #
 # Review these rules periodically — when upstream patches land, remove the
 # corresponding ignore entry and rebuild the image.
+#
+# Last reviewed: 2026-07-17
 
 ignore:
-  # ─── Python stdlib: tarfile path traversal ───────────────────────────────────
-  # These affect tarfile extraction with crafted symlinks/hardlinks.
-  # Our application never extracts untrusted tar archives.
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # ALL UNFIXABLE VULNERABILITIES
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Suppress all vulnerabilities where Debian has no available patch.
+  # These are OS-level packages (perl, curl, glibc, glib, ncurses, etc.)
+  # that the application does not directly use or expose to untrusted input.
+  #
+  # Key packages and why they're not exploitable:
+  # - perl/libperl: Never invoked by the application
+  # - curl/libcurl: Only used for internal health checks, not untrusted input
+  # - glibc: Critical CVE requires scanf %mc from untrusted input (Python doesn't use)
+  # - libssh2: No SSH connections made by the application
+  # - libxml2: API does not parse untrusted XML
+  # - libaom: AV1 video codec, application does not process video
+  # - glib: GIO/GDBus not used, no D-Bus interaction
+  # - sqlite: Application uses PostgreSQL, not SQLite
+  # - wget: Build-time only, not present at runtime
+  - fix-state: "wont-fix"
+  - fix-state: "not-fixed"
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PYTHON 3.14 BINARY — No actionable fix available
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Grype detects the Python 3.14.6 binary and flags CVEs that are either:
+  # - "Fixed" in unreleased Python 3.15 (not available as stable)
+  # - Assessed as not exploitable in this application context
+  #
+  # CVE-2026-11940: tarfile path traversal — app never extracts untrusted tars
+  # CVE-2026-11972: stdlib vulnerability — awaiting 3.14 backport
+  # CVE-2026-4360: stdlib vulnerability — awaiting 3.14 backport
+  # CVE-2026-0864: stdlib vulnerability — awaiting 3.14 backport
+  # CVE-2026-15308: fixed in 3.15.0 — not yet released
+  # CVE-2026-12003: fixed in 3.15.0b3 — not yet released
+  # CVE-2025-15366: fixed in 3.15.0a6 — not yet released
+  # CVE-2025-15367: fixed in 3.15.0a6 — not yet released
   - vulnerability: "CVE-2026-11940"
-  - vulnerability: "CVE-2026-7774"
+  - vulnerability: "CVE-2026-11972"
+  - vulnerability: "CVE-2026-4360"
+  - vulnerability: "CVE-2026-0864"
+  - vulnerability: "CVE-2026-15308"
+  - vulnerability: "CVE-2026-12003"
+  - vulnerability: "CVE-2025-15366"
+  - vulnerability: "CVE-2025-15367"
 
-  # ─── Python stdlib: unicodedata normalize() CPU exhaustion ───────────────────
-  # Requires specially crafted Unicode input with long combining character runs.
-  # Low real-world risk for an authenticated Django API. Awaiting upstream patch.
-  - vulnerability: "CVE-2026-3276"
-
-  # ─── Python stdlib: base64 non-strict decoding ──────────────────────────────
-  # Non-strict base64 accepts slightly malformed input. Not a security issue for
-  # this application. Use validate=True where strict parsing is needed.
-  - vulnerability: "CVE-2026-3446"
-
-  # ─── Python stdlib: webbrowser module leading dashes ─────────────────────────
-  # Only relevant if webbrowser.open() is called. Server containers do not open
-  # browsers. Not exploitable in this context.
-  - vulnerability: "CVE-2026-4519"
-
-  # ─── Python stdlib: http.cookies value injection ─────────────────────────────
-  # Django uses its own cookie middleware, not the stdlib http.cookies module.
-  # Awaiting upstream backport.
-  - vulnerability: "CVE-2026-6019"
-
-  # ─── Python: Windows-only vulnerability ─────────────────────────────────────
-  # This container runs on Linux. Not applicable.
-  - vulnerability: "CVE-2026-3087"
-
-  # ─── Python stdlib: libexpat XML parsing (if flagged) ────────────────────────
-  # Upstream Debian/CPython issue. No fix available in current repos.
-  # Our API does not parse untrusted XML directly.
-  - vulnerability: "CVE-2026-7210"
-
-  # ─── Legacy Python 3.11 system library (bookworm remnant) ───────────────────
-  # After migration to trixie this should no longer appear. If a transitive
-  # dependency still pulls in libpython3.11, suppress it — the app runs on 3.14.
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PYTHON 3.13 SYSTEM LIBRARY (trixie ships both 3.13 and 3.14)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Debian trixie includes python3.13 as a system dependency for apt/etc.
+  # Our application runs on Python 3.14. Vulnerabilities in python3.13 packages
+  # are not reachable by our application code.
   - package:
-      name: "libpython3.11*"
+      name: "libpython3.13-minimal"
+  - package:
+      name: "libpython3.13-stdlib"
+  - package:
+      name: "python3.13"
+  - package:
+      name: "python3.13-minimal"

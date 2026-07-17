@@ -151,3 +151,56 @@ class APIRequestLoggingMiddleware:
                 )
 
         return response
+
+
+class SecurityHeadersMiddleware:
+    """
+    Adds security response headers to all responses:
+    - Cache-Control: no-store for API responses (prevents caching sensitive data)
+    - Content-Security-Policy: restrictive policy for the application
+    - Referrer-Policy: strict-origin-when-cross-origin
+    - Permissions-Policy: disables unused browser features
+
+    X-Frame-Options, X-Content-Type-Options are handled by Django's SecurityMiddleware
+    via settings (SECURE_CONTENT_TYPE_NOSNIFF, X_FRAME_OPTIONS).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        response = self.get_response(request)
+
+        # Cache-Control: no-store for all API responses containing sensitive data
+        if request.path.startswith("/api/"):
+            response["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            response["Pragma"] = "no-cache"
+
+        # Content-Security-Policy — restrictive baseline
+        # The frontend is a separate SPA, so the backend only serves JSON API
+        # responses and the Django admin interface.
+        if request.path.startswith("/admin"):
+            # Django admin needs inline styles and scripts
+            response["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "frame-ancestors 'none'"
+            )
+        else:
+            # API responses — very restrictive
+            response["Content-Security-Policy"] = (
+                "default-src 'none'; frame-ancestors 'none'"
+            )
+
+        # Referrer-Policy
+        response["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Permissions-Policy — disable unused browser features
+        response["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=()"
+        )
+
+        return response

@@ -37,6 +37,9 @@ FROM oven/bun:1.3.14-slim AS production_image
 
 WORKDIR /client
 
+# Upgrade system packages to pick up security patches (OpenSSL, etc.)
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 # Copy built files from build stage
 COPY --from=build_image /app/dist/ /client/dist/
 COPY --from=build_image /app/server.js /client/
