@@ -412,7 +412,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Grype
-        uses: anchore/scan-action/download-grype@v6
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Run Grype scan
         run: |
@@ -463,7 +464,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Grype
-        uses: anchore/scan-action/download-grype@v6
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Run Grype scan
         run: |
