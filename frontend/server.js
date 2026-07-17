@@ -45,6 +45,9 @@ const server = serve({
 					"X-Content-Type-Options": "nosniff",
 					"X-Frame-Options": "DENY",
 					"X-XSS-Protection": "1; mode=block",
+					"Referrer-Policy": "strict-origin-when-cross-origin",
+					"Permissions-Policy":
+						"camera=(), microphone=(), geolocation=(), payment=()",
 				};
 
 				// Add caching headers for static assets
@@ -55,7 +58,9 @@ const server = serve({
 				) {
 					headers["Cache-Control"] = "public, max-age=31536000, immutable";
 				} else {
-					headers["Cache-Control"] = "no-cache";
+					// HTML and other non-asset files should not be cached
+					headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+					headers["Pragma"] = "no-cache";
 				}
 
 				return new Response(file, { headers });
@@ -66,10 +71,14 @@ const server = serve({
 			return new Response(indexFile, {
 				headers: {
 					"Content-Type": "text/html",
-					"Cache-Control": "no-cache",
+					"Cache-Control": "no-store, no-cache, must-revalidate",
+					Pragma: "no-cache",
 					"X-Content-Type-Options": "nosniff",
 					"X-Frame-Options": "DENY",
 					"X-XSS-Protection": "1; mode=block",
+					"Referrer-Policy": "strict-origin-when-cross-origin",
+					"Permissions-Policy":
+						"camera=(), microphone=(), geolocation=(), payment=()",
 				},
 			});
 		} catch (error) {

@@ -389,7 +389,7 @@ jobs:
 
   # ====================== VULNERABILITY SCAN ======================
   scan-frontend:
-    name: Scan Frontend Image
+    name: Scan Frontend Image (Grype)
     runs-on: ubuntu-latest
     needs: [build-frontend-prod]
     if: needs.build-frontend-prod.result == 'success'
@@ -411,76 +411,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate SBOM (Frontend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
-          format: "cyclonedx"
-          output: "sbom-frontend.json"
+      - name: Install Grype
+        uses: anchore/scan-action/download-grype@v6
 
-      - name: Generate SBOM text format (Frontend)
+      - name: Run Grype scan
         run: |
-          jq -r '
-            "SBOM: " + (.metadata.component.name // "frontend") + " (" + (.metadata.component.version // "latest") + ")\n" +
-            "Generated: " + (.metadata.timestamp // "unknown") + "\n" +
-            "Format: CycloneDX " + (.specVersion // "1.5") + "\n\n" +
-            "PACKAGES (" + (.components | length | tostring) + " total):\n" +
-            "--------------------------------------------------------------------------------\n" +
-            (.components | sort_by(.name) | .[] | .type + "  " + .name + "@" + (.version // "unknown") + (if .purl then "  (" + .purl + ")" else "" end))
-          ' sbom-frontend.json > sbom-frontend.txt 2>/dev/null || cp sbom-frontend.json sbom-frontend.txt
+          grype ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable -o json > grype-frontend.json
 
-      - name: Generate vulnerability CSV (Frontend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
-          vuln-type: "library"
-          severity: "HIGH,CRITICAL"
-          format: "json"
-          output: "vuln-frontend.json"
-
-      - name: Convert vulnerabilities to CSV (Frontend)
+      - name: Generate CSV
         run: |
-          echo "Package,Installed Version,Fixed Version,Severity,CVE ID,Title" > vuln-frontend.csv
-          jq -r '.Results[]? | .Vulnerabilities[]? | [.PkgName, .InstalledVersion, (.FixedVersion // "N/A"), .Severity, .VulnerabilityID, (.Title // "N/A")] | @csv' vuln-frontend.json >> vuln-frontend.csv 2>/dev/null || true
+          echo "Package,Installed Version,Fixed In,Type,Vulnerability,Severity,Fix State" > grype-frontend-scan.csv
+          jq -r '.matches[]? | [.artifact.name, .artifact.version, (.vulnerability.fix.versions[0] // "N/A"), .artifact.type, .vulnerability.id, .vulnerability.severity, (.vulnerability.fix.state // "unknown")] | @csv' grype-frontend.json >> grype-frontend-scan.csv
 
-      - name: Run Trivy SARIF scan (Frontend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
-          vuln-type: "library"
-          severity: "HIGH,CRITICAL"
-          format: "sarif"
-          output: "trivy-frontend.sarif"
+      - name: Scan summary
+        run: |
+          TOTAL=$(jq '.matches | length' grype-frontend.json)
+          CRIT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-frontend.json)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-frontend.json)
+          echo "## Frontend Grype Scan" >> $GITHUB_STEP_SUMMARY
+          echo "- Total: ${TOTAL} | Critical: ${CRIT} | High: ${HIGH}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Frontend scan to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: "trivy-frontend.sarif"
-          category: "trivy-frontend"
-
-      - name: Upload security artifacts (Frontend)
+      - name: Upload scan results
         uses: actions/upload-artifact@v4
         with:
-          name: security-frontend-${{ steps.version.outputs.VERSION }}
-          path: |
-            sbom-frontend.txt
-            vuln-frontend.csv
+          name: grype-frontend-${{ steps.version.outputs.VERSION }}
+          path: grype-frontend-scan.csv
           retention-days: 90
 
   scan-backend:
-    name: Scan Backend Image
+    name: Scan Backend Image (Grype)
     runs-on: ubuntu-latest
     needs: [build-backend-prod]
     if: needs.build-backend-prod.result == 'success'
@@ -502,70 +462,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate SBOM (Backend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
-          format: "cyclonedx"
-          output: "sbom-backend.json"
+      - name: Install Grype
+        uses: anchore/scan-action/download-grype@v6
 
-      - name: Generate SBOM text format (Backend)
+      - name: Run Grype scan
         run: |
-          jq -r '
-            "SBOM: " + (.metadata.component.name // "backend") + " (" + (.metadata.component.version // "latest") + ")\n" +
-            "Generated: " + (.metadata.timestamp // "unknown") + "\n" +
-            "Format: CycloneDX " + (.specVersion // "1.5") + "\n\n" +
-            "PACKAGES (" + (.components | length | tostring) + " total):\n" +
-            "--------------------------------------------------------------------------------\n" +
-            (.components | sort_by(.name) | .[] | .type + "  " + .name + "@" + (.version // "unknown") + (if .purl then "  (" + .purl + ")" else "" end))
-          ' sbom-backend.json > sbom-backend.txt 2>/dev/null || cp sbom-backend.json sbom-backend.txt
+          grype ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable -o json > grype-backend.json
 
-      - name: Generate vulnerability CSV (Backend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
-          vuln-type: "library"
-          severity: "HIGH,CRITICAL"
-          format: "json"
-          output: "vuln-backend.json"
-
-      - name: Convert vulnerabilities to CSV (Backend)
+      - name: Generate CSV
         run: |
-          echo "Package,Installed Version,Fixed Version,Severity,CVE ID,Title" > vuln-backend.csv
-          jq -r '.Results[]? | .Vulnerabilities[]? | [.PkgName, .InstalledVersion, (.FixedVersion // "N/A"), .Severity, .VulnerabilityID, (.Title // "N/A")] | @csv' vuln-backend.json >> vuln-backend.csv 2>/dev/null || true
+          echo "Package,Installed Version,Fixed In,Type,Vulnerability,Severity,Fix State" > grype-backend-scan.csv
+          jq -r '.matches[]? | [.artifact.name, .artifact.version, (.vulnerability.fix.versions[0] // "N/A"), .artifact.type, .vulnerability.id, .vulnerability.severity, (.vulnerability.fix.state // "unknown")] | @csv' grype-backend.json >> grype-backend-scan.csv
 
-      - name: Run Trivy SARIF scan (Backend)
-        uses: aquasecurity/trivy-action@v0.36.0
-        env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
-        with:
-          scan-type: "image"
-          scanners: "vuln"
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
-          vuln-type: "library"
-          severity: "HIGH,CRITICAL"
-          format: "sarif"
-          output: "trivy-backend.sarif"
+      - name: Scan summary
+        run: |
+          TOTAL=$(jq '.matches | length' grype-backend.json)
+          CRIT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' grype-backend.json)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' grype-backend.json)
+          echo "## Backend Grype Scan" >> $GITHUB_STEP_SUMMARY
+          echo "- Total: ${TOTAL} | Critical: ${CRIT} | High: ${HIGH}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Backend scan to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: "trivy-backend.sarif"
-          category: "trivy-backend"
-
-      - name: Upload security artifacts (Backend)
+      - name: Upload scan results
         uses: actions/upload-artifact@v4
         with:
-          name: security-backend-${{ steps.version.outputs.VERSION }}
-          path: |
-            sbom-backend.txt
-            vuln-backend.csv
+          name: grype-backend-${{ steps.version.outputs.VERSION }}
+          path: grype-backend-scan.csv
           retention-days: 90

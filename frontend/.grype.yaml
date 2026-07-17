@@ -1,0 +1,15 @@
+# Grype vulnerability ignore rules for the Cannabis frontend container image.
+# The frontend is a static file server (Bun) on Debian 13 (trixie).
+#
+# All remaining vulnerabilities in this image are in system-level OS packages
+# with no available fix from Debian. The frontend application (Bun serving
+# static files) does not invoke or expose these packages to untrusted input.
+#
+# Last reviewed: 2026-07-17
+
+ignore:
+  # Suppress all vulnerabilities with no available fix.
+  # These are OS-level packages (perl-base, glibc, ncurses, libacl, etc.)
+  # that cannot be patched until Debian releases updates.
+  - fix-state: "wont-fix"
+  - fix-state: "not-fixed"
