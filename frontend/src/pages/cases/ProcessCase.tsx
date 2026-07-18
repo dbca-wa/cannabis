@@ -208,6 +208,9 @@ const ProcessCaseContent = observer(() => {
 		string | null
 	>(null);
 
+	// Local case_number state for instant typing feedback (ahead of debounced save)
+	const [localCaseNumber, setLocalCaseNumber] = useState<string | null>(null);
+
 	const {
 		data: caseObj,
 		isLoading: isCaseLoading,
@@ -324,6 +327,19 @@ const ProcessCaseContent = observer(() => {
 		}
 	}, [form]);
 
+	// Sync local case number from server on initial load of each case.
+	// Depends on parsedId so it resets when navigating between cases.
+	// Does NOT depend on caseObj to avoid overwriting local edits on refetch.
+	const caseNumberSyncedRef = useRef<number | null>(null);
+	useEffect(() => {
+		if (caseObj && parsedId && caseNumberSyncedRef.current !== parsedId) {
+			caseNumberSyncedRef.current = parsedId;
+			setLocalCaseNumber(
+				(caseObj as unknown as Record<string, unknown>).case_number as string
+			);
+		}
+	}, [caseObj, parsedId]);
+
 	const caseData = caseObj
 		? form
 			? buildCaseData(caseObj as unknown as Record<string, unknown>, form)
@@ -333,6 +349,9 @@ const ProcessCaseContent = observer(() => {
 	// Override with local state for instant preview updates (ahead of server round-trip)
 	if (caseData && localAdditionalNotes !== null) {
 		caseData.additional_notes = localAdditionalNotes;
+	}
+	if (caseData && localCaseNumber !== null) {
+		caseData.case_number = localCaseNumber;
 	}
 
 	logger.debug("ProcessCase caseData built", {
@@ -390,6 +409,11 @@ const ProcessCaseContent = observer(() => {
 			// Update local notes immediately for instant preview feedback
 			if (field === "additional_notes" && typeof value === "string") {
 				setLocalAdditionalNotes(value);
+			}
+
+			// Update local case number immediately for instant typing feedback
+			if (field === "case_number" && typeof value === "string") {
+				setLocalCaseNumber(value);
 			}
 
 			// additional_notes is per-form — PATCH the form, not the case
