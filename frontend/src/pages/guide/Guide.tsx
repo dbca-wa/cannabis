@@ -92,7 +92,7 @@ const Guide = () => {
 						</li>
 						<li>
 							Fill in <strong>Section C Notes</strong> if there are other
-							matters to note on the certificate/priorty 3 form assessment.
+							matters to note on the certificate/priority 3 form assessment.
 						</li>
 						<li>
 							Optionally fill out case-wide notes which are internal only and do

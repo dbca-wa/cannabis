@@ -298,7 +298,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 		<div className="space-y-6">
 			{/* Drug Bags Section */}
 			<SectionCard
-				title="Priorty 3 Drug Bags"
+				title="Priority 3 Drug Bags"
 				isComplete={serverBags.length > 0}
 				isInvalid={isTouched && serverBags.length === 0}
 			>
@@ -323,7 +323,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 						{capReached && (
 							<p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-								This form can hold at most {MAX_BAGS} bags. Add a new Priorty 3
+								This form can hold at most {MAX_BAGS} bags. Add a new Priority 3
 								Form to add more.
 							</p>
 						)}
