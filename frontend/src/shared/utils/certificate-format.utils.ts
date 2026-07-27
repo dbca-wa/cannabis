@@ -5,22 +5,6 @@
  * related components. Matches the backend Aptos template formatting logic.
  */
 
-/* Minimal Temporal type declaration for environments without ES2027 lib */
-declare global {
-	// eslint-disable-next-line @typescript-eslint/no-namespace
-	namespace Temporal {
-		interface PlainDate {
-			toLocaleString(
-				locale: string,
-				options?: Intl.DateTimeFormatOptions
-			): string;
-		}
-		const PlainDate: {
-			from(item: string): PlainDate;
-		};
-	}
-}
-
 export interface OfficerDetails {
 	rank_display?: string | null;
 	badge_number?: string | null;
@@ -30,16 +14,18 @@ export interface OfficerDetails {
 }
 
 /**
- * Format an ISO date string to "DD Month YYYY" (e.g., "11 June 2026")
- * using the Temporal API for reliable date parsing without timezone issues.
+ * Format an ISO date string to "DD Month YYYY" (e.g., "11 June 2026").
+ * Parses date parts manually to avoid timezone-related off-by-one errors
+ * that occur with `new Date("YYYY-MM-DD")` (interpreted as UTC midnight).
  * Returns "[Pending]" if the input is falsy.
  */
 export const formatCertificateDate = (
 	isoDate: string | null | undefined
 ): string => {
 	if (!isoDate) return "[Pending]";
-	const date = Temporal.PlainDate.from(isoDate.split("T")[0]);
-	return date.toLocaleString("en-AU", {
+	const [year, month, day] = isoDate.split("T")[0].split("-").map(Number);
+	const date = new Date(year, month - 1, day);
+	return date.toLocaleDateString("en-AU", {
 		day: "numeric",
 		month: "long",
 		year: "numeric",
