@@ -87,7 +87,9 @@ export const OfficersStationSection = observer(() => {
 			<CardContent className="space-y-4">
 				{/* Requesting Officer */}
 				<div className="space-y-2">
-					<Label htmlFor="requesting_officer">Requesting Officer</Label>
+					<Label htmlFor="requesting_officer">
+						Requesting Officer (On Behalf Of)
+					</Label>
 					<OfficerSearchComboBox
 						value={formStore.formData.requesting_officer_id ?? null}
 						onValueChange={handleRequestingOfficerChange}
@@ -101,7 +103,8 @@ export const OfficersStationSection = observer(() => {
 						</p>
 					)}
 					<p className="text-xs text-muted-foreground">
-						Officer who requested the botanical identification
+						The sworn officer who made the seizure or arrest and requested the
+						identification
 					</p>
 					{ocrHints.requesting && !formStore.formData.requesting_officer_id && (
 						<p className="text-xs text-blue-600 flex items-center gap-1">
@@ -113,7 +116,9 @@ export const OfficersStationSection = observer(() => {
 
 				{/* Submitting Officer */}
 				<div className="space-y-2">
-					<Label htmlFor="submitting_officer">Submitting Officer</Label>
+					<Label htmlFor="submitting_officer">
+						Submitting Officer (Conveying Officer)
+					</Label>
 					<OfficerSearchComboBox
 						value={formStore.formData.submitting_officer_id ?? null}
 						onValueChange={handleSubmittingOfficerChange}
@@ -127,7 +132,8 @@ export const OfficersStationSection = observer(() => {
 						</p>
 					)}
 					<p className="text-xs text-muted-foreground">
-						Officer who submitted the samples
+						The officer who physically delivered the samples. Usually an unsworn
+						officer stationed at Midland.
 					</p>
 					{ocrHints.submitting && !formStore.formData.submitting_officer_id && (
 						<p className="text-xs text-blue-600 flex items-center gap-1">

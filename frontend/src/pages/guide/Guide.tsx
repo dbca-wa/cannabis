@@ -66,6 +66,40 @@ const Guide = () => {
 
 				<hr />
 
+				{/* Officer Roles */}
+				<section>
+					<h2>Officer Roles</h2>
+					<p>
+						When creating a case, two officer roles may be assigned. These map
+						to common police terminology as follows:
+					</p>
+					<ul>
+						<li>
+							<strong>Submitting Officer (Conveying Officer)</strong> — The
+							officer who physically delivers the samples to the laboratory for
+							examination. This is usually an unsworn officer stationed at
+							Midland, where the botanist performs identifications.
+						</li>
+						<li>
+							<strong>Requesting Officer (On Behalf Of)</strong> — The sworn
+							officer who made the original seizure or arrest and requested the
+							botanical identification. This officer typically works at a
+							station other than Midland.
+						</li>
+					</ul>
+					<p>
+						If only one officer is involved (e.g. a sworn officer submitting
+						their own samples), select them as the Submitting Officer and leave
+						the Requesting Officer blank.
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Tip: The Requesting Officer field is optional. Only fill it in when
+						the samples were conveyed on behalf of another officer.
+					</p>
+				</section>
+
+				<hr />
+
 				{/* Adding Forms and Bags */}
 				<section>
 					<h2>Adding Priority 3 Forms and Drug Bags</h2>
