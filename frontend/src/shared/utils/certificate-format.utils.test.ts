@@ -85,8 +85,7 @@ describe("certificate-format.utils", () => {
 			expect(formatCertificateDate("")).toBe("[Pending]");
 		});
 
-		it("formats an ISO date as 'D Month YYYY' when Temporal is available", () => {
-			if (typeof Temporal === "undefined") return;
+		it("formats an ISO date as 'D Month YYYY'", () => {
 			expect(formatCertificateDate("2026-06-11")).toBe("11 June 2026");
 			expect(formatCertificateDate("2026-06-11T09:30:00Z")).toBe(
 				"11 June 2026"
