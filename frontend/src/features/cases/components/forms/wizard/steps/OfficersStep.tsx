@@ -65,7 +65,7 @@ export const OfficersStep = ({
 					{/* Submitting Officer (required) */}
 					<div className="space-y-2">
 						<Label htmlFor="submitting_officer" className="required">
-							Submitting Officer
+							Submitting Officer (Conveying Officer)
 						</Label>
 						<OfficerSearchComboBox
 							value={submittingOfficer}
@@ -84,15 +84,15 @@ export const OfficersStep = ({
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">
-							The officer who delivered or submitted the samples to the
-							laboratory.
+							The officer who physically delivered the samples to the
+							laboratory. Usually an unsworn officer stationed at Midland.
 						</p>
 					</div>
 
 					{/* Requesting Officer — "on behalf of" (optional) */}
 					<div className="space-y-2">
 						<Label htmlFor="requesting_officer">
-							Requesting Officer (on behalf of)
+							Requesting Officer (On Behalf Of)
 						</Label>
 						<OfficerSearchComboBox
 							value={requestingOfficer}
@@ -101,9 +101,10 @@ export const OfficersStep = ({
 							showExternalAddButton
 						/>
 						<p className="text-xs text-muted-foreground">
-							Optional. If the submitting officer dropped the samples off for
-							another officer, select who they submitted on behalf of. Leave
-							blank if the submitting officer is also the requesting officer.
+							Optional. The sworn officer who made the seizure or arrest and
+							requested the identification. Usually stationed somewhere other
+							than Midland. Leave blank if the submitting officer is also the
+							requesting officer.
 						</p>
 					</div>
 

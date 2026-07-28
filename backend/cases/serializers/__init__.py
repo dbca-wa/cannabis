@@ -30,6 +30,10 @@ from .forms import (  # noqa: F401
     Priority3FormSerializer,
     Priority3FormTinySerializer,
 )
+from .templates import (  # noqa: F401
+    SectionCTemplateCreateSerializer,
+    SectionCTemplateSerializer,
+)
 from .update import CaseUpdateSerializer  # noqa: F401
 
 __all__ = [
@@ -53,6 +57,8 @@ __all__ = [
     "PoliceOfficerTinySerializer",
     "Priority3FormSerializer",
     "Priority3FormTinySerializer",
+    "SectionCTemplateCreateSerializer",
+    "SectionCTemplateSerializer",
     "UserTinySerializer",
 ]
 
