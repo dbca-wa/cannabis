@@ -10,6 +10,7 @@ from .models import (
     Certificate,
     DrugBag,
     Priority3Form,
+    SectionCTemplate,
 )
 
 PHASE_COLORS = {
@@ -475,3 +476,10 @@ class CasePhaseHistoryAdmin(admin.ModelAdmin):
         return (
             super().get_queryset(request).select_related("submission", "form", "user")
         )
+
+
+@admin.register(SectionCTemplate)
+class SectionCTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "created_at", "updated_at")
+    search_fields = ("name", "content")
+    ordering = ("name",)

@@ -46,6 +46,10 @@ from .forms import (  # noqa: F401
 )
 from .ocr import OcrUploadView, ServiceUnavailable  # noqa: F401
 from .previews import CertificatePreviewView  # noqa: F401
+from .templates import (  # noqa: F401
+    SectionCTemplateDetailView,
+    SectionCTemplateListView,
+)
 from .workflow import (  # noqa: F401
     CasePhaseHistoryView,
     FormWorkflowView,
@@ -96,6 +100,9 @@ __all__ = [
     "ServiceUnavailable",
     # previews
     "CertificatePreviewView",
+    # templates
+    "SectionCTemplateDetailView",
+    "SectionCTemplateListView",
     # workflow
     "CasePhaseHistoryView",
     "FormWorkflowView",

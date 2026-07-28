@@ -160,4 +160,15 @@ urlpatterns = [
         views.OcrUploadView.as_view(),
         name="ocr_upload",
     ),
+    # Section C template endpoints
+    path(
+        "templates",
+        views.SectionCTemplateListView.as_view(),
+        name="section_c_template_list",
+    ),
+    path(
+        "templates/<int:pk>",
+        views.SectionCTemplateDetailView.as_view(),
+        name="section_c_template_detail",
+    ),
 ]

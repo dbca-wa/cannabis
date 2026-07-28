@@ -18,6 +18,7 @@ import { SectionCard } from "../SectionCard";
 import { BagCard } from "../BagCard";
 import { BulkAddBagsModal } from "../BulkAddBagsModal";
 import { useDrugBags } from "../../../../hooks/useDrugBags";
+import { TemplatePicker } from "../../../templates/TemplatePicker";
 import { addBagsToForm } from "../../../../services/forms.service";
 import {
 	createAssessment,
@@ -506,33 +507,43 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 			{/* Section C Notes (other matters for the certificate) */}
 			<SectionCard title="Section C Notes" isComplete={true} isInvalid={false}>
-				<div className="space-y-2">
-					<Label htmlFor="additional_notes">Other Matters (Section C)</Label>
-					<Textarea
-						id="additional_notes"
-						value={localNotes}
-						onChange={(e) => {
-							setLocalNotes(e.target.value);
-							onFieldChange("additional_notes", e.target.value);
+				<div className="space-y-4">
+					<TemplatePicker
+						caseData={caseData}
+						bags={serverBags}
+						onApply={(resolved) => {
+							setLocalNotes(resolved);
+							onFieldChange("additional_notes", resolved);
 						}}
-						placeholder="Enter section C notes for the certificate (e.g. subsample details)..."
-						className="min-h-[100px] resize-y"
-						aria-describedby="additional-notes-hint"
 					/>
-					<div className="flex items-center gap-2">
-						{Boolean(caseData?._isSavingNotes) && (
-							<span className="flex items-center gap-1 text-xs text-amber-600">
-								<Loader2 className="h-3 w-3 animate-spin" />
-								Saving...
-							</span>
-						)}
-						<p
-							id="additional-notes-hint"
-							className="text-xs text-muted-foreground"
-						>
-							Shown on the certificate under &quot;Other Matters&quot;. Defaults
-							to &quot;None&quot; if left empty.
-						</p>
+					<div className="space-y-2">
+						<Label htmlFor="additional_notes">Other Matters (Section C)</Label>
+						<Textarea
+							id="additional_notes"
+							value={localNotes}
+							onChange={(e) => {
+								setLocalNotes(e.target.value);
+								onFieldChange("additional_notes", e.target.value);
+							}}
+							placeholder="Enter section C notes for the certificate (e.g. subsample details)..."
+							className="min-h-[100px] resize-y"
+							aria-describedby="additional-notes-hint"
+						/>
+						<div className="flex items-center gap-2">
+							{Boolean(caseData?._isSavingNotes) && (
+								<span className="flex items-center gap-1 text-xs text-amber-600">
+									<Loader2 className="h-3 w-3 animate-spin" />
+									Saving...
+								</span>
+							)}
+							<p
+								id="additional-notes-hint"
+								className="text-xs text-muted-foreground"
+							>
+								Shown on the certificate under &quot;Other Matters&quot;.
+								Defaults to &quot;None&quot; if left empty.
+							</p>
+						</div>
 					</div>
 				</div>
 			</SectionCard>

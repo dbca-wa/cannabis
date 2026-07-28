@@ -791,3 +791,28 @@ class CaseDraft(AuditModel):
 Submission = Case
 SubmissionDraft = CaseDraft
 SubmissionPhaseHistory = CasePhaseHistory
+
+
+class SectionCTemplate(AuditModel):
+    """Reusable template for Section C 'Other Matters' certificate notes.
+
+    Templates are system-wide (shared across all users) and support
+    {{variable}} placeholders that the frontend resolves against case data.
+    """
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Short label shown in the template picker dropdown",
+    )
+    content = models.TextField(
+        help_text="Template text with optional {{variable}} placeholders",
+    )
+
+    class Meta:
+        verbose_name = "Section C Template"
+        verbose_name_plural = "Section C Templates"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

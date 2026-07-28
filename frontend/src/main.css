@@ -333,3 +333,24 @@ scrollbar-hide::-webkit-scrollbar {
 		animation: step-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
 }
+
+/* Template variable chips — atomic inline badges in the contentEditable editor */
+.template-variable-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 8px;
+	margin: 0 2px;
+	border-radius: 4px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1.5;
+	background-color: hsl(210 80% 45%);
+	color: #fff;
+	vertical-align: baseline;
+	user-select: all;
+	cursor: default;
+}
+.dark .template-variable-chip {
+	background-color: hsl(210 70% 50%);
+	color: #fff;
+}

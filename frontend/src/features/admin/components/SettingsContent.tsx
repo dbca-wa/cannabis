@@ -13,6 +13,7 @@ import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
 import { securityService } from "@/features/admin/services/security.service";
 import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
 import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
+import { TemplatesSettingsCard } from "@/features/cases/components/templates/TemplatesSettingsCard";
 import { logger } from "@/shared/services/logger.service";
 
 import type { SystemSettings } from "@/shared/types/backend-api.types";
@@ -377,6 +378,8 @@ const SettingsContent = () => {
 						Setting it to 5 means the next certificate will be R000006.
 					</p>
 				</Card>
+				{/* Section C Templates management */}
+				<TemplatesSettingsCard />
 			</div>
 
 			{/* Edit pricing modal (shared component) */}
