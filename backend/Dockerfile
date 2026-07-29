@@ -2,7 +2,7 @@
 # Multi-stage production Dockerfile for Django backend with Prince XML
 
 # ====================== BUILD STAGE ======================
-FROM python:3.14-slim-trixie AS builder
+FROM python:3.15-rc-slim-trixie AS builder
 
 # Build environment variables
 ENV PYTHONUNBUFFERED=1
@@ -16,6 +16,7 @@ RUN echo "Installing Build Dependencies." && apt-get update && apt-get install -
     build-essential gcc g++ dpkg-dev \
     curl wget ca-certificates \
     gdebi \
+    libpq-dev \
     tesseract-ocr tesseract-ocr-eng poppler-utils \
     && apt-get upgrade -y
 
@@ -46,6 +47,7 @@ RUN rm -f ./license.dat
 
 # Configure Poetry and install dependencies
 RUN poetry config virtualenvs.create false
+ENV POETRY_REQUESTS_TIMEOUT=300
 RUN poetry install --only=main --no-root
 
 # Collect static files (needs dummy env vars to load Django settings)
@@ -95,7 +97,7 @@ RUN echo "Removing development artifacts..." \
     && rm -f entrypoint.sh 2>/dev/null || true
 
 # ====================== PRODUCTION STAGE ======================
-FROM python:3.14-slim-trixie AS production
+FROM python:3.15-rc-slim-trixie AS production
 
 # Production environment variables
 ENV PYTHONUNBUFFERED=1
@@ -136,7 +138,7 @@ RUN DEB_FILE=prince.deb \
 ENV PATH="${PATH}:/usr/lib/prince/bin"
 
 # Copy Python packages from builder stage
-COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=builder /usr/local/lib/python3.15/site-packages /usr/local/lib/python3.15/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # ====================== USER & PERMISSIONS ======================

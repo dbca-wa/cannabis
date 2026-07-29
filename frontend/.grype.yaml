@@ -5,11 +5,68 @@
 # with no available fix from Debian. The frontend application (Bun serving
 # static files) does not invoke or expose these packages to untrusted input.
 #
-# Last reviewed: 2026-07-17
+# Last reviewed: 2026-07-29
 
 ignore:
-  # Suppress all vulnerabilities with no available fix.
-  # These are OS-level packages (perl-base, glibc, ncurses, libacl, etc.)
-  # that cannot be patched until Debian releases updates.
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # ALL UNFIXABLE VULNERABILITIES
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Suppress all vulnerabilities where Debian has no available patch.
+  # The frontend container serves pre-built static files via Bun. It does not:
+  # - Invoke Perl, gzip CLI, tar, bzip2recover, or any system utilities
+  # - Parse untrusted XML, DNS responses, or wide-character streams
+  # - Use SQLite, libacl, PAM, ncurses, or D-Bus
+  # - Accept user-uploaded archives or files for processing
+  #
+  # Key packages and why they're not exploitable in this context:
+  #
+  # perl-base (CVE-2026-13221, CVE-2026-42496, CVE-2026-8376, CVE-2026-12087,
+  #   CVE-2026-57433, CVE-2026-9538, CVE-2026-42497, CVE-2026-48959,
+  #   CVE-2026-48962, CVE-2026-48961, CVE-2026-57432, CVE-2026-7017,
+  #   CVE-2026-7010, CVE-2025-15649):
+  #   Perl is a transitive OS dependency. The frontend never invokes Perl or
+  #   any Perl modules (Archive::Tar, Storable, IO::Compress, HTTP::Tiny, etc.)
+  #
+  # glibc/libc6 (CVE-2026-5450, CVE-2026-5928, CVE-2026-5435, CVE-2026-6238):
+  #   Critical scanf %mc CVE requires C scanf with specific format strings from
+  #   untrusted input — Bun/V8 handles all string parsing. The deprecated DNS
+  #   print functions and ungetwc are not called by the application.
+  #
+  # ncurses/libtinfo (CVE-2025-69720, CVE-2025-6141):
+  #   Terminal library. No terminal interaction in a container serving HTTP.
+  #   infocmp buffer overflow requires local user running infocmp tool.
+  #
+  # libsqlite3 (CVE-2026-11822, CVE-2026-11824):
+  #   FTS5 full-text search vulnerabilities. Frontend does not use SQLite.
+  #
+  # libacl (CVE-2026-54369, CVE-2026-54370):
+  #   Symlink traversal in ACL utilities. Container runs as non-root bun user,
+  #   no symlink-based file operations on untrusted paths.
+  #
+  # util-linux (CVE-2026-3184, CVE-2026-53612–53615):
+  #   login(1) hostname canonicalization. Container does not use login utility.
+  #
+  # libpam (CVE-2026-54411):
+  #   pam_userdb timing attack. Frontend uses no authentication at OS level.
+  #
+  # tar (CVE-2026-5704):
+  #   Hidden file injection via crafted archives. App never extracts tars.
+  #
+  # zlib (CVE-2026-27171):
+  #   crc32_combine DoS. Not in any frontend code path.
+  #
+  # gzip (CVE-2026-41992):
+  #   LZH decompression overflow. App does not decompress untrusted LZH data.
+  #
+  # libbz2 (CVE-2026-42250):
+  #   bzip2recover off-by-one. App never runs bzip2recover.
+  #
+  # libattr (CVE-2026-54371):
+  #   Symlink traversal in getfattr/setfattr. Not used by application.
+  #
+  # libtiff (CVE-2026-36849):
+  #   TIFF image processing vulnerability. Frontend serves pre-built JS/CSS,
+  #   does not process TIFF images server-side.
+  #
   - fix-state: "wont-fix"
   - fix-state: "not-fixed"

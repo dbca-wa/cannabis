@@ -4,7 +4,7 @@
 # Review these rules periodically — when upstream patches land, remove the
 # corresponding ignore entry and rebuild the image.
 #
-# Last reviewed: 2026-07-17
+# Last reviewed: 2026-07-29
 
 ignore:
   # ═══════════════════════════════════════════════════════════════════════════════
@@ -17,45 +17,64 @@ ignore:
   # Key packages and why they're not exploitable:
   # - perl/libperl: Never invoked by the application
   # - curl/libcurl: Only used for internal health checks, not untrusted input
-  # - glibc: Critical CVE requires scanf %mc from untrusted input (Python doesn't use)
+  # - glibc (CVE-2026-5450): Critical CVE requires C scanf %mc from untrusted
+  #   input — Python handles all string parsing, scanf is not reachable
+  # - glibc (CVE-2026-5928): ungetwc on wide-char streams — not used by app
+  # - glibc (CVE-2026-5435): deprecated ns_printrrf DNS functions — not called
   # - libssh2: No SSH connections made by the application
-  # - libxml2: API does not parse untrusted XML
+  # - libxml2 (CVE-2026-6653): Use-after-free in xmlParseInternalSubset — API
+  #   does not accept or parse untrusted XML
   # - libaom: AV1 video codec, application does not process video
-  # - glib: GIO/GDBus not used, no D-Bus interaction
-  # - sqlite: Application uses PostgreSQL, not SQLite
-  # - wget: Build-time only, not present at runtime
+  # - glib/GIO (CVE-2026-58016): GDBus introspection XML parsing — no D-Bus
+  #   interaction in this containerised application
+  # - sqlite (CVE-2026-11822, CVE-2026-11824): FTS5 vulnerabilities — application
+  #   uses PostgreSQL, SQLite present only as Python stdlib component
+  # - libexpat (CVE-2025-59375): Large allocation DoS — app does not parse
+  #   untrusted XML documents via expat
+  # - libnss3 (CVE-2026-16389): NSS boundary overflow — fixed in Firefox 153,
+  #   no Debian patch available yet. App does not use NSS directly.
+  # - ncurses/libtinfo: Terminal library, no terminal interaction with untrusted
+  #   input in a container serving HTTP
+  # - wget: Used only during Docker image build, not present at runtime
+  # - libacl (CVE-2026-54369, CVE-2026-54370): Symlink traversal — container
+  #   runs as non-root, no symlink-based file operations on untrusted paths
+  # - util-linux (CVE-2026-3184, CVE-2026-53612–53615): login utility hostname
+  #   canonicalization — container does not use login(1)
+  # - libpam (CVE-2026-54411): pam_userdb timing attack — app uses Django auth,
+  #   not PAM
+  # - tar (CVE-2026-5704): Hidden file injection — app never extracts untrusted
+  #   tar archives
+  # - zlib (CVE-2026-27171): crc32_combine DoS — requires attacker-controlled
+  #   input to crc32_combine64 which is not in any code path
+  # - gzip (CVE-2026-41992): LZH decompression overflow — app does not decompress
+  #   untrusted LZH data
+  # - libbz2 (CVE-2026-42250): bzip2recover off-by-one — app never runs
+  #   bzip2recover
+  # - libattr (CVE-2026-54371): symlink traversal in getfattr/setfattr — not used
   - fix-state: "wont-fix"
   - fix-state: "not-fixed"
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # PYTHON 3.14 BINARY — No actionable fix available
+  # PYTHON 3.15 BINARY — Residual CVEs awaiting patch release
   # ═══════════════════════════════════════════════════════════════════════════════
-  # Grype detects the Python 3.14.6 binary and flags CVEs that are either:
-  # - "Fixed" in unreleased Python 3.15 (not available as stable)
-  # - Assessed as not exploitable in this application context
+  # Upgraded to Python 3.15 (pre-release) per security team directive.
+  # Some CVEs may still be detected against the binary until the next point
+  # release lands the fix. None are exploitable in our application context.
   #
   # CVE-2026-11940: tarfile path traversal — app never extracts untrusted tars
-  # CVE-2026-11972: stdlib vulnerability — awaiting 3.14 backport
-  # CVE-2026-4360: stdlib vulnerability — awaiting 3.14 backport
-  # CVE-2026-0864: stdlib vulnerability — awaiting 3.14 backport
-  # CVE-2026-15308: fixed in 3.15.0 — not yet released
-  # CVE-2026-12003: fixed in 3.15.0b3 — not yet released
-  # CVE-2025-15366: fixed in 3.15.0a6 — not yet released
-  # CVE-2025-15367: fixed in 3.15.0a6 — not yet released
+  # CVE-2026-11972: stdlib vulnerability — awaiting point release
+  # CVE-2026-4360: stdlib vulnerability — awaiting point release
+  # CVE-2026-0864: stdlib vulnerability — awaiting point release
   - vulnerability: "CVE-2026-11940"
   - vulnerability: "CVE-2026-11972"
   - vulnerability: "CVE-2026-4360"
   - vulnerability: "CVE-2026-0864"
-  - vulnerability: "CVE-2026-15308"
-  - vulnerability: "CVE-2026-12003"
-  - vulnerability: "CVE-2025-15366"
-  - vulnerability: "CVE-2025-15367"
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # PYTHON 3.13 SYSTEM LIBRARY (trixie ships both 3.13 and 3.14)
+  # PYTHON 3.13 SYSTEM LIBRARY (trixie ships 3.13 as system Python for apt)
   # ═══════════════════════════════════════════════════════════════════════════════
   # Debian trixie includes python3.13 as a system dependency for apt/etc.
-  # Our application runs on Python 3.14. Vulnerabilities in python3.13 packages
+  # Our application runs on Python 3.15. Vulnerabilities in python3.13 packages
   # are not reachable by our application code.
   - package:
       name: "libpython3.13-minimal"
