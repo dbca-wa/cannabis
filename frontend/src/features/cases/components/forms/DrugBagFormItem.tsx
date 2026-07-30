@@ -38,6 +38,7 @@ interface DrugBagFormItemProps {
 // shortened. "Other" maps to the backend's catch-all "unknown".
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "plant", label: "Plant" },
+	{ value: "plant_material", label: "Plant Material" },
 	{ value: "seed", label: "Seed" },
 	{ value: "unknown", label: "Other" },
 ];

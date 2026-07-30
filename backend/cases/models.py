@@ -335,8 +335,8 @@ class DrugBag(AuditModel):
     )
 
     class ContentType(models.TextChoices):
-        PLANT = "plant", "Plant Material"
-        PLANT_MATERIAL = "plant_material", "Plant Material (Generic)"
+        PLANT = "plant", "Plant"
+        PLANT_MATERIAL = "plant_material", "Plant Material"
         CUTTING = "cutting", "Cutting"
         STALK = "stalk", "Stalk"
         STEM = "stem", "Stem"
@@ -353,7 +353,7 @@ class DrugBag(AuditModel):
         POPPY_SEED = "poppy_seed", "Poppy Seed"
         MUSHROOM = "mushroom", "Mushroom"
         TABLET = "tablet", "Tablet"
-        UNKNOWN = "unknown", "Unknown"
+        UNKNOWN = "unknown", "Unknown Material"
         UNSURE = "unsure", "Unsure"
 
     content_type = models.CharField(
