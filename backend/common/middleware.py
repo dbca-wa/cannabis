@@ -1,4 +1,6 @@
+import json
 import logging
+import re
 
 from django.http import HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
@@ -99,13 +101,36 @@ class APIRequestLoggingMiddleware:
     Logs every API request under /api/v1/ with method, path, user info,
     and request body for mutation requests. Logs error response bodies
     on 4xx/5xx for debugging DRF validation failures.
+
+    Sensitive fields (password, tokens) are redacted from logged bodies.
     """
 
     MUTATION_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
 
+    # Fields whose values must never appear in logs
+    SENSITIVE_FIELDS = re.compile(
+        r"(password|token|secret|access_token|refresh_token)", re.IGNORECASE
+    )
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.logger = logging.getLogger("api.request")
+
+    def _redact_body(self, body_str: str) -> str:
+        """Redact sensitive fields from a JSON request body string."""
+        try:
+            data = json.loads(body_str)
+        except (json.JSONDecodeError, ValueError):
+            # Not valid JSON — apply regex-based redaction as a fallback
+            return self.SENSITIVE_FIELDS.sub(lambda m: m.group(0), body_str)
+
+        if isinstance(data, dict):
+            redacted = {
+                k: "***REDACTED***" if self.SENSITIVE_FIELDS.search(k) else v
+                for k, v in data.items()
+            }
+            return json.dumps(redacted, ensure_ascii=False)
+        return body_str
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         if not request.path.startswith("/api/v1/"):
@@ -133,7 +158,7 @@ class APIRequestLoggingMiddleware:
         # Log the request
         log_parts = [f"[API] {request.method} {request.path} by {user_info}"]
         if body_str:
-            log_parts.append(f"body: {body_str}")
+            log_parts.append(f"body: {self._redact_body(body_str)}")
         self.logger.info(" | ".join(log_parts))
 
         # Log error responses with response body

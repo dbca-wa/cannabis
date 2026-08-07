@@ -82,12 +82,9 @@ export const ForgotPasswordForm = ({
 			// Call success callback if provided (for modal usage)
 			onSuccess?.();
 		} catch (error: unknown) {
-			console.log("Full error object:", error);
-
 			const axiosError = error as {
 				response?: { data?: { error_code?: string } };
 			};
-			console.log("Error response data:", axiosError?.response?.data);
 
 			const errorResponse = axiosError?.response?.data;
 			const errorMessage = getErrorMessage(error);
