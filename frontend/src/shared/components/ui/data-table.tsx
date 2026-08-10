@@ -4,13 +4,18 @@ import {
 	type ColumnDef,
 	type ColumnFiltersState,
 	type SortingState,
-	type VisibilityState,
+	type ColumnVisibilityState,
 	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	getSortedRowModel,
-	useReactTable,
+	useTable,
+	tableFeatures,
+	columnFilteringFeature,
+	columnVisibilityFeature,
+	rowSortingFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	createPaginatedRowModel,
 } from "@tanstack/react-table";
 import { ChevronDown, Search, RefreshCw, X } from "lucide-react";
 
@@ -54,19 +59,28 @@ export interface DataTableAction {
 	icon?: React.ReactNode;
 	onClick: () => void;
 	variant?:
-		| "default"
-		| "outline"
-		| "destructive"
-		| "secondary"
-		| "ghost"
-		| "link";
+		"default" | "outline" | "destructive" | "secondary" | "ghost" | "link";
 }
 
+// Features used by this component
+const features = tableFeatures({
+	columnFilteringFeature,
+	columnVisibilityFeature,
+	rowSortingFeature,
+	rowPaginationFeature,
+	rowSelectionFeature,
+	filteredRowModel: createFilteredRowModel(),
+	sortedRowModel: createSortedRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+});
+
+type TableFeatures = typeof features;
+
 // Main props interface
-export interface DataTableProps<TData> {
+export interface DataTableProps<TData extends Record<string, unknown>> {
 	// Data and columns
 	data: TData[];
-	columns: ColumnDef<TData>[];
+	columns: ColumnDef<TableFeatures, TData>[];
 
 	// Loading and error states
 	isLoading?: boolean;
@@ -117,7 +131,7 @@ export interface DataTableProps<TData> {
 	resultsCountLabel?: (count: number, total: number) => string;
 }
 
-export function DataTable<TData>({
+export const DataTable = <TData extends Record<string, unknown>>({
 	data,
 	columns,
 	isLoading = false,
@@ -141,24 +155,21 @@ export function DataTable<TData>({
 	tableClassName,
 	showResultsCount = true,
 	resultsCountLabel = (count, total) => `Showing ${count} of ${total} results`,
-}: DataTableProps<TData>) {
+}: DataTableProps<TData>) => {
 	// Internal state for table functionality
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+	const [columnVisibility, setColumnVisibility] =
+		useState<ColumnVisibilityState>({});
 	const [rowSelection, setRowSelection] = useState({});
 
 	// Create table instance
-
-	const table = useReactTable({
+	const table = useTable({
 		data,
 		columns,
+		features,
 		onSortingChange: enableSorting ? setSorting : undefined,
 		onColumnFiltersChange: setColumnFilters,
-		getCoreRowModel: getCoreRowModel(),
-		getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
-		getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
-		getFilteredRowModel: getFilteredRowModel(),
 		onColumnVisibilityChange: enableColumnVisibility
 			? setColumnVisibility
 			: undefined,
@@ -173,6 +184,7 @@ export function DataTable<TData>({
 			pagination: pagination
 				? undefined
 				: {
+						pageIndex: 0,
 						pageSize: 10,
 					},
 		},
@@ -468,4 +480,4 @@ export function DataTable<TData>({
 			)}
 		</div>
 	);
-}
+};

@@ -40,15 +40,18 @@ RUN DEB_FILE=prince.deb \
     && yes | gdebi ${DEB_FILE} \
     && rm -f ${DEB_FILE}
 
-# Copy project files
-COPY . ./backend
+# Copy only dependency files first (enables layer caching for deps)
+COPY pyproject.toml poetry.lock ./backend/
 WORKDIR /usr/src/app/backend
-RUN rm -f ./license.dat
 
-# Configure Poetry and install dependencies
+# Configure Poetry and install dependencies (cached unless pyproject/lock changes)
 RUN poetry config virtualenvs.create false
 ENV POETRY_REQUESTS_TIMEOUT=300
 RUN poetry install --only=main --no-root
+
+# Copy the rest of the project files
+COPY . .
+RUN rm -f ./license.dat
 
 # Collect static files (needs dummy env vars to load Django settings)
 # NOTE: Docker security scanner may warn about SECRET_KEY and IT_ASSETS_ACCESS_TOKEN

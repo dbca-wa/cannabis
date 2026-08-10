@@ -1,5 +1,5 @@
 # Development Dockerfile for Django backend with hot reloading
-FROM python:3.13-slim-bookworm
+FROM python:3.15-rc-slim-trixie
 
 # Development environment variables
 ENV PYTHONUNBUFFERED=1
@@ -12,6 +12,7 @@ RUN echo "Installing Development Dependencies." && apt-get update && apt-get ins
     build-essential gcc g++ \
     curl wget ca-certificates \
     gdebi \
+    libpq-dev \
     vim git \
     tesseract-ocr tesseract-ocr-eng poppler-utils \
     && apt-get upgrade -y
@@ -28,17 +29,13 @@ ENV PATH="${PATH}:/etc/poetry/bin"
 RUN DEB_FILE=prince.deb \
     && ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "arm64" ]; then \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.1-1_debian12_arm64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_arm64.deb"; \
     else \
-    PRINCE_URL="https://www.princexml.com/download/prince_16.1-1_debian12_amd64.deb"; \
+    PRINCE_URL="https://www.princexml.com/download/prince_16.2-1_debian13_amd64.deb"; \
     fi \
     && wget -O ${DEB_FILE} $PRINCE_URL \
     && yes | gdebi ${DEB_FILE} \
     && rm -f ${DEB_FILE}
-
-# COPY license.dat /usr/lib/prince/license/license.dat
-# COPY license.dat /lib/prince/license/license.dat
-
 
 # Configure Poetry (don't create virtual env since we're in container)
 RUN poetry config virtualenvs.create false
