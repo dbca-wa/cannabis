@@ -226,7 +226,22 @@ if DEBUG:
 else:
     CSRF_TRUSTED_ORIGINS = [f"https://{domain}" for domain in DOMAINS.values()]
 
-CSRF_COOKIE_NAME = "cannabis_cookie"  # Set custom CSRF cookie name
+# Per-environment cookie name scoping
+CSRF_COOKIE_NAMES = {
+    "local": "cannabis_dev_csrf",
+    "development": "cannabis_dev_csrf",
+    "staging": "cannabis_test_csrf",
+    "production": "cannabis_csrf",
+}
+CSRF_COOKIE_NAME = CSRF_COOKIE_NAMES.get(ENVIRONMENT, "cannabis_csrf")
+
+SESSION_COOKIE_NAMES = {
+    "local": "cannabis_dev_sessionid",
+    "development": "cannabis_dev_sessionid",
+    "staging": "cannabis_test_sessionid",
+    "production": "cannabis_sessionid",
+}
+SESSION_COOKIE_NAME = SESSION_COOKIE_NAMES.get(ENVIRONMENT, "cannabis_sessionid")
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -257,13 +272,13 @@ if DEBUG:
 
 
 if not DEBUG:
-    # Secure cookie configuration for production
-    SESSION_COOKIE_DOMAIN = ".dbca.wa.gov.au"
-    CSRF_COOKIE_DOMAIN = ".dbca.wa.gov.au"
+    # Since frontend and API share the same origin, and there is a single domain,
+    # Cookie domain is intentionally not set — Django defaults to the exact host
+    # (cannabis.dbca.wa.gov.au or cannabis-test.dbca.wa.gov.au).
 
-    # Cross-site settings for multi-domain setup
-    CSRF_COOKIE_SAMESITE = "None"
-    SESSION_COOKIE_SAMESITE = "None"
+    # SameSite=Lax is appropriate for same-origin (frontend + API on same host)
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SAMESITE = "Lax"
 
     # Security settings
     CSRF_COOKIE_SECURE = True
