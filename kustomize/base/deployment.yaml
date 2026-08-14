@@ -7,13 +7,52 @@ spec:
     type: RollingUpdate
   template:
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: Exists
+                topologyKey: kubernetes.io/hostname
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: Exists
+                topologyKey: topology.kubernetes.io/zone
       containers:
         - name: cannabis-backend
           image: ghcr.io/dbca-wa/cannabis-backend
           imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
           env:
             - name: TZ
               value: 'Australia/Perth'
+          startupProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
             requests:
               memory: '256Mi'
@@ -23,6 +62,7 @@ spec:
               cpu: '1000m'
           securityContext:
             runAsNonRoot: true
+            runAsUser: 10001
             privileged: false
             allowPrivilegeEscalation: false
             capabilities:
@@ -35,9 +75,31 @@ spec:
         - name: cannabis-frontend
           image: ghcr.io/dbca-wa/cannabis-frontend
           imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              protocol: TCP
           env:
             - name: TZ
               value: 'Australia/Perth'
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
             requests:
               memory: '128Mi'

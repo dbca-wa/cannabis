@@ -5,3 +5,4 @@ resources:
   - deployment_hpa.yaml
   - service.yaml
   - configmap.yaml
+  - networkpolicy.yaml
