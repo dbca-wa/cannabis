@@ -16,6 +16,34 @@ spec:
       containers:
         - name: cannabis-backend
           imagePullPolicy: Always
+          startupProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis-test.dbca.wa.gov.au
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis-test.dbca.wa.gov.au
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis-test.dbca.wa.gov.au
+            periodSeconds: 30
+            failureThreshold: 3
           envFrom:
             - secretRef:
                 name: cannabis-env-test

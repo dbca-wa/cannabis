@@ -15,6 +15,34 @@ spec:
     spec:
       containers:
         - name: cannabis-backend
+          startupProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis.dbca.wa.gov.au
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis.dbca.wa.gov.au
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: cannabis.dbca.wa.gov.au
+            periodSeconds: 30
+            failureThreshold: 3
           envFrom:
             - secretRef:
                 name: cannabis-env-prod
