@@ -205,7 +205,7 @@ if DEBUG:
         "0.0.0.0:8000",
     ]
 else:
-    ALLOWED_HOSTS = list(set(DOMAINS.values()))
+    ALLOWED_HOSTS = list(set(DOMAINS.values())) + ["localhost"]
 
 # Remove duplicates
 ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))
