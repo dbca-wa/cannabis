@@ -38,11 +38,19 @@ User = get_user_model()
 
 class ExternalUserSearchView(APIView):
     """
-    Search external IT Assets API for users not already in the system
-    Used for user invitations
+    Search external IT Assets API for users not already in the system.
+    Used for user invitations.
+
+    Caches the full IT Assets user list for 5 minutes to avoid repeated
+    API calls on every keystroke. Filtering is done locally with word-token
+    matching so queries like "ben rich" match "Ben Richardson".
     """
 
     permission_classes = [HasAppAccess]
+
+    # Cache key for the full IT Assets user list
+    IT_ASSETS_CACHE_KEY = "it_assets_all_users"
+    IT_ASSETS_CACHE_TTL = 300  # 5 minutes
 
     def get(self, request):
         """Search external users by query parameter"""
@@ -57,73 +65,75 @@ class ExternalUserSearchView(APIView):
                 status=HTTP_200_OK,
             )
 
-        # Cache key for external API results
-        cache_key = f"external_users_search_{query.lower()}"
-        cached_results = cache.get(cache_key)
+        # Fetch full user list from cache or IT Assets API
+        external_users = cache.get(self.IT_ASSETS_CACHE_KEY)
 
-        if cached_results is not None:
-            return Response({"results": cached_results}, status=HTTP_200_OK)
+        if external_users is None:
+            try:
+                external_api_url = settings.IT_ASSETS_URLS
+                auth = (settings.IT_ASSETS_USER, settings.IT_ASSETS_ACCESS_TOKEN)
+                response = requests.get(external_api_url, auth=auth, timeout=15)
+                response.raise_for_status()
+                external_users = response.json()
+                cache.set(
+                    self.IT_ASSETS_CACHE_KEY,
+                    external_users,
+                    self.IT_ASSETS_CACHE_TTL,
+                )
+            except requests.RequestException as e:
+                settings.LOGGER.error(f"IT Assets API error: {str(e)}")
+                raise
+            except Exception as e:
+                settings.LOGGER.error(f"Unexpected error fetching IT Assets: {str(e)}")
+                raise
 
-        try:
-            # Call external IT Assets API using configured URL and Basic auth
-            external_api_url = f"{settings.IT_ASSETS_URLS}?limit=100"
-            auth = (settings.IT_ASSETS_USER, settings.IT_ASSETS_ACCESS_TOKEN)
-            response = requests.get(external_api_url, auth=auth, timeout=10)
-            response.raise_for_status()
+        # Get existing user emails to exclude (only active users)
+        existing_emails = set(
+            User.objects.filter(is_active=True).values_list("email", flat=True)
+        )
 
-            external_users = response.json()
+        # Tokenise search query for word-level matching
+        query_tokens = query.lower().split()
 
-            # Get existing user emails to exclude (only active users)
-            existing_emails = set(
-                User.objects.filter(is_active=True).values_list("email", flat=True)
+        # Filter and format results
+        filtered_results = []
+        for user in external_users:
+            email = user.get("email", "").lower()
+
+            # Skip if user already exists in our system
+            if email in existing_emails:
+                continue
+
+            # Build searchable text from all available name fields
+            given_name = user.get("given_name", "") or ""
+            surname = user.get("surname", "") or ""
+            name_field = user.get("name", "") or ""
+            full_name = f"{given_name} {surname}".strip() or name_field
+
+            # Searchable corpus: full name + combined name field + email
+            searchable = f"{full_name} {name_field} {email}".lower()
+
+            # Every query token must appear somewhere in the searchable text
+            if not all(token in searchable for token in query_tokens):
+                continue
+
+            # Format for frontend
+            filtered_results.append(
+                {
+                    "id": user.get("id"),
+                    "employee_id": user.get("employee_id"),
+                    "given_name": given_name or name_field.split(" ")[0],
+                    "surname": (surname or " ".join(name_field.split(" ")[1:])),
+                    "email": email,
+                    "full_name": full_name or name_field,
+                    "title": user.get("title"),
+                    "division": user.get("division"),
+                    "unit": user.get("unit"),
+                }
             )
 
-            # Filter and format results
-            filtered_results = []
-            for user in external_users:
-                email = user.get("email", "").lower()
-
-                # Skip if user already exists in our system
-                if email in existing_emails:
-                    continue
-
-                # Skip if doesn't match search query
-                full_name = (
-                    f"{user.get('given_name', '')} {user.get('surname', '')}".strip()
-                )
-                if (
-                    query.lower() not in full_name.lower()
-                    and query.lower() not in email.lower()
-                ):
-                    continue
-
-                # Format for frontend
-                filtered_results.append(
-                    {
-                        "id": user.get("id"),
-                        "employee_id": user.get("employee_id"),
-                        "given_name": user.get("given_name"),
-                        "surname": user.get("surname"),
-                        "email": email,
-                        "full_name": full_name,
-                        "title": user.get("title"),
-                        "division": user.get("division"),
-                        "unit": user.get("unit"),
-                    }
-                )
-
-            # Limit to 8 results and cache for 5 minutes
-            limited_results = filtered_results[:8]
-            cache.set(cache_key, limited_results, 300)
-
-            return Response({"results": limited_results}, status=HTTP_200_OK)
-
-        except requests.RequestException as e:
-            settings.LOGGER.error(f"External API error: {str(e)}")
-            raise
-        except Exception as e:
-            settings.LOGGER.error(f"Unexpected error in external user search: {str(e)}")
-            raise
+        # Return top 10 results
+        return Response({"results": filtered_results[:10]}, status=HTTP_200_OK)
 
 
 # endregion
