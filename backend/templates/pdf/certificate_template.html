@@ -16,10 +16,10 @@
         body {
             font-family: 'Aptos', 'Calibri', 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 30px; /* Reduced from 48px */
+            padding: 25px; /* Reduced from 30px */
             color: #000;
-            line-height: 1.6;
-            font-size: 12px;
+            line-height: 1.5;
+            font-size: 11px;
             background: white;
             /* Create a flex container for the entire page */
             display: flex;
@@ -37,7 +37,7 @@
         /* Header styling */
         .header-section {
             position: relative;
-            margin-bottom: 15px; /* Reduced from 20px */
+            margin-bottom: 10px; /* Reduced from 15px */
             /* Header and title remain serif; everything below renders in Aptos */
             font-family: Times, 'Times New Roman', serif;
         }
@@ -243,8 +243,8 @@
             background-color: #f0f8ff;
             border: 2px solid #2B6493;
             border-radius: 6px;
-            padding: 6px; /* Reduced from 8px */
-            margin: 15px 0; /* Reduced from 20px 0 */
+            padding: 5px; /* Reduced from 6px */
+            margin: 10px 0; /* Reduced from 15px 0 */
             text-align: center;
             width: 100%;
             display: flex;
@@ -263,6 +263,7 @@
         .cert-date {
             font-size: 13px;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .cert-highlight {
@@ -390,12 +391,12 @@
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bag, tag number {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on {{ receipt_date }}.
+                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% else %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bags, tag numbers {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on {{ receipt_date }}.
+                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% endif %}
                 </div>
             </div>
