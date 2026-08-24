@@ -84,6 +84,13 @@ export const useCreatePoliceOfficer = () => {
 
 			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
+			// Force all active officer queries (including open combobox searches)
+			// to refetch immediately so the new officer appears without re-opening.
+			await queryClient.invalidateQueries({
+				queryKey: ["police-officers"],
+				refetchType: "all",
+			});
+
 			toast.success("Officer created successfully!");
 		},
 		onError: (error: unknown) => {
