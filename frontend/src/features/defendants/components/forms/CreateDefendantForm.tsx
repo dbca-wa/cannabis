@@ -45,15 +45,19 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
-					name="given_names"
+					name="last_name"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Given Names</FormLabel>
+							<FormLabel>
+								Surname (Last Name) <span className="text-red-500">*</span>
+							</FormLabel>
 							<FormControl>
 								<Input
 									{...field}
-									placeholder="Enter given names (optional)"
+									placeholder="Enter surname (required)"
 									disabled={isSubmitting}
+									className="uppercase"
+									onChange={(e) => field.onChange(e.target.value.toUpperCase())}
 								/>
 							</FormControl>
 							<FormMessage />
@@ -63,16 +67,14 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 
 				<FormField
 					control={form.control}
-					name="last_name"
+					name="given_names"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>
-								Last Name <span className="text-red-500">*</span>
-							</FormLabel>
+							<FormLabel>Given Names</FormLabel>
 							<FormControl>
 								<Input
 									{...field}
-									placeholder="Enter last name (required)"
+									placeholder="Enter given names (optional)"
 									disabled={isSubmitting}
 								/>
 							</FormControl>

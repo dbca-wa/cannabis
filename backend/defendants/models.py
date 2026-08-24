@@ -24,8 +24,8 @@ class Defendant(AuditModel):
     @property
     def pdf_name(self):
         if self.last_name and self.given_names:
-            return f"{self.last_name.capitalize()}, {self.given_names.capitalize()}"
-        return self.last_name.capitalize() if self.last_name else "Unknown"
+            return f"{self.last_name.upper()}, {self.given_names.title()}"
+        return self.last_name.upper() if self.last_name else "Unknown"
 
     @property
     def full_name(self):
