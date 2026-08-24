@@ -81,6 +81,8 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - mountPath: /tmp
               name: tmpfs-ram-backend
@@ -128,6 +130,8 @@ spec:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - mountPath: /tmp
               name: tmpfs-ram-frontend

@@ -8,11 +8,13 @@ import {
 } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Info } from "lucide-react";
+import { useEffect } from "react";
 import { useCaseFormStore } from "../../../hooks/useCaseFormStore";
 import { ocrResultStore } from "../../../stores/ocrResult.store";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
+import { useOfficerById } from "@/features/police/hooks";
 
 export const OfficersStationSection = observer(() => {
 	const formStore = useCaseFormStore();
@@ -47,6 +49,17 @@ export const OfficersStationSection = observer(() => {
 			formStore.setSelectedOfficer("submitting", null);
 		}
 	};
+
+	// Auto-fill station from the selected submitting officer
+	const { data: submittingOfficer } = useOfficerById(
+		formStore.formData.submitting_officer_id ?? null
+	);
+
+	useEffect(() => {
+		if (submittingOfficer?.station && !formStore.formData.station_id) {
+			formStore.updateField("station_id", submittingOfficer.station);
+		}
+	}, [submittingOfficer, formStore]);
 
 	const handleStationChange = (stationId: number | null) => {
 		if (stationId) {

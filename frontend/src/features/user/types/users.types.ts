@@ -73,6 +73,7 @@ export interface EditUserFormData {
 	role: Role;
 	is_staff?: boolean;
 	is_active?: boolean;
+	is_legacy?: boolean;
 	it_asset_id?: number | null;
 	employee_id?: string | null;
 }

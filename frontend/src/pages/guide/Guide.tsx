@@ -88,9 +88,10 @@ const Guide = () => {
 						</li>
 					</ul>
 					<p>
-						If only one officer is involved (e.g. a sworn officer submitting
-						their own samples), select them as the Submitting Officer and leave
-						the Requesting Officer blank.
+						If only one officer is involved (e.g. the Conveying Officer -
+						Unsworn Officer is submitting the samples for favour of
+						examination), select them as the Submitting Officer and leave the
+						Requesting Officer blank.
 					</p>
 					<p className="text-sm text-muted-foreground">
 						Tip: The Requesting Officer field is optional. Only fill it in when
@@ -136,6 +137,11 @@ const Guide = () => {
 					<p className="text-sm text-muted-foreground">
 						Tip: Each form produces one certificate. If you have more than 5
 						bags, add a second form.
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Tip: You can click the step labels at the top of the wizard to
+						navigate directly to any completed step. Use this to review
+						previously entered data without losing your progress.
 					</p>
 					<br />
 					<img
