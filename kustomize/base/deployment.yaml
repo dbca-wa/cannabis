@@ -24,6 +24,9 @@ spec:
                     - key: app
                       operator: Exists
                 topologyKey: topology.kubernetes.io/zone
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: cannabis-backend
           image: ghcr.io/dbca-wa/cannabis-backend
