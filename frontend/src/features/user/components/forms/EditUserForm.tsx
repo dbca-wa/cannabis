@@ -112,6 +112,7 @@ const EditUserForm = ({
 			role: "none" as Role,
 			is_staff: false,
 			is_active: true,
+			is_legacy: false,
 			it_asset_id: null,
 			employee_id: "",
 		},
@@ -137,6 +138,7 @@ const EditUserForm = ({
 				role: userRole,
 				is_staff: user.is_staff,
 				is_active: user.is_active,
+				is_legacy: user.is_legacy ?? false,
 				it_asset_id: user.it_asset_id,
 				employee_id: user.employee_id,
 			};
@@ -177,6 +179,7 @@ const EditUserForm = ({
 			role: data.role ?? "none",
 			is_staff: data.is_staff,
 			is_active: data.is_active,
+			is_legacy: data.is_legacy,
 			it_asset_id: data.it_asset_id,
 			employee_id: data.employee_id,
 		};
@@ -423,6 +426,37 @@ const EditUserForm = ({
 							</p>
 						)}
 					</div>
+
+					{/* Legacy toggle — only shown for botanist role */}
+					{selectedRole === "botanist" && (
+						<div className="flex items-center space-x-2">
+							<Controller
+								name="is_legacy"
+								control={control}
+								render={({ field }) => (
+									<Checkbox
+										id="is_legacy"
+										checked={field.value}
+										onCheckedChange={field.onChange}
+									/>
+								)}
+							/>
+							<Label htmlFor="is_legacy" className="text-sm">
+								Mark as Legacy
+							</Label>
+							{watch("is_legacy") && (
+								<Badge variant="outline" className="text-xs">
+									Hidden from dropdowns
+								</Badge>
+							)}
+						</div>
+					)}
+					{selectedRole === "botanist" && (
+						<p className="text-xs text-gray-500 ml-6">
+							Legacy botanists are hidden from case creation dropdowns but
+							retained for historical records.
+						</p>
+					)}
 
 					{/* Permission Checkboxes */}
 					<div className="space-y-3">

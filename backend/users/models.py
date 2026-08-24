@@ -91,6 +91,12 @@ class User(AbstractUser):
         null=True,
     )
 
+    # Legacy flag — hides user from selection dropdowns without affecting login
+    is_legacy = models.BooleanField(
+        default=False,
+        help_text="Legacy users are hidden from selection dropdowns but retain historical data.",
+    )
+
     # Set email as the username field
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # Email is already required as USERNAME_FIELD
