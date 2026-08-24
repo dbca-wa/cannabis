@@ -88,7 +88,7 @@ export const WizardNavigation = ({
 						className="flex-1 sm:flex-initial min-h-11"
 					>
 						<ArrowLeft className="mr-2 h-4 w-4" />
-						<span className="hidden sm:inline">Back</span>
+						<span className="hidden sm:inline">Back (Review)</span>
 					</Button>
 
 					<Button

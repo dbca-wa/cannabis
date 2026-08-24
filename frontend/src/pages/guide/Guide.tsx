@@ -138,6 +138,11 @@ const Guide = () => {
 						Tip: Each form produces one certificate. If you have more than 5
 						bags, add a second form.
 					</p>
+					<p className="text-sm text-muted-foreground">
+						Tip: You can click the step labels at the top of the wizard to
+						navigate directly to any completed step. Use this to review
+						previously entered data without losing your progress.
+					</p>
 					<br />
 					<img
 						src="/assets/guide/create-drug.png"
