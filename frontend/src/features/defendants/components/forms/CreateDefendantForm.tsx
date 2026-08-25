@@ -40,6 +40,12 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 		await onSubmit(data);
 	};
 
+	/** Title-case a string, handling spaces and hyphens (e.g. "jimmy-lee van" → "Jimmy-Lee Van") */
+	const toTitleCase = (value: string): string =>
+		value
+			.replace(/\b\w/g, (char) => char.toUpperCase())
+			.replace(/-\w/g, (match) => `-${match.charAt(1).toUpperCase()}`);
+
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -57,7 +63,7 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 									placeholder="Enter surname (required)"
 									disabled={isSubmitting}
 									className="uppercase"
-									onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+									onChange={(e) => field.onChange(toTitleCase(e.target.value))}
 								/>
 							</FormControl>
 							<FormMessage />
@@ -76,6 +82,7 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 									{...field}
 									placeholder="Enter given names (optional)"
 									disabled={isSubmitting}
+									onChange={(e) => field.onChange(toTitleCase(e.target.value))}
 								/>
 							</FormControl>
 							<FormMessage />
