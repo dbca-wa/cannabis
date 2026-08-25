@@ -223,9 +223,6 @@ const Staff = observer(() => {
 										{getSortIcon("cases_count")}
 									</button>
 								</TableHead>
-								<TableHead className="text-center">
-									<span>Legacy</span>
-								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -244,14 +241,11 @@ const Staff = observer(() => {
 										<TableCell>
 											<Skeleton className="h-6 w-8 rounded-full mx-auto" />
 										</TableCell>
-										<TableCell>
-											<Skeleton className="h-5 w-12 rounded-full mx-auto" />
-										</TableCell>
 									</TableRow>
 								))
 							) : isError ? (
 								<TableRow>
-									<TableCell colSpan={4} className="h-48 text-center">
+									<TableCell colSpan={3} className="h-48 text-center">
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
 											<AlertCircle className="h-12 w-12 opacity-50 mb-4" />
 											<p className="text-lg font-medium mb-2">
@@ -273,7 +267,7 @@ const Staff = observer(() => {
 								</TableRow>
 							) : filteredUsers.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={4} className="h-48 text-center">
+									<TableCell colSpan={3} className="h-48 text-center">
 										<div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
 											<Inbox className="h-12 w-12 opacity-40 mb-4" />
 											<p className="text-lg font-medium mb-2">
@@ -327,21 +321,23 @@ const Staff = observer(() => {
 												</div>
 											</TableCell>
 											<TableCell>
-												<Badge className={cn("text-[11px]", roleBadge.classes)}>
-													{roleBadge.label}
-												</Badge>
+												<div className="flex items-center gap-1.5 flex-wrap">
+													<Badge
+														className={cn("text-[11px]", roleBadge.classes)}
+													>
+														{roleBadge.label}
+													</Badge>
+													{u.is_legacy && (
+														<Badge className="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+															Legacy
+														</Badge>
+													)}
+												</div>
 											</TableCell>
 											<TableCell className="text-center">
 												<span className="inline-flex items-center justify-center w-8 h-6 text-xs bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 rounded-full tabular-nums">
 													{u.cases_count ?? 0}
 												</span>
-											</TableCell>
-											<TableCell className="text-center">
-												{u.is_legacy && (
-													<Badge variant="outline" className="text-[11px]">
-														Legacy
-													</Badge>
-												)}
 											</TableCell>
 										</TableRow>
 									);
