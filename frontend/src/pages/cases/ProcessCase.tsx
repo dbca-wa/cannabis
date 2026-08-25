@@ -211,6 +211,9 @@ const ProcessCaseContent = observer(() => {
 	// Local case_number state for instant typing feedback (ahead of debounced save)
 	const [localCaseNumber, setLocalCaseNumber] = useState<string | null>(null);
 
+	// Local SME state for instant typing feedback
+	const [localSme, setLocalSme] = useState<string | null>(null);
+
 	const {
 		data: caseObj,
 		isLoading: isCaseLoading,
@@ -322,8 +325,10 @@ const ProcessCaseContent = observer(() => {
 	useEffect(() => {
 		if (form) {
 			setLocalAdditionalNotes(form.additional_notes ?? null);
+			setLocalSme(form.security_movement_envelope ?? null);
 		} else {
 			setLocalAdditionalNotes(null);
+			setLocalSme(null);
 		}
 	}, [form]);
 
@@ -352,6 +357,9 @@ const ProcessCaseContent = observer(() => {
 	}
 	if (caseData && localCaseNumber !== null) {
 		caseData.case_number = localCaseNumber;
+	}
+	if (caseData && localSme !== null) {
+		caseData.security_movement_envelope = localSme;
 	}
 
 	logger.debug("ProcessCase caseData built", {
@@ -448,6 +456,27 @@ const ProcessCaseContent = observer(() => {
 				return;
 			}
 
+			// security_movement_envelope is per-form — PATCH the form, not the case
+			if (field === "security_movement_envelope") {
+				if (!activeFormId) return;
+				setLocalSme(value as string);
+				if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current);
+				debouncedSaveRef.current = setTimeout(() => {
+					updateForm(activeFormId, {
+						security_movement_envelope: value as string,
+					})
+						.then(() => {
+							toast.success("SME saved");
+							queryClient.invalidateQueries({
+								queryKey: ["cases", "forms", activeFormId],
+							});
+						})
+						.catch(() => {
+							toast.error("Failed to save SME");
+						});
+				}, 800);
+				return;
+			}
 			// Defendants M2M — add or set the full list of IDs
 			if (field === "add_defendant") {
 				const defendant = value as { id: number };

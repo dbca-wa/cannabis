@@ -16,6 +16,7 @@ export interface TemplateContext {
 	tag_numbers: string;
 	new_tag_numbers: string;
 	content_types: string;
+	security_movement_envelope: string;
 }
 
 /** Available template variables with descriptions for the UI. */
@@ -30,6 +31,10 @@ export const TEMPLATE_VARIABLES: { key: string; description: string }[] = [
 	{ key: "tag_numbers", description: "Original seal tag numbers" },
 	{ key: "new_tag_numbers", description: "New seal tag numbers" },
 	{ key: "content_types", description: "Content type descriptions" },
+	{
+		key: "security_movement_envelope",
+		description: "Security movement envelope number",
+	},
 ];
 
 /**
@@ -68,6 +73,7 @@ export const buildTemplateContext = (
 			tag_numbers: "",
 			new_tag_numbers: "",
 			content_types: "",
+			security_movement_envelope: "",
 		};
 	}
 
@@ -106,5 +112,30 @@ export const buildTemplateContext = (
 		tag_numbers: tagNumbers,
 		new_tag_numbers: newTagNumbers,
 		content_types: contentTypes,
+		security_movement_envelope:
+			(caseData.security_movement_envelope as string) ?? "",
 	};
+};
+
+/**
+ * Extract all {{variable}} keys from a template string.
+ */
+export const extractTemplateVariables = (template: string): string[] => {
+	const matches = template.matchAll(/\{\{(\w+)\}\}/g);
+	return [...new Set([...matches].map((m) => m[1]))];
+};
+
+/**
+ * Check if a template can be fully resolved (all referenced variables have values).
+ * Returns true if all variables in the template have non-empty values in the context.
+ */
+export const canResolveTemplate = (
+	template: string,
+	context: TemplateContext
+): boolean => {
+	const variables = extractTemplateVariables(template);
+	return variables.every((key) => {
+		const value = context[key as keyof TemplateContext];
+		return !!value && value.trim() !== "";
+	});
 };

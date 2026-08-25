@@ -748,17 +748,12 @@ export class CaseFormStore {
 			this.isValid &&
 			!this.isSubmitting &&
 			this.formData.case_number.trim() !== "" &&
-			this.formData.received.trim() !== "" &&
-			this.formData.security_movement_envelope.trim() !== ""
+			this.formData.received.trim() !== ""
 		);
 	}
 
 	get formProgress(): number {
-		const requiredFields = [
-			this.formData.case_number,
-			this.formData.received,
-			this.formData.security_movement_envelope,
-		];
+		const requiredFields = [this.formData.case_number, this.formData.received];
 
 		const completedFields = requiredFields.filter(
 			(field) => field && field.toString().trim() !== ""
@@ -782,7 +777,6 @@ export class CaseFormStore {
 		const requiredFields = [
 			this.formData.case_number, // Police Reference No.
 			this.formData.received, // Received Date
-			this.formData.security_movement_envelope, // Security Movement Envelope Number
 		];
 
 		const completedFields = requiredFields.filter(
@@ -860,8 +854,7 @@ export class CaseFormStore {
 	get requiredFieldsCompleted(): boolean {
 		return (
 			this.formData.case_number.trim() !== "" &&
-			this.formData.received.trim() !== "" &&
-			this.formData.security_movement_envelope.trim() !== ""
+			this.formData.received.trim() !== ""
 		);
 	}
 

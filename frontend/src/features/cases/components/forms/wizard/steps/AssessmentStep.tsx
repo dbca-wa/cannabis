@@ -10,6 +10,7 @@ import {
 } from "@/shared/utils/error.utils";
 
 import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { useDrugBagWranglerStore } from "@/app/providers/store.provider";
@@ -502,6 +503,28 @@ export const AssessmentStep = observer(function AssessmentStep({
 							Remove All Unsaved ({wrangler.state.bags.length})
 						</Button>
 					)}
+				</div>
+			</SectionCard>
+
+			{/* Security Movement Envelope (per form) */}
+			<SectionCard
+				title="Security Movement Envelope"
+				isComplete={true}
+				isInvalid={false}
+			>
+				<div className="space-y-2">
+					<Label htmlFor="security_movement_envelope">SME Number</Label>
+					<Input
+						id="security_movement_envelope"
+						value={(caseData?.security_movement_envelope as string) ?? ""}
+						onChange={(e) =>
+							onFieldChange("security_movement_envelope", e.target.value)
+						}
+						placeholder="Enter security movement envelope number (optional)"
+					/>
+					<p className="text-xs text-muted-foreground">
+						Optional. The security movement envelope number for this form.
+					</p>
 				</div>
 			</SectionCard>
 

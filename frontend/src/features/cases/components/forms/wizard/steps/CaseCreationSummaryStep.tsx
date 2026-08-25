@@ -52,8 +52,6 @@ export const CaseCreationSummaryStep = ({
 	// Derive field values from server data
 	const caseNumber = (caseData?.case_number as string) ?? "";
 	const received = (caseData?.received as string) ?? "";
-	const securityEnvelope =
-		(caseData?.security_movement_envelope as string) ?? "";
 	const defendants = (caseData?.defendants_details as DefendantTiny[]) ?? [];
 	const defendantIds = useMemo(
 		() => (caseData?.defendants as number[]) ?? [],
@@ -179,20 +177,6 @@ export const CaseCreationSummaryStep = ({
 								{errors.received}
 							</p>
 						)}
-					</div>
-
-					<div className="space-y-2 md:col-span-2">
-						<Label htmlFor="summary_security_envelope">
-							Security Movement Envelope
-						</Label>
-						<Input
-							id="summary_security_envelope"
-							value={securityEnvelope}
-							onChange={(e) =>
-								onFieldChange("security_movement_envelope", e.target.value)
-							}
-							placeholder="Enter envelope number"
-						/>
 					</div>
 				</div>
 			</SectionCard>

@@ -13,6 +13,7 @@ import { useSectionCTemplates } from "../../hooks/useSectionCTemplates";
 import {
 	resolveTemplate,
 	buildTemplateContext,
+	canResolveTemplate,
 } from "../../utils/templateResolver";
 import { CreateTemplateModal } from "./CreateTemplateModal";
 import { EditTemplateModal } from "./EditTemplateModal";
@@ -80,11 +81,25 @@ export const TemplatePicker = ({
 							/>
 						</SelectTrigger>
 						<SelectContent>
-							{templates?.map((t) => (
-								<SelectItem key={t.id} value={String(t.id)}>
-									{t.name}
-								</SelectItem>
-							))}
+							{templates?.map((t) => {
+								const context = buildTemplateContext(caseData, bags);
+								const canResolve = canResolveTemplate(t.content, context);
+								return (
+									<SelectItem
+										key={t.id}
+										value={String(t.id)}
+										disabled={!canResolve}
+										className={!canResolve ? "opacity-50" : ""}
+									>
+										{t.name}
+										{!canResolve && (
+											<span className="ml-2 text-xs text-muted-foreground">
+												(missing data)
+											</span>
+										)}
+									</SelectItem>
+								);
+							})}
 						</SelectContent>
 					</Select>
 					<Button
