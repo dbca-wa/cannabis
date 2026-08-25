@@ -70,22 +70,29 @@ export const CreateOfficerForm = ({
 		}
 	};
 
+	/** Title-case a string, handling spaces and hyphens */
+	const toTitleCase = (value: string): string =>
+		value
+			.replace(/\b\w/g, (char) => char.toUpperCase())
+			.replace(/-\w/g, (match) => `-${match.charAt(1).toUpperCase()}`);
+
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-				{/* Badge Number */}
+				{/* Last Name (Surname) */}
 				<FormField
 					control={form.control}
-					name="badge_number"
+					name="last_name"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Badge Number</FormLabel>
+							<FormLabel>Surname (Last Name) *</FormLabel>
 							<FormControl>
 								<Input
-									placeholder="Enter badge number (optional)"
+									placeholder="Enter officer's surname"
 									{...field}
-									value={field.value || ""}
 									disabled={isLoading}
+									className="uppercase"
+									onChange={(e) => field.onChange(toTitleCase(e.target.value))}
 								/>
 							</FormControl>
 							<FormMessage />
@@ -106,6 +113,7 @@ export const CreateOfficerForm = ({
 									{...field}
 									value={field.value || ""}
 									disabled={isLoading}
+									onChange={(e) => field.onChange(toTitleCase(e.target.value))}
 								/>
 							</FormControl>
 							<FormMessage />
@@ -113,17 +121,18 @@ export const CreateOfficerForm = ({
 					)}
 				/>
 
-				{/* Last Name */}
+				{/* Badge Number */}
 				<FormField
 					control={form.control}
-					name="last_name"
+					name="badge_number"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Last Name *</FormLabel>
+							<FormLabel>Badge Number</FormLabel>
 							<FormControl>
 								<Input
-									placeholder="Enter officer's last name"
+									placeholder="Enter badge number (optional)"
 									{...field}
+									value={field.value || ""}
 									disabled={isLoading}
 								/>
 							</FormControl>
