@@ -64,11 +64,13 @@ export const TemplateContentEditor = ({
 	/** Convert plain text with {{var}} to HTML with chip spans. */
 	const toHtml = useCallback((text: string): string => {
 		if (!text) return "";
-		return text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
+		// First replace variables with chips, then convert newlines to <br>
+		const withChips = text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
 			const variable = TEMPLATE_VARIABLES.find((v) => v.key === key);
 			const label = variable?.description ?? key;
 			return `<span contenteditable="false" data-variable="${key}" class="template-variable-chip">${label}</span>`;
 		});
+		return withChips.replace(/\n/g, "<br>");
 	}, []);
 
 	/** Convert HTML back to plain text with {{var}} syntax. */

@@ -62,7 +62,7 @@ export const CreateTemplateModal = ({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange} modal={true}>
 			<DialogContent
-				className="sm:max-w-[550px]"
+				className="sm:max-w-[1100px]"
 				onInteractOutside={(e) => e.preventDefault()}
 			>
 				<form onSubmit={handleSubmit}>
