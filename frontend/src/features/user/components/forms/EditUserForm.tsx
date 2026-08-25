@@ -433,11 +433,14 @@ const EditUserForm = ({
 							<Controller
 								name="is_legacy"
 								control={control}
+								shouldUnregister={false}
 								render={({ field }) => (
 									<Checkbox
 										id="is_legacy"
-										checked={field.value}
-										onCheckedChange={field.onChange}
+										checked={!!field.value}
+										onCheckedChange={(checked) => {
+											field.onChange(!!checked);
+										}}
 									/>
 								)}
 							/>
