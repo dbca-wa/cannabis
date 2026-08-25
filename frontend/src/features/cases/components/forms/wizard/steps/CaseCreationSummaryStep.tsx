@@ -265,6 +265,7 @@ export const CaseCreationSummaryStep = ({
 							placeholder="Search officer..."
 							error={isTouched && !!errors.submitting_officer}
 							showExternalAddButton
+							required
 						/>
 						{isTouched && errors.submitting_officer && (
 							<p className="text-sm text-red-600" role="alert">
@@ -285,9 +286,10 @@ export const CaseCreationSummaryStep = ({
 							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
 							placeholder="Search officer..."
 							showExternalAddButton
+							required
 						/>
 						<p className="text-xs text-muted-foreground">
-							Optional — who the samples were submitted on behalf of.
+							The sworn officer who requested the identification.
 						</p>
 					</div>
 

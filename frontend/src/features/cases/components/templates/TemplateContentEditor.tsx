@@ -1,6 +1,40 @@
 import { useRef, useCallback, useEffect } from "react";
 import { TEMPLATE_VARIABLES } from "../../utils/templateResolver";
 
+/** Group variables by category for the UI. */
+const VARIABLE_GROUPS: {
+	label: string;
+	keys: string[];
+}[] = [
+	{
+		label: "Case",
+		keys: [
+			"case_number",
+			"received_date",
+			"defendant_name",
+			"conveying_officer",
+			"requesting_officer",
+		],
+	},
+	{
+		label: "Bags",
+		keys: ["bag_count", "tag_numbers", "new_tag_numbers", "content_types"],
+	},
+	{
+		label: "Female Plants",
+		keys: [
+			"female_plant_tags",
+			"non_female_plant_tags",
+			"female_plant_count",
+			"non_female_plant_count",
+		],
+	},
+	{
+		label: "Other",
+		keys: ["security_movement_envelope"],
+	},
+];
+
 interface TemplateContentEditorProps {
 	value: string;
 	onChange: (value: string) => void;
@@ -133,24 +167,35 @@ export const TemplateContentEditor = ({
 				aria-label="Template content"
 			/>
 
-			<div className="space-y-1.5">
-				<p className="text-xs text-muted-foreground">
-					Click a variable to insert it at cursor position:
+			<div className="space-y-2">
+				<p className="text-xs text-muted-foreground font-medium">
+					Insert variable at cursor:
 				</p>
-				<div className="flex flex-wrap gap-1.5">
-					{TEMPLATE_VARIABLES.map((v) => (
-						<button
-							key={v.key}
-							type="button"
-							onClick={() => insertVariable(v.key)}
-							className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs hover:bg-accent transition-colors cursor-pointer"
-							title={v.description}
-							disabled={disabled}
-						>
-							<span className="font-medium">{v.description}</span>
-						</button>
-					))}
-				</div>
+				{VARIABLE_GROUPS.map((group) => (
+					<div key={group.label} className="space-y-1">
+						<p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+							{group.label}
+						</p>
+						<div className="flex flex-wrap gap-1.5">
+							{group.keys.map((key) => {
+								const v = TEMPLATE_VARIABLES.find((tv) => tv.key === key);
+								if (!v) return null;
+								return (
+									<button
+										key={v.key}
+										type="button"
+										onClick={() => insertVariable(v.key)}
+										className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs hover:bg-accent transition-colors cursor-pointer"
+										title={v.description}
+										disabled={disabled}
+									>
+										<span className="font-medium">{v.description}</span>
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				))}
 			</div>
 		</div>
 	);

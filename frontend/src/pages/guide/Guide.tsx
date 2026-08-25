@@ -139,9 +139,11 @@ const Guide = () => {
 						bags, add a second form.
 					</p>
 					<p className="text-sm text-muted-foreground">
-						Tip: You can click the step labels at the top of the wizard to
-						navigate directly to any completed step. Use this to review
-						previously entered data without losing your progress.
+						Tip: You can click the step numbers at the top of the wizard to
+						navigate directly to any completed step. The Back button at the
+						bottom left will take you to the previous step (greyed out if you
+						are already on step 1). Use these to review previously entered data
+						without losing your progress.
 					</p>
 					<br />
 					<img

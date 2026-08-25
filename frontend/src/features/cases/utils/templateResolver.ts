@@ -18,6 +18,11 @@ export interface TemplateContext {
 	content_types: string;
 	security_movement_envelope: string;
 	female_plant_tags: string;
+	non_female_plant_tags: string;
+	female_plant_count: string;
+	non_female_plant_count: string;
+	conveying_officer: string;
+	requesting_officer: string;
 }
 
 /** Available template variables with descriptions for the UI. */
@@ -27,10 +32,10 @@ export const TEMPLATE_VARIABLES: { key: string; description: string }[] = [
 		description: "Defendant surnames (comma-separated)",
 	},
 	{ key: "case_number", description: "Police reference number" },
-	{ key: "bag_count", description: "Number of bags on this form" },
+	{ key: "bag_count", description: "Total number of bags on this form" },
 	{ key: "received_date", description: "Date samples were received" },
-	{ key: "tag_numbers", description: "Original seal tag numbers" },
-	{ key: "new_tag_numbers", description: "New seal tag numbers" },
+	{ key: "tag_numbers", description: "Original seal tag numbers (all bags)" },
+	{ key: "new_tag_numbers", description: "New seal tag numbers (all bags)" },
 	{ key: "content_types", description: "Content type descriptions" },
 	{
 		key: "security_movement_envelope",
@@ -40,7 +45,45 @@ export const TEMPLATE_VARIABLES: { key: string; description: string }[] = [
 		key: "female_plant_tags",
 		description: "Seal numbers of bags containing female plants",
 	},
+	{
+		key: "non_female_plant_tags",
+		description: "Seal numbers of bags NOT containing female plants",
+	},
+	{
+		key: "female_plant_count",
+		description: "Number of bags containing female plants",
+	},
+	{
+		key: "non_female_plant_count",
+		description: "Number of bags NOT containing female plants",
+	},
+	{
+		key: "conveying_officer",
+		description: "Conveying (submitting) officer name",
+	},
+	{
+		key: "requesting_officer",
+		description: "Requesting (on behalf of) officer name",
+	},
 ];
+
+/** Mock data for template preview — shows realistic example values for all variables. */
+export const MOCK_TEMPLATE_CONTEXT: TemplateContext = {
+	defendant_name: "SMITH, JONES",
+	case_number: "IR 123456789",
+	bag_count: "3 bags",
+	received_date: "20 March 2026",
+	tag_numbers: "T119007, T119008, T119009",
+	new_tag_numbers: "T220001, T220002, T220003",
+	content_types: "plant",
+	security_movement_envelope: "WW00564835",
+	female_plant_tags: "T119007, T119009",
+	non_female_plant_tags: "T119008",
+	female_plant_count: "2",
+	non_female_plant_count: "1",
+	conveying_officer: "Unsworn Officer NEUTRON, Jimmy",
+	requesting_officer: "Sworn Officer PD9998 LIGHTYEAR, Buzz",
+};
 
 /**
  * Replace all {{variable}} placeholders in template content with resolved values.
@@ -80,6 +123,11 @@ export const buildTemplateContext = (
 			content_types: "",
 			security_movement_envelope: "",
 			female_plant_tags: "",
+			non_female_plant_tags: "",
+			female_plant_count: "0",
+			non_female_plant_count: "0",
+			conveying_officer: "",
+			requesting_officer: "",
 		};
 	}
 
@@ -116,6 +164,17 @@ export const buildTemplateContext = (
 		.filter(Boolean)
 		.join(", ");
 
+	const nonFemalePlantTags = bags
+		.filter((b) => !b.contains_female_plants)
+		.map((b) => b.seal_tag_numbers)
+		.filter(Boolean)
+		.join(", ");
+
+	const femalePlantCount = bags.filter((b) => b.contains_female_plants).length;
+	const nonFemalePlantCount = bags.filter(
+		(b) => !b.contains_female_plants
+	).length;
+
 	return {
 		defendant_name: defendantName,
 		case_number: caseNumber,
@@ -127,6 +186,12 @@ export const buildTemplateContext = (
 		security_movement_envelope:
 			(caseData.security_movement_envelope as string) ?? "",
 		female_plant_tags: femalePlantTags,
+		non_female_plant_tags: nonFemalePlantTags,
+		female_plant_count: femalePlantCount > 0 ? String(femalePlantCount) : "",
+		non_female_plant_count:
+			nonFemalePlantCount > 0 ? String(nonFemalePlantCount) : "",
+		conveying_officer: (caseData.submitting_officer_name as string) ?? "",
+		requesting_officer: (caseData.requesting_officer_name as string) ?? "",
 	};
 };
 

@@ -89,6 +89,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 			allowCreate = true,
 			showExternalAddButton = false,
 			swornFilter,
+			required = false,
 		},
 		ref
 	) => {
@@ -205,7 +206,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 							)}
 						</div>
 						<div className="flex items-center gap-1">
-							{displayValue && !disabled && (
+							{displayValue && !disabled && !required && (
 								<div
 									className="h-4 w-4 p-0 hover:bg-muted rounded-sm cursor-pointer flex items-center justify-center"
 									onClick={handleClear}

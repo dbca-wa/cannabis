@@ -452,7 +452,7 @@ export const BagCard = ({
 				<div className="flex items-center gap-2 pt-1">
 					<input
 						type="checkbox"
-						id={`female-plants-${bag.id}`}
+						id={`female-plants-${String(bag.id)}`}
 						checked={femalePlants}
 						onChange={(e) => {
 							setFemalePlants(e.target.checked);
@@ -465,8 +465,8 @@ export const BagCard = ({
 						className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
 					/>
 					<label
-						htmlFor={`female-plants-${bag.id}`}
-						className="text-sm text-muted-foreground cursor-pointer"
+						htmlFor={`female-plants-${String(bag.id)}`}
+						className="text-sm text-muted-foreground cursor-pointer select-none"
 					>
 						Contains female plants
 					</label>

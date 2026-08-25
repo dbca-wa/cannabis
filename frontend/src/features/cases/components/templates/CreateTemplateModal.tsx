@@ -10,9 +10,13 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useCreateTemplate } from "../../hooks/useSectionCTemplates";
 import { TemplateContentEditor } from "./TemplateContentEditor";
+import {
+	resolveTemplate,
+	MOCK_TEMPLATE_CONTEXT,
+} from "../../utils/templateResolver";
 import type { ISectionCTemplate } from "../../types/templates.types";
 
 interface CreateTemplateModalProps {
@@ -29,6 +33,7 @@ export const CreateTemplateModal = ({
 }: CreateTemplateModalProps) => {
 	const [name, setName] = useState("");
 	const [content, setContent] = useState("");
+	const [showPreview, setShowPreview] = useState(false);
 	const createMutation = useCreateTemplate();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -81,14 +86,40 @@ export const CreateTemplateModal = ({
 							/>
 						</div>
 
+						{/* Toggle between editor and preview */}
 						<div className="space-y-2">
-							<Label>Content</Label>
-							<TemplateContentEditor
-								value={content}
-								onChange={setContent}
-								placeholder="Type template text here. Click variables below to insert them..."
-								disabled={createMutation.isPending}
-							/>
+							<div className="flex items-center justify-between">
+								<Label>{showPreview ? "Preview" : "Content"}</Label>
+								{content.trim() && (
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => setShowPreview(!showPreview)}
+										className="h-7 text-xs"
+									>
+										{showPreview ? (
+											<EyeOff className="mr-1 h-3 w-3" />
+										) : (
+											<Eye className="mr-1 h-3 w-3" />
+										)}
+										{showPreview ? "Back to Editor" : "Preview with Mock Data"}
+									</Button>
+								)}
+							</div>
+
+							{showPreview ? (
+								<div className="min-h-[120px] rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+									{resolveTemplate(content, MOCK_TEMPLATE_CONTEXT)}
+								</div>
+							) : (
+								<TemplateContentEditor
+									value={content}
+									onChange={setContent}
+									placeholder="Type template text here. Click variables below to insert them..."
+									disabled={createMutation.isPending}
+								/>
+							)}
 						</div>
 					</div>
 
