@@ -109,6 +109,7 @@ export const OfficersStationSection = observer(() => {
 						placeholder="Search for requesting officer..."
 						error={!!getFieldError("requesting_officer")}
 						showExternalAddButton={true}
+						swornFilter="sworn"
 					/>
 					{getFieldError("requesting_officer") && (
 						<p className="text-sm text-red-500">
@@ -138,6 +139,7 @@ export const OfficersStationSection = observer(() => {
 						placeholder="Search for submitting officer..."
 						error={!!getFieldError("submitting_officer")}
 						showExternalAddButton={true}
+						swornFilter="unsworn"
 					/>
 					{getFieldError("submitting_officer") && (
 						<p className="text-sm text-red-500">

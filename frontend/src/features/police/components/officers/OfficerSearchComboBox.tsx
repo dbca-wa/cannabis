@@ -52,6 +52,8 @@ interface OfficerSearchComboBoxProps {
 	error?: boolean;
 	allowCreate?: boolean; // Whether to show the "Create New Officer" button
 	showExternalAddButton?: boolean; // Whether to show external "Add" button to the right
+	/** Filter officers by sworn status. "unsworn" shows only unsworn, "sworn" only sworn, undefined shows all. */
+	swornFilter?: "sworn" | "unsworn";
 }
 
 export const OfficerSearchComboBox = React.forwardRef<
@@ -69,6 +71,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 			error = false,
 			allowCreate = true,
 			showExternalAddButton = false,
+			swornFilter,
 		},
 		ref
 	) => {
@@ -103,6 +106,16 @@ export const OfficerSearchComboBox = React.forwardRef<
 				setSearchQuery("");
 			}
 		}, [open]);
+
+		// Filter officers by sworn status when swornFilter is set
+		const filterBySworn = (
+			officers: PoliceOfficerTiny[]
+		): PoliceOfficerTiny[] => {
+			if (!swornFilter) return officers;
+			return officers.filter((o) =>
+				swornFilter === "sworn" ? o.is_sworn : !o.is_sworn
+			);
+		};
 
 		const handleSelect = (officerId: number) => {
 			onValueChange(officerId);
@@ -227,7 +240,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{[...(initialData ?? [])]
+											{filterBySworn([...(initialData ?? [])])
 												.sort((a, b) => {
 													const nameA =
 														`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
@@ -267,7 +280,8 @@ export const OfficerSearchComboBox = React.forwardRef<
 												))}
 										</CommandGroup>
 									</>
-								) : !searchResults?.results?.length ? (
+								) : !searchResults?.results?.length ||
+								  filterBySworn(searchResults.results).length === 0 ? (
 									<div className="p-4 text-center">
 										<div className="text-sm text-muted-foreground mb-3">
 											{searchQuery ? emptyText : "No officers available"}
@@ -285,7 +299,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 									</div>
 								) : (
 									<CommandGroup>
-										{[...searchResults.results]
+										{filterBySworn([...searchResults.results])
 											.sort((a, b) => {
 												const nameA =
 													`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
