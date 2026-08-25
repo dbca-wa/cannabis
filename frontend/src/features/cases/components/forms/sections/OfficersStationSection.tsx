@@ -7,7 +7,7 @@ import {
 	CardTitle,
 } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
-import { Info, MapPin } from "lucide-react";
+import { Info } from "lucide-react";
 import { useEffect } from "react";
 import { useCaseFormStore } from "../../../hooks/useCaseFormStore";
 import { ocrResultStore } from "../../../stores/ocrResult.store";
@@ -58,29 +58,29 @@ export const OfficersStationSection = observer(() => {
 		formStore.formData.requesting_officer_id ?? null
 	);
 
-	// Determine if both officers are selected
-	const bothOfficersSet = !!(
-		formStore.formData.submitting_officer_id &&
-		formStore.formData.requesting_officer_id
-	);
+	// Show station section when at least the submitting officer is set
+	const showStationSection = !!formStore.formData.submitting_officer_id;
 
 	// Derive station: prefer requesting officer's station, fallback to submitting
 	const derivedStationId =
 		requestingOfficer?.station || submittingOfficer?.station || null;
-	const derivedStationName =
-		(requestingOfficer?.station
-			? requestingOfficer.station_details?.name
-			: submittingOfficer?.station_details?.name) || null;
 
-	// Auto-set station when derived from officers
+	// Auto-set station when derived from officers changes
 	useEffect(() => {
-		if (derivedStationId && bothOfficersSet) {
+		if (showStationSection && derivedStationId) {
 			formStore.updateField("station_id", derivedStationId);
 		}
-	}, [derivedStationId, bothOfficersSet, formStore]);
+	}, [derivedStationId, showStationSection, formStore]);
+
+	// Also auto-set when only requesting officer has a station (don't wait for both)
+	useEffect(() => {
+		if (requestingOfficer?.station && !formStore.formData.station_id) {
+			formStore.updateField("station_id", requestingOfficer.station);
+		}
+	}, [requestingOfficer, formStore]);
 
 	// Whether manual station selection is needed (neither officer has a station)
-	const needsManualStation = bothOfficersSet && !derivedStationId;
+	const needsManualStation = showStationSection && !derivedStationId;
 
 	const handleStationChange = (stationId: number | null) => {
 		if (stationId) {
@@ -130,7 +130,6 @@ export const OfficersStationSection = observer(() => {
 						placeholder="Search for requesting officer..."
 						error={!!getFieldError("requesting_officer")}
 						showExternalAddButton={true}
-						swornFilter="sworn"
 					/>
 					{getFieldError("requesting_officer") && (
 						<p className="text-sm text-red-500">
@@ -160,7 +159,6 @@ export const OfficersStationSection = observer(() => {
 						placeholder="Search for submitting officer..."
 						error={!!getFieldError("submitting_officer")}
 						showExternalAddButton={true}
-						swornFilter="unsworn"
 					/>
 					{getFieldError("submitting_officer") && (
 						<p className="text-sm text-red-500">
@@ -179,43 +177,30 @@ export const OfficersStationSection = observer(() => {
 					)}
 				</div>
 
-				{/* Station — shown only after both officers are selected */}
-				{bothOfficersSet && (
+				{/* Station — shown once at least the submitting officer is selected */}
+				{showStationSection && (
 					<div className="space-y-2">
 						<Label htmlFor="station">Police Station</Label>
-						{derivedStationId && derivedStationName ? (
-							<div className="flex items-center gap-2 rounded-md border px-3 py-2 bg-muted/50">
-								<MapPin className="h-4 w-4 text-muted-foreground" />
-								<span className="text-sm">{derivedStationName}</span>
-								<span className="text-xs text-muted-foreground ml-auto">
-									From requesting officer
-								</span>
-							</div>
-						) : derivedStationId ? (
-							<StationSearchComboBox
-								value={formStore.formData.station_id ?? null}
-								onValueChange={handleStationChange}
-								placeholder="Station derived from officer..."
-								error={!!getFieldError("station")}
-								showExternalAddButton={false}
-								disabled={true}
-							/>
-						) : needsManualStation ? (
-							<>
-								<StationSearchComboBox
-									value={formStore.formData.station_id ?? null}
-									onValueChange={handleStationChange}
-									placeholder="Search for police station..."
-									error={!!getFieldError("station")}
-									showExternalAddButton={true}
-								/>
-								<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-									<Info className="h-3 w-3" />
-									Neither officer has a station assigned. Please select one
-									manually.
-								</p>
-							</>
-						) : null}
+						<StationSearchComboBox
+							value={formStore.formData.station_id ?? null}
+							onValueChange={handleStationChange}
+							placeholder="Search for police station..."
+							error={!!getFieldError("station")}
+							showExternalAddButton={!derivedStationId}
+							disabled={!!derivedStationId}
+						/>
+						{derivedStationId && (
+							<p className="text-xs text-muted-foreground">
+								Automatically set from officer&apos;s station.
+							</p>
+						)}
+						{needsManualStation && (
+							<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+								<Info className="h-3 w-3" />
+								Neither officer has a station assigned. Please select one
+								manually.
+							</p>
+						)}
 						{getFieldError("station") && (
 							<p className="text-sm text-red-500">{getFieldError("station")}</p>
 						)}
@@ -227,9 +212,9 @@ export const OfficersStationSection = observer(() => {
 						)}
 					</div>
 				)}
-				{!bothOfficersSet && (
+				{!showStationSection && (
 					<p className="text-xs text-muted-foreground italic">
-						Police station will be determined once both officers are selected.
+						Police station will appear once the submitting officer is selected.
 					</p>
 				)}
 

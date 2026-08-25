@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { Label } from "@/shared/components/ui/label";
+import { Info } from "lucide-react";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
+import { useOfficerById } from "@/features/police/hooks";
 import { SectionCard } from "../SectionCard";
 
 interface OfficersStepProps {
@@ -22,25 +25,59 @@ export const OfficersStep = ({
 	onFieldChange,
 }: OfficersStepProps) => {
 	// Derive field values from server data
-	const requestingOfficer =
+	const requestingOfficerId =
 		(caseData?.requesting_officer_id as number | null) ?? null;
-	const submittingOfficer =
+	const submittingOfficerId =
 		(caseData?.submitting_officer_id as number | null) ?? null;
 	const station = (caseData?.station_id as number | null) ?? null;
 
-	// Compute validation errors (only displayed when isTouched). The submitting
-	// officer is required; the requesting officer ("on behalf of") and the
-	// police station are optional — Priority 3 forms only list a station when an
-	// "on behalf of" officer is present.
+	// Fetch requesting officer details to derive station
+	const { data: requestingOfficerData } = useOfficerById(requestingOfficerId);
+
+	// Derive station ONLY from requesting officer
+	const derivedStationId = requestingOfficerData?.station || null;
+
+	// Clear station when requesting officer is removed
+	useEffect(() => {
+		if (!requestingOfficerId && station) {
+			onFieldChange("station_id", null);
+		}
+	}, [requestingOfficerId, station, onFieldChange]);
+
+	// Auto-set station from requesting officer
+	useEffect(() => {
+		if (derivedStationId) {
+			onFieldChange("station_id", derivedStationId);
+		}
+	}, [derivedStationId, onFieldChange]);
+
+	// Station visibility: show once both officers are set
+	const bothOfficersSet = !!submittingOfficerId && !!requestingOfficerId;
+	const showStation = bothOfficersSet;
+	// Manual station selection: both set but no station derived
+	const needsManualStation = bothOfficersSet && !derivedStationId;
+
+	// Compute validation errors (only displayed when isTouched).
+	// Both officers are required and must be different.
 	const errors = {
-		submitting_officer: !submittingOfficer
-			? "Submitting officer is required"
-			: undefined,
+		submitting_officer: !submittingOfficerId
+			? "Conveying officer is required"
+			: submittingOfficerId === requestingOfficerId
+				? "Must be different from the requesting officer"
+				: undefined,
+		requesting_officer: !requestingOfficerId
+			? "Requesting officer is required"
+			: requestingOfficerId === submittingOfficerId
+				? "Must be different from the conveying officer"
+				: undefined,
 	};
 
-	// Determine section completion and invalid state (station is optional)
-	const isComplete = !!submittingOfficer;
-	const isInvalid = isTouched && !submittingOfficer;
+	// Section is complete when both officers are set and different
+	const isComplete =
+		!!submittingOfficerId &&
+		!!requestingOfficerId &&
+		submittingOfficerId !== requestingOfficerId;
+	const isInvalid = isTouched && !isComplete;
 
 	const handleRequestingOfficerChange = (officerId: number | null) => {
 		onFieldChange("requesting_officer_id", officerId);
@@ -68,9 +105,9 @@ export const OfficersStep = ({
 							Submitting Officer (Conveying Officer)
 						</Label>
 						<OfficerSearchComboBox
-							value={submittingOfficer}
+							value={submittingOfficerId}
 							onValueChange={handleSubmittingOfficerChange}
-							placeholder="Search for submitting officer..."
+							placeholder="Search for conveying officer..."
 							error={isTouched && !!errors.submitting_officer}
 							showExternalAddButton
 						/>
@@ -84,44 +121,68 @@ export const OfficersStep = ({
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">
-							The officer who physically delivered the samples to the
-							laboratory. Usually an unsworn officer stationed at Midland.
+							The unsworn officer who physically delivered the samples to the
+							laboratory.
 						</p>
 					</div>
 
-					{/* Requesting Officer — "on behalf of" (optional) */}
+					{/* Requesting Officer (required) */}
 					<div className="space-y-2">
-						<Label htmlFor="requesting_officer">
+						<Label htmlFor="requesting_officer" className="required">
 							Requesting Officer (On Behalf Of)
 						</Label>
 						<OfficerSearchComboBox
-							value={requestingOfficer}
+							value={requestingOfficerId}
 							onValueChange={handleRequestingOfficerChange}
 							placeholder="Search for requesting officer..."
+							error={isTouched && !!errors.requesting_officer}
 							showExternalAddButton
 						/>
+						{isTouched && errors.requesting_officer && (
+							<p
+								id="requesting_officer-error"
+								className="text-sm text-red-600"
+								role="alert"
+							>
+								{errors.requesting_officer}
+							</p>
+						)}
 						<p className="text-xs text-muted-foreground">
-							Optional. The sworn officer who made the seizure or arrest and
-							requested the identification. Usually stationed somewhere other
-							than Midland. Leave blank if the submitting officer is also the
-							requesting officer.
+							The sworn officer who made the seizure or arrest and requested the
+							identification.
 						</p>
 					</div>
 
-					{/* Police Station (optional) */}
-					<div className="space-y-2">
-						<Label htmlFor="station">Police Station</Label>
-						<StationSearchComboBox
-							value={station}
-							onValueChange={handleStationChange}
-							placeholder="Search for police station..."
-							showExternalAddButton
-						/>
-						<p className="text-xs text-muted-foreground">
-							Optional. Station where the samples originated — usually only
-							recorded when an "on behalf of" officer is present.
+					{/* Police Station — hidden until submitting officer set */}
+					{showStation && (
+						<div className="space-y-2">
+							<Label htmlFor="station">Police Station</Label>
+							<StationSearchComboBox
+								value={station}
+								onValueChange={handleStationChange}
+								placeholder="Search for police station..."
+								showExternalAddButton={!derivedStationId}
+								disabled={!!derivedStationId}
+							/>
+							{derivedStationId && (
+								<p className="text-xs text-muted-foreground">
+									Automatically set from officer&apos;s station.
+								</p>
+							)}
+							{needsManualStation && (
+								<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+									<Info className="h-3 w-3" />
+									Neither officer has a station assigned. Please select
+									manually.
+								</p>
+							)}
+						</div>
+					)}
+					{!showStation && (
+						<p className="text-xs text-muted-foreground italic">
+							Police station will appear once both officers are selected.
 						</p>
-					</div>
+					)}
 				</div>
 			</SectionCard>
 		</div>
