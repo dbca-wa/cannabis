@@ -194,6 +194,7 @@ class DrugBagService:
                 seal_tag_numbers=entry["seal_tag_numbers"],
                 new_seal_tag_numbers=entry.get("new_seal_tag_numbers") or "",
                 content_type=entry.get("content_type", DrugBag.ContentType.PLANT),
+                contains_female_plants=entry.get("contains_female_plants", False),
             )
 
             determination = entry.get("determination")

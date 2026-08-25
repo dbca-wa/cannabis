@@ -53,6 +53,7 @@ export interface DrugBag {
 	property_reference: string | null;
 	gross_weight: string | null;
 	net_weight: string | null;
+	contains_female_plants: boolean;
 	security_movement_envelope: string;
 	assessment: BotanicalAssessment | null;
 	created_at: string;
@@ -78,6 +79,7 @@ export interface DrugBagUpdateRequest {
 	property_reference?: string | null;
 	gross_weight?: string | null;
 	net_weight?: string | null;
+	contains_female_plants?: boolean;
 }
 
 // Batch bag creation item (matches DrugBagBatchItemSerializer)
@@ -87,6 +89,7 @@ export interface DrugBagBatchItem {
 	content_type: DrugBagContentType;
 	determination?: BotanicalDetermination;
 	assessment_date?: string | null;
+	contains_female_plants?: boolean;
 }
 
 // Batch bag creation request (matches DrugBagBatchCreateSerializer)

@@ -399,6 +399,11 @@ class DrugBag(AuditModel):
         help_text="Weight of specimens only (grams)",
     )
 
+    contains_female_plants = models.BooleanField(
+        default=False,
+        help_text="Whether this bag contains female plants (marked by botanist during examination)",
+    )
+
     @property
     def security_movement_envelope(self):
         """Get the envelope number from the parent Priority 3 form."""

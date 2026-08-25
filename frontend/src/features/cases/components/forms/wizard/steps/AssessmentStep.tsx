@@ -105,6 +105,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				new_seal_tag_numbers: string | null;
 				content_type: DrugBagContentType;
 				determination: BotanicalDetermination;
+				contains_female_plants?: boolean;
 			}>;
 		}) => addBagsToForm(formId, data),
 		onSuccess: async () => {
@@ -216,6 +217,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 					new_seal_tag_numbers: b.new_seal_tag_numbers || null,
 					content_type: b.content_type,
 					determination: b.determination,
+					contains_female_plants: b.contains_female_plants,
 				})),
 			});
 			wrangler.clearBags(formId);
@@ -256,6 +258,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				new_seal_tag_numbers: b.new_seal_tag_numbers,
 				content_type: b.content_type,
 				determination: b.determination,
+				contains_female_plants: false,
 			}))
 		);
 	};
@@ -282,7 +285,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const handleInMemoryUpdate = (
 		tempId: string,
 		field: string,
-		value: string
+		value: string | boolean
 	) => {
 		wrangler.updateBag(
 			tempId,
@@ -290,7 +293,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 				| "seal_tag_numbers"
 				| "new_seal_tag_numbers"
 				| "content_type"
-				| "determination",
+				| "determination"
+				| "contains_female_plants",
 			value
 		);
 	};
@@ -370,6 +374,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 														property_reference: null,
 														gross_weight: null,
 														net_weight: null,
+														contains_female_plants:
+															memBag.contains_female_plants,
 														security_movement_envelope: "",
 														assessment:
 															memBag.determination !== "pending"
@@ -394,7 +400,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 														handleInMemoryUpdate(
 															memBag.tempId,
 															key,
-															String(val ?? "")
+															typeof val === "boolean" ? val : String(val ?? "")
 														);
 													}
 												}}
@@ -429,6 +435,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 																		data.new_seal_tag_numbers || null,
 																	content_type: data.content_type,
 																	determination: data.determination,
+																	contains_female_plants:
+																		data.contains_female_plants,
 																},
 															],
 														});

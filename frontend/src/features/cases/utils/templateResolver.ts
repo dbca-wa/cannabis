@@ -17,6 +17,7 @@ export interface TemplateContext {
 	new_tag_numbers: string;
 	content_types: string;
 	security_movement_envelope: string;
+	female_plant_tags: string;
 }
 
 /** Available template variables with descriptions for the UI. */
@@ -34,6 +35,10 @@ export const TEMPLATE_VARIABLES: { key: string; description: string }[] = [
 	{
 		key: "security_movement_envelope",
 		description: "Security movement envelope number",
+	},
+	{
+		key: "female_plant_tags",
+		description: "Seal numbers of bags containing female plants",
 	},
 ];
 
@@ -74,6 +79,7 @@ export const buildTemplateContext = (
 			new_tag_numbers: "",
 			content_types: "",
 			security_movement_envelope: "",
+			female_plant_tags: "",
 		};
 	}
 
@@ -104,6 +110,12 @@ export const buildTemplateContext = (
 		...new Set(bags.map((b) => b.content_type_display).filter(Boolean)),
 	].join(", ");
 
+	const femalePlantTags = bags
+		.filter((b) => b.contains_female_plants)
+		.map((b) => b.seal_tag_numbers)
+		.filter(Boolean)
+		.join(", ");
+
 	return {
 		defendant_name: defendantName,
 		case_number: caseNumber,
@@ -114,6 +126,7 @@ export const buildTemplateContext = (
 		content_types: contentTypes,
 		security_movement_envelope:
 			(caseData.security_movement_envelope as string) ?? "",
+		female_plant_tags: femalePlantTags,
 	};
 };
 
