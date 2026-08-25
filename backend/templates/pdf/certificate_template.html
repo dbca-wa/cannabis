@@ -99,6 +99,9 @@
 
         /* Reference numbers styling */
         .reference-numbers {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding-bottom: 5px;
             margin-top: 10px;
             margin-bottom: 10px;
@@ -107,7 +110,6 @@
         .reference-number {
             padding: 0 5px;
             font-size: 12px;
-            text-align: left;
         }
 
         .reference-number strong {
@@ -362,10 +364,10 @@
         <!-- DBCA and Police Reference Numbers -->
         <div class="reference-numbers">
             <div class="reference-number">
-                <strong>Certificate No.</strong> {{ certificate_number }}
+                <strong>Police Reference No.</strong> {{ police_reference_number }}
             </div>
             <div class="reference-number">
-                <strong>Police Reference No.</strong> {{ police_reference_number }}
+                <strong>Certificate No.</strong> {{ certificate_number }}
             </div>
         </div>
 

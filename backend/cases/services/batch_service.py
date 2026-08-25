@@ -273,7 +273,23 @@ class BatchService:
 
     @staticmethod
     def rebuild_zip(batch):
-        """Public alias to regenerate the package for re-download."""
+        """Regenerate all certificate PDFs in the batch, then rebuild the ZIP.
+
+        This allows template or data changes to be reflected without unbatching.
+        """
+        from .certificate_service import CertificateService
+
+        for cert in batch.certificates.select_related("form__case").all():
+            # Regenerate the PDF in-place (bypasses the batch check since we
+            # are explicitly rebuilding the batch).
+            pdf_bytes = CertificateService._render_pdf(cert)
+            if cert.pdf_file:
+                cert.pdf_file.delete(save=False)
+            filename = f"certificate_{cert.certificate_number}.pdf"
+            cert.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
+            cert.pdf_size = len(pdf_bytes)
+            cert.save(update_fields=["pdf_file", "pdf_size"])
+
         return BatchService.build_zip(batch)
 
     @staticmethod
