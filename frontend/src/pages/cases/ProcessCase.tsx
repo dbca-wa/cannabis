@@ -252,6 +252,7 @@ const ProcessCaseContent = observer(() => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", parsedId, "forms"],
 			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 			setActiveFormId(newForm.id);
 		},
 		onError: () => {
@@ -277,6 +278,11 @@ const ProcessCaseContent = observer(() => {
 					queryKey: ["cases", "forms", activeFormId],
 				});
 			}
+			// Refresh the forms list (FormsNavigator badges) and case list/dashboard
+			await queryClient.invalidateQueries({
+				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 			toast.success("Certificate generated");
 		},
 		onError: () => {
@@ -293,6 +299,11 @@ const ProcessCaseContent = observer(() => {
 					queryKey: ["cases", "forms", activeFormId],
 				});
 			}
+			// Phase changes affect the forms list badges and case status
+			await queryClient.invalidateQueries({
+				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 		},
 	});
 
@@ -302,6 +313,11 @@ const ProcessCaseContent = observer(() => {
 		onSuccess: async (_data, deletedFormId) => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
+			// Drop the deleted form's single-form cache entry
+			queryClient.removeQueries({
+				queryKey: ["cases", "forms", deletedFormId],
 			});
 			// If the deleted form was the active one, clear selection
 			if (activeFormId === deletedFormId) {

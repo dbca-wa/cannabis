@@ -8,6 +8,7 @@ import {
 	recordInvoiceRaised,
 	unsetInvoiceRaised,
 	deleteBatch,
+	repackageBatch,
 } from "../services/batches.service";
 import type {
 	BatchOrdering,
@@ -106,6 +107,24 @@ export const useDeleteBatch = () => {
 		},
 		onError: (error: unknown) => {
 			toast.error(`Failed to delete batch: ${getErrorMessage(error)}`);
+		},
+	});
+};
+
+/** Repackage a batch — regenerates certificate PDFs and rebuilds the ZIP. */
+export const useRepackageBatch = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: number) => repackageBatch(id),
+		onSuccess: async () => {
+			// Regeneration changes certificate PDFs and batch data, so refresh
+			// batches, cases, dashboard, and any cached certificate previews.
+			await invalidateBatches(queryClient);
+			await queryClient.invalidateQueries({ queryKey: ["certificates"] });
+			toast.success("Package rebuilt with latest data");
+		},
+		onError: (error: unknown) => {
+			toast.error(`Failed to rebuild package: ${getErrorMessage(error)}`);
 		},
 	});
 };
