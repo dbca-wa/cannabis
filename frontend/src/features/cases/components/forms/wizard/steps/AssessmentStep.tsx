@@ -222,6 +222,22 @@ export const AssessmentStep = observer(function AssessmentStep({
 			});
 			wrangler.clearBags(formId);
 		} catch (error) {
+			const message = getErrorMessage(error);
+
+			// If the form is already at capacity, the bags almost certainly saved
+			// on a previous attempt. Clear the unsaved copies and refresh so the
+			// user sees the saved bags rather than being stuck re-submitting.
+			if (message.includes("at most") || message.includes("already has")) {
+				wrangler.clearBags(formId);
+				await queryClient.invalidateQueries({
+					queryKey: ["cases", "forms", formId],
+				});
+				toast.info(
+					"These bags were already saved to the form. Refreshed the list."
+				);
+				return;
+			}
+
 			// Surface backend tag conflicts against the matching bag sections.
 			const mapped = mapBatchErrorsToBags(error, wrangler.state.bags);
 			if (mapped.length > 0) {
@@ -231,7 +247,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 					`${affected} bag${affected !== 1 ? "s" : ""} rejected — see the highlighted issues below each unsaved bag.`
 				);
 			} else {
-				toast.error(`Failed to save bags: ${getErrorMessage(error)}`);
+				toast.error(`Failed to save bags: ${message}`);
 			}
 		}
 	};
