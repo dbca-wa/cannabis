@@ -75,15 +75,21 @@ export const useCases = (params: CasesSearchParams = {}) => {
 		}: {
 			id: number;
 			data: CaseUpdateRequest;
+			/** Suppress the success toast — for silent auto-save contexts. */
+			silent?: boolean;
 		}) => {
 			logger.info("Updating case", { submissionId: id });
 			return updateCase(id, data);
 		},
-		onSuccess: async (updatedCase) => {
+		onSuccess: async (updatedCase, variables) => {
 			// Invalidate the detail query to refetch full case data (with nested relations)
 			// instead of replacing cache with partial PATCH response
 			await invalidateRelatedQueries(queryClient, "cases");
-			toast.success(`Case "${updatedCase.case_number}" updated successfully!`);
+			if (!variables.silent) {
+				toast.success(
+					`Case "${updatedCase.case_number}" updated successfully!`
+				);
+			}
 			logger.info("Case updated via hook", {
 				submissionId: updatedCase.id,
 				caseNumber: updatedCase.case_number,

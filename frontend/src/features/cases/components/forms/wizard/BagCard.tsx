@@ -114,6 +114,8 @@ interface BagCardProps {
 		contains_female_plants: boolean;
 	}) => void;
 	isUnsaved?: boolean;
+	/** True while a save is in flight — disables Confirm to prevent double-submit. */
+	isSaving?: boolean;
 }
 
 export const BagCard = ({
@@ -124,6 +126,7 @@ export const BagCard = ({
 	onDeleteBag,
 	onConfirmUnsaved,
 	isUnsaved = false,
+	isSaving = false,
 }: BagCardProps) => {
 	// Unsaved bags always start open; server-persisted start closed
 	const [isEditing, setIsEditing] = useState(isUnsaved);
@@ -503,12 +506,12 @@ export const BagCard = ({
 					variant="default"
 					size="sm"
 					onClick={handleConfirm}
-					disabled={!isFormComplete}
+					disabled={!isFormComplete || isSaving}
 					aria-label={isUnsaved ? "Confirm bag" : "Update bag"}
 					className="h-9"
 				>
 					<Check className="mr-1 h-4 w-4" />
-					{isUnsaved ? "Confirm" : "Update"}
+					{isSaving ? "Saving..." : isUnsaved ? "Confirm" : "Update"}
 				</Button>
 				<Button
 					type="button"

@@ -462,6 +462,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 													}
 												}}
 												isUnsaved
+												isSaving={batchCreateMutation.isPending}
 											/>
 											{bagErrors.length > 0 && (
 												<ul className="ml-2 list-disc space-y-0.5 pl-4 text-xs text-red-600 dark:text-red-400">

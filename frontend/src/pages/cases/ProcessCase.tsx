@@ -457,7 +457,7 @@ const ProcessCaseContent = observer(() => {
 					setIsSavingNotes(true);
 					updateForm(pending.formId, { additional_notes: pending.value })
 						.then(() => {
-							toast.success("Section C notes saved");
+							// Inline "Saving..." indicator provides feedback — no toast needed
 							queryClient.invalidateQueries({
 								queryKey: ["cases", "forms", pending.formId],
 							});
@@ -482,7 +482,6 @@ const ProcessCaseContent = observer(() => {
 						security_movement_envelope: value as string,
 					})
 						.then(() => {
-							toast.success("SME saved");
 							queryClient.invalidateQueries({
 								queryKey: ["cases", "forms", activeFormId],
 							});
@@ -499,7 +498,11 @@ const ProcessCaseContent = observer(() => {
 				const currentIds = (caseData?.defendants as number[]) ?? [];
 				if (!currentIds.includes(defendant.id)) {
 					const newIds = [...currentIds, defendant.id];
-					updateCase({ id: parsedId, data: { defendants: newIds } });
+					updateCase({
+						id: parsedId,
+						data: { defendants: newIds },
+						silent: true,
+					});
 					queryClient.invalidateQueries({
 						queryKey: ["cases", "detail", parsedId],
 					});
@@ -508,7 +511,11 @@ const ProcessCaseContent = observer(() => {
 			}
 			if (field === "defendants") {
 				// value is the updated array of defendant IDs (after removal)
-				updateCase({ id: parsedId, data: { defendants: value as number[] } });
+				updateCase({
+					id: parsedId,
+					data: { defendants: value as number[] },
+					silent: true,
+				});
 				queryClient.invalidateQueries({
 					queryKey: ["cases", "detail", parsedId],
 				});
@@ -519,7 +526,7 @@ const ProcessCaseContent = observer(() => {
 			if (typeof value === "string") {
 				if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current);
 				debouncedSaveRef.current = setTimeout(() => {
-					updateCase({ id: parsedId, data: { [field]: value } });
+					updateCase({ id: parsedId, data: { [field]: value }, silent: true });
 				}, 800);
 				return;
 			}
@@ -533,7 +540,7 @@ const ProcessCaseContent = observer(() => {
 				approved_botanist_id: "approved_botanist",
 			};
 			const apiField = fieldMap[field] ?? field;
-			updateCase({ id: parsedId, data: { [apiField]: value } });
+			updateCase({ id: parsedId, data: { [apiField]: value }, silent: true });
 		},
 		[parsedId, activeFormId, updateCase, queryClient]
 	);
