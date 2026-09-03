@@ -57,19 +57,22 @@ export const OfficersStep = ({
 	// Manual station selection: both set but no station derived
 	const needsManualStation = bothOfficersSet && !derivedStationId;
 
-	// Compute validation errors (only displayed when isTouched).
-	// Both officers are required and must be different.
+	// The same officer cannot be both conveying and requesting. This is a clear
+	// mistake so we surface it immediately (not gated behind isTouched).
+	const sameOfficerSelected =
+		!!submittingOfficerId &&
+		!!requestingOfficerId &&
+		submittingOfficerId === requestingOfficerId;
+
+	// Compute validation errors. "Required" errors only show once touched;
+	// the same-officer clash shows as soon as it happens.
 	const errors = {
 		submitting_officer: !submittingOfficerId
 			? "Conveying officer is required"
-			: submittingOfficerId === requestingOfficerId
-				? "Must be different from the requesting officer"
-				: undefined,
+			: undefined,
 		requesting_officer: !requestingOfficerId
 			? "Requesting officer is required"
-			: requestingOfficerId === submittingOfficerId
-				? "Must be different from the conveying officer"
-				: undefined,
+			: undefined,
 	};
 
 	// Section is complete when both officers are set and different
@@ -77,7 +80,7 @@ export const OfficersStep = ({
 		!!submittingOfficerId &&
 		!!requestingOfficerId &&
 		submittingOfficerId !== requestingOfficerId;
-	const isInvalid = isTouched && !isComplete;
+	const isInvalid = (isTouched && !isComplete) || sameOfficerSelected;
 
 	const handleRequestingOfficerChange = (officerId: number | null) => {
 		onFieldChange("requesting_officer_id", officerId);
@@ -108,7 +111,10 @@ export const OfficersStep = ({
 							value={submittingOfficerId}
 							onValueChange={handleSubmittingOfficerChange}
 							placeholder="Search for conveying officer..."
-							error={isTouched && !!errors.submitting_officer}
+							error={
+								(isTouched && !!errors.submitting_officer) ||
+								sameOfficerSelected
+							}
 							showExternalAddButton
 						/>
 						{isTouched && errors.submitting_officer && (
@@ -135,7 +141,10 @@ export const OfficersStep = ({
 							value={requestingOfficerId}
 							onValueChange={handleRequestingOfficerChange}
 							placeholder="Search for requesting officer..."
-							error={isTouched && !!errors.requesting_officer}
+							error={
+								(isTouched && !!errors.requesting_officer) ||
+								sameOfficerSelected
+							}
 							showExternalAddButton
 						/>
 						{isTouched && errors.requesting_officer && (
@@ -152,6 +161,21 @@ export const OfficersStep = ({
 							identification.
 						</p>
 					</div>
+
+					{/* Same-officer clash — shown immediately, not gated by touch */}
+					{sameOfficerSelected && (
+						<div
+							role="alert"
+							className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
+						>
+							<Info className="mt-0.5 h-4 w-4 shrink-0" />
+							<span>
+								The Conveying Officer and Requesting Officer must be two
+								different people. Please select a different officer for one of
+								the fields.
+							</span>
+						</div>
+					)}
 
 					{/* Police Station — hidden until submitting officer set */}
 					{showStation && (
