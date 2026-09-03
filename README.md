@@ -15,13 +15,17 @@
 
 ## System Overview
 
-WIP: v1.0.0
+WIP
+- 1) Security and App approval: Complete
+- 2) End-User approval: In progress
+- 3) Perform ETL: In progress; dependent on #2
+
 
 The Cannabis system is a digital platform developed for DBCA's Herbarium. This application streamlines the documentation and certification of determinations made by Approved Botanists for suspected cannabis specimens, providing legally admissible evidence for law enforcement and court proceedings.
 
 ### Workflow Process
 
-The primary purpose of this application is certificate generation from determination results. Approved Botanists perform their assessments on-site at police stations using Priority 3 forms, then the results are entered into this system for processing.
+The primary purpose of this application is the generation of certificates from Approved Botanists. Approved Botanists perform their assessments on-site at police stations using Priority 3 forms, then the results are entered into this system for processing.
 
 #### External Process (before the app)
 
@@ -31,17 +35,19 @@ The primary purpose of this application is certificate generation from determina
 
 #### In-App Process
 
-1. **Case Creation** -- Finance Officer creates a case, entering details from the completed Priority 3 form (officer, defendant, and bag information)
-2. **Assessment Entry** -- Determination results from the physical form are entered per bag (species, weight, determination outcome)
+1. **Case Creation** -- Finance Officer creates a case, entering details from the completed Priority 3 form (officer, defendant, and bag information). There may be multiple forms per case as each form has a maximum of 5 bags.
+2. **Assessment Entry** -- Determination results from the physical forms are entered per bag (species, whether female plants exists and determination outcome)
 3. **Certificate Generation** -- The system generates unsigned PDF certificates from the entered data, ready for printing
 4. **Batching** -- Completed cases are grouped into batches for invoicing and cost tracking and provided to finance officers via a zip file
-5. **Completion** -- Certificates are printed and provided to the Approved Botanist for signing. After invoices are raised externally, the invoice number is recorded in-app
+5. **Completion** -- Certificates are printed and provided to the Approved Botanist for signing. After invoices are raised externally, the invoice number is recorded in-app.
 
 #### External Process (after the app)
 
 1. Approved Botanist signs the printed certificates
 2. Finance Officers scan signed certificates back into the system and send automated emails with certificate and police form attached
 3. Endorsed certificates are delivered to police to serve as legal evidence for prosecution
+
+In the future, we hope to streamline the process so everything from beginning to end is done in-app. At present, however, this is not permitted due to external constraints.
 
 ## Technical Architecture
 
