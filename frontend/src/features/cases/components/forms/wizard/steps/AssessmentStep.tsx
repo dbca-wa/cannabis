@@ -10,6 +10,7 @@ import {
 } from "@/shared/utils/error.utils";
 
 import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { useDrugBagWranglerStore } from "@/app/providers/store.provider";
@@ -104,6 +105,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				new_seal_tag_numbers: string | null;
 				content_type: DrugBagContentType;
 				determination: BotanicalDetermination;
+				contains_female_plants?: boolean;
 			}>;
 		}) => addBagsToForm(formId, data),
 		onSuccess: async () => {
@@ -215,10 +217,27 @@ export const AssessmentStep = observer(function AssessmentStep({
 					new_seal_tag_numbers: b.new_seal_tag_numbers || null,
 					content_type: b.content_type,
 					determination: b.determination,
+					contains_female_plants: b.contains_female_plants,
 				})),
 			});
 			wrangler.clearBags(formId);
 		} catch (error) {
+			const message = getErrorMessage(error);
+
+			// If the form is already at capacity, the bags almost certainly saved
+			// on a previous attempt. Clear the unsaved copies and refresh so the
+			// user sees the saved bags rather than being stuck re-submitting.
+			if (message.includes("at most") || message.includes("already has")) {
+				wrangler.clearBags(formId);
+				await queryClient.invalidateQueries({
+					queryKey: ["cases", "forms", formId],
+				});
+				toast.info(
+					"These bags were already saved to the form. Refreshed the list."
+				);
+				return;
+			}
+
 			// Surface backend tag conflicts against the matching bag sections.
 			const mapped = mapBatchErrorsToBags(error, wrangler.state.bags);
 			if (mapped.length > 0) {
@@ -228,7 +247,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 					`${affected} bag${affected !== 1 ? "s" : ""} rejected — see the highlighted issues below each unsaved bag.`
 				);
 			} else {
-				toast.error(`Failed to save bags: ${getErrorMessage(error)}`);
+				toast.error(`Failed to save bags: ${message}`);
 			}
 		}
 	};
@@ -255,6 +274,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				new_seal_tag_numbers: b.new_seal_tag_numbers,
 				content_type: b.content_type,
 				determination: b.determination,
+				contains_female_plants: false,
 			}))
 		);
 	};
@@ -281,7 +301,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const handleInMemoryUpdate = (
 		tempId: string,
 		field: string,
-		value: string
+		value: string | boolean
 	) => {
 		wrangler.updateBag(
 			tempId,
@@ -289,7 +309,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 				| "seal_tag_numbers"
 				| "new_seal_tag_numbers"
 				| "content_type"
-				| "determination",
+				| "determination"
+				| "contains_female_plants",
 			value
 		);
 	};
@@ -369,6 +390,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 														property_reference: null,
 														gross_weight: null,
 														net_weight: null,
+														contains_female_plants:
+															memBag.contains_female_plants,
 														security_movement_envelope: "",
 														assessment:
 															memBag.determination !== "pending"
@@ -393,7 +416,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 														handleInMemoryUpdate(
 															memBag.tempId,
 															key,
-															String(val ?? "")
+															typeof val === "boolean" ? val : String(val ?? "")
 														);
 													}
 												}}
@@ -428,6 +451,8 @@ export const AssessmentStep = observer(function AssessmentStep({
 																		data.new_seal_tag_numbers || null,
 																	content_type: data.content_type,
 																	determination: data.determination,
+																	contains_female_plants:
+																		data.contains_female_plants,
 																},
 															],
 														});
@@ -437,6 +462,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 													}
 												}}
 												isUnsaved
+												isSaving={batchCreateMutation.isPending}
 											/>
 											{bagErrors.length > 0 && (
 												<ul className="ml-2 list-disc space-y-0.5 pl-4 text-xs text-red-600 dark:text-red-400">
@@ -502,6 +528,28 @@ export const AssessmentStep = observer(function AssessmentStep({
 							Remove All Unsaved ({wrangler.state.bags.length})
 						</Button>
 					)}
+				</div>
+			</SectionCard>
+
+			{/* Security Movement Envelope (per form) */}
+			<SectionCard
+				title="Security Movement Envelope"
+				isComplete={true}
+				isInvalid={false}
+			>
+				<div className="space-y-2">
+					<Label htmlFor="security_movement_envelope">SME Number</Label>
+					<Input
+						id="security_movement_envelope"
+						value={(caseData?.security_movement_envelope as string) ?? ""}
+						onChange={(e) =>
+							onFieldChange("security_movement_envelope", e.target.value)
+						}
+						placeholder="Enter security movement envelope number (optional)"
+					/>
+					<p className="text-xs text-muted-foreground">
+						Optional. The security movement envelope number for this form.
+					</p>
 				</div>
 			</SectionCard>
 

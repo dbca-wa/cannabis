@@ -111,8 +111,11 @@ interface BagCardProps {
 		new_seal_tag_numbers: string;
 		content_type: DrugBagContentType;
 		determination: BotanicalDetermination;
+		contains_female_plants: boolean;
 	}) => void;
 	isUnsaved?: boolean;
+	/** True while a save is in flight — disables Confirm to prevent double-submit. */
+	isSaving?: boolean;
 }
 
 export const BagCard = ({
@@ -123,6 +126,7 @@ export const BagCard = ({
 	onDeleteBag,
 	onConfirmUnsaved,
 	isUnsaved = false,
+	isSaving = false,
 }: BagCardProps) => {
 	// Unsaved bags always start open; server-persisted start closed
 	const [isEditing, setIsEditing] = useState(isUnsaved);
@@ -136,6 +140,9 @@ export const BagCard = ({
 	);
 	const [tagError, setTagError] = useState<string | null>(null);
 	const [newTagError, setNewTagError] = useState<string | null>(null);
+	const [femalePlants, setFemalePlants] = useState(
+		bag.contains_female_plants ?? false
+	);
 
 	const validateTagFormat = (
 		value: string,
@@ -190,6 +197,7 @@ export const BagCard = ({
 				new_seal_tag_numbers: newTag,
 				content_type: contentType,
 				determination: determination,
+				contains_female_plants: femalePlants,
 			});
 			return;
 		}
@@ -201,6 +209,8 @@ export const BagCard = ({
 		if (newTag !== (bag.new_seal_tag_numbers ?? ""))
 			updates.new_seal_tag_numbers = newTag || null;
 		if (contentType !== bag.content_type) updates.content_type = contentType;
+		if (femalePlants !== (bag.contains_female_plants ?? false))
+			updates.contains_female_plants = femalePlants;
 
 		if (Object.keys(updates).length > 0) {
 			onUpdateBag(bag.id, updates);
@@ -261,7 +271,10 @@ export const BagCard = ({
 								</span>
 							</div>
 							<div className="flex items-center gap-2 mt-1 flex-wrap">
-								<Badge variant="outline" className="text-xs">
+								<Badge
+									variant="outline"
+									className="text-xs capitalize bg-gray-50 dark:bg-gray-800 dark:text-gray-200"
+								>
 									{bag.content_type_display ||
 										getContentTypeLabel(bag.content_type)}
 								</Badge>
@@ -274,6 +287,14 @@ export const BagCard = ({
 											bag.assessment?.determination ?? "pending"
 										)}
 								</Badge>
+								{bag.contains_female_plants && (
+									<Badge
+										variant="outline"
+										className="text-xs bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800"
+									>
+										♀ Female
+									</Badge>
+								)}
 							</div>
 						</div>
 					</div>
@@ -429,6 +450,32 @@ export const BagCard = ({
 				)}
 			</div>
 
+			{/* Female Plants Toggle — only for plant content types */}
+			{(contentType === "plant" || contentType === "plant_material") && (
+				<div className="flex items-center gap-2 pt-1">
+					<input
+						type="checkbox"
+						id={`female-plants-${String(bag.id)}`}
+						checked={femalePlants}
+						onChange={(e) => {
+							setFemalePlants(e.target.checked);
+							if (isUnsaved) {
+								onUpdateBag(bag.id, {
+									contains_female_plants: e.target.checked,
+								});
+							}
+						}}
+						className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+					/>
+					<label
+						htmlFor={`female-plants-${String(bag.id)}`}
+						className="text-sm text-muted-foreground cursor-pointer select-none"
+					>
+						Contains female plants
+					</label>
+				</div>
+			)}
+
 			{/* Action Buttons */}
 			<div className="flex justify-end items-center gap-2">
 				{!isUnsaved && (
@@ -459,12 +506,12 @@ export const BagCard = ({
 					variant="default"
 					size="sm"
 					onClick={handleConfirm}
-					disabled={!isFormComplete}
+					disabled={!isFormComplete || isSaving}
 					aria-label={isUnsaved ? "Confirm bag" : "Update bag"}
 					className="h-9"
 				>
 					<Check className="mr-1 h-4 w-4" />
-					{isUnsaved ? "Confirm" : "Update"}
+					{isSaving ? "Saving..." : isUnsaved ? "Confirm" : "Update"}
 				</Button>
 				<Button
 					type="button"

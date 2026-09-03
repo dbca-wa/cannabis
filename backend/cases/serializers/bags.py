@@ -50,6 +50,7 @@ class DrugBagSerializer(serializers.ModelSerializer):
             "property_reference",
             "gross_weight",
             "net_weight",
+            "contains_female_plants",
             "security_movement_envelope",
             "assessment",
             "created_at",
@@ -93,6 +94,7 @@ class DrugBagBatchItemSerializer(serializers.Serializer):
         choices=BotanicalAssessment.DeterminationChoices.choices, required=False
     )
     assessment_date = serializers.DateField(required=False, allow_null=True)
+    contains_female_plants = serializers.BooleanField(required=False, default=False)
 
 
 class DrugBagBatchCreateSerializer(serializers.Serializer):

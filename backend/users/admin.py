@@ -25,6 +25,7 @@ class CustomUserAdmin(UserAdmin):
                     "given_names",
                     "last_name",
                     "role",
+                    "is_legacy",
                 ),
                 "classes": ("wide",),
             },
@@ -84,13 +85,21 @@ class CustomUserAdmin(UserAdmin):
         "given_names",
         "last_name",
         "role",
+        "is_legacy",
         "is_active",
         "is_staff",
         "is_superuser",
         "date_joined",
     )
 
-    list_filter = ("is_staff", "is_superuser", "is_active", "role", "groups")
+    list_filter = (
+        "is_staff",
+        "is_superuser",
+        "is_active",
+        "role",
+        "is_legacy",
+        "groups",
+    )
     search_fields = ("email", "given_names", "last_name")
 
 

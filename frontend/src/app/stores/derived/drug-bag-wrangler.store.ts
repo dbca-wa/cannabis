@@ -20,6 +20,7 @@ export interface InMemoryBag {
 	new_seal_tag_numbers: string;
 	content_type: DrugBagContentType;
 	determination: BotanicalDetermination;
+	contains_female_plants: boolean;
 }
 
 export interface BagValidationError {
@@ -98,6 +99,7 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 			content_type: "plant",
 			// Most cases are cannabis sativa — default to it to speed up entry.
 			determination: "cannabis_sativa",
+			contains_female_plants: false,
 		});
 		logger.debug("DrugBagWrangler: added empty bag", {
 			count: this.state.bags.length,
@@ -121,11 +123,12 @@ export class DrugBagWranglerStore extends BaseStore<DrugBagWranglerStoreState> {
 	updateBag = (
 		tempId: string,
 		field: keyof Omit<InMemoryBag, "tempId">,
-		value: string
+		value: string | boolean
 	) => {
 		const bag = this.state.bags.find((b) => b.tempId === tempId);
 		if (bag) {
-			(bag[field] as string) = value;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(bag as any)[field] = value;
 			// Clear validation errors for this field
 			this.state.validationErrors = this.state.validationErrors.filter(
 				(e) => !(e.tempId === tempId && e.field === field)

@@ -8,11 +8,13 @@ import {
 } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Info } from "lucide-react";
+import { useEffect } from "react";
 import { useCaseFormStore } from "../../../hooks/useCaseFormStore";
 import { ocrResultStore } from "../../../stores/ocrResult.store";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
+import { useOfficerById } from "@/features/police/hooks";
 
 export const OfficersStationSection = observer(() => {
 	const formStore = useCaseFormStore();
@@ -47,6 +49,38 @@ export const OfficersStationSection = observer(() => {
 			formStore.setSelectedOfficer("submitting", null);
 		}
 	};
+
+	// Fetch officer details to derive station
+	const { data: submittingOfficer } = useOfficerById(
+		formStore.formData.submitting_officer_id ?? null
+	);
+	const { data: requestingOfficer } = useOfficerById(
+		formStore.formData.requesting_officer_id ?? null
+	);
+
+	// Show station section when at least the submitting officer is set
+	const showStationSection = !!formStore.formData.submitting_officer_id;
+
+	// Derive station: prefer requesting officer's station, fallback to submitting
+	const derivedStationId =
+		requestingOfficer?.station || submittingOfficer?.station || null;
+
+	// Auto-set station when derived from officers changes
+	useEffect(() => {
+		if (showStationSection && derivedStationId) {
+			formStore.updateField("station_id", derivedStationId);
+		}
+	}, [derivedStationId, showStationSection, formStore]);
+
+	// Also auto-set when only requesting officer has a station (don't wait for both)
+	useEffect(() => {
+		if (requestingOfficer?.station && !formStore.formData.station_id) {
+			formStore.updateField("station_id", requestingOfficer.station);
+		}
+	}, [requestingOfficer, formStore]);
+
+	// Whether manual station selection is needed (neither officer has a station)
+	const needsManualStation = showStationSection && !derivedStationId;
 
 	const handleStationChange = (stationId: number | null) => {
 		if (stationId) {
@@ -143,29 +177,46 @@ export const OfficersStationSection = observer(() => {
 					)}
 				</div>
 
-				{/* Station */}
-				<div className="space-y-2">
-					<Label htmlFor="station">Police Station</Label>
-					<StationSearchComboBox
-						value={formStore.formData.station_id ?? null}
-						onValueChange={handleStationChange}
-						placeholder="Search for police station..."
-						error={!!getFieldError("station")}
-						showExternalAddButton={true}
-					/>
-					{getFieldError("station") && (
-						<p className="text-sm text-red-500">{getFieldError("station")}</p>
-					)}
-					<p className="text-xs text-muted-foreground">
-						Station where the samples originated
+				{/* Station — shown once at least the submitting officer is selected */}
+				{showStationSection && (
+					<div className="space-y-2">
+						<Label htmlFor="station">Police Station</Label>
+						<StationSearchComboBox
+							value={formStore.formData.station_id ?? null}
+							onValueChange={handleStationChange}
+							placeholder="Search for police station..."
+							error={!!getFieldError("station")}
+							showExternalAddButton={!derivedStationId}
+							disabled={!!derivedStationId}
+						/>
+						{derivedStationId && (
+							<p className="text-xs text-muted-foreground">
+								Automatically set from officer&apos;s station.
+							</p>
+						)}
+						{needsManualStation && (
+							<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+								<Info className="h-3 w-3" />
+								Neither officer has a station assigned. Please select one
+								manually.
+							</p>
+						)}
+						{getFieldError("station") && (
+							<p className="text-sm text-red-500">{getFieldError("station")}</p>
+						)}
+						{ocrHints.station && !formStore.formData.station_id && (
+							<p className="text-xs text-blue-600 flex items-center gap-1">
+								<Info className="h-3 w-3" />
+								{ocrHints.station}
+							</p>
+						)}
+					</div>
+				)}
+				{!showStationSection && (
+					<p className="text-xs text-muted-foreground italic">
+						Police station will appear once the submitting officer is selected.
 					</p>
-					{ocrHints.station && !formStore.formData.station_id && (
-						<p className="text-xs text-blue-600 flex items-center gap-1">
-							<Info className="h-3 w-3" />
-							{ocrHints.station}
-						</p>
-					)}
-				</div>
+				)}
 
 				{/* Approved Botanist */}
 				<div className="space-y-2">

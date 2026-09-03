@@ -84,6 +84,9 @@ export const UnsignedCertificateStep = ({
 
 	const allGenerated = eligibleForms.length > 0 && pendingForms.length === 0;
 
+	// Check if any certificate is already batched (blocks regeneration)
+	const anyBatched = eligibleForms.some((f) => f.certificate?.batch_id != null);
+
 	// Track whether a batch operation is in progress to suppress per-form toasts
 	const batchCountRef = useRef(0);
 
@@ -216,24 +219,34 @@ export const UnsignedCertificateStep = ({
 						hand.
 					</p>
 					<div className="flex items-center gap-2">
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={handleRegenerateAll}
-							disabled={lockActions || generatingFormIds.size > 0}
-							title={
-								lockActions
-									? lockMessage
-									: "Regenerate all certificates with the latest data"
-							}
-						>
-							{generatingFormIds.size > 0 ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<RefreshCw className="mr-2 h-4 w-4" />
-							)}
-							Regenerate All
-						</Button>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={handleRegenerateAll}
+										disabled={
+											lockActions || generatingFormIds.size > 0 || anyBatched
+										}
+									>
+										{generatingFormIds.size > 0 ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<RefreshCw className="mr-2 h-4 w-4" />
+										)}
+										Regenerate All
+									</Button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>
+								{anyBatched
+									? "Certificates are batched. Use Repackage on the Batches page to regenerate."
+									: lockActions
+										? lockMessage
+										: "Regenerate all certificates with the latest data"}
+							</TooltipContent>
+						</Tooltip>
 						{!allFormsReady && (
 							<Button
 								size="sm"
@@ -255,24 +268,34 @@ export const UnsignedCertificateStep = ({
 					</p>
 					<div className="flex items-center gap-2">
 						{generatedForms.length > 0 && (
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={handleRegenerateAll}
-								disabled={lockActions || generatingFormIds.size > 0}
-								title={
-									lockActions
-										? lockMessage
-										: "Regenerate all certificates with the latest data"
-								}
-							>
-								{generatingFormIds.size > 0 ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<RefreshCw className="mr-2 h-4 w-4" />
-								)}
-								Regenerate All
-							</Button>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<span>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={handleRegenerateAll}
+											disabled={
+												lockActions || generatingFormIds.size > 0 || anyBatched
+											}
+										>
+											{generatingFormIds.size > 0 ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<RefreshCw className="mr-2 h-4 w-4" />
+											)}
+											Regenerate All
+										</Button>
+									</span>
+								</TooltipTrigger>
+								<TooltipContent>
+									{anyBatched
+										? "Certificates are batched. Use Repackage on the Batches page to regenerate."
+										: lockActions
+											? lockMessage
+											: "Regenerate all certificates with the latest data"}
+								</TooltipContent>
+							</Tooltip>
 						)}
 						<Button
 							size="sm"
@@ -323,7 +346,10 @@ export const UnsignedCertificateStep = ({
 										)}
 									/>
 									<span className="text-sm font-medium">Form {index + 1}</span>
-									<Badge variant="outline" className="text-[10px]">
+									<Badge
+										variant="outline"
+										className="text-[10px] bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+									>
 										{bagCount} bag{bagCount !== 1 ? "s" : ""}
 									</Badge>
 									{hasGenerated && (
@@ -334,27 +360,43 @@ export const UnsignedCertificateStep = ({
 									)}
 								</div>
 								<div className="flex items-center gap-2">
-									<Button
-										type="button"
-										variant={hasGenerated ? "outline" : "default"}
-										size="sm"
-										onClick={() => handleGenerate(form.id)}
-										disabled={isGenerating || lockActions}
-										title={lockActions ? lockMessage : undefined}
-									>
-										{isGenerating ? (
-											<Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-										) : hasGenerated ? (
-											<RefreshCw className="mr-1 h-3.5 w-3.5" />
-										) : (
-											<FileText className="mr-1 h-3.5 w-3.5" />
-										)}
-										{isGenerating
-											? "Generating..."
-											: hasGenerated
-												? "Regenerate"
-												: "Generate"}
-									</Button>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span>
+												<Button
+													type="button"
+													variant={hasGenerated ? "outline" : "default"}
+													size="sm"
+													onClick={() => handleGenerate(form.id)}
+													disabled={
+														isGenerating || lockActions || !!cert?.batch_id
+													}
+												>
+													{isGenerating ? (
+														<Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+													) : hasGenerated ? (
+														<RefreshCw className="mr-1 h-3.5 w-3.5" />
+													) : (
+														<FileText className="mr-1 h-3.5 w-3.5" />
+													)}
+													{isGenerating
+														? "Generating..."
+														: hasGenerated
+															? "Regenerate"
+															: "Generate"}
+												</Button>
+											</span>
+										</TooltipTrigger>
+										<TooltipContent>
+											{cert?.batch_id
+												? "This certificate is batched. Use Repackage on the Batches page to regenerate."
+												: lockActions
+													? lockMessage
+													: hasGenerated
+														? "Regenerate certificate with latest data"
+														: "Generate certificate PDF"}
+										</TooltipContent>
+									</Tooltip>
 									{/* Readiness toggle */}
 									<Tooltip>
 										<TooltipTrigger asChild>

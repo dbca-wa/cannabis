@@ -115,10 +115,17 @@ export const FormsNavigator = ({
 									? "Generated"
 									: "Pending";
 					return (
-						<button
+						<div
 							key={form.id}
-							type="button"
+							role="button"
+							tabIndex={0}
 							onClick={() => handleFormClick(form)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									handleFormClick(form);
+								}
+							}}
 							aria-current={isActive ? "page" : undefined}
 							className={cn(
 								"group flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition-colors cursor-pointer",
@@ -164,7 +171,7 @@ export const FormsNavigator = ({
 									<Trash2 className="h-3 w-3" />
 								</button>
 							)}
-						</button>
+						</div>
 					);
 				})}
 				{onAddForm && (

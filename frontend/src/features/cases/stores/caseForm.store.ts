@@ -748,17 +748,12 @@ export class CaseFormStore {
 			this.isValid &&
 			!this.isSubmitting &&
 			this.formData.case_number.trim() !== "" &&
-			this.formData.received.trim() !== "" &&
-			this.formData.security_movement_envelope.trim() !== ""
+			this.formData.received.trim() !== ""
 		);
 	}
 
 	get formProgress(): number {
-		const requiredFields = [
-			this.formData.case_number,
-			this.formData.received,
-			this.formData.security_movement_envelope,
-		];
+		const requiredFields = [this.formData.case_number, this.formData.received];
 
 		const completedFields = requiredFields.filter(
 			(field) => field && field.toString().trim() !== ""
@@ -782,7 +777,6 @@ export class CaseFormStore {
 		const requiredFields = [
 			this.formData.case_number, // Police Reference No.
 			this.formData.received, // Received Date
-			this.formData.security_movement_envelope, // Security Movement Envelope Number
 		];
 
 		const completedFields = requiredFields.filter(
@@ -794,17 +788,28 @@ export class CaseFormStore {
 
 	get officersProgress(): number {
 		const requiredFields = [
-			this.formData.submitting_officer_id, // Submitting Officer
+			this.formData.submitting_officer_id, // Conveying Officer
+			this.formData.requesting_officer_id, // Requesting Officer
 			this.formData.station_id, // Police Station
 			this.formData.approved_botanist_id, // Approved Botanist
 			this.formData.finance_officer_id, // Finance Officer
 		];
 
+		// Officers must also be different
+		const officersDifferent =
+			!this.formData.submitting_officer_id ||
+			!this.formData.requesting_officer_id ||
+			this.formData.submitting_officer_id !==
+				this.formData.requesting_officer_id;
+
 		const completedFields = requiredFields.filter(
 			(field) => field !== undefined && field !== null
 		).length;
 
-		return Math.round((completedFields / requiredFields.length) * 100);
+		const baseProgress = Math.round(
+			(completedFields / requiredFields.length) * 100
+		);
+		return officersDifferent ? baseProgress : Math.min(baseProgress, 80);
 	}
 
 	get drugBagsProgress(): number {
@@ -849,8 +854,7 @@ export class CaseFormStore {
 	get requiredFieldsCompleted(): boolean {
 		return (
 			this.formData.case_number.trim() !== "" &&
-			this.formData.received.trim() !== "" &&
-			this.formData.security_movement_envelope.trim() !== ""
+			this.formData.received.trim() !== ""
 		);
 	}
 

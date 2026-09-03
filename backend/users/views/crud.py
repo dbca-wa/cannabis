@@ -72,6 +72,12 @@ class UserListView(ListCreateAPIView):
         if role:
             queryset = queryset.filter(role=role)
 
+        # Exclude legacy users from role-filtered results by default.
+        # Pass ?include_legacy=true to override (e.g. admin views).
+        include_legacy = self.request.query_params.get("include_legacy")
+        if role and not include_legacy:
+            queryset = queryset.filter(is_legacy=False)
+
         # Filter by active status
         is_active = self.request.query_params.get("is_active")
         if is_active is not None:

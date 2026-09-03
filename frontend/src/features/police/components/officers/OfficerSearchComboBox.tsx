@@ -41,6 +41,23 @@ const formatOfficerDetails = (officer: PoliceOfficerTiny): string => {
 	return parts.length > 0 ? parts.join(" • ") : "No details";
 };
 
+// Format officer name in legal style: SURNAME, Given Names
+const formatOfficerLegalName = (officer: {
+	last_name?: string | null;
+	given_names?: string | null;
+	full_name: string;
+}): string => {
+	const lastName = officer.last_name?.trim();
+	const givenNames = officer.given_names?.trim();
+
+	if (lastName && givenNames) {
+		return `${lastName.toUpperCase()}, ${givenNames}`;
+	} else if (lastName) {
+		return lastName.toUpperCase();
+	}
+	return officer.full_name;
+};
+
 interface OfficerSearchComboBoxProps {
 	value?: number | null;
 	onValueChange: (officerId: number | null) => void;
@@ -52,6 +69,8 @@ interface OfficerSearchComboBoxProps {
 	error?: boolean;
 	allowCreate?: boolean; // Whether to show the "Create New Officer" button
 	showExternalAddButton?: boolean; // Whether to show external "Add" button to the right
+	/** Filter officers by sworn status. "unsworn" shows only unsworn, "sworn" only sworn, undefined shows all. */
+	swornFilter?: "sworn" | "unsworn";
 }
 
 export const OfficerSearchComboBox = React.forwardRef<
@@ -69,6 +88,8 @@ export const OfficerSearchComboBox = React.forwardRef<
 			error = false,
 			allowCreate = true,
 			showExternalAddButton = false,
+			swornFilter,
+			required = false,
 		},
 		ref
 	) => {
@@ -104,6 +125,16 @@ export const OfficerSearchComboBox = React.forwardRef<
 			}
 		}, [open]);
 
+		// Filter officers by sworn status when swornFilter is set
+		const filterBySworn = (
+			officers: PoliceOfficerTiny[]
+		): PoliceOfficerTiny[] => {
+			if (!swornFilter) return officers;
+			return officers.filter((o) =>
+				swornFilter === "sworn" ? o.is_sworn : !o.is_sworn
+			);
+		};
+
 		const handleSelect = (officerId: number) => {
 			onValueChange(officerId);
 			setOpen(false);
@@ -134,7 +165,9 @@ export const OfficerSearchComboBox = React.forwardRef<
 			setOpen(false);
 		};
 
-		const displayValue = selectedOfficer?.full_name || null;
+		const displayValue = selectedOfficer
+			? formatOfficerLegalName(selectedOfficer)
+			: null;
 
 		const comboboxElement = (
 			<Popover open={open} onOpenChange={setOpen}>
@@ -173,7 +206,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 							)}
 						</div>
 						<div className="flex items-center gap-1">
-							{displayValue && !disabled && (
+							{displayValue && !disabled && !required && (
 								<div
 									className="h-4 w-4 p-0 hover:bg-muted rounded-sm cursor-pointer flex items-center justify-center"
 									onClick={handleClear}
@@ -227,7 +260,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 											</div>
 										</div>
 										<CommandGroup>
-											{[...(initialData ?? [])]
+											{filterBySworn([...(initialData ?? [])])
 												.sort((a, b) => {
 													const nameA =
 														`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
@@ -254,7 +287,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 														<Shield className="h-4 w-4 text-muted-foreground" />
 														<div className="flex-1 min-w-0">
 															<div className="truncate">
-																{officer.full_name}
+																{formatOfficerLegalName(officer)}
 															</div>
 															<div className="text-xs text-muted-foreground truncate">
 																{formatOfficerDetails(officer)}
@@ -267,7 +300,8 @@ export const OfficerSearchComboBox = React.forwardRef<
 												))}
 										</CommandGroup>
 									</>
-								) : !searchResults?.results?.length ? (
+								) : !searchResults?.results?.length ||
+								  filterBySworn(searchResults.results).length === 0 ? (
 									<div className="p-4 text-center">
 										<div className="text-sm text-muted-foreground mb-3">
 											{searchQuery ? emptyText : "No officers available"}
@@ -285,7 +319,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 									</div>
 								) : (
 									<CommandGroup>
-										{[...searchResults.results]
+										{filterBySworn([...searchResults.results])
 											.sort((a, b) => {
 												const nameA =
 													`${a.last_name ?? ""} ${a.given_names ?? ""}`.toLowerCase();
@@ -309,7 +343,9 @@ export const OfficerSearchComboBox = React.forwardRef<
 													/>
 													<Shield className="h-4 w-4 text-muted-foreground" />
 													<div className="flex-1 min-w-0">
-														<div className="truncate">{officer.full_name}</div>
+														<div className="truncate">
+															{formatOfficerLegalName(officer)}
+														</div>
 														<div className="text-xs text-muted-foreground truncate">
 															{formatOfficerDetails(officer)}
 														</div>

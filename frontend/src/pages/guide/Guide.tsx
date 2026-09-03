@@ -88,9 +88,10 @@ const Guide = () => {
 						</li>
 					</ul>
 					<p>
-						If only one officer is involved (e.g. a sworn officer submitting
-						their own samples), select them as the Submitting Officer and leave
-						the Requesting Officer blank.
+						If only one officer is involved (e.g. the Conveying Officer -
+						Unsworn Officer is submitting the samples for favour of
+						examination), select them as the Submitting Officer and leave the
+						Requesting Officer blank.
 					</p>
 					<p className="text-sm text-muted-foreground">
 						Tip: The Requesting Officer field is optional. Only fill it in when
@@ -136,6 +137,13 @@ const Guide = () => {
 					<p className="text-sm text-muted-foreground">
 						Tip: Each form produces one certificate. If you have more than 5
 						bags, add a second form.
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Tip: You can click the step numbers at the top of the wizard to
+						navigate directly to any completed step. The Back button at the
+						bottom left will take you to the previous step (greyed out if you
+						are already on step 1). Use these to review previously entered data
+						without losing your progress.
 					</p>
 					<br />
 					<img
@@ -316,6 +324,205 @@ const Guide = () => {
 							certificates.
 						</li>
 					</ul>
+				</section>
+
+				<hr />
+
+				{/* Glossary */}
+				<section>
+					<h2>Glossary of Terms</h2>
+					<p>A plain-language guide to the terms used throughout the system.</p>
+					<dl className="space-y-3">
+						<div>
+							<dt className="font-semibold">Case</dt>
+							<dd className="text-muted-foreground">
+								The overall record for one police submission. A case ties
+								together the officers, the defendant, the botanist, and one or
+								more Priority 3 Forms.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Priority 3 Form</dt>
+							<dd className="text-muted-foreground">
+								A single certificate&apos;s worth of samples. Each form holds up
+								to 5 drug bags and produces exactly one certificate. If you have
+								more than 5 bags, add another form.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Drug Bag (Bag)</dt>
+							<dd className="text-muted-foreground">
+								One sealed drug movement bag, identified by its seal tag
+								number(s). Each bag records its content type (e.g. plant) and
+								the botanist&apos;s determination.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Seal Tag Number</dt>
+							<dd className="text-muted-foreground">
+								The tag number printed on the drug movement bag. &quot;Original
+								Tag&quot; is the number it arrived with; &quot;New Tag&quot; is
+								the number of the fresh bag it&apos;s resealed into after
+								examination.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Determination</dt>
+							<dd className="text-muted-foreground">
+								The botanist&apos;s finding for a bag — for example, whether the
+								material is cannabis and its species.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Content Type</dt>
+							<dd className="text-muted-foreground">
+								What the bag contains — for example plant, seed, or cutting.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Female Plants</dt>
+							<dd className="text-muted-foreground">
+								A tick on a bag indicating it contains female plants, as noted
+								by the botanist. This can be referenced in Section C note
+								templates.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Unsaved Bags</dt>
+							<dd className="text-muted-foreground">
+								Bags you&apos;ve typed in but not yet committed. They appear in
+								a dashed amber box. Click <strong>Confirm</strong> on a bag (or{" "}
+								<strong>Add All</strong>) to save them to the form.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Save and Continue</dt>
+							<dd className="text-muted-foreground">
+								Moves you to the next step of the case. It stays greyed out
+								until the current step has all the information it needs — when
+								everything is complete, each section shows a green tick and the
+								button becomes active.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Conveying Officer (Submitting)</dt>
+							<dd className="text-muted-foreground">
+								The unsworn officer who physically delivered the samples to the
+								laboratory.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">
+								Requesting Officer (On Behalf Of)
+							</dt>
+							<dd className="text-muted-foreground">
+								The sworn officer who made the seizure or arrest and requested
+								the identification.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Approved Botanist</dt>
+							<dd className="text-muted-foreground">
+								The botanist assigned to examine the samples and sign the
+								certificate. Only botanists approved under the Act appear here.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">
+								Security Movement Envelope (SME)
+							</dt>
+							<dd className="text-muted-foreground">
+								The envelope number recorded per form when subsamples are placed
+								into a security movement envelope. Available for use in Section
+								C note templates.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Section C Notes</dt>
+							<dd className="text-muted-foreground">
+								The &quot;other matters&quot; notes that appear on the
+								certificate under Section C. These are specific to each form.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Template</dt>
+							<dd className="text-muted-foreground">
+								A reusable, generically-worded Section C note. Templates use
+								building blocks (variables) that automatically fill in each
+								form&apos;s specific data — so you never type case-specific
+								details like tag numbers directly into a template.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Variable (Building Block)</dt>
+							<dd className="text-muted-foreground">
+								A placeholder in a template (e.g. seal tag numbers or SME
+								number) that the system swaps for the real value from the
+								current form when the certificate is generated.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Certificate</dt>
+							<dd className="text-muted-foreground">
+								The official PDF document produced for a form once its bags are
+								assessed. The printed copy is signed by hand by the botanist.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Generate / Regenerate</dt>
+							<dd className="text-muted-foreground">
+								Generate creates the certificate PDF. Regenerate produces a
+								fresh version after you&apos;ve made changes — available until
+								the certificate is placed into a batch.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Ready</dt>
+							<dd className="text-muted-foreground">
+								A mark you place on a form to confirm its certificate has been
+								reviewed and is ready to finalise.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Batch</dt>
+							<dd className="text-muted-foreground">
+								A group of finished certificates bundled together for invoicing
+								and download. Creating a batch calculates the costs and produces
+								a downloadable package.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Repackage</dt>
+							<dd className="text-muted-foreground">
+								Rebuilds a batch&apos;s download package with the latest data.
+								Use this if you&apos;ve made template or certificate changes
+								after a batch was created — it regenerates the certificate PDFs
+								for you.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Legacy Botanist</dt>
+							<dd className="text-muted-foreground">
+								A botanist from historical records who is hidden from the
+								selection dropdown to reduce clutter, while their past cases
+								stay intact.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Defendant</dt>
+							<dd className="text-muted-foreground">
+								The person named on the submission. Recorded with surname (shown
+								in capitals on the certificate) and given names.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Forms Navigator</dt>
+							<dd className="text-muted-foreground">
+								The row of form tabs at the top of the case wizard. Click a form
+								to switch to it, or use the step numbers to move between stages.
+							</dd>
+						</div>
+					</dl>
 				</section>
 			</article>
 		</>

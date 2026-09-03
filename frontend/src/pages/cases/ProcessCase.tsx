@@ -211,6 +211,9 @@ const ProcessCaseContent = observer(() => {
 	// Local case_number state for instant typing feedback (ahead of debounced save)
 	const [localCaseNumber, setLocalCaseNumber] = useState<string | null>(null);
 
+	// Local SME state for instant typing feedback
+	const [localSme, setLocalSme] = useState<string | null>(null);
+
 	const {
 		data: caseObj,
 		isLoading: isCaseLoading,
@@ -249,6 +252,7 @@ const ProcessCaseContent = observer(() => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", parsedId, "forms"],
 			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 			setActiveFormId(newForm.id);
 		},
 		onError: () => {
@@ -274,6 +278,11 @@ const ProcessCaseContent = observer(() => {
 					queryKey: ["cases", "forms", activeFormId],
 				});
 			}
+			// Refresh the forms list (FormsNavigator badges) and case list/dashboard
+			await queryClient.invalidateQueries({
+				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 			toast.success("Certificate generated");
 		},
 		onError: () => {
@@ -290,6 +299,11 @@ const ProcessCaseContent = observer(() => {
 					queryKey: ["cases", "forms", activeFormId],
 				});
 			}
+			// Phase changes affect the forms list badges and case status
+			await queryClient.invalidateQueries({
+				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 		},
 	});
 
@@ -299,6 +313,11 @@ const ProcessCaseContent = observer(() => {
 		onSuccess: async (_data, deletedFormId) => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", parsedId, "forms"],
+			});
+			await queryClient.invalidateQueries({ queryKey: ["cases"] });
+			// Drop the deleted form's single-form cache entry
+			queryClient.removeQueries({
+				queryKey: ["cases", "forms", deletedFormId],
 			});
 			// If the deleted form was the active one, clear selection
 			if (activeFormId === deletedFormId) {
@@ -322,8 +341,10 @@ const ProcessCaseContent = observer(() => {
 	useEffect(() => {
 		if (form) {
 			setLocalAdditionalNotes(form.additional_notes ?? null);
+			setLocalSme(form.security_movement_envelope ?? null);
 		} else {
 			setLocalAdditionalNotes(null);
+			setLocalSme(null);
 		}
 	}, [form]);
 
@@ -352,6 +373,9 @@ const ProcessCaseContent = observer(() => {
 	}
 	if (caseData && localCaseNumber !== null) {
 		caseData.case_number = localCaseNumber;
+	}
+	if (caseData && localSme !== null) {
+		caseData.security_movement_envelope = localSme;
 	}
 
 	logger.debug("ProcessCase caseData built", {
@@ -433,7 +457,7 @@ const ProcessCaseContent = observer(() => {
 					setIsSavingNotes(true);
 					updateForm(pending.formId, { additional_notes: pending.value })
 						.then(() => {
-							toast.success("Section C notes saved");
+							// Inline "Saving..." indicator provides feedback — no toast needed
 							queryClient.invalidateQueries({
 								queryKey: ["cases", "forms", pending.formId],
 							});
@@ -448,13 +472,37 @@ const ProcessCaseContent = observer(() => {
 				return;
 			}
 
+			// security_movement_envelope is per-form — PATCH the form, not the case
+			if (field === "security_movement_envelope") {
+				if (!activeFormId) return;
+				setLocalSme(value as string);
+				if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current);
+				debouncedSaveRef.current = setTimeout(() => {
+					updateForm(activeFormId, {
+						security_movement_envelope: value as string,
+					})
+						.then(() => {
+							queryClient.invalidateQueries({
+								queryKey: ["cases", "forms", activeFormId],
+							});
+						})
+						.catch(() => {
+							toast.error("Failed to save SME");
+						});
+				}, 800);
+				return;
+			}
 			// Defendants M2M — add or set the full list of IDs
 			if (field === "add_defendant") {
 				const defendant = value as { id: number };
 				const currentIds = (caseData?.defendants as number[]) ?? [];
 				if (!currentIds.includes(defendant.id)) {
 					const newIds = [...currentIds, defendant.id];
-					updateCase({ id: parsedId, data: { defendants: newIds } });
+					updateCase({
+						id: parsedId,
+						data: { defendants: newIds },
+						silent: true,
+					});
 					queryClient.invalidateQueries({
 						queryKey: ["cases", "detail", parsedId],
 					});
@@ -463,7 +511,11 @@ const ProcessCaseContent = observer(() => {
 			}
 			if (field === "defendants") {
 				// value is the updated array of defendant IDs (after removal)
-				updateCase({ id: parsedId, data: { defendants: value as number[] } });
+				updateCase({
+					id: parsedId,
+					data: { defendants: value as number[] },
+					silent: true,
+				});
 				queryClient.invalidateQueries({
 					queryKey: ["cases", "detail", parsedId],
 				});
@@ -474,7 +526,7 @@ const ProcessCaseContent = observer(() => {
 			if (typeof value === "string") {
 				if (debouncedSaveRef.current) clearTimeout(debouncedSaveRef.current);
 				debouncedSaveRef.current = setTimeout(() => {
-					updateCase({ id: parsedId, data: { [field]: value } });
+					updateCase({ id: parsedId, data: { [field]: value }, silent: true });
 				}, 800);
 				return;
 			}
@@ -488,7 +540,7 @@ const ProcessCaseContent = observer(() => {
 				approved_botanist_id: "approved_botanist",
 			};
 			const apiField = fieldMap[field] ?? field;
-			updateCase({ id: parsedId, data: { [apiField]: value } });
+			updateCase({ id: parsedId, data: { [apiField]: value }, silent: true });
 		},
 		[parsedId, activeFormId, updateCase, queryClient]
 	);

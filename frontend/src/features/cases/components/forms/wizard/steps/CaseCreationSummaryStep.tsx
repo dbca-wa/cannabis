@@ -52,8 +52,6 @@ export const CaseCreationSummaryStep = ({
 	// Derive field values from server data
 	const caseNumber = (caseData?.case_number as string) ?? "";
 	const received = (caseData?.received as string) ?? "";
-	const securityEnvelope =
-		(caseData?.security_movement_envelope as string) ?? "";
 	const defendants = (caseData?.defendants_details as DefendantTiny[]) ?? [];
 	const defendantIds = useMemo(
 		() => (caseData?.defendants as number[]) ?? [],
@@ -180,20 +178,6 @@ export const CaseCreationSummaryStep = ({
 							</p>
 						)}
 					</div>
-
-					<div className="space-y-2 md:col-span-2">
-						<Label htmlFor="summary_security_envelope">
-							Security Movement Envelope
-						</Label>
-						<Input
-							id="summary_security_envelope"
-							value={securityEnvelope}
-							onChange={(e) =>
-								onFieldChange("security_movement_envelope", e.target.value)
-							}
-							placeholder="Enter envelope number"
-						/>
-					</div>
 				</div>
 			</SectionCard>
 
@@ -281,6 +265,7 @@ export const CaseCreationSummaryStep = ({
 							placeholder="Search officer..."
 							error={isTouched && !!errors.submitting_officer}
 							showExternalAddButton
+							required
 						/>
 						{isTouched && errors.submitting_officer && (
 							<p className="text-sm text-red-600" role="alert">
@@ -301,9 +286,10 @@ export const CaseCreationSummaryStep = ({
 							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
 							placeholder="Search officer..."
 							showExternalAddButton
+							required
 						/>
 						<p className="text-xs text-muted-foreground">
-							Optional — who the samples were submitted on behalf of.
+							The sworn officer who requested the identification.
 						</p>
 					</div>
 

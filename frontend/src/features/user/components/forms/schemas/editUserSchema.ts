@@ -18,6 +18,7 @@ export const editUserSchema = z.object({
 		.optional(),
 	is_staff: z.boolean().optional(),
 	is_active: z.boolean().optional(),
+	is_legacy: z.boolean().optional(),
 	it_asset_id: z
 		.number()
 		.positive("IT Asset ID must be a positive number")

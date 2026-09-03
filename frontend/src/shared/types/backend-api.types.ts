@@ -117,6 +117,7 @@ export interface User {
 	is_staff: boolean;
 	is_active: boolean;
 	is_superuser: boolean;
+	is_legacy: boolean;
 	requires_password_change: boolean;
 	date_joined: string; // ISO datetime string
 	last_login: string | null; // ISO datetime string
@@ -169,6 +170,7 @@ export interface UserTiny {
 	is_active: boolean;
 	is_staff: boolean;
 	is_superuser: boolean; // Added for role badge display consistency
+	is_legacy: boolean;
 	date_joined: string;
 	last_login: string | null;
 	has_signature?: boolean; // Present for botanist users in admin views
@@ -197,6 +199,7 @@ export interface UserUpdateRequest {
 	role?: UserRole;
 	is_staff?: boolean;
 	is_active?: boolean;
+	is_legacy?: boolean;
 	it_asset_id?: number | null;
 	employee_id?: string | null;
 }

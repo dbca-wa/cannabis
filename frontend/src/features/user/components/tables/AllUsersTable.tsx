@@ -672,6 +672,15 @@ const AllUsersTable = observer(() => {
 									</Button>
 								</TableHead>
 
+								{/* Legacy Column (hidden on mobile) */}
+								{!isMobile && (
+									<TableHead className="w-20">
+										<span className="px-3 py-0 font-semibold text-sm">
+											Legacy
+										</span>
+									</TableHead>
+								)}
+
 								{/* Actions Column */}
 								<TableHead className="w-16">
 									<span className="sr-only">Actions</span>
@@ -681,12 +690,12 @@ const AllUsersTable = observer(() => {
 						<TableBody>
 							{isLoading ? (
 								<TableRow>
-									<TableCell colSpan={isMobile ? 5 : 7} />
+									<TableCell colSpan={isMobile ? 5 : 8} />
 								</TableRow>
 							) : error ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 5 : 7}
+										colSpan={isMobile ? 5 : 8}
 										className="h-24 text-center"
 									>
 										<div className="text-muted-foreground">
@@ -698,7 +707,7 @@ const AllUsersTable = observer(() => {
 							) : users.length === 0 ? (
 								<TableRow>
 									<TableCell
-										colSpan={isMobile ? 5 : 7}
+										colSpan={isMobile ? 5 : 8}
 										className="h-24 text-center"
 									>
 										<div className="flex flex-col items-center gap-2">
@@ -826,6 +835,17 @@ const AllUsersTable = observer(() => {
 												</Badge>
 											)}
 										</TableCell>
+
+										{/* Legacy (hidden on mobile) */}
+										{!isMobile && (
+											<TableCell className="text-center">
+												{user.is_legacy && (
+													<Badge variant="outline" className="text-xs w-fit">
+														Legacy
+													</Badge>
+												)}
+											</TableCell>
+										)}
 
 										{/* Actions */}
 										<TableCell>

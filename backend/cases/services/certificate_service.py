@@ -99,16 +99,27 @@ class CertificateService:
             raise NotFound("Certificate not found for this case.")
 
     @staticmethod
-    def _format_officer_legal(officer):
-        """Format officer as: Rank BadgeNumber SURNAME, FirstName of Organisation."""
+    def _format_officer_legal(officer, role_label=None):
+        """Format officer as: RoleLabel BadgeNumber SURNAME, FirstName of Organisation.
+
+        Args:
+            officer: The PoliceOfficer instance.
+            role_label: Override the rank display with a fixed label
+                        (e.g. "Unsworn Officer" or "Sworn Officer").
+        """
         if not officer:
             return "[Pending]"
         parts = []
-        rank = (
-            officer.get_rank_display() if hasattr(officer, "get_rank_display") else ""
-        )
-        if rank and rank.lower() not in ("unknown", "other"):
-            parts.append(rank)
+        if role_label:
+            parts.append(role_label)
+        else:
+            rank = (
+                officer.get_rank_display()
+                if hasattr(officer, "get_rank_display")
+                else ""
+            )
+            if rank and rank.lower() not in ("unknown", "other"):
+                parts.append(rank)
         if officer.badge_number:
             parts.append(officer.badge_number)
         if officer.last_name:
@@ -195,10 +206,11 @@ class CertificateService:
             "section_b_description": section_b_description,
             "defendant": defendant_display,
             "police_officer": CertificateService._format_officer_legal(
-                case.submitting_officer
+                case.submitting_officer, role_label="Unsworn Officer"
             ),
             "receiving_officer": CertificateService._format_officer_legal(
-                case.requesting_officer or case.submitting_officer
+                case.requesting_officer or case.submitting_officer,
+                role_label="Sworn Officer",
             ),
             "receipt_date": receipt_date,
             "species_name": (

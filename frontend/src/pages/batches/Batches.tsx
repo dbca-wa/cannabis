@@ -18,8 +18,8 @@ import {
 	useDeleteBatch,
 	useRecordInvoiceRaised,
 	useUnsetInvoiceRaised,
+	useRepackageBatch,
 	downloadBatchZip,
-	repackageBatch,
 	type Batch,
 	type BatchOrdering,
 } from "@/features/batches";
@@ -168,6 +168,7 @@ const Batches = () => {
 	};
 
 	const deleteBatch = useDeleteBatch();
+	const repackage = useRepackageBatch();
 
 	const [detailBatch, setDetailBatch] = useState<Batch | null>(null);
 	const [invoiceBatch, setInvoiceBatch] = useState<Batch | null>(null);
@@ -207,10 +208,9 @@ const Batches = () => {
 
 	const handleRepackage = async (batch: Batch) => {
 		try {
-			await repackageBatch(batch.id);
-			toast.success("Package rebuilt with latest data");
+			await repackage.mutateAsync(batch.id);
 		} catch {
-			toast.error("Failed to rebuild package");
+			// Error toast handled by the mutation
 		}
 	};
 

@@ -42,6 +42,7 @@ export const CaseCreationWizardContainer = observer(
 		const caseNumber = (caseData?.case_number as string) ?? "";
 		const received = (caseData?.received as string) ?? "";
 		const submittingOfficer = caseData?.submitting_officer_id;
+		const requestingOfficer = caseData?.requesting_officer_id;
 		const approvedBotanist = caseData?.approved_botanist_id;
 		const defendants = (caseData?.defendants as number[]) ?? [];
 		const hasDefendants =
@@ -50,6 +51,8 @@ export const CaseCreationWizardContainer = observer(
 			!!caseNumber.trim() &&
 			!!received &&
 			!!submittingOfficer &&
+			!!requestingOfficer &&
+			submittingOfficer !== requestingOfficer &&
 			!!approvedBotanist &&
 			hasDefendants &&
 			!store.hasMatchedExistingCase &&
@@ -85,7 +88,7 @@ export const CaseCreationWizardContainer = observer(
 							setTouched(true);
 							if (isValid) onSubmit();
 						}}
-						disabled={store.state.isSubmitting}
+						disabled={!isValid || store.state.isSubmitting}
 						className="bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
 					>
 						{store.state.isSubmitting ? (

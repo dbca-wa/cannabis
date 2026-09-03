@@ -4,11 +4,20 @@ import type {
 } from "@/shared/types/backend-api.types";
 
 /**
- * Format defendant display name for UI components.
+ * Format defendant display name in legal format: SURNAME, Given Names.
+ * Example: "THE BUILDER, Bob"
  */
 export const formatDefendantDisplayName = (
 	defendant: DefendantTiny | Defendant
 ): string => {
+	const lastName = defendant.last_name?.trim();
+	const givenNames = defendant.given_names?.trim();
+
+	if (lastName && givenNames) {
+		return `${lastName.toUpperCase()}, ${givenNames}`;
+	} else if (lastName) {
+		return lastName.toUpperCase();
+	}
 	return defendant.full_name;
 };
 
