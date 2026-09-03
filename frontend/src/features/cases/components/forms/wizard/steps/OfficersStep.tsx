@@ -34,28 +34,53 @@ export const OfficersStep = ({
 	// Fetch requesting officer details to derive station
 	const { data: requestingOfficerData } = useOfficerById(requestingOfficerId);
 
-	// Derive station ONLY from requesting officer
-	const derivedStationId = requestingOfficerData?.station || null;
+	// Only trust the fetched officer data once it matches the currently-selected
+	// requesting officer — avoids acting on a previous officer's stale data
+	// during the query refetch window.
+	const officerDataMatches =
+		!!requestingOfficerId && requestingOfficerData?.id === requestingOfficerId;
 
-	// Clear station when requesting officer is removed
+	// Derive station ONLY from the requesting officer (once their data is loaded)
+	const derivedStationId = officerDataMatches
+		? (requestingOfficerData?.station ?? null)
+		: null;
+
+	// Keep the case's station in sync with the requesting officer's station:
+	// - no requesting officer   -> clear the station
+	// - officer has a station   -> set it (auto-derived, read-only)
+	// - officer has no station  -> clear any previously-derived station so the
+	//                              user can set one manually
 	useEffect(() => {
-		if (!requestingOfficerId && station) {
+		if (!requestingOfficerId) {
+			if (station) onFieldChange("station_id", null);
+			return;
+		}
+		// Wait until the fetched data is for the current officer before syncing.
+		if (!officerDataMatches) return;
+
+		if (derivedStationId) {
+			if (station !== derivedStationId) {
+				onFieldChange("station_id", derivedStationId);
+			}
+		} else if (station) {
+			// New requesting officer has no station — drop the stale one.
 			onFieldChange("station_id", null);
 		}
-	}, [requestingOfficerId, station, onFieldChange]);
-
-	// Auto-set station from requesting officer
-	useEffect(() => {
-		if (derivedStationId) {
-			onFieldChange("station_id", derivedStationId);
-		}
-	}, [derivedStationId, onFieldChange]);
+	}, [
+		requestingOfficerId,
+		officerDataMatches,
+		derivedStationId,
+		station,
+		onFieldChange,
+	]);
 
 	// Station visibility: show once both officers are set
 	const bothOfficersSet = !!submittingOfficerId && !!requestingOfficerId;
 	const showStation = bothOfficersSet;
-	// Manual station selection: both set but no station derived
-	const needsManualStation = bothOfficersSet && !derivedStationId;
+	// Manual station selection: both set, the officer's data has loaded, and
+	// that officer has no station of their own.
+	const needsManualStation =
+		bothOfficersSet && officerDataMatches && !derivedStationId;
 
 	// The same officer cannot be both conveying and requesting. This is a clear
 	// mistake so we surface it immediately (not gated behind isTouched).

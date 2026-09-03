@@ -9,6 +9,7 @@ vi.mock("@/features/batches", () => ({
 	useDeleteBatch: mutationStub,
 	useRecordInvoiceRaised: mutationStub,
 	useUnsetInvoiceRaised: mutationStub,
+	useRepackageBatch: mutationStub,
 	downloadBatchZip: vi.fn(),
 	getBatchExportUrl: () => "/api/v1/batches/export",
 }));
