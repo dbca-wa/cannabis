@@ -45,7 +45,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 
 import { useUsers } from "@/features/user/hooks/useUsers";
 import { StaffFilters } from "@/features/user/components/StaffFilters";
-import { getRoleBadgeConfig } from "@/features/user/utils/userDisplay.utils";
+import { getRoleBadges } from "@/features/user/utils/userDisplay.utils";
 import { staffSearchStore } from "@/app/stores/derived/staff-search.store";
 import { cn } from "@/shared/utils/style.utils";
 
@@ -295,7 +295,7 @@ const Staff = observer(() => {
 								</TableRow>
 							) : (
 								filteredUsers.map((u) => {
-									const roleBadge = getRoleBadgeConfig(u);
+									const roleBadges = getRoleBadges(u);
 									return (
 										<TableRow
 											key={u.id}
@@ -322,16 +322,14 @@ const Staff = observer(() => {
 											</TableCell>
 											<TableCell>
 												<div className="flex items-center gap-1.5 flex-wrap">
-													<Badge
-														className={cn("text-[11px]", roleBadge.classes)}
-													>
-														{roleBadge.label}
-													</Badge>
-													{u.is_legacy && (
-														<Badge className="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-															Legacy
+													{roleBadges.map((badge) => (
+														<Badge
+															key={badge.label}
+															className={cn("text-[11px]", badge.classes)}
+														>
+															{badge.label}
 														</Badge>
-													)}
+													))}
 												</div>
 											</TableCell>
 											<TableCell className="text-center">
