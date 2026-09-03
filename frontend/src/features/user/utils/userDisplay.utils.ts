@@ -97,3 +97,63 @@ export const getRoleBadgeConfig = (user: {
 			};
 	}
 };
+
+export interface RoleBadge {
+	label: string;
+	classes: string;
+}
+
+/**
+ * Get all applicable role badges for a user, in display order:
+ * Admin, Finance, Botanist, Legacy.
+ *
+ * A user can be an admin as well as a botanist or finance officer
+ * (but not both botanist and finance), and may additionally be legacy.
+ * This returns every badge that applies rather than a single one.
+ */
+export const getRoleBadges = (user: {
+	is_superuser: boolean;
+	role: string;
+	is_legacy?: boolean;
+}): RoleBadge[] => {
+	const badges: RoleBadge[] = [];
+
+	if (user.is_superuser) {
+		badges.push({
+			label: "Admin",
+			classes: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+		});
+	}
+
+	if (user.role === "finance") {
+		badges.push({
+			label: "Finance",
+			classes:
+				"bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+		});
+	} else if (user.role === "botanist") {
+		badges.push({
+			label: "Botanist",
+			classes:
+				"bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+		});
+	}
+
+	if (user.is_legacy) {
+		badges.push({
+			label: "Legacy",
+			classes:
+				"bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+		});
+	}
+
+	// Fall back to a "No Role" badge when nothing else applies
+	if (badges.length === 0) {
+		badges.push({
+			label: "No Role",
+			classes: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+		});
+	}
+
+	return badges;
+};
