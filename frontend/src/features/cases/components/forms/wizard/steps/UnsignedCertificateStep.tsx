@@ -346,7 +346,10 @@ export const UnsignedCertificateStep = ({
 										)}
 									/>
 									<span className="text-sm font-medium">Form {index + 1}</span>
-									<Badge variant="outline" className="text-[10px]">
+									<Badge
+										variant="outline"
+										className="text-[10px] bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+									>
 										{bagCount} bag{bagCount !== 1 ? "s" : ""}
 									</Badge>
 									{hasGenerated && (
