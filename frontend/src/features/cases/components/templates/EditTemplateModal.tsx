@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -30,21 +30,42 @@ export const EditTemplateModal = ({
 	onOpenChange,
 	template,
 }: EditTemplateModalProps) => {
-	const [name, setName] = useState("");
-	const [content, setContent] = useState("");
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+			<DialogContent
+				className="sm:max-w-[1100px]"
+				onInteractOutside={(e) => e.preventDefault()}
+			>
+				{template && (
+					// Remount on template change so form state initialises fresh,
+					// avoiding a state-sync effect.
+					<EditTemplateForm
+						key={template.id}
+						template={template}
+						onOpenChange={onOpenChange}
+					/>
+				)}
+			</DialogContent>
+		</Dialog>
+	);
+};
+
+interface EditTemplateFormProps {
+	template: ISectionCTemplate;
+	onOpenChange: (open: boolean) => void;
+}
+
+const EditTemplateForm = ({
+	template,
+	onOpenChange,
+}: EditTemplateFormProps) => {
+	const [name, setName] = useState(template.name);
+	const [content, setContent] = useState(template.content);
 	const [showPreview, setShowPreview] = useState(false);
 	const updateMutation = useUpdateTemplate();
 
-	useEffect(() => {
-		if (template) {
-			setName(template.name);
-			setContent(template.content);
-		}
-	}, [template]);
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!template) return;
 		const trimmedName = name.trim();
 		const trimmedContent = content.trim();
 		if (!trimmedName || !trimmedContent) return;
@@ -61,91 +82,82 @@ export const EditTemplateModal = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange} modal={true}>
-			<DialogContent
-				className="sm:max-w-[1100px]"
-				onInteractOutside={(e) => e.preventDefault()}
-			>
-				<form onSubmit={handleSubmit}>
-					<DialogHeader>
-						<DialogTitle>Edit Template</DialogTitle>
-						<DialogDescription>
-							Update the template name or content. Variables appear as blocks.
-						</DialogDescription>
-					</DialogHeader>
+		<form onSubmit={handleSubmit}>
+			<DialogHeader>
+				<DialogTitle>Edit Template</DialogTitle>
+				<DialogDescription>
+					Update the template name or content. Variables appear as blocks.
+				</DialogDescription>
+			</DialogHeader>
 
-					<div className="space-y-4 py-4">
-						<div className="space-y-2">
-							<Label htmlFor="edit-template-name">Template Name</Label>
-							<Input
-								id="edit-template-name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								placeholder="e.g. Standard subsample note"
-								disabled={updateMutation.isPending}
-							/>
-						</div>
+			<div className="space-y-4 py-4">
+				<div className="space-y-2">
+					<Label htmlFor="edit-template-name">Template Name</Label>
+					<Input
+						id="edit-template-name"
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+						placeholder="e.g. Standard subsample note"
+						disabled={updateMutation.isPending}
+					/>
+				</div>
 
-						{/* Toggle between editor and preview */}
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<Label>{showPreview ? "Preview" : "Content"}</Label>
-								{content.trim() && (
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										onClick={() => setShowPreview(!showPreview)}
-										className="h-7 text-xs"
-									>
-										{showPreview ? (
-											<EyeOff className="mr-1 h-3 w-3" />
-										) : (
-											<Eye className="mr-1 h-3 w-3" />
-										)}
-										{showPreview ? "Back to Editor" : "Preview with Mock Data"}
-									</Button>
+				{/* Toggle between editor and preview */}
+				<div className="space-y-2">
+					<div className="flex items-center justify-between">
+						<Label>{showPreview ? "Preview" : "Content"}</Label>
+						{content.trim() && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => setShowPreview(!showPreview)}
+								className="h-7 text-xs"
+							>
+								{showPreview ? (
+									<EyeOff className="mr-1 h-3 w-3" />
+								) : (
+									<Eye className="mr-1 h-3 w-3" />
 								)}
-							</div>
-
-							{showPreview ? (
-								<div className="min-h-[120px] rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-									{resolveTemplate(content, MOCK_TEMPLATE_CONTEXT)}
-								</div>
-							) : (
-								<TemplateContentEditor
-									value={content}
-									onChange={setContent}
-									placeholder="Type template text here..."
-									disabled={updateMutation.isPending}
-								/>
-							)}
-						</div>
+								{showPreview ? "Back to Editor" : "Preview with Mock Data"}
+							</Button>
+						)}
 					</div>
 
-					<DialogFooter>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={handleCancel}
+					{showPreview ? (
+						<div className="min-h-[120px] rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+							{resolveTemplate(content, MOCK_TEMPLATE_CONTEXT)}
+						</div>
+					) : (
+						<TemplateContentEditor
+							value={content}
+							onChange={setContent}
+							placeholder="Type template text here..."
 							disabled={updateMutation.isPending}
-						>
-							Cancel
-						</Button>
-						<Button
-							type="submit"
-							disabled={
-								!name.trim() || !content.trim() || updateMutation.isPending
-							}
-						>
-							{updateMutation.isPending && (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							)}
-							Save Changes
-						</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
+						/>
+					)}
+				</div>
+			</div>
+
+			<DialogFooter>
+				<Button
+					type="button"
+					variant="outline"
+					onClick={handleCancel}
+					disabled={updateMutation.isPending}
+				>
+					Cancel
+				</Button>
+				<Button
+					type="submit"
+					disabled={!name.trim() || !content.trim() || updateMutation.isPending}
+				>
+					{updateMutation.isPending && (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					)}
+					Save Changes
+				</Button>
+			</DialogFooter>
+		</form>
 	);
 };
