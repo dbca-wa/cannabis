@@ -1,6 +1,39 @@
 import { useRef, useCallback, useEffect } from "react";
 import { TEMPLATE_VARIABLES } from "../../utils/templateResolver";
 
+/** Convert plain text with {{var}} to HTML with chip spans. */
+const toHtml = (text: string): string => {
+	if (!text) return "";
+	// First replace variables with chips, then convert newlines to <br>
+	const withChips = text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
+		const variable = TEMPLATE_VARIABLES.find((v) => v.key === key);
+		const label = variable?.description ?? key;
+		return `<span contenteditable="false" data-variable="${key}" class="template-variable-chip">${label}</span>`;
+	});
+	return withChips.replace(/\n/g, "<br>");
+};
+
+/** Convert HTML back to plain text with {{var}} syntax. */
+const toPlainText = (el: HTMLElement): string => {
+	let result = "";
+	el.childNodes.forEach((node) => {
+		if (node.nodeType === Node.TEXT_NODE) {
+			result += node.textContent ?? "";
+		} else if (node.nodeType === Node.ELEMENT_NODE) {
+			const element = node as HTMLElement;
+			const variable = element.getAttribute("data-variable");
+			if (variable) {
+				result += `{{${variable}}}`;
+			} else if (element.tagName === "BR") {
+				result += "\n";
+			} else {
+				result += toPlainText(element);
+			}
+		}
+	});
+	return result;
+};
+
 /** Group variables by category for the UI. */
 const VARIABLE_GROUPS: {
 	label: string;
@@ -61,39 +94,6 @@ export const TemplateContentEditor = ({
 	const editorRef = useRef<HTMLDivElement>(null);
 	const isInternalUpdate = useRef(false);
 
-	/** Convert plain text with {{var}} to HTML with chip spans. */
-	const toHtml = useCallback((text: string): string => {
-		if (!text) return "";
-		// First replace variables with chips, then convert newlines to <br>
-		const withChips = text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-			const variable = TEMPLATE_VARIABLES.find((v) => v.key === key);
-			const label = variable?.description ?? key;
-			return `<span contenteditable="false" data-variable="${key}" class="template-variable-chip">${label}</span>`;
-		});
-		return withChips.replace(/\n/g, "<br>");
-	}, []);
-
-	/** Convert HTML back to plain text with {{var}} syntax. */
-	const toPlainText = useCallback((el: HTMLElement): string => {
-		let result = "";
-		el.childNodes.forEach((node) => {
-			if (node.nodeType === Node.TEXT_NODE) {
-				result += node.textContent ?? "";
-			} else if (node.nodeType === Node.ELEMENT_NODE) {
-				const element = node as HTMLElement;
-				const variable = element.getAttribute("data-variable");
-				if (variable) {
-					result += `{{${variable}}}`;
-				} else if (element.tagName === "BR") {
-					result += "\n";
-				} else {
-					result += toPlainText(element);
-				}
-			}
-		});
-		return result;
-	}, []);
-
 	/** Sync the editor DOM from the value prop (only on external changes). */
 	useEffect(() => {
 		if (isInternalUpdate.current) {
@@ -106,14 +106,14 @@ export const TemplateContentEditor = ({
 		if (currentText !== value) {
 			editor.innerHTML = toHtml(value);
 		}
-	}, [value, toHtml, toPlainText]);
+	}, [value]);
 
 	const handleInput = useCallback(() => {
 		const editor = editorRef.current;
 		if (!editor) return;
 		isInternalUpdate.current = true;
 		onChange(toPlainText(editor));
-	}, [onChange, toPlainText]);
+	}, [onChange]);
 
 	/** Insert a variable chip at the current cursor position. */
 	const insertVariable = useCallback(
@@ -152,7 +152,7 @@ export const TemplateContentEditor = ({
 			isInternalUpdate.current = true;
 			onChange(toPlainText(editor));
 		},
-		[onChange, toPlainText]
+		[onChange]
 	);
 
 	return (

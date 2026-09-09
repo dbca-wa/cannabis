@@ -1,5 +1,5 @@
 # Development Dockerfile for Django backend with hot reloading
-FROM python:3.15-rc-slim-trixie
+FROM python:3.14-slim-trixie
 
 # Development environment variables
 ENV PYTHONUNBUFFERED=1
