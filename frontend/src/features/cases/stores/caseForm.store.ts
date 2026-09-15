@@ -54,7 +54,6 @@ export interface CaseFormData {
 	case_number: string;
 	received: string;
 	security_movement_envelope: string;
-	internal_comments: string;
 
 	// Officer assignments (IDs)
 	requesting_officer_id?: number;
@@ -98,7 +97,6 @@ export class CaseFormStore {
 		case_number: "",
 		received: new Date().toISOString().split("T")[0], // Default to today
 		security_movement_envelope: "",
-		internal_comments: "",
 		requesting_officer_id: undefined,
 		submitting_officer_id: undefined,
 		station_id: undefined,
@@ -614,7 +612,6 @@ export class CaseFormStore {
 				// loaded here — this store holds the case's shared base data.
 				this.formData.case_number = caseObj.case_number || "";
 				this.formData.received = caseObj.received || "";
-				this.formData.internal_comments = caseObj.internal_comments || "";
 
 				// Load officer IDs
 				this.formData.requesting_officer_id =
@@ -687,7 +684,6 @@ export class CaseFormStore {
 				case_number: "",
 				received: new Date().toISOString().split("T")[0], // Reset to today
 				security_movement_envelope: "",
-				internal_comments: "",
 				requesting_officer_id: undefined,
 				submitting_officer_id: undefined,
 				station_id: undefined,

@@ -105,7 +105,6 @@ const buildCaseData = (
 		(caseObj.station_details as Record<string, unknown>)?.name ??
 		caseObj.station_name ??
 		null,
-	internal_comments: caseObj.internal_comments ?? "",
 	additional_notes: form.additional_notes ?? "",
 	police_form_url: caseObj.police_form_url ?? null,
 });
@@ -186,7 +185,6 @@ const buildCaseDataNoForm = (
 		(caseObj.station_details as Record<string, unknown>)?.name ??
 		caseObj.station_name ??
 		null,
-	internal_comments: caseObj.internal_comments ?? "",
 	additional_notes: "",
 	police_form_url: caseObj.police_form_url ?? null,
 });

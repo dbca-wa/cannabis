@@ -129,10 +129,6 @@ const Guide = () => {
 							Fill in <strong>Section C Notes</strong> if there are other
 							matters to note on the certificate/priority 3 form assessment.
 						</li>
-						<li>
-							Optionally fill out case-wide notes which are internal only and do
-							not appear on the certificate.
-						</li>
 					</ol>
 					<p className="text-sm text-muted-foreground">
 						Tip: Each form produces one certificate. If you have more than 5
@@ -318,10 +314,6 @@ const Guide = () => {
 						<li>
 							Section C notes are per-form (each certificate gets its own
 							notes).
-						</li>
-						<li>
-							Internal comments are shared across the case and are not shown on
-							certificates.
 						</li>
 					</ul>
 				</section>

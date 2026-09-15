@@ -133,7 +133,7 @@ const mapBatchErrorsToBags = (
 
 /**
  * Assessment step — Approved Botanist selection, form-scoped drug bags (max
- * five per form producing one certificate), and internal comments.
+ * five per form producing one certificate) and the form's Section C notes.
  */
 export const AssessmentStep = observer(function AssessmentStep({
 	caseData,
@@ -237,12 +237,6 @@ export const AssessmentStep = observer(function AssessmentStep({
 	useEffect(() => {
 		setLocalNotes(serverNotes);
 	}, [serverNotes, formId]);
-
-	const serverComments = (caseData?.internal_comments as string) ?? "";
-	const [localComments, setLocalComments] = useState(serverComments);
-	useEffect(() => {
-		setLocalComments(serverComments);
-	}, [serverComments]);
 
 	// ALL hooks above this line — early return AFTER all hooks
 	if (!formId) {
@@ -672,34 +666,6 @@ export const AssessmentStep = observer(function AssessmentStep({
 							</p>
 						</div>
 					</div>
-				</div>
-			</SectionCard>
-
-			{/* Internal Comments */}
-			<SectionCard
-				title="Case Internal Comments"
-				isComplete={true}
-				isInvalid={false}
-			>
-				<div className="space-y-2">
-					<Label htmlFor="internal_comments">Internal Comments</Label>
-					<Textarea
-						id="internal_comments"
-						value={localComments}
-						onChange={(e) => {
-							setLocalComments(e.target.value);
-							onFieldChange("internal_comments", e.target.value);
-						}}
-						placeholder="Add internal comments..."
-						className="min-h-[120px] resize-y"
-						aria-describedby="internal-comments-hint"
-					/>
-					<p
-						id="internal-comments-hint"
-						className="text-xs text-muted-foreground"
-					>
-						Not shown on the certificate.
-					</p>
 				</div>
 			</SectionCard>
 

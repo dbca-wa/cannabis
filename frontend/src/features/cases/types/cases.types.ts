@@ -41,6 +41,10 @@ export interface Case {
 	/** Aggregated status across the case's forms (least-advanced non-complete) */
 	derived_status: CasePhase;
 	derived_status_display: string;
+	/**
+	 * Retained on the record for the import pipeline and Django admin. Not
+	 * surfaced or editable in this application.
+	 */
 	internal_comments: string | null;
 
 	// Staff assignments (foreign key IDs)
@@ -194,7 +198,6 @@ export interface CaseDraft {
 export interface CaseUpdateRequest {
 	case_number?: string;
 	received?: string;
-	internal_comments?: string | null;
 	approved_botanist?: number | null;
 	finance_officer?: number | null;
 	requesting_officer?: number | null;
