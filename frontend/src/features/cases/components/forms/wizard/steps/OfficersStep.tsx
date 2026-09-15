@@ -16,8 +16,12 @@ interface OfficersStepProps {
 }
 
 /**
- * Step 1 of the case creation wizard — officer and station selection.
- * Renders requesting_officer, submitting_officer, and station fields.
+ * Officer and station selection.
+ *
+ * The conveying (submitting) officer is required — they physically delivered the
+ * samples and are the officer named on the certificate. The requesting officer is
+ * optional and only applies when the samples were conveyed on another officer's
+ * behalf.
  */
 export const OfficersStep = ({
 	caseData,
@@ -31,27 +35,28 @@ export const OfficersStep = ({
 		(caseData?.submitting_officer_id as number | null) ?? null;
 	const station = (caseData?.station_id as number | null) ?? null;
 
-	// Fetch requesting officer details to derive station
-	const { data: requestingOfficerData } = useOfficerById(requestingOfficerId);
+	// The station follows the requesting officer when there is one, since they
+	// hold the originating station; otherwise it follows the conveying officer.
+	const stationSourceOfficerId = requestingOfficerId ?? submittingOfficerId;
+	const { data: stationSourceOfficer } = useOfficerById(stationSourceOfficerId);
 
-	// Only trust the fetched officer data once it matches the currently-selected
-	// requesting officer — avoids acting on a previous officer's stale data
-	// during the query refetch window.
+	// Only trust the fetched officer data once it matches the officer we are
+	// deriving from — avoids acting on a previous officer's data during a refetch.
 	const officerDataMatches =
-		!!requestingOfficerId && requestingOfficerData?.id === requestingOfficerId;
+		!!stationSourceOfficerId &&
+		stationSourceOfficer?.id === stationSourceOfficerId;
 
-	// Derive station ONLY from the requesting officer (once their data is loaded)
 	const derivedStationId = officerDataMatches
-		? (requestingOfficerData?.station ?? null)
+		? (stationSourceOfficer?.station ?? null)
 		: null;
 
-	// Keep the case's station in sync with the requesting officer's station:
-	// - no requesting officer   -> clear the station
-	// - officer has a station   -> set it (auto-derived, read-only)
-	// - officer has no station  -> clear any previously-derived station so the
-	//                              user can set one manually
+	// Keep the case's station in step with the source officer's station:
+	// - no officer to derive from -> clear the station
+	// - officer has a station     -> set it (auto-derived, read-only)
+	// - officer has no station    -> clear any previously-derived station so the
+	//                                user can set one manually
 	useEffect(() => {
-		if (!requestingOfficerId) {
+		if (!stationSourceOfficerId) {
 			if (station) onFieldChange("station_id", null);
 			return;
 		}
@@ -63,24 +68,21 @@ export const OfficersStep = ({
 				onFieldChange("station_id", derivedStationId);
 			}
 		} else if (station) {
-			// New requesting officer has no station — drop the stale one.
+			// The source officer has no station — drop the stale one.
 			onFieldChange("station_id", null);
 		}
 	}, [
-		requestingOfficerId,
+		stationSourceOfficerId,
 		officerDataMatches,
 		derivedStationId,
 		station,
 		onFieldChange,
 	]);
 
-	// Station visibility: show once both officers are set
-	const bothOfficersSet = !!submittingOfficerId && !!requestingOfficerId;
-	const showStation = bothOfficersSet;
-	// Manual station selection: both set, the officer's data has loaded, and
-	// that officer has no station of their own.
+	// The station appears once there is an officer to derive it from.
+	const showStation = !!submittingOfficerId;
 	const needsManualStation =
-		bothOfficersSet && officerDataMatches && !derivedStationId;
+		showStation && officerDataMatches && !derivedStationId;
 
 	// The same officer cannot be both conveying and requesting. This is a clear
 	// mistake so we surface it immediately (not gated behind isTouched).
@@ -89,22 +91,15 @@ export const OfficersStep = ({
 		!!requestingOfficerId &&
 		submittingOfficerId === requestingOfficerId;
 
-	// Compute validation errors. "Required" errors only show once touched;
-	// the same-officer clash shows as soon as it happens.
+	// Only the conveying officer is required. The clash shows as soon as it
+	// happens; the required error waits until the section has been touched.
 	const errors = {
 		submitting_officer: !submittingOfficerId
 			? "Conveying officer is required"
 			: undefined,
-		requesting_officer: !requestingOfficerId
-			? "Requesting officer is required"
-			: undefined,
 	};
 
-	// Section is complete when both officers are set and different
-	const isComplete =
-		!!submittingOfficerId &&
-		!!requestingOfficerId &&
-		submittingOfficerId !== requestingOfficerId;
+	const isComplete = !!submittingOfficerId && !sameOfficerSelected;
 	const isInvalid = (isTouched && !isComplete) || sameOfficerSelected;
 
 	const handleRequestingOfficerChange = (officerId: number | null) => {
@@ -157,33 +152,25 @@ export const OfficersStep = ({
 						</p>
 					</div>
 
-					{/* Requesting Officer (required) */}
+					{/* Requesting Officer (optional) */}
 					<div className="space-y-2">
-						<Label htmlFor="requesting_officer" className="required">
-							Requesting Officer (On Behalf Of)
+						<Label htmlFor="requesting_officer">
+							Requesting Officer (On Behalf Of){" "}
+							<span className="font-normal text-muted-foreground">
+								— optional
+							</span>
 						</Label>
 						<OfficerSearchComboBox
 							value={requestingOfficerId}
 							onValueChange={handleRequestingOfficerChange}
 							placeholder="Search for requesting officer..."
-							error={
-								(isTouched && !!errors.requesting_officer) ||
-								sameOfficerSelected
-							}
+							error={sameOfficerSelected}
 							showExternalAddButton
 						/>
-						{isTouched && errors.requesting_officer && (
-							<p
-								id="requesting_officer-error"
-								className="text-sm text-red-600"
-								role="alert"
-							>
-								{errors.requesting_officer}
-							</p>
-						)}
 						<p className="text-xs text-muted-foreground">
 							The sworn officer who made the seizure or arrest and requested the
-							identification.
+							identification. Leave blank when the conveying officer submitted
+							the samples in their own right.
 						</p>
 					</div>
 
@@ -221,7 +208,7 @@ export const OfficersStep = ({
 							{needsManualStation && (
 								<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
 									<Info className="h-3 w-3" />
-									Neither officer has a station assigned. Please select
+									That officer has no station assigned. Please select one
 									manually.
 								</p>
 							)}
@@ -229,7 +216,7 @@ export const OfficersStep = ({
 					)}
 					{!showStation && (
 						<p className="text-xs text-muted-foreground italic">
-							Police station will appear once both officers are selected.
+							Police station will appear once the conveying officer is selected.
 						</p>
 					)}
 				</div>

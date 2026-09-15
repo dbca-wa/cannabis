@@ -205,12 +205,22 @@ class CertificateService:
             "description": descriptions,
             "section_b_description": section_b_description,
             "defendant": defendant_display,
-            "police_officer": CertificateService._format_officer_legal(
+            # The conveying officer physically delivered the samples and was
+            # present at the examination, so they are named in both section (a)
+            # (received from) and section (b) (handed back to).
+            "conveying_officer": CertificateService._format_officer_legal(
                 case.submitting_officer, role_label="Unsworn Officer"
             ),
-            "receiving_officer": CertificateService._format_officer_legal(
-                case.requesting_officer or case.submitting_officer,
-                role_label="Sworn Officer",
+            # The requesting officer is optional and appears only in section (a),
+            # as the officer the samples were conveyed on behalf of. None when
+            # unset, so the template omits the clause rather than printing a
+            # placeholder.
+            "requesting_officer": (
+                CertificateService._format_officer_legal(
+                    case.requesting_officer, role_label="Sworn Officer"
+                )
+                if case.requesting_officer
+                else None
             ),
             "receipt_date": receipt_date,
             "species_name": (

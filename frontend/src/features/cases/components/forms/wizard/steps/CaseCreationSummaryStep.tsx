@@ -279,17 +279,20 @@ export const CaseCreationSummaryStep = ({
 
 					<div className="space-y-2">
 						<Label htmlFor="summary_requesting_officer">
-							Requesting Officer (on behalf of)
+							Requesting Officer (on behalf of){" "}
+							<span className="font-normal text-muted-foreground">
+								— optional
+							</span>
 						</Label>
 						<OfficerSearchComboBox
 							value={requestingOfficer}
 							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
 							placeholder="Search officer..."
 							showExternalAddButton
-							required
 						/>
 						<p className="text-xs text-muted-foreground">
-							The sworn officer who requested the identification.
+							The sworn officer who requested the identification. Leave blank
+							when the conveying officer submitted the samples themselves.
 						</p>
 					</div>
 

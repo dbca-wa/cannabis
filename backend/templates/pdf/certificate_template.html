@@ -393,12 +393,16 @@
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bag, tag number {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                    {{ requesting_officer }}{% endif %} on
+                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% else %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bags, tag numbers {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                    {{ requesting_officer }}{% endif %} on
+                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% endif %}
                 </div>
             </div>
@@ -419,11 +423,11 @@
                     {% if quantity_of_bags == 1 %}
                     The {{ section_b_description }} was sealed in a new drug movement bag, tag number
                     {{ new_tag_numbers }}. This bag was handed over to
-                    {{ receiving_officer }} who was present during the examination.
+                    {{ conveying_officer }} who was present during the examination.
                     {% else %}
                     The {{ section_b_description }} were sealed in new drug movement bags, tag numbers
                     {{ new_tag_numbers }}. These bags were handed over to
-                    {{ receiving_officer }} who was present during the examination.
+                    {{ conveying_officer }} who was present during the examination.
                     {% endif %}
                 </div>
             </div>
