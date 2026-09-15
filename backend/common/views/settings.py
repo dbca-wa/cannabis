@@ -34,7 +34,18 @@ class SystemFeatureFlagsView(APIView):
 
     def get(self, request):
         settings_obj = SystemSettings.load()
-        return Response({"ocr_enabled": settings_obj.ocr_enabled})
+
+        # Reported only while the chosen user still holds the Approved Botanist
+        # role, so a role change behaves as though no default were set.
+        botanist = settings_obj.default_approved_botanist
+        default_botanist_id = botanist.pk if botanist and botanist.is_botanist else None
+
+        return Response(
+            {
+                "ocr_enabled": settings_obj.ocr_enabled,
+                "default_approved_botanist": default_botanist_id,
+            }
+        )
 
 
 class SystemSettingsRateThrottle(UserRateThrottle):
@@ -68,6 +79,23 @@ class SystemSettingsView(APIView):
             "ocr_enabled": settings.ocr_enabled,
             "environment": environment,
         }
+
+        # The default botanist is only reported while the chosen user still holds
+        # the Approved Botanist role, so a role change behaves as though no
+        # default were set rather than pre-selecting someone ineligible.
+        botanist = settings.default_approved_botanist
+        if botanist and botanist.is_botanist:
+            response_data["default_approved_botanist"] = botanist.pk
+            response_data["default_approved_botanist_details"] = {
+                "id": botanist.pk,
+                "email": botanist.email,
+                "given_names": botanist.given_names,
+                "last_name": botanist.last_name,
+                "full_name": botanist.full_name,
+            }
+        else:
+            response_data["default_approved_botanist"] = None
+            response_data["default_approved_botanist_details"] = None
 
         # Add audit information if available
         if settings.last_modified_by:
@@ -287,6 +315,38 @@ class SystemSettingsView(APIView):
                 validation_errors["certificate_counter"] = (
                     "Certificate counter must be a whole number"
                 )
+
+        # Validate default_approved_botanist field
+        if "default_approved_botanist" in request.data:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            botanist_id = request.data["default_approved_botanist"]
+            if botanist_id is None or botanist_id == "":
+                old_values["default_approved_botanist"] = (
+                    settings.default_approved_botanist
+                )
+                settings.default_approved_botanist = None
+                updated_fields.append("default_approved_botanist")
+            else:
+                try:
+                    botanist = User.objects.get(pk=int(botanist_id))
+                except (User.DoesNotExist, ValueError, TypeError):
+                    validation_errors["default_approved_botanist"] = (
+                        "Select an existing user as the default botanist"
+                    )
+                else:
+                    if not botanist.is_botanist:
+                        validation_errors["default_approved_botanist"] = (
+                            "That user does not hold the Approved Botanist role"
+                        )
+                    else:
+                        old_values["default_approved_botanist"] = (
+                            settings.default_approved_botanist
+                        )
+                        settings.default_approved_botanist = botanist
+                        updated_fields.append("default_approved_botanist")
 
         # Validate email_test_user field
         if "email_test_user" in request.data:

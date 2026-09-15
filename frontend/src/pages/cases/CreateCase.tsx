@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
+import { useDefaultBotanistId } from "@/shared/hooks/data";
 import { useCaseCreationFormStore } from "@/app/providers/store.provider";
 import { CaseStoresProvider } from "@/features/cases/components/providers/CaseStoresProvider";
 import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
@@ -49,6 +50,18 @@ const CreateCaseContent = observer(() => {
 		void formStore.loadDraft();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Apply the configured default botanist once, and only when the form has no
+	// botanist of its own — a restored draft or a manual choice always wins.
+	const defaultBotanistId = useDefaultBotanistId();
+	const defaultApplied = useRef(false);
+	useEffect(() => {
+		if (defaultApplied.current) return;
+		if (defaultBotanistId === null) return;
+		if (formStore.formData.approved_botanist_id) return;
+		defaultApplied.current = true;
+		formStore.updateField("approved_botanist_id", defaultBotanistId);
+	}, [defaultBotanistId, formStore]);
 
 	// Reset the creation presentation store on unmount
 	useEffect(() => {
