@@ -26,10 +26,7 @@ import { GeneratedCertificatesViewer } from "../GeneratedCertificatesViewer";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 interface UnsignedCertificateStepProps {
-	caseData: Record<string, unknown> | null;
 	caseId: number;
-	formId: number;
-	onAction: (action: string) => void;
 	lockActions?: boolean;
 	lockMessage?: string;
 	/** Callback fired when the all-forms-ready state changes */
@@ -37,15 +34,15 @@ interface UnsignedCertificateStepProps {
 }
 
 /**
- * Multi-form certificate step — shows ALL forms on the case and their
- * certificate status. Users can generate/regenerate certificates per form
- * or generate all at once.
+ * Certificate section — shows every form on the case and its certificate
+ * status. Certificates can be generated or regenerated per form, or all at
+ * once, and each form is marked ready once its certificate has been reviewed.
+ *
+ * Scoped to the case rather than the active form: finalising requires every
+ * form's certificate, so all of them are listed here.
  */
 export const UnsignedCertificateStep = ({
-	caseData: _caseData,
 	caseId,
-	formId: _formId,
-	onAction: _onAction,
 	lockActions = false,
 	lockMessage,
 	onAllReadyChange,

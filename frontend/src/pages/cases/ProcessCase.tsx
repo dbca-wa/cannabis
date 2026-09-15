@@ -1,9 +1,9 @@
 import { observer } from "mobx-react-lite";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-	useCaseProcessingWizardStore,
+	useCaseProcessingPageStore,
 	useDrugBagWranglerStore,
 } from "@/app/providers/store.provider";
 import { CaseStoresProvider } from "@/features/cases/components/providers/CaseStoresProvider";
@@ -13,11 +13,10 @@ import {
 	getCaseForms,
 	getFormById,
 	advanceFormPhase,
-	generateFormCertificate,
 	deleteForm,
 	updateForm,
 } from "@/features/cases/services/forms.service";
-import { CaseProcessingWizardContainer } from "@/features/cases/components/forms/wizard/CaseProcessingWizardContainer";
+import { CaseProcessingPage } from "@/features/cases/components/forms/page/CaseProcessingPage";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -196,7 +195,7 @@ const ProcessCaseContent = observer(() => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	const wizardStore = useCaseProcessingWizardStore();
+	const pageStore = useCaseProcessingPageStore();
 	const wrangler = useDrugBagWranglerStore();
 	const parsedId = id ? parseInt(id, 10) : null;
 
@@ -228,7 +227,12 @@ const ProcessCaseContent = observer(() => {
 		staleTime: 30_000,
 	});
 
-	const forms: Priority3Form[] = Array.isArray(formsData) ? formsData : [];
+	// Memoised so effects and callbacks depending on the list are not
+	// invalidated by a fresh array identity on every render.
+	const forms: Priority3Form[] = useMemo(
+		() => (Array.isArray(formsData) ? formsData : []),
+		[formsData]
+	);
 
 	// Default to first form when forms load (or after adding one)
 	useEffect(() => {
@@ -260,53 +264,6 @@ const ProcessCaseContent = observer(() => {
 		},
 	});
 
-	// Generate certificate mutation (form-scoped)
-	const generateCertificateMutation = useMutation({
-		mutationFn: ({
-			fId,
-			sectionCNote,
-		}: {
-			fId: number;
-			sectionCNote?: string | null;
-		}) =>
-			generateFormCertificate(fId, {
-				section_c_note: sectionCNote ?? undefined,
-			}),
-		onSuccess: async () => {
-			if (activeFormId) {
-				await queryClient.invalidateQueries({
-					queryKey: ["cases", "forms", activeFormId],
-				});
-			}
-			// Refresh the forms list (FormsNavigator badges) and case list/dashboard
-			await queryClient.invalidateQueries({
-				queryKey: ["cases", parsedId, "forms"],
-			});
-			await queryClient.invalidateQueries({ queryKey: ["cases"] });
-			toast.success("Certificate generated");
-		},
-		onError: () => {
-			toast.error("Failed to generate certificate");
-		},
-	});
-
-	// Advance form phase mutation
-	const advanceFormPhaseMutation = useMutation({
-		mutationFn: (fId: number) => advanceFormPhase(fId),
-		onSuccess: async () => {
-			if (activeFormId) {
-				await queryClient.invalidateQueries({
-					queryKey: ["cases", "forms", activeFormId],
-				});
-			}
-			// Phase changes affect the forms list badges and case status
-			await queryClient.invalidateQueries({
-				queryKey: ["cases", parsedId, "forms"],
-			});
-			await queryClient.invalidateQueries({ queryKey: ["cases"] });
-		},
-	});
-
 	// Delete form mutation
 	const deleteFormMutation = useMutation({
 		mutationFn: (formId: number) => deleteForm(formId),
@@ -330,12 +287,12 @@ const ProcessCaseContent = observer(() => {
 		},
 	});
 
-	// Reset the processing wizard store on unmount
+	// Reset the page presentation store on unmount
 	useEffect(() => {
 		return () => {
-			wizardStore.reset();
+			pageStore.reset();
 		};
-	}, [wizardStore]);
+	}, [pageStore]);
 
 	// Sync local notes from the form when it loads or changes
 	useEffect(() => {
@@ -542,7 +499,7 @@ const ProcessCaseContent = observer(() => {
 			const apiField = fieldMap[field] ?? field;
 			updateCase({ id: parsedId, data: { [apiField]: value }, silent: true });
 		},
-		[parsedId, activeFormId, updateCase, queryClient]
+		[parsedId, activeFormId, caseData?.defendants, updateCase, queryClient]
 	);
 
 	// Clean up debounce timeouts on unmount — flush notes to avoid data loss
@@ -558,38 +515,13 @@ const ProcessCaseContent = observer(() => {
 		};
 	}, []);
 
-	/** Action handler — triggers form-scoped actions. */
-	const handleAction = useCallback(
-		(action: string) => {
-			if (!activeFormId) return;
-			if (action === "generate_certificate") {
-				const sectionCNote =
-					typeof caseData?.additional_notes === "string"
-						? caseData.additional_notes
-						: undefined;
-				generateCertificateMutation.mutate({
-					fId: activeFormId,
-					sectionCNote,
-				});
-			} else if (action === "advance_phase") {
-				advanceFormPhaseMutation.mutate(activeFormId);
-			}
-		},
-		[
-			activeFormId,
-			caseData,
-			generateCertificateMutation,
-			advanceFormPhaseMutation,
-		]
-	);
-
 	/** Submit handler — advances ALL forms on the case to batching, then returns to cases list. */
 	const handleSubmit = useCallback(() => {
 		if (!parsedId) return;
-		wizardStore.setSubmitting(true);
+		pageStore.setSubmitting(true);
 
 		const finish = () => {
-			wizardStore.setSubmitting(false);
+			pageStore.setSubmitting(false);
 			toast.success("Case ready for batching");
 			navigate("/cases");
 		};
@@ -627,10 +559,10 @@ const ProcessCaseContent = observer(() => {
 				finish();
 			})
 			.catch(() => {
-				wizardStore.setSubmitting(false);
+				pageStore.setSubmitting(false);
 				toast.error("Failed to finalise case");
 			});
-	}, [parsedId, forms, wizardStore, navigate, queryClient]);
+	}, [parsedId, forms, pageStore, navigate, queryClient]);
 
 	/** Discard handler — navigates back to cases list. */
 	const handleDiscard = useCallback(() => {
@@ -705,13 +637,12 @@ const ProcessCaseContent = observer(() => {
 
 	return (
 		<div className="space-y-4">
-			<CaseProcessingWizardContainer
+			<CaseProcessingPage
 				caseData={caseData}
 				caseId={parsedId!}
 				activeFormId={activeFormId ?? 0}
 				forms={forms}
 				onFieldChange={handleFieldChange}
-				onAction={handleAction}
 				onSubmit={handleSubmit}
 				onDiscard={handleDiscard}
 				onFormSelect={handleFormSelect}

@@ -1,18 +1,18 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useCaseCreationWizardStore } from "@/app/providers/store.provider";
+import { useCaseCreationFormStore } from "@/app/providers/store.provider";
 import { CaseStoresProvider } from "@/features/cases/components/providers/CaseStoresProvider";
 import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
 import { useCases } from "@/features/cases/hooks/useCases";
-import { CaseCreationWizardContainer } from "@/features/cases/components/forms/wizard/CaseCreationWizardContainer";
+import { CaseCreationForm } from "@/features/cases/components/forms/page/CaseCreationForm";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 /**
  * Bridges the CaseFormStore base data into the Record<string, unknown> shape
- * the creation wizard expects as caseData. Creation captures base data only —
+ * the creation form expects as caseData. Creation captures base data only —
  * the security movement envelope, drug bags, and scanned image belong to a
  * Priority 3 form and are recorded when a form is added.
  */
@@ -41,7 +41,7 @@ const buildCaseData = (
 const CreateCaseContent = observer(() => {
 	const navigate = useNavigate();
 	const formStore = useCaseFormStore();
-	const wizardStore = useCaseCreationWizardStore();
+	const creationStore = useCaseCreationFormStore();
 	const { createCase } = useCases();
 
 	useEffect(() => {
@@ -50,22 +50,22 @@ const CreateCaseContent = observer(() => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Reset the wizard store on unmount
+	// Reset the creation presentation store on unmount
 	useEffect(() => {
 		return () => {
-			wizardStore.reset();
+			creationStore.reset();
 		};
-	}, [wizardStore]);
+	}, [creationStore]);
 
 	const caseData = buildCaseData(formStore);
 
 	/**
 	 * Field change handler — updates the CaseFormStore field.
-	 * Maps field names from wizard components to the store's internal field names.
+	 * Maps section field names to the store's internal field names.
 	 */
 	const handleFieldChange = useCallback(
 		(field: string, value: unknown) => {
-			// Map wizard field names to store field names where they differ
+			// Map section field names to store field names where they differ
 			if (field === "defendants") {
 				// CaseDetailsStep passes defendant IDs; sync both IDs and display list.
 				// Filter selectedDefendants to match the new ID list (handles removals),
@@ -104,12 +104,12 @@ const CreateCaseContent = observer(() => {
 	 * first Priority 3 form, its bags, and its certificate on the new case.
 	 */
 	const handleSubmit = useCallback(() => {
-		wizardStore.setSubmitting(true);
+		creationStore.setSubmitting(true);
 		const submissionData = formStore.getCaseCreateRequest();
 
 		createCase(submissionData, {
 			onSuccess: (newCase) => {
-				wizardStore.setSubmitting(false);
+				creationStore.setSubmitting(false);
 				// Navigate first, then clean up — prevents a brief red flash.
 				navigate(`/cases/${newCase.id}`);
 				void formStore.clearDraft();
@@ -117,10 +117,10 @@ const CreateCaseContent = observer(() => {
 				ocrResultStore.clearAll();
 			},
 			onError: () => {
-				wizardStore.setSubmitting(false);
+				creationStore.setSubmitting(false);
 			},
 		});
-	}, [formStore, wizardStore, createCase, navigate]);
+	}, [formStore, creationStore, createCase, navigate]);
 
 	/**
 	 * Discard handler — clears draft and navigates to cases list.
@@ -132,7 +132,7 @@ const CreateCaseContent = observer(() => {
 	}, [formStore, navigate]);
 
 	return (
-		<CaseCreationWizardContainer
+		<CaseCreationForm
 			caseData={caseData}
 			onFieldChange={handleFieldChange}
 			onSubmit={handleSubmit}
