@@ -12,7 +12,7 @@ import type { QueryClient } from "@tanstack/react-query";
 export const ROOT_QUERY_KEYS = {
 	cases: ["cases"],
 	certificates: ["certificates"],
-	invoices: ["invoices"],
+	batches: ["batches"],
 	defendants: ["defendants"],
 	users: ["users"],
 	policeOfficers: ["police-officers"],
@@ -31,16 +31,19 @@ export type CacheEntity = keyof typeof ROOT_QUERY_KEYS;
  *
  * Relationships (why each dependency exists):
  * - Cases are summarised on the dashboard (phase counts, revenue, attention).
- * - Certificates/invoices are embedded in case detail and feed dashboard stats.
+ * - Certificates are embedded in case detail and feed dashboard stats.
+ * - Batches carry the invoice-raised state, and a certificate's batching
+ *   eligibility derives from its form's phase — so anything that moves a case,
+ *   form or certificate forward changes what the batches views should show.
  * - Defendants, officers and stations are embedded in case records.
  * - Officers belong to stations (rosters) and stations are named on officers.
  * - Users (creator, botanist, assignee) are named on case records.
  * - Drug bags and assessments are nested under a case.
  */
 const RELATED_ENTITIES = {
-	cases: ["cases", "dashboard"],
-	certificates: ["certificates", "cases", "dashboard"],
-	invoices: ["invoices", "cases", "dashboard"],
+	cases: ["cases", "batches", "dashboard"],
+	certificates: ["certificates", "cases", "batches", "dashboard"],
+	batches: ["batches", "cases", "certificates", "dashboard"],
 	defendants: ["defendants", "cases"],
 	users: ["users", "cases"],
 	policeOfficers: ["policeOfficers", "policeStations", "cases"],

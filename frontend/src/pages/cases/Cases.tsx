@@ -76,7 +76,8 @@ const Cases = () => {
 	// Hide the table when viewing a full-page child route
 	const isAddPage = useMatch("/cases/add");
 	const isCasePage = useMatch("/cases/:id");
-	const isFullPageChild = isAddPage || isCasePage;
+	const isCaseFormPage = useMatch("/cases/:id/forms/:formId");
+	const isFullPageChild = isAddPage || isCasePage || isCaseFormPage;
 
 	useDocumentTitle("Cases");
 

@@ -220,6 +220,9 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		children: [
 			{ path: "add", element: CreateCase },
 			{ path: ":id", element: ProcessCase },
+			// The selected Priority 3 form is part of the address so a reload,
+			// a bookmark or a shared link returns to the same form.
+			{ path: ":id/forms/:formId", element: ProcessCase },
 			{ path: ":id/delete", element: DeleteCaseRouteModal },
 		],
 	},

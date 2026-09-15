@@ -31,6 +31,7 @@ import type {
 	DrugBagUpdateRequest,
 	BotanicalDetermination,
 } from "../../../../types/drugBags.types";
+import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 interface AssessmentStepProps {
 	/** Case data from TanStack Query — contains bags array and text fields */
@@ -46,6 +47,58 @@ interface AssessmentStepProps {
 }
 
 const MAX_BAGS = 5;
+
+interface BatchCreateBag {
+	seal_tag_numbers: string;
+	new_seal_tag_numbers: string | null;
+	content_type: DrugBagContentType;
+	determination: BotanicalDetermination;
+	contains_female_plants?: boolean;
+}
+
+interface BatchCreatePayload {
+	bags: BatchCreateBag[];
+}
+
+/**
+ * Build the placeholder a submitted bag is shown as until the server responds.
+ *
+ * Ids are negative so they cannot collide with a real record, and are only ever
+ * used as React keys — the list is replaced by server data once the request
+ * settles.
+ */
+const buildProvisionalBag = (
+	bag: BatchCreateBag,
+	caseId: number,
+	index: number
+): DrugBag => {
+	const now = new Date().toISOString();
+	return {
+		id: -(Date.now() + index),
+		case: caseId,
+		content_type: bag.content_type,
+		content_type_display: bag.content_type,
+		seal_tag_numbers: bag.seal_tag_numbers,
+		new_seal_tag_numbers: bag.new_seal_tag_numbers,
+		property_reference: null,
+		gross_weight: null,
+		net_weight: null,
+		contains_female_plants: bag.contains_female_plants ?? false,
+		security_movement_envelope: "",
+		assessment: {
+			id: -(Date.now() + index),
+			determination: bag.determination,
+			determination_display: bag.determination,
+			is_cannabis: bag.determination.startsWith("cannabis"),
+			assessment_date: now,
+			botanist_notes: null,
+			created_at: now,
+			updated_at: now,
+		},
+		created_at: now,
+		updated_at: now,
+	};
+};
 
 /**
  * Map a backend batch-create error of the shape
@@ -97,23 +150,49 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 	const { updateDrugBag, deleteDrugBag } = useDrugBags(caseId || null);
 
-	// Form-scoped batch creation mutation
+	// Form-scoped batch creation mutation.
+	//
+	// Applied optimistically: the saved list shows the new bags the moment the
+	// request is accepted rather than waiting for the form to be refetched, so a
+	// slow or cache-obstructed read cannot make a successful save look lost.
 	const batchCreateMutation = useMutation({
-		mutationFn: (data: {
-			bags: Array<{
-				seal_tag_numbers: string;
-				new_seal_tag_numbers: string | null;
-				content_type: DrugBagContentType;
-				determination: BotanicalDetermination;
-				contains_female_plants?: boolean;
-			}>;
-		}) => addBagsToForm(formId, data),
-		onSuccess: async () => {
+		mutationFn: (data: BatchCreatePayload) => addBagsToForm(formId, data),
+		onMutate: async (data: BatchCreatePayload) => {
+			const formQueryKey = ["cases", "forms", formId];
+			// Stop an in-flight read from overwriting the optimistic list.
+			await queryClient.cancelQueries({ queryKey: formQueryKey });
+
+			const previousForm =
+				queryClient.getQueryData<Priority3Form>(formQueryKey);
+			if (previousForm) {
+				queryClient.setQueryData<Priority3Form>(formQueryKey, {
+					...previousForm,
+					bags: [
+						...(previousForm.bags ?? []),
+						...data.bags.map((bag, index) =>
+							buildProvisionalBag(bag, caseId, index)
+						),
+					],
+				});
+			}
+
+			return { previousForm, formQueryKey };
+		},
+		onError: (_error, _data, context) => {
+			// Put the server's last known list back so the user does not see bags
+			// that were rejected.
+			if (context?.previousForm) {
+				queryClient.setQueryData(context.formQueryKey, context.previousForm);
+			}
+		},
+		onSuccess: () => {
+			toast.success("Bags saved successfully");
+		},
+		onSettled: async () => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", "forms", formId],
 			});
 			await invalidateRelatedQueries(queryClient, "drugBags");
-			toast.success("Bags saved successfully");
 		},
 	});
 

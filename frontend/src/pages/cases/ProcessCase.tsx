@@ -192,15 +192,36 @@ const buildCaseDataNoForm = (
 });
 
 const ProcessCaseContent = observer(() => {
-	const { id } = useParams<{ id: string }>();
+	const { id, formId } = useParams<{ id: string; formId?: string }>();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const pageStore = useCaseProcessingPageStore();
 	const wrangler = useDrugBagWranglerStore();
 	const parsedId = id ? parseInt(id, 10) : null;
 
-	// Active form tracked in local state (no URL param)
-	const [activeFormId, setActiveFormId] = useState<number | null>(null);
+	// The selected form comes from the address, so a reload or a shared link
+	// returns to the same form instead of falling back to the first one.
+	const parsedFormId = formId ? parseInt(formId, 10) : null;
+
+	/**
+	 * Select a form by changing the address.
+	 *
+	 * A deliberate switch adds a history entry so Back returns to the previous
+	 * form; landing on a default form replaces the entry instead, so Back does
+	 * not bounce between the bare case address and the redirect.
+	 */
+	const setActiveFormId = useCallback(
+		(nextFormId: number | null, { replace = false } = {}) => {
+			if (!parsedId) return;
+			navigate(
+				nextFormId === null
+					? `/cases/${parsedId}`
+					: `/cases/${parsedId}/forms/${nextFormId}`,
+				{ replace }
+			);
+		},
+		[parsedId, navigate]
+	);
 
 	// Local notes state for instant preview updates (ahead of debounced server save)
 	const [localAdditionalNotes, setLocalAdditionalNotes] = useState<
@@ -234,12 +255,21 @@ const ProcessCaseContent = observer(() => {
 		[formsData]
 	);
 
-	// Default to first form when forms load (or after adding one)
-	useEffect(() => {
-		if (forms.length > 0 && activeFormId === null) {
-			setActiveFormId(forms[0].id);
+	// Only honour a form id from the address if it belongs to this case, so a
+	// stale or hand-edited link cannot load another case's form.
+	const activeFormId = useMemo(() => {
+		if (parsedFormId && forms.some((f) => f.id === parsedFormId)) {
+			return parsedFormId;
 		}
-	}, [forms, activeFormId]);
+		return null;
+	}, [parsedFormId, forms]);
+
+	// Land on the first form when the address names no valid form. Redirects so
+	// the address always reflects what is on screen.
+	useEffect(() => {
+		if (forms.length === 0 || activeFormId !== null) return;
+		setActiveFormId(forms[0].id, { replace: true });
+	}, [forms, activeFormId, setActiveFormId]);
 
 	// Load the active form's full data
 	const { data: form, isLoading: isFormLoading } = useQuery({
@@ -276,9 +306,10 @@ const ProcessCaseContent = observer(() => {
 			queryClient.removeQueries({
 				queryKey: ["cases", "forms", deletedFormId],
 			});
-			// If the deleted form was the active one, clear selection
+			// If the deleted form was the active one, drop the selection so the
+			// landing effect picks the next remaining form.
 			if (activeFormId === deletedFormId) {
-				setActiveFormId(null);
+				setActiveFormId(null, { replace: true });
 			}
 			toast.success("Form deleted");
 		},
@@ -571,18 +602,18 @@ const ProcessCaseContent = observer(() => {
 
 	/** Callback for FormsNavigator form selection. */
 	const handleFormSelect = useCallback(
-		(formId: number) => {
+		(nextFormId: number) => {
 			// Flush any pending section C notes before switching
 			flushPendingNotes();
 			// Stash current form's unsaved bags before switching
 			if (activeFormId) {
 				wrangler.stashForForm(activeFormId);
 			}
-			setActiveFormId(formId);
+			setActiveFormId(nextFormId);
 			// Restore the target form's stashed bags
-			wrangler.restoreForForm(formId);
+			wrangler.restoreForForm(nextFormId);
 		},
-		[activeFormId, wrangler, flushPendingNotes]
+		[activeFormId, wrangler, flushPendingNotes, setActiveFormId]
 	);
 
 	/** Callback for FormsNavigator "Add Form" button. */
