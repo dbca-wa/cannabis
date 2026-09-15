@@ -4,6 +4,7 @@ import HamburgerMenu from "./HamburgerMenu";
 import MobileSidebar from "./MobileSidebar";
 import { NavigationProvider } from "@/app/providers/navigation.provider";
 import { useUIStore } from "@/app/providers/store.provider";
+import { OutdatedBuildNotice } from "@/shared/components/feedback/OutdatedBuildNotice";
 import { observer } from "mobx-react-lite";
 
 const MainLayout = observer(function MainLayout() {
@@ -37,6 +38,8 @@ const MainLayout = observer(function MainLayout() {
 						<Outlet />
 					</div>
 				</main>
+
+				<OutdatedBuildNotice />
 			</div>
 		</NavigationProvider>
 	);

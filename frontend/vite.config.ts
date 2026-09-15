@@ -44,8 +44,15 @@ function generateCSP(config: Record<string, string[]>): string {
 		.join("; ");
 }
 
+// Identifies the build. Written into the bundle and emitted as version.json so a
+// running tab can tell when it is out of date with what is deployed.
+const BUILD_ID = process.env.BUILD_ID ?? Date.now().toString(36);
+
 // https://vite.dev/config/
 export default defineConfig({
+	define: {
+		__BUILD_ID__: JSON.stringify(BUILD_ID),
+	},
 	server: {
 		host: "127.0.0.1",
 		port: 3000,
@@ -77,6 +84,18 @@ export default defineConfig({
 	plugins: [
 		react(),
 		tailwindcss(),
+		// Emit the build identifier alongside the bundle so the running app can
+		// compare itself against what is currently deployed.
+		{
+			name: "emit-build-version",
+			generateBundle() {
+				this.emitFile({
+					type: "asset",
+					fileName: "version.json",
+					source: JSON.stringify({ buildId: BUILD_ID }),
+				});
+			},
+		},
 		// Replace the dev CSP meta tag with production CSP during build
 		{
 			name: "html-csp-transform",
