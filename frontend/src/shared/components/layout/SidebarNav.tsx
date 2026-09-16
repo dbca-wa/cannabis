@@ -28,6 +28,8 @@ interface NavItem {
 interface NavGroup {
 	label?: string;
 	items: NavItem[];
+	/** Pin this group to the bottom of the sidebar, separated from those above. */
+	pinToBottom?: boolean;
 }
 
 /** Shared navigation groups used by both desktop and mobile sidebars. */
@@ -39,7 +41,6 @@ export const navGroups: NavGroup[] = [
 			{ to: "/", label: "Dashboard", icon: LayoutDashboard },
 			{ to: "/cases", label: "Cases", icon: FileStack },
 			{ to: "/batches", label: "Batches", icon: Package },
-			{ to: "/settings", label: "Settings", icon: Settings },
 			{
 				to: "/testing",
 				label: "Testing",
@@ -65,6 +66,11 @@ export const navGroups: NavGroup[] = [
 			{ to: "/defendants", label: "Defendants", icon: UserSquare2 },
 		],
 	},
+	// Configuration sits apart from day-to-day navigation, at the very bottom.
+	{
+		items: [{ to: "/settings", label: "Settings", icon: Settings }],
+		pinToBottom: true,
+	},
 ];
 
 interface SidebarNavProps {
@@ -86,7 +92,7 @@ export const SidebarNav = ({
 	const { user, hasAppAccess } = useAuth();
 
 	return (
-		<nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+		<nav className="flex flex-col flex-1 px-3 py-4 gap-4 overflow-y-auto">
 			{navGroups.map((group, groupIdx) => {
 				const visibleItems = group.items.filter(
 					(item) =>
@@ -99,7 +105,14 @@ export const SidebarNav = ({
 				if (visibleItems.length === 0) return null;
 
 				return (
-					<div key={groupIdx} className="space-y-0.5">
+					<div
+						key={groupIdx}
+						className={
+							group.pinToBottom
+								? "space-y-0.5 mt-auto pt-4 border-t border-border/60"
+								: "space-y-0.5"
+						}
+					>
 						{group.label && (
 							<span className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
 								{group.label}
