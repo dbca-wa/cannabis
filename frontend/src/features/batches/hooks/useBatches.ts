@@ -50,6 +50,26 @@ export const useBatch = (id: number | null) =>
 		staleTime: 60_000,
 	});
 
+/**
+ * How many batches are still waiting for their invoice number.
+ *
+ * A batch is not finished until that number is recorded, and nothing else
+ * prompts for it, so this is surfaced outside the Batches page. Shares the list
+ * query so it costs no extra request when the page is also open.
+ *
+ * @param enabled - Skip the request for users without access to batches.
+ */
+export const useAwaitingInvoiceCount = (enabled = true): number => {
+	const { data } = useQuery({
+		queryKey: batchesQueryKeys.list("-created_at"),
+		queryFn: () => getBatches("-created_at"),
+		staleTime: 60_000,
+		enabled,
+	});
+
+	return (data ?? []).filter((batch) => !batch.invoice_raised_number).length;
+};
+
 /** Create a batch from selected cases. */
 export const useCreateBatch = () => {
 	const queryClient = useQueryClient();

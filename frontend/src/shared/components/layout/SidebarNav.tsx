@@ -14,6 +14,7 @@ import {
 	BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useAwaitingInvoiceCount } from "@/features/batches";
 
 const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
@@ -23,6 +24,8 @@ interface NavItem {
 	icon: typeof LayoutDashboard;
 	adminOnly?: boolean;
 	devOnly?: boolean;
+	/** Draws attention to outstanding work behind this link. */
+	showAwaitingInvoiceCount?: boolean;
 }
 
 interface NavGroup {
@@ -40,7 +43,12 @@ export const navGroups: NavGroup[] = [
 		items: [
 			{ to: "/", label: "Dashboard", icon: LayoutDashboard },
 			{ to: "/cases", label: "Cases", icon: FileStack },
-			{ to: "/batches", label: "Batches", icon: Package },
+			{
+				to: "/batches",
+				label: "Batches",
+				icon: Package,
+				showAwaitingInvoiceCount: true,
+			},
 			{
 				to: "/testing",
 				label: "Testing",
@@ -90,6 +98,9 @@ export const SidebarNav = ({
 }: SidebarNavProps) => {
 	const location = useLocation();
 	const { user, hasAppAccess } = useAuth();
+	// Surfaces outstanding invoices from anywhere in the app, since nothing else
+	// prompts for them once a batch is created.
+	const awaitingInvoiceCount = useAwaitingInvoiceCount(hasAppAccess);
 
 	return (
 		<nav className="flex flex-col flex-1 px-3 py-4 gap-4 overflow-y-auto">
@@ -161,6 +172,21 @@ export const SidebarNav = ({
 										)}
 										<Icon className="w-[18px] h-[18px] relative z-10" />
 										<span className="relative z-10">{item.label}</span>
+										{item.showAwaitingInvoiceCount &&
+											awaitingInvoiceCount > 0 && (
+												<span
+													className="relative z-10 ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold tabular-nums text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:ring-amber-700"
+													title={`${awaitingInvoiceCount} batch${awaitingInvoiceCount === 1 ? "" : "es"} awaiting an invoice`}
+												>
+													{awaitingInvoiceCount}
+													<span className="sr-only">
+														{" "}
+														batch
+														{awaitingInvoiceCount === 1 ? "" : "es"} awaiting an
+														invoice
+													</span>
+												</span>
+											)}
 									</div>
 								</NavLink>
 							);
