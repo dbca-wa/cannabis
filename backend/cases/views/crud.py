@@ -275,5 +275,11 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
         )
 
     def perform_destroy(self, instance):
+        # Deleting a case cascades to its forms, bags, assessments and
+        # certificates. Refuse when any of those certificates is in a batch.
+        from ..permissions import ensure_case_deletable
+
+        ensure_case_deletable(instance)
+
         settings.LOGGER.warning(f"User {self.request.user} deleted case: {instance}")
         super().perform_destroy(instance)

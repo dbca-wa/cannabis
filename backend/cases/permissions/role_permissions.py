@@ -71,6 +71,36 @@ def ensure_case_editable(case, user) -> None:
         raise PermissionDenied("This case is complete and can no longer be edited.")
 
 
+def ensure_case_deletable(case) -> None:
+    """Guard against deleting a case that forms part of a batch.
+
+    Deleting a case cascades to its forms, their bags and assessments, and their
+    certificates. If any of those certificates belongs to a batch, that batch's
+    tallies and packaged ZIP would no longer match its contents, so the batch
+    must be deleted first.
+
+    Applies to everyone, admins included: the constraint protects finance
+    records, not user permissions.
+
+    Raises:
+        ValidationError: If any of the case's certificates belongs to a batch.
+    """
+    from rest_framework.exceptions import ValidationError
+
+    batched = [
+        form.certificate.certificate_number
+        for form in case.forms.select_related("certificate").all()
+        if getattr(form, "certificate", None) and form.certificate.batch_id is not None
+    ]
+
+    if batched:
+        raise ValidationError(
+            "This case cannot be deleted because its certificates belong to a "
+            f"batch ({', '.join(sorted(n for n in batched if n))}). Delete the "
+            "batch first if the case really must be removed."
+        )
+
+
 def ensure_form_editable(form, user) -> None:
     """Guard against edits to a completed Priority 3 form.
 
