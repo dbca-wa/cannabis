@@ -10,6 +10,7 @@ import {
 	numberToWords,
 	formatOfficerLegal,
 	formatContentDescription,
+	joinWithAnd,
 } from "@/shared/utils/certificate-format.utils";
 import type { OfficerDetails } from "@/shared/utils/certificate-format.utils";
 
@@ -54,15 +55,9 @@ export const CertificateDocument = ({
 	const bagCountWord = numberToWords(bagCount);
 
 	const tagNumbers =
-		bags
-			.map((b) => b.seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "[Pending]";
+		joinWithAnd(bags.map((b) => b.seal_tag_numbers)) || "[Pending]";
 	const newTagNumbers =
-		bags
-			.map((b) => b.new_seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "[Pending]";
+		joinWithAnd(bags.map((b) => b.new_seal_tag_numbers)) || "[Pending]";
 
 	const description = formatContentDescription(bags);
 

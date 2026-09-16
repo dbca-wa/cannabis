@@ -1,4 +1,5 @@
 import type { CertificateData } from "@/features/cases/stores/caseForm.store";
+import { joinWithAnd } from "@/shared/utils/certificate-format.utils";
 
 /**
  * Generate HTML for M.D.14 Certificate of Approved Botanist
@@ -98,18 +99,12 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 	// Format quantity as words (without "a")
 	const quantityOfBags = numberToWords(total_bags);
 
-	// Format tag numbers (comma-separated)
-	const tagNumbers =
-		bags
-			.map((b) => b.seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "N/A";
+	// Tag numbers and content types read as prose on the certificate.
+	const tagNumbers = joinWithAnd(bags.map((b) => b.seal_tag_numbers)) || "N/A";
 
-	// Format description (content types)
 	const description =
-		bags.length > 0
-			? bags.map((b) => formatContentType(b.content_type)).join(", ")
-			: "plant material";
+		joinWithAnd(bags.map((b) => formatContentType(b.content_type))) ||
+		"plant material";
 
 	// Format defendants list - "LASTNAME, Given Names" format
 	const defendantsList =
@@ -183,11 +178,9 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 						? "Cannabis (hybrid)"
 						: "Cannabis sativa";
 
-			// Get new seal tag numbers
-			const newTags = cannabisBags
-				.map((b) => b.new_seal_tag_numbers)
-				.filter(Boolean)
-				.join(", ");
+			const newTags = joinWithAnd(
+				cannabisBags.map((b) => b.new_seal_tag_numbers)
+			);
 
 			const resealText = newTags
 				? ` The plant was resealed in a new drug movement bag, tag numbers ${newTags}.`

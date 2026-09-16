@@ -5,7 +5,10 @@
  * Unknown or empty variables resolve to "[Pending]".
  */
 
-import { formatCertificateDate } from "@/shared/utils/certificate-format.utils";
+import {
+	formatCertificateDate,
+	joinWithAnd,
+} from "@/shared/utils/certificate-format.utils";
 import type { DrugBag } from "../types/drugBags.types";
 
 export interface TemplateContext {
@@ -133,10 +136,7 @@ export const buildTemplateContext = (
 
 	const defendants = (caseData.defendants_details as DefendantDetail[]) ?? [];
 	const defendantName =
-		defendants
-			.map((d) => d.last_name ?? "")
-			.filter(Boolean)
-			.join(", ") || "UNKNOWN";
+		joinWithAnd(defendants.map((d) => d.last_name ?? "")) || "UNKNOWN";
 
 	const caseNumber = (caseData.case_number as string) ?? "";
 
@@ -144,31 +144,23 @@ export const buildTemplateContext = (
 		(caseData.received as string) ?? null
 	);
 
-	const tagNumbers = bags
-		.map((b) => b.seal_tag_numbers)
-		.filter(Boolean)
-		.join(", ");
+	// Tag and content lists read as prose on the certificate, so they use "and"
+	// before the final item rather than a bare comma-separated join.
+	const tagNumbers = joinWithAnd(bags.map((b) => b.seal_tag_numbers));
 
-	const newTagNumbers = bags
-		.map((b) => b.new_seal_tag_numbers)
-		.filter(Boolean)
-		.join(", ");
+	const newTagNumbers = joinWithAnd(bags.map((b) => b.new_seal_tag_numbers));
 
-	const contentTypes = [
-		...new Set(bags.map((b) => b.content_type_display).filter(Boolean)),
-	].join(", ");
+	const contentTypes = joinWithAnd([
+		...new Set(bags.map((b) => b.content_type_display)),
+	]);
 
-	const femalePlantTags = bags
-		.filter((b) => b.contains_female_plants)
-		.map((b) => b.seal_tag_numbers)
-		.filter(Boolean)
-		.join(", ");
+	const femalePlantTags = joinWithAnd(
+		bags.filter((b) => b.contains_female_plants).map((b) => b.seal_tag_numbers)
+	);
 
-	const nonFemalePlantTags = bags
-		.filter((b) => !b.contains_female_plants)
-		.map((b) => b.seal_tag_numbers)
-		.filter(Boolean)
-		.join(", ");
+	const nonFemalePlantTags = joinWithAnd(
+		bags.filter((b) => !b.contains_female_plants).map((b) => b.seal_tag_numbers)
+	);
 
 	const femalePlantCount = bags.filter((b) => b.contains_female_plants).length;
 	const nonFemalePlantCount = bags.filter(
