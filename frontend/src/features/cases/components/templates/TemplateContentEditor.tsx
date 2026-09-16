@@ -1,38 +1,11 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
+import { Check } from "lucide-react";
+import { cn } from "@/shared/utils/style.utils";
 import { TEMPLATE_VARIABLES } from "../../utils/templateResolver";
-
-/** Convert plain text with {{var}} to HTML with chip spans. */
-const toHtml = (text: string): string => {
-	if (!text) return "";
-	// First replace variables with chips, then convert newlines to <br>
-	const withChips = text.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
-		const variable = TEMPLATE_VARIABLES.find((v) => v.key === key);
-		const label = variable?.description ?? key;
-		return `<span contenteditable="false" data-variable="${key}" class="template-variable-chip">${label}</span>`;
-	});
-	return withChips.replace(/\n/g, "<br>");
-};
-
-/** Convert HTML back to plain text with {{var}} syntax. */
-const toPlainText = (el: HTMLElement): string => {
-	let result = "";
-	el.childNodes.forEach((node) => {
-		if (node.nodeType === Node.TEXT_NODE) {
-			result += node.textContent ?? "";
-		} else if (node.nodeType === Node.ELEMENT_NODE) {
-			const element = node as HTMLElement;
-			const variable = element.getAttribute("data-variable");
-			if (variable) {
-				result += `{{${variable}}}`;
-			} else if (element.tagName === "BR") {
-				result += "\n";
-			} else {
-				result += toPlainText(element);
-			}
-		}
-	});
-	return result;
-};
+import {
+	templateHtmlToPlainText as toPlainText,
+	templateTextToHtml as toHtml,
+} from "./templateEditorText";
 
 /** Group variables by category for the UI. */
 const VARIABLE_GROUPS: {
@@ -93,6 +66,7 @@ export const TemplateContentEditor = ({
 }: TemplateContentEditorProps) => {
 	const editorRef = useRef<HTMLDivElement>(null);
 	const isInternalUpdate = useRef(false);
+	const [isFocused, setIsFocused] = useState(false);
 
 	/** Sync the editor DOM from the value prop (only on external changes). */
 	useEffect(() => {
@@ -114,6 +88,46 @@ export const TemplateContentEditor = ({
 		isInternalUpdate.current = true;
 		onChange(toPlainText(editor));
 	}, [onChange]);
+
+	/**
+	 * Paste as plain text.
+	 *
+	 * Pasting rich content would drop styled markup into the editor, which
+	 * serialises to text the author never typed. Newlines in the pasted text are
+	 * preserved as line breaks.
+	 */
+	const handlePaste = useCallback(
+		(event: React.ClipboardEvent<HTMLDivElement>) => {
+			event.preventDefault();
+			const text = event.clipboardData.getData("text/plain");
+			if (!text) return;
+
+			const selection = window.getSelection();
+			if (!selection || selection.rangeCount === 0) return;
+
+			const range = selection.getRangeAt(0);
+			range.deleteContents();
+
+			// Build a fragment so multi-line pastes keep their breaks.
+			const fragment = document.createDocumentFragment();
+			text.split("\n").forEach((line, index) => {
+				if (index > 0) fragment.appendChild(document.createElement("br"));
+				if (line) fragment.appendChild(document.createTextNode(line));
+			});
+
+			const lastNode = fragment.lastChild;
+			range.insertNode(fragment);
+			if (lastNode) {
+				range.setStartAfter(lastNode);
+				range.setEndAfter(lastNode);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
+
+			handleInput();
+		},
+		[handleInput]
+	);
 
 	/** Insert a variable chip at the current cursor position. */
 	const insertVariable = useCallback(
@@ -155,19 +169,48 @@ export const TemplateContentEditor = ({
 		[onChange]
 	);
 
+	const hasContent = value.trim().length > 0;
+
 	return (
 		<div className="space-y-2">
-			<div
-				ref={editorRef}
-				contentEditable={!disabled}
-				suppressContentEditableWarning
-				onInput={handleInput}
-				data-placeholder={placeholder}
-				className="min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y overflow-auto empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
-				role="textbox"
-				aria-multiline="true"
-				aria-label="Template content"
-			/>
+			<div className="relative">
+				<div
+					ref={editorRef}
+					contentEditable={!disabled}
+					suppressContentEditableWarning
+					onInput={handleInput}
+					onPaste={handlePaste}
+					onFocus={() => setIsFocused(true)}
+					onBlur={() => setIsFocused(false)}
+					data-placeholder={placeholder}
+					className={cn(
+						// A visible, input-like boundary so the writing area is
+						// unmistakable, with a clear focus ring on top of it.
+						"min-h-[140px] w-full rounded-md border-2 bg-background px-3 py-2 pr-9 text-sm",
+						"whitespace-pre-wrap break-words overflow-auto resize-y",
+						"focus-visible:outline-none",
+						"empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground",
+						"disabled:cursor-not-allowed disabled:opacity-50",
+						isFocused
+							? "border-emerald-500 ring-2 ring-emerald-500/25"
+							: "border-input hover:border-muted-foreground/50"
+					)}
+					role="textbox"
+					aria-multiline="true"
+					aria-label="Template content"
+				/>
+				{hasContent && (
+					<span
+						className="pointer-events-none absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50"
+						aria-hidden="true"
+					>
+						<Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+					</span>
+				)}
+			</div>
+			<p className="text-xs text-muted-foreground">
+				Press Enter for a new line. Line breaks are kept on the certificate.
+			</p>
 
 			<div className="space-y-2">
 				<p className="text-xs text-muted-foreground font-medium">

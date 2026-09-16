@@ -13,6 +13,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { cn } from "@/shared/utils/style.utils";
 import { useDrugBagWranglerStore } from "@/app/providers/store.provider";
 import type { BagValidationError } from "@/app/stores/derived/drug-bag-wrangler.store";
 import { SectionCard } from "../SectionCard";
@@ -232,6 +233,10 @@ export const AssessmentStep = observer(function AssessmentStep({
 	});
 
 	// Local state for textareas to avoid flicker during debounced PATCH
+	// Highlights the notes field while it has focus, so the operator can see at a
+	// glance where their typing will land on a long page.
+	const [notesFocused, setNotesFocused] = useState(false);
+
 	const serverNotes = (caseData?.additional_notes as string) ?? "";
 	const [localNotes, setLocalNotes] = useState(serverNotes);
 	useEffect(() => {
@@ -627,7 +632,12 @@ export const AssessmentStep = observer(function AssessmentStep({
 			</SectionCard>
 
 			{/* Section C Notes (other matters for the certificate) */}
-			<SectionCard title="Section C Notes" isComplete={true} isInvalid={false}>
+			<SectionCard
+				title="Section C Notes"
+				isComplete={localNotes.trim().length > 0}
+				isInvalid={false}
+				completionLabel="Section C notes written"
+			>
 				<div className="space-y-4">
 					<TemplatePicker
 						caseData={caseData}
@@ -646,8 +656,15 @@ export const AssessmentStep = observer(function AssessmentStep({
 								setLocalNotes(e.target.value);
 								onFieldChange("additional_notes", e.target.value);
 							}}
+							onFocus={() => setNotesFocused(true)}
+							onBlur={() => setNotesFocused(false)}
 							placeholder="Enter section C notes for the certificate (e.g. subsample details)..."
-							className="min-h-[100px] resize-y"
+							className={cn(
+								"min-h-[100px] resize-y border-2 transition-colors",
+								notesFocused
+									? "border-emerald-500 ring-2 ring-emerald-500/25"
+									: "border-input hover:border-muted-foreground/50"
+							)}
 							aria-describedby="additional-notes-hint"
 						/>
 						<div className="flex items-center gap-2">
