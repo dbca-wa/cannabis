@@ -21,17 +21,10 @@
             line-height: 1.5;
             font-size: 11px;
             background: white;
-            /* Create a flex container for the entire page */
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
 
-        /* Main content wrapper - takes available space */
         .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
+            display: block;
         }
 
         /* Header styling */
@@ -179,11 +172,24 @@
             border-left: 4px solid #ffc958;
         }
 
-        /* Bottom content that gets pushed to bottom */
+        /* Signature block and departmental address, pinned to the bottom of the
+           page they fall on.
+
+           This is a page float, a Prince extension that moves an element in the
+           block direction rather than the inline direction. Unlike a running
+           element in an @page margin box it is not repeated on every page, which
+           is what a signature needs: it belongs once, at the foot of the final
+           page.
+
+           The previous approach — a flex column on body with min-height: 100vh
+           and margin-top: auto — is a screen-media idiom. Viewport units and
+           flex auto-margins do not resolve against the page box in paged media,
+           so the block floated up under the content instead of sitting at the
+           bottom. */
         .bottom-content {
-            /* Position at bottom of page */
-            margin-top: auto;
-            /* Prevent breaking inside */
+            float: bottom;
+            width: 100%;
+            /* Never split the signature across a page boundary. */
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -303,11 +309,6 @@
         @media print {
             .bottom-content {
                 page-break-inside: avoid;
-            }
-
-            /* Force new page if bottom content doesn't fit */
-            .bottom-content-new-page {
-                page-break-before: always;
             }
 
             /* Force background colors to print */
