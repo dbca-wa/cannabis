@@ -124,11 +124,12 @@ export const CaseCreationSummaryStep = ({
 			  its own internal field grid.
 			*/}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-				{/* Case Details Section (condensed) */}
+				{/* Case Details — full width row */}
 				<SectionCard
 					title="Case Details"
 					isComplete={isCaseDetailsComplete}
 					isInvalid={isCaseDetailsInvalid}
+					className="lg:col-span-2"
 				>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
@@ -188,6 +189,28 @@ export const CaseCreationSummaryStep = ({
 				</SectionCard>
 
 				{/* Defendants Section (condensed) */}
+				{/* Approved Botanist — shares a row with Defendants */}
+				<SectionCard
+					title="Approved Botanist"
+					isComplete={!!approvedBotanistId}
+					isInvalid={isTouched && !approvedBotanistId}
+				>
+					<div className="space-y-2">
+						<Label htmlFor="approved_botanist">Approved Botanist</Label>
+						<UserSearchCombobox
+							value={approvedBotanistId}
+							onValueChange={(id) => onFieldChange("approved_botanist", id)}
+							placeholder="Select approved botanist..."
+							roleFilter="botanist"
+							lastUsedKey="botanist"
+						/>
+						<p className="text-xs text-muted-foreground">
+							The botanist assigned to this case
+						</p>
+					</div>
+				</SectionCard>
+
+				{/* Defendants — shares a row with Approved Botanist */}
 				<SectionCard
 					title="Defendants"
 					isComplete={isDefendantsComplete}
@@ -255,11 +278,12 @@ export const CaseCreationSummaryStep = ({
 					</div>
 				</SectionCard>
 
-				{/* Officers Section (condensed) */}
+				{/* Officers — full width row */}
 				<SectionCard
 					title="Officers"
 					isComplete={isOfficersComplete}
 					isInvalid={isOfficersInvalid}
+					className="lg:col-span-2"
 				>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div className="space-y-2">
@@ -316,27 +340,6 @@ export const CaseCreationSummaryStep = ({
 								showExternalAddButton
 							/>
 						</div>
-					</div>
-				</SectionCard>
-
-				{/* Approved Botanist Section */}
-				<SectionCard
-					title="Approved Botanist"
-					isComplete={!!approvedBotanistId}
-					isInvalid={isTouched && !approvedBotanistId}
-				>
-					<div className="space-y-2">
-						<Label htmlFor="approved_botanist">Approved Botanist</Label>
-						<UserSearchCombobox
-							value={approvedBotanistId}
-							onValueChange={(id) => onFieldChange("approved_botanist", id)}
-							placeholder="Select approved botanist..."
-							roleFilter="botanist"
-							lastUsedKey="botanist"
-						/>
-						<p className="text-xs text-muted-foreground">
-							The botanist assigned to this case
-						</p>
 					</div>
 				</SectionCard>
 			</div>

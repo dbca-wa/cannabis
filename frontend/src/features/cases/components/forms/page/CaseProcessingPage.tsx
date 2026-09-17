@@ -266,7 +266,9 @@ export const CaseProcessingPage = observer(
 								<WizardPreviewPanel caseData={caseData} />
 							) : (
 								<div className="min-[1920px]:grid min-[1920px]:grid-cols-2 min-[1920px]:gap-8">
-									<div className="max-w-4xl min-w-0">
+									{/* Fills the section width like Case Details; only
+									    shares the row with the preview on ultra-wide. */}
+									<div className="min-w-0">
 										{renderLockable(
 											<AssessmentStep
 												caseData={caseData}

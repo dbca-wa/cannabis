@@ -20,6 +20,8 @@ interface SectionCardProps {
 	 * work, so it never contradicts the page-level completion summary.
 	 */
 	optional?: boolean;
+	/** Extra classes for the outer card, e.g. grid column spans. */
+	className?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export const SectionCard = ({
 	isInvalid = false,
 	completionLabel,
 	optional = false,
+	className,
 }: SectionCardProps) => {
 	const showOptionalBadge = optional && !isComplete && !isInvalid;
 
@@ -42,7 +45,8 @@ export const SectionCard = ({
 				"relative transition-colors",
 				isInvalid &&
 					"bg-red-50/50 dark:bg-red-950/20 border-red-300 dark:border-red-700",
-				!isInvalid && isComplete && "bg-emerald-50/50 dark:bg-emerald-950/20"
+				!isInvalid && isComplete && "bg-emerald-50/50 dark:bg-emerald-950/20",
+				className
 			)}
 		>
 			<CardHeader className="relative">
