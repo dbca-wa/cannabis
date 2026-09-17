@@ -156,6 +156,19 @@
 		font-size: var(--font-size);
 	}
 
+	/*
+	  Give the root chain a real height so a layout can size itself to the
+	  viewport with `height: 100%` rather than `100vh`. The two differ when a
+	  scrollbar or mobile browser chrome is present, and that difference is what
+	  produced the blank strip below the fixed sidebar. Overflow is left to each
+	  layout so pages that legitimately scroll the document (e.g. auth) still can.
+	*/
+	html,
+	body,
+	#root {
+		height: 100%;
+	}
+
 	h1 {
 		font-size: var(--text-2xl);
 		font-weight: var(--font-weight-medium);

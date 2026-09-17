@@ -235,7 +235,7 @@ export const CaseProcessingPage = observer(
 
 					<CaseSection
 						id="assessment"
-						title="Assessment"
+						title="Priority Form Assessment"
 						description="Priority 3 forms and their drug bags"
 						state={sectionStates.assessment}
 						reason={describeSectionState("assessment", flags)}

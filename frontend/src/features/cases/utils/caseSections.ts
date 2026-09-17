@@ -14,7 +14,7 @@ export const CASE_SECTIONS = [
 	},
 	{
 		id: "assessment",
-		label: "Assessment",
+		label: "Priority Form Assessment",
 		description: "Priority 3 forms and their drug bags",
 	},
 	{

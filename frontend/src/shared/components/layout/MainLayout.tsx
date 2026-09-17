@@ -13,14 +13,14 @@ const MainLayout = observer(function MainLayout() {
 	return (
 		<NavigationProvider>
 			{/*
-			  Fixed to the viewport so the document itself never scrolls: `main` is
-			  the only scroll container. Without this the sidebar is only sticky, so
-			  any page that made the document taller than the viewport scrolled the
-			  sidebar out of view and left a gap beneath it.
+			  The shell is exactly the viewport tall (h-full of the height:100%
+			  root chain) and clips its own overflow, so the document never
+			  scrolls. The sidebar is fixed out of flow and `main` is the only
+			  scroll container.
 			*/}
-			<div className="flex h-screen w-full overflow-hidden bg-[#fafbfb] dark:bg-background">
-				{/* Desktop sidebar */}
-				<div className="hidden lg:flex">
+			<div className="flex h-full w-full overflow-hidden bg-[#fafbfb] dark:bg-background">
+				{/* Desktop sidebar — full height, does not scroll with content */}
+				<div className="hidden lg:flex h-full">
 					<Sidebar />
 				</div>
 
@@ -39,12 +39,16 @@ const MainLayout = observer(function MainLayout() {
 				/>
 
 				{/*
-				  Fills the fixed-height parent via flex rather than its own
-				  `h-screen`. A flex child sized to 100vh inside an already
-				  100vh parent double-counts, so it overflowed by the padding
-				  delta and produced a second scrollbar over blank space.
+				  The only scroll container. `contain: layout paint` keeps its
+				  overflow from leaking into the document's scroll height: without
+				  it, a child taller than the viewport that paints outside main's
+				  box (the react-pdf certificate canvas on the process case page)
+				  made `html` itself scrollable, so the page scrolled behind the
+				  fixed sidebar into blank space. Measured: it drops html
+				  scrollHeight from 2092 back to the 900 viewport. `h-full` fills
+				  the fixed-height shell via flex rather than its own 100vh.
 				*/}
-				<main className="flex-1 min-w-0 overflow-y-auto">
+				<main className="flex-1 min-w-0 h-full overflow-y-auto [contain:layout_paint]">
 					<div className="max-w-[1400px] mx-auto px-8 py-8 pt-14 lg:pt-8">
 						<Outlet />
 					</div>

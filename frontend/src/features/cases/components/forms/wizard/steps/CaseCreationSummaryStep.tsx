@@ -123,7 +123,7 @@ export const CaseCreationSummaryStep = ({
 			  available width instead of a single narrow column. Each card owns
 			  its own internal field grid.
 			*/}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				{/* Case Details — full width row */}
 				<SectionCard
 					title="Case Details"
@@ -188,15 +188,14 @@ export const CaseCreationSummaryStep = ({
 					</div>
 				</SectionCard>
 
-				{/* Defendants Section (condensed) */}
-				{/* Approved Botanist — shares a row with Defendants */}
+				{/* Approved Botanist — shares a row, and height, with Defendants */}
 				<SectionCard
 					title="Approved Botanist"
 					isComplete={!!approvedBotanistId}
 					isInvalid={isTouched && !approvedBotanistId}
+					className="h-full"
 				>
 					<div className="space-y-2">
-						<Label htmlFor="approved_botanist">Approved Botanist</Label>
 						<UserSearchCombobox
 							value={approvedBotanistId}
 							onValueChange={(id) => onFieldChange("approved_botanist", id)}
@@ -210,12 +209,13 @@ export const CaseCreationSummaryStep = ({
 					</div>
 				</SectionCard>
 
-				{/* Defendants — shares a row with Approved Botanist */}
+				{/* Defendants — shares a row, and height, with Approved Botanist */}
 				<SectionCard
 					title="Defendants"
 					isComplete={isDefendantsComplete}
 					isInvalid={isDefendantsInvalid}
 					optional
+					className="h-full"
 				>
 					<div className="space-y-3">
 						<div className="flex items-center gap-2">
@@ -245,33 +245,34 @@ export const CaseCreationSummaryStep = ({
 						)}
 
 						{defendants.length > 0 && (
-							<div className="space-y-1.5">
+							// Chips wrap so several defendants share a line rather than
+							// one per row, keeping the card compact as more are added.
+							<div className="flex flex-wrap gap-1.5">
 								{defendants.map((defendant) => (
-									<div
+									<span
 										key={defendant.id}
-										className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/50"
+										className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 py-1 pl-3 pr-1 text-sm"
 									>
-										<div className="flex items-center gap-2 flex-1 min-w-0">
-											<span className="font-medium text-sm truncate">
-												{formatDefendantDisplayName(defendant)}
-											</span>
-											<Badge
-												variant="secondary"
-												className={getDefendantCasesBadgeColourClass(defendant)}
-											>
-												{getDefendantCasesBadge(defendant)}
-											</Badge>
-										</div>
+										<span className="font-medium truncate max-w-[14rem]">
+											{formatDefendantDisplayName(defendant)}
+										</span>
+										<Badge
+											variant="secondary"
+											className={getDefendantCasesBadgeColourClass(defendant)}
+										>
+											{getDefendantCasesBadge(defendant)}
+										</Badge>
 										<Button
 											type="button"
 											variant="ghost"
-											size="sm"
+											size="icon"
+											className="h-5 w-5 rounded-full"
 											onClick={() => handleRemoveDefendant(defendant.id)}
 											aria-label={`Remove ${formatDefendantDisplayName(defendant)}`}
 										>
 											<X className="h-3.5 w-3.5" />
 										</Button>
-									</div>
+									</span>
 								))}
 							</div>
 						)}

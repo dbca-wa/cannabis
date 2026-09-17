@@ -110,7 +110,7 @@ export const GeneratedCertificatesViewer = ({
 		);
 
 	const spinner = (
-		<div className="flex h-full items-center justify-center">
+		<div className="flex min-h-[300px] items-center justify-center">
 			<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
 		</div>
 	);
@@ -130,12 +130,15 @@ export const GeneratedCertificatesViewer = ({
 				</div>
 			)}
 
-			<div
-				className="flex w-full flex-col overflow-hidden rounded-lg border border-border shadow-lg"
-				style={{ height: "80vh" }}
-			>
-				{/* Zoom toolbar */}
-				<div className="flex items-center justify-end gap-1 border-b border-border bg-muted/40 px-3 py-1.5">
+			{/*
+			  Auto height so the whole certificate renders and the page scrolls,
+			  rather than a fixed box that clipped the page and forced an inner
+			  scroll. The zoom toolbar sticks to the top of the viewer while its
+			  pages scroll past with the page.
+			*/}
+			<div className="flex w-full flex-col overflow-hidden rounded-lg border border-border shadow-lg">
+				{/* Zoom toolbar — sticks to the top while the pages scroll past */}
+				<div className="sticky top-0 z-10 flex items-center justify-end gap-1 border-b border-border bg-muted/40 px-3 py-1.5 backdrop-blur">
 					<Button
 						type="button"
 						variant="ghost"
@@ -226,8 +229,8 @@ export const GeneratedCertificatesViewer = ({
 					</Button>
 				</div>
 
-				{/* Scrollable PDF area */}
-				<div ref={scrollRef} className="flex-1 overflow-auto bg-muted/20 p-4">
+				{/* PDF area — natural height so every page shows; the page scrolls. */}
+				<div ref={scrollRef} className="bg-muted/20 p-4">
 					{file ? (
 						<div className="flex flex-col items-center">
 							<Document
@@ -238,7 +241,7 @@ export const GeneratedCertificatesViewer = ({
 								}
 								loading={spinner}
 								error={
-									<div className="flex h-full items-center justify-center">
+									<div className="flex min-h-[300px] items-center justify-center">
 										<p className="text-red-600">
 											Failed to load certificate PDF
 										</p>
@@ -258,7 +261,7 @@ export const GeneratedCertificatesViewer = ({
 							</Document>
 						</div>
 					) : pdfError ? (
-						<div className="flex h-full items-center justify-center">
+						<div className="flex min-h-[300px] items-center justify-center">
 							<p className="text-red-600">{pdfError}</p>
 						</div>
 					) : (

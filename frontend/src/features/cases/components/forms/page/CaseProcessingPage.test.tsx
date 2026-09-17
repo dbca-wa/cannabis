@@ -111,7 +111,7 @@ describe("CaseProcessingPage", () => {
 				screen.getByRole("heading", { name: /case details/i })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("heading", { name: /^assessment$/i })
+				screen.getByRole("heading", { name: /priority form assessment/i })
 			).toBeInTheDocument();
 			expect(
 				screen.getByRole("heading", { name: /^certificates$/i })
