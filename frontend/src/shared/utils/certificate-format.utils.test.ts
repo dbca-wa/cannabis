@@ -4,6 +4,7 @@ import {
 	formatOfficerLegal,
 	formatContentDescription,
 	formatCertificateDate,
+	joinWithAnd,
 } from "./certificate-format.utils";
 
 describe("certificate-format.utils", () => {
@@ -91,5 +92,79 @@ describe("certificate-format.utils", () => {
 				"11 June 2026"
 			);
 		});
+	});
+});
+
+/**
+ * Certificates are read aloud in court, so lists must read as prose rather than
+ * as comma-separated data. These mirror the backend join_with_and tests so the
+ * two implementations stay in step.
+ */
+describe("joinWithAnd", () => {
+	it("returns an empty string for no values", () => {
+		expect(joinWithAnd([])).toBe("");
+	});
+
+	it("returns a single value alone", () => {
+		expect(joinWithAnd(["T001"])).toBe("T001");
+	});
+
+	it("joins two values with and", () => {
+		expect(joinWithAnd(["T001", "T002"])).toBe("T001 and T002");
+	});
+
+	it("separates three values with commas then and", () => {
+		expect(joinWithAnd(["T001", "T002", "T003"])).toBe("T001, T002 and T003");
+	});
+
+	it("handles four values", () => {
+		expect(joinWithAnd(["A", "B", "C", "D"])).toBe("A, B, C and D");
+	});
+
+	// No serial comma before "and", matching Australian usage.
+	it("does not use a serial comma", () => {
+		expect(joinWithAnd(["A", "B", "C"])).not.toContain(", and");
+	});
+
+	it("drops empty values", () => {
+		expect(joinWithAnd(["A", "", "D"])).toBe("A and D");
+	});
+
+	it("drops null and undefined values", () => {
+		expect(joinWithAnd(["A", null, undefined, "D"])).toBe("A and D");
+	});
+
+	it("drops whitespace-only values", () => {
+		expect(joinWithAnd(["A", "   ", "D"])).toBe("A and D");
+	});
+
+	it("trims the values it keeps", () => {
+		expect(joinWithAnd(["  A  ", " B "])).toBe("A and B");
+	});
+
+	it("returns an empty string when every value is empty", () => {
+		expect(joinWithAnd(["", null, "  "])).toBe("");
+	});
+});
+
+describe("formatContentDescription — conjunctions", () => {
+	it("reports a single content type", () => {
+		expect(
+			formatContentDescription([{ content_type_display: "Plant Material" }])
+		).toBe("quantity of Plant Material");
+	});
+
+	it("joins three distinct content types with commas then and", () => {
+		expect(
+			formatContentDescription([
+				{ content_type_display: "Plant Material" },
+				{ content_type_display: "Seed" },
+				{ content_type_display: "Cutting" },
+			])
+		).toBe("quantity of Plant Material, Seed and Cutting");
+	});
+
+	it("reports a placeholder when content types are missing", () => {
+		expect(formatContentDescription([{}, {}])).toBe("quantity of [Pending]");
 	});
 });
