@@ -20,6 +20,17 @@ from common.tests.factories import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _stub_pdf(monkeypatch):
+    """Building a batch renders a cost-summary PDF through PrinceXML, which is
+    not installed in CI. These tests are about eligibility, not PDF output, so
+    stub the render to keep them independent of the binary."""
+    monkeypatch.setattr(
+        "cases.services.pdf_service.PDFService._html_to_pdf",
+        staticmethod(lambda *args, **kwargs: b"%PDF-1.4 stub"),
+    )
+
+
 def _assessed_form(case, phase):
     """A form in the given phase holding one fully assessed bag."""
     form = Priority3FormFactory(case=case, phase=phase)

@@ -27,6 +27,17 @@ from police.models import PoliceOfficer, PoliceStation
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _stub_pdf(monkeypatch):
+    """Building a batch renders a cost-summary PDF through PrinceXML, which is
+    not installed in CI. These tests are about deletion rules, not PDF output,
+    so stub the render to keep them independent of the binary."""
+    monkeypatch.setattr(
+        "cases.services.pdf_service.PDFService._html_to_pdf",
+        staticmethod(lambda *args, **kwargs: b"%PDF-1.4 stub"),
+    )
+
+
 def _full_case(phase=Case.PhaseChoices.BATCHING):
     """A case with a station, both officers, a defendant, a form, a bag and a cert."""
     station = PoliceStationFactory()
