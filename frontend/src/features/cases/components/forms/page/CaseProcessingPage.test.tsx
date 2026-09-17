@@ -230,6 +230,20 @@ describe("CaseProcessingPage", () => {
 	});
 
 	describe("finalising", () => {
+		it("places the finalise action after the certificates section", () => {
+			renderPageWith();
+
+			const finalise = screen.getByRole("button", { name: /finalise case/i });
+			const certificates = screen.getByTestId("certificates-section");
+
+			// DOCUMENT_POSITION_FOLLOWING (4) means finalise comes after the
+			// certificates section in document order — i.e. at the very bottom.
+			expect(
+				certificates.compareDocumentPosition(finalise) &
+					Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
+		});
+
 		it("is blocked until every form has been marked ready", () => {
 			renderPageWith();
 

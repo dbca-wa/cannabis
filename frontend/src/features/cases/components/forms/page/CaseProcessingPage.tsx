@@ -198,28 +198,6 @@ export const CaseProcessingPage = observer(
 							Process Case
 						</h1>
 					</div>
-					<div className="flex items-center gap-3">
-						{hasPreviewContent && (
-							<FormPreviewToggle
-								activeView={store.state.showPreview ? "preview" : "form"}
-								onToggle={handlePreviewToggle}
-							/>
-						)}
-						<Button
-							size="lg"
-							onClick={handleFinalise}
-							disabled={
-								!canFinalise || store.state.isSubmitting || lockForNonAdmin
-							}
-							title={finaliseTitle}
-							className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
-						>
-							{store.state.isSubmitting && (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							)}
-							Finalise Case
-						</Button>
-					</div>
 				</div>
 
 				{/* Stays reachable on a long page. */}
@@ -246,15 +224,13 @@ export const CaseProcessingPage = observer(
 						state={sectionStates.details}
 						reason={describeSectionState("details", flags)}
 					>
-						<div className="max-w-4xl">
-							{renderLockable(
-								<CaseCreationSummaryStep
-									caseData={caseData}
-									isTouched
-									onFieldChange={onFieldChange}
-								/>
-							)}
-						</div>
+						{renderLockable(
+							<CaseCreationSummaryStep
+								caseData={caseData}
+								isTouched
+								onFieldChange={onFieldChange}
+							/>
+						)}
 					</CaseSection>
 
 					<CaseSection
@@ -263,6 +239,17 @@ export const CaseProcessingPage = observer(
 						description="Priority 3 forms and their drug bags"
 						state={sectionStates.assessment}
 						reason={describeSectionState("assessment", flags)}
+						// The Form/Preview switch lives here because it acts on the
+						// selected form and the preview it toggles renders in this
+						// section.
+						actions={
+							hasPreviewContent ? (
+								<FormPreviewToggle
+									activeView={store.state.showPreview ? "preview" : "form"}
+									onToggle={handlePreviewToggle}
+								/>
+							) : undefined
+						}
 					>
 						<div className="space-y-4">
 							<FormsNavigator
@@ -274,9 +261,9 @@ export const CaseProcessingPage = observer(
 							/>
 
 							{hasPreviewContent && store.state.showPreview ? (
-								<div className="max-w-4xl">
-									<WizardPreviewPanel caseData={caseData} />
-								</div>
+								// Sole panel — fill the section rather than cap at the
+								// form's reading width.
+								<WizardPreviewPanel caseData={caseData} />
 							) : (
 								<div className="min-[1920px]:grid min-[1920px]:grid-cols-2 min-[1920px]:gap-8">
 									<div className="max-w-4xl min-w-0">
@@ -314,6 +301,33 @@ export const CaseProcessingPage = observer(
 							onAllReadyChange={setAllFormsReady}
 						/>
 					</CaseSection>
+
+					{/*
+					  The final action sits at the end of the last section, the
+					  natural place to commit once every section above has been
+					  worked through.
+					*/}
+					<div className="flex flex-col items-end gap-2 border-t pt-6">
+						{finaliseTitle && (
+							<p className="text-sm text-muted-foreground text-right">
+								{finaliseTitle}
+							</p>
+						)}
+						<Button
+							size="lg"
+							onClick={handleFinalise}
+							disabled={
+								!canFinalise || store.state.isSubmitting || lockForNonAdmin
+							}
+							title={finaliseTitle}
+							className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
+						>
+							{store.state.isSubmitting && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							Finalise Case
+						</Button>
+					</div>
 				</div>
 			</div>
 		);

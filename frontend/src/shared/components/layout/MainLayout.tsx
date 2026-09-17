@@ -38,8 +38,13 @@ const MainLayout = observer(function MainLayout() {
 					onClose={() => uiStore.setMobileSidebarOpen(false)}
 				/>
 
-				{/* Main content area — no page-level animation here */}
-				<main className="flex-1 min-w-0 overflow-y-auto h-screen">
+				{/*
+				  Fills the fixed-height parent via flex rather than its own
+				  `h-screen`. A flex child sized to 100vh inside an already
+				  100vh parent double-counts, so it overflowed by the padding
+				  delta and produced a second scrollbar over blank space.
+				*/}
+				<main className="flex-1 min-w-0 overflow-y-auto">
 					<div className="max-w-[1400px] mx-auto px-8 py-8 pt-14 lg:pt-8">
 						<Outlet />
 					</div>
