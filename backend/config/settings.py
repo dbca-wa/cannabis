@@ -257,6 +257,8 @@ CORS_ALLOW_HEADERS = [
     "Content-Type",
     "Authorization",
     "x-request-id",
+    "Cache-Control",
+    "Pragma",
 ]
 
 if DEBUG:
