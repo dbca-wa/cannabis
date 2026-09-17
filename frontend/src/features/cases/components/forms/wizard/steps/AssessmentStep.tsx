@@ -272,6 +272,18 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const totalBags = serverBags.length + wrangler.state.bags.length;
 	const capReached = totalBags >= MAX_BAGS;
 
+	// Matches the case-level assessment rule so this card can never report the
+	// form's bags done while the page summary still asks for attention.
+	const allServerBagsAssessed = serverBags.every(
+		(bag) =>
+			!!bag.assessment?.determination &&
+			bag.assessment.determination !== "pending"
+	);
+	const bagsComplete =
+		serverBags.length > 0 &&
+		allServerBagsAssessed &&
+		wrangler.state.bags.length === 0;
+
 	const handleAddBag = () => wrangler.addBag();
 
 	// Persist every prepared (in-memory) bag in one validated batch request.
@@ -399,7 +411,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 			{/* Drug Bags Section */}
 			<SectionCard
 				title="Priority 3 Drug Bags"
-				isComplete={serverBags.length > 0}
+				isComplete={bagsComplete}
 				isInvalid={isTouched && serverBags.length === 0}
 			>
 				{serverBags.length === 0 && wrangler.state.bags.length === 0 ? (
@@ -612,8 +624,13 @@ export const AssessmentStep = observer(function AssessmentStep({
 			{/* Security Movement Envelope (per form) */}
 			<SectionCard
 				title="Security Movement Envelope"
-				isComplete={true}
+				isComplete={
+					((caseData?.security_movement_envelope as string) ?? "").trim()
+						.length > 0
+				}
 				isInvalid={false}
+				optional
+				completionLabel="Security movement envelope recorded"
 			>
 				<div className="space-y-2">
 					<Label htmlFor="security_movement_envelope">SME Number</Label>
@@ -636,6 +653,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				title="Section C Notes"
 				isComplete={localNotes.trim().length > 0}
 				isInvalid={false}
+				optional
 				completionLabel="Section C notes written"
 			>
 				<div className="space-y-4">

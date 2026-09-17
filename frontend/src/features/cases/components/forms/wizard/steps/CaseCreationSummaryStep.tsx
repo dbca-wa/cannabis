@@ -186,6 +186,7 @@ export const CaseCreationSummaryStep = ({
 				title="Defendants"
 				isComplete={isDefendantsComplete}
 				isInvalid={isDefendantsInvalid}
+				optional
 			>
 				<div className="space-y-3">
 					<div className="flex items-center gap-2">

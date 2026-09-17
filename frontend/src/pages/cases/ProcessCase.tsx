@@ -1,7 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+	useQuery,
+	useMutation,
+	useQueryClient,
+	keepPreviousData,
+} from "@tanstack/react-query";
 import {
 	useCaseProcessingPageStore,
 	useDrugBagWranglerStore,
@@ -269,12 +274,17 @@ const ProcessCaseContent = observer(() => {
 		setActiveFormId(forms[0].id, { replace: true });
 	}, [forms, activeFormId, setActiveFormId]);
 
-	// Load the active form's full data
-	const { data: form, isLoading: isFormLoading } = useQuery({
+	// Load the active form's full data.
+	//
+	// Keeps the previously loaded form on screen while a different one is
+	// fetched. Without it the page unmounted on every form switch and on adding
+	// a form, which threw the reader back to the top.
+	const { data: form } = useQuery({
 		queryKey: ["cases", "forms", activeFormId],
 		queryFn: () => getFormById(activeFormId!),
 		enabled: !!activeFormId,
 		staleTime: 30_000,
+		placeholderData: keepPreviousData,
 	});
 
 	// Create form mutation — adds a new P3 form and sets it active
@@ -323,16 +333,21 @@ const ProcessCaseContent = observer(() => {
 		};
 	}, [pageStore]);
 
+	// Only trust the fetched form once it is the one the address names. While a
+	// switch is in flight the previous form is still in hand, and building the
+	// page from it would point writes — new bags especially — at the wrong form.
+	const activeForm = form && form.id === activeFormId ? form : null;
+
 	// Sync local notes from the form when it loads or changes
 	useEffect(() => {
-		if (form) {
-			setLocalAdditionalNotes(form.additional_notes ?? null);
-			setLocalSme(form.security_movement_envelope ?? null);
+		if (activeForm) {
+			setLocalAdditionalNotes(activeForm.additional_notes ?? null);
+			setLocalSme(activeForm.security_movement_envelope ?? null);
 		} else {
 			setLocalAdditionalNotes(null);
 			setLocalSme(null);
 		}
-	}, [form]);
+	}, [activeForm]);
 
 	// Sync local case number from server on initial load of each case.
 	// Depends on parsedId so it resets when navigating between cases.
@@ -348,8 +363,8 @@ const ProcessCaseContent = observer(() => {
 	}, [caseObj, parsedId]);
 
 	const caseData = caseObj
-		? form
-			? buildCaseData(caseObj as unknown as Record<string, unknown>, form)
+		? activeForm
+			? buildCaseData(caseObj as unknown as Record<string, unknown>, activeForm)
 			: buildCaseDataNoForm(caseObj as unknown as Record<string, unknown>)
 		: null;
 
@@ -628,9 +643,10 @@ const ProcessCaseContent = observer(() => {
 		[deleteFormMutation]
 	);
 
-	// Loading state — only wait for the form when there's an active form to load
-	const isLoading =
-		isCaseLoading || isFormsLoading || (!!activeFormId && isFormLoading);
+	// Only the case and its form list gate the page. The active form's detail is
+	// allowed to arrive afterwards so switching or adding a form never unmounts
+	// the page and loses the reader's position.
+	const isLoading = isCaseLoading || isFormsLoading;
 	if (isLoading) {
 		return (
 			<div className="space-y-6 p-6">

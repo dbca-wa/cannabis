@@ -115,3 +115,62 @@ export const firstIncompleteSection = (
 	validity: CaseSectionValidity
 ): CaseSectionId | null =>
 	CASE_SECTIONS.find((section) => !validity[section.id])?.id ?? null;
+
+/**
+ * How a section should present itself.
+ *
+ * - `complete`   — holds everything it needs
+ * - `attention`  — has been started but something required is missing or wrong
+ * - `notStarted` — nothing to report yet, because the work it depends on has
+ *                  not begun
+ *
+ * The distinction matters: an empty case has no forms, so the assessment and
+ * certificate sections are not *wrong*, they are simply not reachable yet.
+ * Colouring them red on a brand new case would cry wolf.
+ */
+export type CaseSectionState = "complete" | "attention" | "notStarted";
+
+/** Derive the presentation state of every section from one set of flags. */
+export const deriveCaseSectionStates = (
+	flags: CaseSectionFlags
+): Record<CaseSectionId, CaseSectionState> => ({
+	// Every field behind the details section is required, so anything missing
+	// needs attention immediately.
+	details: flags.details ? "complete" : "attention",
+
+	assessment: flags.assessment
+		? "complete"
+		: flags.hasForms
+			? "attention"
+			: "notStarted",
+
+	// Certificates cannot be generated until the assessment is finished, so
+	// they only ask for attention once it is.
+	certificates: flags.certificates
+		? "complete"
+		: flags.assessment
+			? "attention"
+			: "notStarted",
+});
+
+/** Plain-language reason a section is not complete, for a tooltip or hint. */
+export const describeSectionState = (
+	sectionId: CaseSectionId,
+	flags: CaseSectionFlags
+): string | null => {
+	if (sectionId === "details") {
+		return flags.details ? null : "Some required case details are missing";
+	}
+
+	if (sectionId === "assessment") {
+		if (flags.assessment) return null;
+		if (!flags.hasForms) return "Add a Priority 3 form to begin";
+		if (!flags.allFormsHaveBags) return "Every form needs at least one bag";
+		return "Every bag needs a determination";
+	}
+
+	if (flags.certificates) return null;
+	if (!flags.hasForms) return "Add a Priority 3 form to begin";
+	if (!flags.assessment) return "Finish the assessment first";
+	return "Every form needs a generated certificate";
+};

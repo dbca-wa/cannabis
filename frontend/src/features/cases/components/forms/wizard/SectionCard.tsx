@@ -14,6 +14,12 @@ interface SectionCardProps {
 	isComplete: boolean;
 	isInvalid?: boolean;
 	completionLabel?: string;
+	/**
+	 * Marks the section as not required for the form to be complete. An empty
+	 * optional section shows an "Optional" badge instead of reading as unfinished
+	 * work, so it never contradicts the page-level completion summary.
+	 */
+	optional?: boolean;
 }
 
 /**
@@ -26,7 +32,10 @@ export const SectionCard = ({
 	isComplete,
 	isInvalid = false,
 	completionLabel,
+	optional = false,
 }: SectionCardProps) => {
+	const showOptionalBadge = optional && !isComplete && !isInvalid;
+
 	return (
 		<Card
 			className={cn(
@@ -46,6 +55,12 @@ export const SectionCard = ({
 					>
 						<X className="h-4 w-4 text-red-600 dark:text-red-400" />
 					</div>
+				)}
+
+				{showOptionalBadge && (
+					<span className="absolute top-4 right-4 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+						Optional
+					</span>
 				)}
 
 				{isComplete && !isInvalid && (

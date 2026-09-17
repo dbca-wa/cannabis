@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
 	CASE_SECTIONS,
 	deriveCaseSectionFlags,
+	deriveCaseSectionStates,
+	describeSectionState,
 	firstIncompleteSection,
 } from "./caseSections";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
@@ -210,5 +212,132 @@ describe("firstIncompleteSection", () => {
 				certificates: false,
 			})
 		).toBe("certificates");
+	});
+});
+
+describe("deriveCaseSectionStates", () => {
+	it("marks every section complete on a finished case", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 5 }),
+		]);
+
+		expect(deriveCaseSectionStates(flags)).toEqual({
+			details: "complete",
+			assessment: "complete",
+			certificates: "complete",
+		});
+	});
+
+	it("asks for attention on details as soon as a required field is missing", () => {
+		const flags = deriveCaseSectionFlags(
+			{ ...completeCaseData(), case_number: "" },
+			[form(1, [{ determination: "cannabis_sativa" }], { id: 5 })]
+		);
+
+		expect(deriveCaseSectionStates(flags).details).toBe("attention");
+	});
+
+	it("leaves dependent sections not started when the case has no forms", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), []);
+		const states = deriveCaseSectionStates(flags);
+
+		expect(states.assessment).toBe("notStarted");
+		expect(states.certificates).toBe("notStarted");
+	});
+
+	it("asks for attention on the assessment once a form exists without bags", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [form(1, [])]);
+
+		expect(deriveCaseSectionStates(flags).assessment).toBe("attention");
+	});
+
+	it("asks for attention on a bag that has not been determined", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "pending" }]),
+		]);
+
+		expect(deriveCaseSectionStates(flags).assessment).toBe("attention");
+	});
+
+	it("holds certificates back from attention until the assessment is done", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [form(1, [])]);
+
+		expect(deriveCaseSectionStates(flags).certificates).toBe("notStarted");
+	});
+
+	it("asks for attention on certificates once the assessment is done", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }]),
+		]);
+
+		expect(deriveCaseSectionStates(flags).certificates).toBe("attention");
+	});
+});
+
+describe("describeSectionState", () => {
+	it("says nothing about a section that is complete", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 5 }),
+		]);
+
+		expect(describeSectionState("details", flags)).toBeNull();
+		expect(describeSectionState("assessment", flags)).toBeNull();
+		expect(describeSectionState("certificates", flags)).toBeNull();
+	});
+
+	it("names missing case details", () => {
+		const flags = deriveCaseSectionFlags(
+			{ ...completeCaseData(), received: "" },
+			[form(1, [{ determination: "cannabis_sativa" }], { id: 5 })]
+		);
+
+		expect(describeSectionState("details", flags)).toMatch(/case details/i);
+	});
+
+	it("asks for a form before anything else", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), []);
+
+		expect(describeSectionState("assessment", flags)).toMatch(
+			/add a priority 3 form/i
+		);
+		expect(describeSectionState("certificates", flags)).toMatch(
+			/add a priority 3 form/i
+		);
+	});
+
+	it("asks for a bag when a form is empty", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [form(1, [])]);
+
+		expect(describeSectionState("assessment", flags)).toMatch(
+			/at least one bag/i
+		);
+	});
+
+	it("asks for a determination when a bag is still pending", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "pending" }]),
+		]);
+
+		expect(describeSectionState("assessment", flags)).toMatch(
+			/needs a determination/i
+		);
+	});
+
+	it("points at the assessment before asking for certificates", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [form(1, [])]);
+
+		expect(describeSectionState("certificates", flags)).toMatch(
+			/finish the assessment/i
+		);
+	});
+
+	it("asks for a certificate once the assessment is done", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }]),
+		]);
+
+		expect(describeSectionState("certificates", flags)).toMatch(
+			/generated certificate/i
+		);
 	});
 });

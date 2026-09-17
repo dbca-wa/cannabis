@@ -12,6 +12,8 @@ import type { Priority3Form } from "@/shared/types/backend-api.types";
 import {
 	CASE_SECTIONS,
 	deriveCaseSectionFlags,
+	deriveCaseSectionStates,
+	describeSectionState,
 	firstIncompleteSection,
 	type CaseSectionId,
 } from "../../../utils/caseSections";
@@ -67,9 +69,6 @@ export const CaseProcessingPage = observer(
 	}: CaseProcessingPageProps) => {
 		const store = useCaseProcessingPageStore();
 		const { isAdmin } = useAuth();
-		// Held in state, not a ref, so the in-view observer can be told which
-		// element scrolls once it exists.
-		const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
 
 		// Certificate readiness is owned by the certificate section, which tracks
 		// the per-form ready marks.
@@ -92,15 +91,21 @@ export const CaseProcessingPage = observer(
 			[flags.details, flags.assessment, flags.certificates]
 		);
 
+		// One derivation drives both the index and the section headings, so they
+		// cannot report different things.
+		const sectionStates = useMemo(
+			() => deriveCaseSectionStates(flags),
+			[flags]
+		);
+
 		const sectionIds = useMemo(
 			() => CASE_SECTIONS.map((section) => section.id),
 			[]
 		);
 
-		const activeSectionId = useActiveSection({
-			sectionIds,
-			root: scrollEl,
-		});
+		// The page scrolls within the layout's main region, so sections move
+		// relative to the viewport and the observer needs no explicit root.
+		const activeSectionId = useActiveSection({ sectionIds });
 
 		const scrollToSection = useCallback((sectionId: CaseSectionId) => {
 			document
@@ -174,7 +179,10 @@ export const CaseProcessingPage = observer(
 						: undefined;
 
 		return (
-			<div className="flex flex-col gap-6 h-full">
+			// Scrolls in the layout's main region like every other page. A nested
+			// scroll container here fought the layout for the scroll and reset the
+			// reader's position whenever it remounted.
+			<div className="space-y-6">
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3 min-w-0">
 						<Button
@@ -214,11 +222,14 @@ export const CaseProcessingPage = observer(
 					</div>
 				</div>
 
-				<CaseSectionIndex
-					activeId={activeSectionId}
-					validity={validity}
-					onSelect={handleSectionSelect}
-				/>
+				{/* Stays reachable on a long page. */}
+				<div className="sticky top-0 z-20 -mx-1 bg-[#fafbfb]/95 px-1 py-2 backdrop-blur dark:bg-background/95">
+					<CaseSectionIndex
+						activeId={activeSectionId}
+						flags={flags}
+						onSelect={handleSectionSelect}
+					/>
+				</div>
 
 				{lockForNonAdmin && (
 					<div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
@@ -227,16 +238,13 @@ export const CaseProcessingPage = observer(
 					</div>
 				)}
 
-				<div
-					ref={setScrollEl}
-					className="flex-1 min-h-0 overflow-y-auto space-y-10 pb-10"
-				>
+				<div className="space-y-10 pb-10">
 					<CaseSection
 						id="details"
 						title="Case Details"
 						description="Reference, dates, defendants and officers"
-						isComplete={validity.details}
-						isInvalid={!validity.details}
+						state={sectionStates.details}
+						reason={describeSectionState("details", flags)}
 					>
 						<div className="max-w-4xl">
 							{renderLockable(
@@ -253,8 +261,8 @@ export const CaseProcessingPage = observer(
 						id="assessment"
 						title="Assessment"
 						description="Priority 3 forms and their drug bags"
-						isComplete={validity.assessment}
-						isInvalid={flags.hasForms && !validity.assessment}
+						state={sectionStates.assessment}
+						reason={describeSectionState("assessment", flags)}
 					>
 						<div className="space-y-4">
 							<FormsNavigator
@@ -296,8 +304,8 @@ export const CaseProcessingPage = observer(
 						id="certificates"
 						title="Certificates"
 						description="Generate and review each form's certificate"
-						isComplete={validity.certificates}
-						isInvalid={flags.hasForms && !validity.certificates}
+						state={sectionStates.certificates}
+						reason={describeSectionState("certificates", flags)}
 					>
 						<UnsignedCertificateStep
 							caseId={caseId}

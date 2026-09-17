@@ -12,7 +12,13 @@ const MainLayout = observer(function MainLayout() {
 
 	return (
 		<NavigationProvider>
-			<div className="flex min-h-screen w-full overflow-x-hidden bg-[#fafbfb] dark:bg-background">
+			{/*
+			  Fixed to the viewport so the document itself never scrolls: `main` is
+			  the only scroll container. Without this the sidebar is only sticky, so
+			  any page that made the document taller than the viewport scrolled the
+			  sidebar out of view and left a gap beneath it.
+			*/}
+			<div className="flex h-screen w-full overflow-hidden bg-[#fafbfb] dark:bg-background">
 				{/* Desktop sidebar */}
 				<div className="hidden lg:flex">
 					<Sidebar />

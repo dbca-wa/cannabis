@@ -150,18 +150,82 @@ describe("CaseProcessingPage", () => {
 			expect(within(index).getAllByText(/complete/i).length).toBeGreaterThan(0);
 		});
 
-		it("marks the details section as having errors when data is missing", () => {
+		it("marks the details section as needing attention when data is missing", () => {
 			renderPageWith({
 				caseData: { ...completeCaseData(), case_number: "" },
 			});
 
-			expect(screen.getByText(/case details has errors/i)).toBeInTheDocument();
+			expect(
+				screen.getByText(/case details needs attention/i)
+			).toBeInTheDocument();
+		});
+
+		it("says what is outstanding rather than only that a section is incomplete", () => {
+			renderPageWith({
+				caseData: { ...completeCaseData(), case_number: "" },
+			});
+
+			const index = screen.getByRole("navigation", { name: /case sections/i });
+			expect(
+				within(index).getByText(/some required case details are missing/i)
+			).toBeInTheDocument();
+		});
+
+		it("does not cry wolf on a case with no forms yet", () => {
+			renderPageWith({ forms: [] });
+
+			// Nothing has been started, so neither dependent section is an error.
+			expect(screen.getByText(/assessment not started/i)).toBeInTheDocument();
+			expect(screen.getByText(/certificates not started/i)).toBeInTheDocument();
+
+			const index = screen.getByRole("navigation", { name: /case sections/i });
+			expect(
+				within(index).getAllByText(/add a priority 3 form to begin/i).length
+			).toBe(2);
+		});
+
+		it("asks for attention on the assessment once a form exists without bags", () => {
+			renderPageWith({
+				forms: [
+					{ id: 10, bags: [], certificate: null } as unknown as Priority3Form,
+				],
+			});
+
+			expect(
+				screen.getByText(/assessment needs attention/i)
+			).toBeInTheDocument();
+
+			const index = screen.getByRole("navigation", { name: /case sections/i });
+			expect(
+				within(index).getByText(/every form needs at least one bag/i)
+			).toBeInTheDocument();
+		});
+
+		it("asks for attention on certificates only once the assessment is done", () => {
+			renderPageWith({ forms: [assessedForm(10, null)] });
+
+			expect(
+				screen.getByText(/certificates needs attention/i)
+			).toBeInTheDocument();
+
+			const index = screen.getByRole("navigation", { name: /case sections/i });
+			expect(
+				within(index).getByText(/every form needs a generated certificate/i)
+			).toBeInTheDocument();
 		});
 
 		it("announces how many sections are complete", () => {
 			renderPageWith();
 
 			expect(screen.getByText(/3 of 3 sections complete/i)).toBeInTheDocument();
+		});
+
+		it("announces how many sections need attention", () => {
+			renderPageWith({
+				caseData: { ...completeCaseData(), case_number: "" },
+			});
+
+			expect(screen.getByText(/1 needing attention/i)).toBeInTheDocument();
 		});
 	});
 
