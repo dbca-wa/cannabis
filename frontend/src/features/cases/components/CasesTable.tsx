@@ -67,9 +67,10 @@ export const CasesTable = observer(
 
 		const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
-		// Sort state (local — not part of filter persistence)
-		const [sortField, setSortField] = useState("status_priority");
-		const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+		// Sort state (local — not part of filter persistence). Newest first by
+		// default: operators work through cases in the order they were entered.
+		const [sortField, setSortField] = useState("created_at");
+		const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
 		// Server-side pagination — keep for pageSize management via global preference
 		const pagination = useServerPagination({
@@ -143,7 +144,9 @@ export const CasesTable = observer(
 				setSortDirection(newDirection);
 			} else {
 				setSortField(field);
-				setSortDirection(field === "received" ? "desc" : "asc");
+				// Dates are most useful newest-first on first click.
+				const datesDescendFirst = ["received", "created_at"];
+				setSortDirection(datesDescendFirst.includes(field) ? "desc" : "asc");
 			}
 			// Reset to first page when sorting changes
 			casesSearchStore.setCurrentPage(1);
@@ -227,6 +230,18 @@ export const CasesTable = observer(
 									>
 										<span>Reference</span>
 										{getSortIcon("case_number")}
+									</button>
+								</TableHead>
+
+								{/* Created Date Column — the default sort */}
+								<TableHead title="Date the case was entered into the system">
+									<button
+										type="button"
+										onClick={() => handleSort("created_at")}
+										className="inline-flex items-center gap-1 group hover:text-foreground transition-colors cursor-pointer"
+									>
+										<span>Created</span>
+										{getSortIcon("created_at")}
 									</button>
 								</TableHead>
 
@@ -342,6 +357,9 @@ export const CasesTable = observer(
 										<TableCell>
 											<Skeleton className="h-4 w-20" />
 										</TableCell>
+										<TableCell>
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
 										{!isMobile && (
 											<TableCell>
 												<Skeleton className="h-4 w-28" />
@@ -377,7 +395,7 @@ export const CasesTable = observer(
 								<TableRow>
 									<TableCell
 										colSpan={
-											(isMobile ? 3 : 7) + (selectedCertificateIds ? 1 : 0)
+											(isMobile ? 4 : 8) + (selectedCertificateIds ? 1 : 0)
 										}
 										className="h-48 text-center"
 									>
@@ -404,7 +422,7 @@ export const CasesTable = observer(
 								<TableRow>
 									<TableCell
 										colSpan={
-											(isMobile ? 3 : 7) + (selectedCertificateIds ? 1 : 0)
+											(isMobile ? 4 : 8) + (selectedCertificateIds ? 1 : 0)
 										}
 										className="h-48 text-center"
 									>
@@ -502,6 +520,11 @@ export const CasesTable = observer(
 												<div className="text-[12px] text-muted-foreground">
 													ID: {caseObj.id}
 												</div>
+											</TableCell>
+
+											{/* Created Date */}
+											<TableCell className="text-[14px] text-muted-foreground">
+												{formatDate(caseObj.created_at)}
 											</TableCell>
 
 											{/* Received Date */}

@@ -118,111 +118,142 @@ export const CaseCreationSummaryStep = ({
 				currentFormUrl={(caseData?.police_form_url as string | null) ?? null}
 			/>
 
-			{/* Case Details Section (condensed) */}
-			<SectionCard
-				title="Case Details"
-				isComplete={isCaseDetailsComplete}
-				isInvalid={isCaseDetailsInvalid}
-			>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="space-y-2">
-						<Label htmlFor="summary_case_number" className="required">
-							Police Reference No.
-						</Label>
-						<Input
-							id="summary_case_number"
-							value={caseNumber}
-							onChange={(e) => onFieldChange("case_number", e.target.value)}
-							placeholder="Enter police reference number"
-							aria-invalid={isTouched && !!errors.case_number}
-							aria-describedby={
-								isTouched && errors.case_number
-									? "summary-case-number-error"
-									: undefined
-							}
-						/>
-						{isTouched && errors.case_number && (
-							<p
-								id="summary-case-number-error"
-								className="text-sm text-red-600"
-								role="alert"
-							>
-								{errors.case_number}
-							</p>
-						)}
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="summary_received" className="required">
-							Received Date
-						</Label>
-						<Calendar22
-							value={received}
-							onChange={(date) => onFieldChange("received", date)}
-							placeholder="Select received date"
-							error={isTouched && !!errors.received}
-							aria-invalid={isTouched && !!errors.received}
-							aria-describedby={
-								isTouched && errors.received
-									? "summary-received-error"
-									: undefined
-							}
-						/>
-						{isTouched && errors.received && (
-							<p
-								id="summary-received-error"
-								className="text-sm text-red-600"
-								role="alert"
-							>
-								{errors.received}
-							</p>
-						)}
-					</div>
-				</div>
-			</SectionCard>
-
-			{/* Defendants Section (condensed) */}
-			<SectionCard
-				title="Defendants"
-				isComplete={isDefendantsComplete}
-				isInvalid={isDefendantsInvalid}
-			>
-				<div className="space-y-3">
-					<div className="flex items-center gap-2">
-						<div className="flex-1">
-							<DefendantSearchCombobox
-								value={selectedDefendantId}
-								onValueChange={setSelectedDefendantId}
-								placeholder="Search for defendant..."
-								exclude={defendantIds}
+			{/*
+			  Two columns of cards on large screens so the details fill the
+			  available width instead of a single narrow column. Each card owns
+			  its own internal field grid.
+			*/}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				{/* Case Details — full width row */}
+				<SectionCard
+					title="Case Details"
+					isComplete={isCaseDetailsComplete}
+					isInvalid={isCaseDetailsInvalid}
+					className="lg:col-span-2"
+				>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label htmlFor="summary_case_number" className="required">
+								Police Reference No.
+							</Label>
+							<Input
+								id="summary_case_number"
+								value={caseNumber}
+								onChange={(e) => onFieldChange("case_number", e.target.value)}
+								placeholder="Enter police reference number"
+								aria-invalid={isTouched && !!errors.case_number}
+								aria-describedby={
+									isTouched && errors.case_number
+										? "summary-case-number-error"
+										: undefined
+								}
 							/>
-						</div>
-						<Button
-							type="button"
-							onClick={() => setShowCreateModal(true)}
-							size="sm"
-							className="bg-green-600 hover:bg-green-700 text-white"
-						>
-							<Plus className="h-4 w-4 mr-1" />
-							Add
-						</Button>
-					</div>
-					{defendants.length === 0 && (
-						<p className="text-xs text-muted-foreground">
-							No defendants added — the certificate will record the defendant as
-							&quot;Unknown&quot;.
-						</p>
-					)}
-
-					{defendants.length > 0 && (
-						<div className="space-y-1.5">
-							{defendants.map((defendant) => (
-								<div
-									key={defendant.id}
-									className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/50"
+							{isTouched && errors.case_number && (
+								<p
+									id="summary-case-number-error"
+									className="text-sm text-red-600"
+									role="alert"
 								>
-									<div className="flex items-center gap-2 flex-1 min-w-0">
-										<span className="font-medium text-sm truncate">
+									{errors.case_number}
+								</p>
+							)}
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="summary_received" className="required">
+								Received Date
+							</Label>
+							<Calendar22
+								value={received}
+								onChange={(date) => onFieldChange("received", date)}
+								placeholder="Select received date"
+								error={isTouched && !!errors.received}
+								aria-invalid={isTouched && !!errors.received}
+								aria-describedby={
+									isTouched && errors.received
+										? "summary-received-error"
+										: undefined
+								}
+							/>
+							{isTouched && errors.received && (
+								<p
+									id="summary-received-error"
+									className="text-sm text-red-600"
+									role="alert"
+								>
+									{errors.received}
+								</p>
+							)}
+						</div>
+					</div>
+				</SectionCard>
+
+				{/* Approved Botanist — shares a row, and height, with Defendants */}
+				<SectionCard
+					title="Approved Botanist"
+					isComplete={!!approvedBotanistId}
+					isInvalid={isTouched && !approvedBotanistId}
+					className="h-full"
+				>
+					<div className="space-y-2">
+						<UserSearchCombobox
+							value={approvedBotanistId}
+							onValueChange={(id) => onFieldChange("approved_botanist", id)}
+							placeholder="Select approved botanist..."
+							roleFilter="botanist"
+							lastUsedKey="botanist"
+						/>
+						<p className="text-xs text-muted-foreground">
+							The botanist assigned to this case
+						</p>
+					</div>
+				</SectionCard>
+
+				{/* Defendants — shares a row, and height, with Approved Botanist */}
+				<SectionCard
+					title="Defendants"
+					isComplete={isDefendantsComplete}
+					isInvalid={isDefendantsInvalid}
+					optional
+					className="h-full"
+				>
+					<div className="space-y-3">
+						<div className="flex items-center gap-2">
+							<div className="flex-1">
+								<DefendantSearchCombobox
+									value={selectedDefendantId}
+									onValueChange={setSelectedDefendantId}
+									placeholder="Search for defendant..."
+									exclude={defendantIds}
+								/>
+							</div>
+							<Button
+								type="button"
+								onClick={() => setShowCreateModal(true)}
+								size="sm"
+								className="bg-green-600 hover:bg-green-700 text-white"
+							>
+								<Plus className="h-4 w-4 mr-1" />
+								Add
+							</Button>
+						</div>
+						{defendants.length === 0 && (
+							<p className="text-xs text-muted-foreground">
+								No defendants added — the certificate will record the defendant
+								as &quot;Unknown&quot;.
+							</p>
+						)}
+
+						{defendants.length > 0 && (
+							// Chips wrap so several defendants share a line rather than
+							// one per row, keeping the card compact as more are added.
+							<div className="flex flex-wrap gap-1.5">
+								{defendants.map((defendant) => (
+									<span
+										key={defendant.id}
+										className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 py-1 pl-3 pr-1 text-sm"
+									>
+										<span className="font-medium truncate max-w-[14rem]">
 											{formatDefendantDisplayName(defendant)}
 										</span>
 										<Badge
@@ -231,100 +262,88 @@ export const CaseCreationSummaryStep = ({
 										>
 											{getDefendantCasesBadge(defendant)}
 										</Badge>
-									</div>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onClick={() => handleRemoveDefendant(defendant.id)}
-										aria-label={`Remove ${formatDefendantDisplayName(defendant)}`}
-									>
-										<X className="h-3.5 w-3.5" />
-									</Button>
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-			</SectionCard>
-
-			{/* Officers Section (condensed) */}
-			<SectionCard
-				title="Officers"
-				isComplete={isOfficersComplete}
-				isInvalid={isOfficersInvalid}
-			>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="space-y-2">
-						<Label htmlFor="summary_submitting_officer" className="required">
-							Submitting Officer
-						</Label>
-						<OfficerSearchComboBox
-							value={submittingOfficer}
-							onValueChange={(id) => onFieldChange("submitting_officer_id", id)}
-							placeholder="Search officer..."
-							error={isTouched && !!errors.submitting_officer}
-							showExternalAddButton
-							required
-						/>
-						{isTouched && errors.submitting_officer && (
-							<p className="text-sm text-red-600" role="alert">
-								{errors.submitting_officer}
-							</p>
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											className="h-5 w-5 rounded-full"
+											onClick={() => handleRemoveDefendant(defendant.id)}
+											aria-label={`Remove ${formatDefendantDisplayName(defendant)}`}
+										>
+											<X className="h-3.5 w-3.5" />
+										</Button>
+									</span>
+								))}
+							</div>
 						)}
-						<p className="text-xs text-muted-foreground">
-							Officer who delivered/submitted the samples.
-						</p>
 					</div>
+				</SectionCard>
 
-					<div className="space-y-2">
-						<Label htmlFor="summary_requesting_officer">
-							Requesting Officer (on behalf of)
-						</Label>
-						<OfficerSearchComboBox
-							value={requestingOfficer}
-							onValueChange={(id) => onFieldChange("requesting_officer_id", id)}
-							placeholder="Search officer..."
-							showExternalAddButton
-							required
-						/>
-						<p className="text-xs text-muted-foreground">
-							The sworn officer who requested the identification.
-						</p>
+				{/* Officers — full width row */}
+				<SectionCard
+					title="Officers"
+					isComplete={isOfficersComplete}
+					isInvalid={isOfficersInvalid}
+					className="lg:col-span-2"
+				>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="space-y-2">
+							<Label htmlFor="summary_submitting_officer" className="required">
+								Submitting Officer
+							</Label>
+							<OfficerSearchComboBox
+								value={submittingOfficer}
+								onValueChange={(id) =>
+									onFieldChange("submitting_officer_id", id)
+								}
+								placeholder="Search officer..."
+								error={isTouched && !!errors.submitting_officer}
+								showExternalAddButton
+								required
+							/>
+							{isTouched && errors.submitting_officer && (
+								<p className="text-sm text-red-600" role="alert">
+									{errors.submitting_officer}
+								</p>
+							)}
+							<p className="text-xs text-muted-foreground">
+								Officer who delivered/submitted the samples.
+							</p>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="summary_requesting_officer">
+								Requesting Officer (on behalf of){" "}
+								<span className="font-normal text-muted-foreground">
+									— optional
+								</span>
+							</Label>
+							<OfficerSearchComboBox
+								value={requestingOfficer}
+								onValueChange={(id) =>
+									onFieldChange("requesting_officer_id", id)
+								}
+								placeholder="Search officer..."
+								showExternalAddButton
+							/>
+							<p className="text-xs text-muted-foreground">
+								The sworn officer who requested the identification. Leave blank
+								when the conveying officer submitted the samples themselves.
+							</p>
+						</div>
+
+						<div className="space-y-2 sm:col-span-2">
+							<Label htmlFor="summary_station">Police Station</Label>
+							<StationSearchComboBox
+								value={station}
+								onValueChange={(id) => onFieldChange("station_id", id)}
+								placeholder="Search station..."
+								showExternalAddButton
+							/>
+						</div>
 					</div>
-
-					<div className="space-y-2 md:col-span-2">
-						<Label htmlFor="summary_station">Police Station</Label>
-						<StationSearchComboBox
-							value={station}
-							onValueChange={(id) => onFieldChange("station_id", id)}
-							placeholder="Search station..."
-							showExternalAddButton
-						/>
-					</div>
-				</div>
-			</SectionCard>
-
-			{/* Approved Botanist Section */}
-			<SectionCard
-				title="Approved Botanist"
-				isComplete={!!approvedBotanistId}
-				isInvalid={isTouched && !approvedBotanistId}
-			>
-				<div className="space-y-2">
-					<Label htmlFor="approved_botanist">Approved Botanist</Label>
-					<UserSearchCombobox
-						value={approvedBotanistId}
-						onValueChange={(id) => onFieldChange("approved_botanist", id)}
-						placeholder="Select approved botanist..."
-						roleFilter="botanist"
-						lastUsedKey="botanist"
-					/>
-					<p className="text-xs text-muted-foreground">
-						The botanist assigned to this case
-					</p>
-				</div>
-			</SectionCard>
+				</SectionCard>
+			</div>
 
 			{/* Create Defendant Modal */}
 			<CreateDefendantModal

@@ -30,9 +30,15 @@ VALID_ORDERINGS = {
     "-case_number",
     "received",
     "-received",
+    "created_at",
+    "-created_at",
     "status_priority",
     "-status_priority",
 } | _NULL_SAFE_ORDERINGS
+
+# Newest first. Operators work through cases in the order they were entered, so
+# the most recently created case is the one most likely to need attention.
+DEFAULT_ORDERING = "-created_at"
 
 
 # Phase priority for sorting: lower number = shown first in default order.
@@ -77,10 +83,7 @@ def _annotate_status_priority(queryset):
 def _apply_ordering(queryset, ordering):
     """Apply validated ordering with null-safe FK sorting and status priority."""
     if ordering not in VALID_ORDERINGS:
-        # Default: order by status priority (active cases first), then newest received
-        return _annotate_status_priority(queryset).order_by(
-            "status_priority", "-received"
-        )
+        return queryset.order_by(DEFAULT_ORDERING)
 
     if ordering in ("status_priority", "-status_priority"):
         qs = _annotate_status_priority(queryset)
@@ -222,7 +225,7 @@ class CaseListView(ListCreateAPIView):
         ).prefetch_related("defendants", "forms__bags", "forms__certificate")
 
         queryset = _apply_filters(queryset, self.request.query_params)
-        ordering = self.request.query_params.get("ordering", "-received")
+        ordering = self.request.query_params.get("ordering", DEFAULT_ORDERING)
         return _apply_ordering(queryset, ordering)
 
     def perform_create(self, serializer):
@@ -272,5 +275,11 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
         )
 
     def perform_destroy(self, instance):
+        # Deleting a case cascades to its forms, bags, assessments and
+        # certificates. Refuse when any of those certificates is in a batch.
+        from ..permissions import ensure_case_deletable
+
+        ensure_case_deletable(instance)
+
         settings.LOGGER.warning(f"User {self.request.user} deleted case: {instance}")
         super().perform_destroy(instance)

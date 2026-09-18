@@ -4,18 +4,16 @@ import { getErrorMessage } from "@/shared/utils";
 import { makeObservable, observable } from "mobx";
 import { AuthStore } from "./auth.store";
 import { UIStore } from "./ui.store";
-import { CaseProcessingWizardStore } from "./derived/case-processing-wizard.store";
-import { CaseCreationWizardStore } from "./derived/case-creation-wizard.store";
+import { CaseProcessingPageStore } from "./derived/case-processing-page.store";
+import { CaseCreationFormStore } from "./derived/case-creation-form.store";
 import { DrugBagWranglerStore } from "./derived/drug-bag-wrangler.store";
 import { CertificateGroupingStore } from "./derived/certificate-grouping.store";
 
 export class RootStore {
 	authStore: AuthStore;
 	uiStore: UIStore;
-	caseProcessingWizardStore: CaseProcessingWizardStore;
-	/** @deprecated Use caseProcessingWizardStore instead */
-	caseWizardStore: CaseProcessingWizardStore;
-	caseCreationWizardStore: CaseCreationWizardStore;
+	caseProcessingPageStore: CaseProcessingPageStore;
+	caseCreationFormStore: CaseCreationFormStore;
 	drugBagWranglerStore: DrugBagWranglerStore;
 	certificateGroupingStore: CertificateGroupingStore;
 
@@ -27,9 +25,8 @@ export class RootStore {
 	constructor() {
 		this.authStore = new AuthStore();
 		this.uiStore = new UIStore();
-		this.caseProcessingWizardStore = new CaseProcessingWizardStore();
-		this.caseWizardStore = this.caseProcessingWizardStore;
-		this.caseCreationWizardStore = new CaseCreationWizardStore();
+		this.caseProcessingPageStore = new CaseProcessingPageStore();
+		this.caseCreationFormStore = new CaseCreationFormStore();
 		this.drugBagWranglerStore = new DrugBagWranglerStore();
 		this.certificateGroupingStore = new CertificateGroupingStore();
 

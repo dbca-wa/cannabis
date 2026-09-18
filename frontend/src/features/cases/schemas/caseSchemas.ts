@@ -51,11 +51,6 @@ export const updateCaseSchema = z.object({
 		.positive("Please select a finance officer")
 		.optional()
 		.nullable(),
-	internal_comments: z
-		.string()
-		.max(1000, "Internal comments must be 1000 characters or less")
-		.optional()
-		.nullable(),
 	defendants: z.array(z.number().positive()).optional().default([]),
 	phase: submissionPhaseSchema.optional(),
 });

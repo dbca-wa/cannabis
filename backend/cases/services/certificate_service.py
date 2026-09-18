@@ -15,6 +15,8 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.utils import join_with_and
+
 from ..models import Case, Certificate
 from .pdf_service import PDFService
 from .workflow_service import WorkflowService
@@ -159,7 +161,7 @@ class CertificateService:
 
         defendants = case.defendants.all()
 
-        tag_numbers = ", ".join(bag.seal_tag_numbers for bag in bags)
+        tag_numbers = join_with_and(bag.seal_tag_numbers for bag in bags)
         # Section B uses generic "item"/"items" instead of content type names
         section_b_description = "item" if len(bags) == 1 else "items"
 
@@ -167,12 +169,7 @@ class CertificateService:
         unique_types = list(
             dict.fromkeys(bag.get_content_type_display() for bag in bags)
         )
-        if len(unique_types) == 1:
-            descriptions = unique_types[0]
-        elif len(unique_types) == 2:
-            descriptions = f"{unique_types[0]} and {unique_types[1]}"
-        else:
-            descriptions = ", ".join(unique_types[:-1]) + f" and {unique_types[-1]}"
+        descriptions = join_with_and(unique_types)
         primary_assessment = bags_with_assessments[0].assessment
 
         receipt_date = ""
@@ -198,19 +195,29 @@ class CertificateService:
             "quantity_of_bags": len(bags),
             "quantity_of_bags_words": CertificateService._number_to_words(len(bags)),
             "tag_numbers": tag_numbers,
-            "new_tag_numbers": ", ".join(
+            "new_tag_numbers": join_with_and(
                 bag.new_seal_tag_numbers for bag in bags if bag.new_seal_tag_numbers
             )
             or "[Pending]",
             "description": descriptions,
             "section_b_description": section_b_description,
             "defendant": defendant_display,
-            "police_officer": CertificateService._format_officer_legal(
+            # The conveying officer physically delivered the samples and was
+            # present at the examination, so they are named in both section (a)
+            # (received from) and section (b) (handed back to).
+            "conveying_officer": CertificateService._format_officer_legal(
                 case.submitting_officer, role_label="Unsworn Officer"
             ),
-            "receiving_officer": CertificateService._format_officer_legal(
-                case.requesting_officer or case.submitting_officer,
-                role_label="Sworn Officer",
+            # The requesting officer is optional and appears only in section (a),
+            # as the officer the samples were conveyed on behalf of. None when
+            # unset, so the template omits the clause rather than printing a
+            # placeholder.
+            "requesting_officer": (
+                CertificateService._format_officer_legal(
+                    case.requesting_officer, role_label="Sworn Officer"
+                )
+                if case.requesting_officer
+                else None
             ),
             "receipt_date": receipt_date,
             "species_name": (

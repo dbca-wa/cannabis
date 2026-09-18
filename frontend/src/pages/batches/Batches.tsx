@@ -10,6 +10,8 @@ import {
 	ChevronDown,
 	Hash,
 	RefreshCw,
+	AlertTriangle,
+	CheckCircle2,
 } from "lucide-react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { collapseCertRanges } from "@/shared/utils/certificate-range.utils";
@@ -161,6 +163,17 @@ const Batches = () => {
 		});
 	}, [batches, officerFilterId, officerName, certSearch, invoiceSearch]);
 
+	// Every batch still missing its invoice number, oldest first so the prompt
+	// offers the one that has been waiting longest.
+	const awaitingInvoice = useMemo(
+		() =>
+			batches
+				.filter((b) => !b.invoice_raised_number)
+				.slice()
+				.sort((a, b) => a.created_at.localeCompare(b.created_at)),
+		[batches]
+	);
+
 	const clearFilters = () => {
 		setOfficerFilterId(null);
 		setCertSearch("");
@@ -253,6 +266,41 @@ const Batches = () => {
 				title={`Batches${!isLoading ? ` (${batches.length})` : ""}`}
 				subtitle="Packaged certificate batches and their cost summaries."
 			/>
+
+			{/* Outstanding invoices. A batch sits unfinished until its invoice number
+			    is recorded, so say so plainly rather than leaving it to a badge in
+			    one column. */}
+			{awaitingInvoice.length > 0 && (
+				<div
+					role="status"
+					className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/40"
+				>
+					<div className="flex items-start gap-3">
+						<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+						<div>
+							<p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+								{awaitingInvoice.length} batch
+								{awaitingInvoice.length === 1 ? "" : "es"} awaiting an invoice
+							</p>
+							<p className="text-xs text-amber-800 dark:text-amber-200">
+								Raise the invoice externally, then record its number here to
+								complete the{" "}
+								{awaitingInvoice.length === 1 ? "batch" : "batches"}.
+							</p>
+						</div>
+					</div>
+					<Button
+						size="sm"
+						onClick={() => {
+							setInvoiceBatch(awaitingInvoice[0]);
+							setInvoiceNumber("");
+						}}
+					>
+						<Receipt className="mr-2 h-4 w-4" />
+						Record invoice for {awaitingInvoice[0].batch_number}
+					</Button>
+				</div>
+			)}
 
 			{/* Search / filter */}
 			<FilterContainer>
@@ -414,15 +462,32 @@ const Batches = () => {
 									<TableCell className="text-right tabular-nums align-top whitespace-nowrap">
 										${batch.total}
 									</TableCell>
-									<TableCell className="align-top">
+									<TableCell
+										className="align-top"
+										onClick={(e) => e.stopPropagation()}
+									>
 										{batch.invoice_raised_number ? (
 											<Badge className="border border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+												<CheckCircle2 className="mr-1 h-3 w-3" />
 												{batch.invoice_raised_number}
 											</Badge>
 										) : (
-											<Badge className="border border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200">
-												Pending
-											</Badge>
+											// Doubles as the shortcut to record the number, so the
+											// prompt and the action are the same thing.
+											<button
+												type="button"
+												onClick={() => {
+													setInvoiceBatch(batch);
+													setInvoiceNumber("");
+												}}
+												title="Record the invoice number for this batch"
+												className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+											>
+												<Badge className="border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800">
+													<AlertTriangle className="mr-1 h-3 w-3" />
+													Awaiting invoice
+												</Badge>
+											</button>
 										)}
 									</TableCell>
 									<TableCell

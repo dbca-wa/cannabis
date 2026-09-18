@@ -30,4 +30,8 @@ export { useExport } from "./useExport";
 
 // System data
 export { useSystemSettings } from "./useSystemSettings";
-export { useFeatureFlags, useOcrEnabled } from "./useFeatureFlags";
+export {
+	useFeatureFlags,
+	useOcrEnabled,
+	useDefaultBotanistId,
+} from "./useFeatureFlags";

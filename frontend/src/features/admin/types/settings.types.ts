@@ -18,6 +18,8 @@ export interface SystemSettingsUpdateRequest {
 	tax_percentage?: string;
 	forward_certificate_emails_to?: string;
 	send_emails_to_self?: boolean;
+	/** User id of the botanist to pre-select, or null to clear the default. */
+	default_approved_botanist?: number | null;
 }
 
 // Settings validation error response

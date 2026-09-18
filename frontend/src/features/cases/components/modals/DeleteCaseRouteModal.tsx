@@ -9,13 +9,23 @@ import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { Button } from "@/shared/components/ui/button";
 import { AlertTriangle, FileText, Calendar, User, Loader2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { getPhaseBadgeClass } from "../../utils/cases.utils";
 import { formatDate } from "@/shared/utils/date.utils";
+import { useState } from "react";
+
+/** Typed exactly (case-insensitively) before the delete button unlocks. */
+const REQUIRED_CONFIRMATION = "delete";
 
 export const DeleteCaseRouteModal = () => {
 	const navigate = useNavigate();
 	const { id } = useParams();
 	const { deleteCase, isDeleting } = useCases();
+	const [confirmationText, setConfirmationText] = useState("");
+
+	const confirmationMatches =
+		confirmationText.trim().toLowerCase() === REQUIRED_CONFIRMATION;
 
 	// Fetch case data
 	const {
@@ -29,7 +39,7 @@ export const DeleteCaseRouteModal = () => {
 	};
 
 	const handleDelete = async () => {
-		if (!id) return;
+		if (!id || !confirmationMatches) return;
 
 		try {
 			await new Promise<void>((resolve, reject) => {
@@ -78,12 +88,19 @@ export const DeleteCaseRouteModal = () => {
 		);
 	}
 
-	// A case can be deleted while it is still being processed. Once it has been
-	// batched or completed it forms part of finance records and must be retained.
-	const canDelete = caseObj.derived_status !== "complete";
-	const warningMessage = !canDelete
-		? "This case cannot be deleted because it has been completed. Cases become part of finance records once batched."
-		: null;
+	// A case can be deleted at any point up until one of its certificates joins a
+	// batch. After that the batch's tallies and packaged documents depend on those
+	// certificates, so the batch must be removed first.
+	const batchedCertificateNumbers = caseObj.forms
+		.map((form) => form.certificate)
+		.filter((cert) => cert && cert.batch_id !== null)
+		.map((cert) => cert!.certificate_number)
+		.filter(Boolean);
+
+	const canDelete = batchedCertificateNumbers.length === 0;
+	const warningMessage = canDelete
+		? null
+		: `This case cannot be deleted because its certificates belong to a batch (${batchedCertificateNumbers.join(", ")}). Delete the batch first if the case really must be removed.`;
 
 	return (
 		<ResponsiveModal
@@ -177,6 +194,59 @@ export const DeleteCaseRouteModal = () => {
 						)}
 					</div>
 
+					{/* What goes and what stays */}
+					{canDelete && (
+						<div className="grid gap-3 sm:grid-cols-2">
+							<div className="rounded-lg border border-red-200 bg-red-50/60 p-3 dark:border-red-800 dark:bg-red-950/20">
+								<p className="mb-1.5 text-sm font-medium text-red-900 dark:text-red-100">
+									Will be permanently removed
+								</p>
+								<ul className="list-disc space-y-0.5 pl-4 text-xs text-red-800 dark:text-red-200">
+									<li>This case and its details</li>
+									<li>All of its Priority 3 forms</li>
+									<li>All drug bags and their assessments</li>
+									<li>Any generated certificates</li>
+								</ul>
+							</div>
+							<div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900">
+								<p className="mb-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+									Will be kept
+								</p>
+								<ul className="list-disc space-y-0.5 pl-4 text-xs text-gray-700 dark:text-gray-300">
+									<li>Police officers</li>
+									<li>Police stations</li>
+									<li>Defendants</li>
+									<li>Every other case</li>
+								</ul>
+							</div>
+						</div>
+					)}
+
+					{/* Typed confirmation */}
+					{canDelete && (
+						<div className="space-y-2">
+							<Label htmlFor="delete-confirmation">
+								Type <span className="font-mono font-semibold">delete</span> to
+								confirm
+							</Label>
+							<Input
+								id="delete-confirmation"
+								value={confirmationText}
+								onChange={(e) => setConfirmationText(e.target.value)}
+								placeholder="delete"
+								autoComplete="off"
+								disabled={isDeleting}
+								aria-describedby="delete-confirmation-hint"
+							/>
+							<p
+								id="delete-confirmation-hint"
+								className="text-xs text-muted-foreground"
+							>
+								This cannot be undone.
+							</p>
+						</div>
+					)}
+
 					{/* Action Buttons */}
 					<div className="flex gap-3 justify-end">
 						<Button
@@ -190,7 +260,12 @@ export const DeleteCaseRouteModal = () => {
 							<Button
 								variant="destructive"
 								onClick={handleDelete}
-								disabled={isDeleting}
+								disabled={isDeleting || !confirmationMatches}
+								title={
+									confirmationMatches
+										? undefined
+										: 'Type "delete" to enable this button'
+								}
 							>
 								{isDeleting && (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />

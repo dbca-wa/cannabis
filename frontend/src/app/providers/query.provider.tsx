@@ -137,6 +137,18 @@ const createQueryClient = () => {
 	client.setQueryDefaults(["auth"], authQueryDefaults);
 	client.setQueryDefaults(["auth", "user"], authQueryDefaults);
 
+	// Case, batch and dashboard data is edited concurrently by several people, so
+	// returning to a backgrounded tab should show the current state rather than
+	// whatever was true when the tab lost focus. Reference data and auth keep the
+	// global refetchOnWindowFocus: false.
+	const collaborativeQueryDefaults = { refetchOnWindowFocus: true };
+
+	client.setQueryDefaults(["cases"], collaborativeQueryDefaults);
+	client.setQueryDefaults(["batches"], collaborativeQueryDefaults);
+	client.setQueryDefaults(["certificates"], collaborativeQueryDefaults);
+	client.setQueryDefaults(["drugbags"], collaborativeQueryDefaults);
+	client.setQueryDefaults(["dashboard"], collaborativeQueryDefaults);
+
 	return client;
 };
 

@@ -10,6 +10,7 @@ import {
 	numberToWords,
 	formatOfficerLegal,
 	formatContentDescription,
+	joinWithAnd,
 } from "@/shared/utils/certificate-format.utils";
 import type { OfficerDetails } from "@/shared/utils/certificate-format.utils";
 
@@ -54,15 +55,9 @@ export const CertificateDocument = ({
 	const bagCountWord = numberToWords(bagCount);
 
 	const tagNumbers =
-		bags
-			.map((b) => b.seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "[Pending]";
+		joinWithAnd(bags.map((b) => b.seal_tag_numbers)) || "[Pending]";
 	const newTagNumbers =
-		bags
-			.map((b) => b.new_seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "[Pending]";
+		joinWithAnd(bags.map((b) => b.new_seal_tag_numbers)) || "[Pending]";
 
 	const description = formatContentDescription(bags);
 
@@ -85,16 +80,19 @@ export const CertificateDocument = ({
 					.join("; ")
 			: "UNKNOWN";
 
-	const submittingOfficer = formatOfficerLegal(
+	// The conveying officer delivered the samples and was present at the
+	// examination, so they are named in both section (a) and section (b).
+	const conveyingOfficer = formatOfficerLegal(
 		caseData.submitting_officer_details as OfficerDetails | null | undefined
 	);
+	// The requesting officer is optional and appears only in section (a), as the
+	// officer the samples were conveyed on behalf of.
 	const requestingOfficerDetails = caseData.requesting_officer_id
 		? (caseData.requesting_officer_details as OfficerDetails | null | undefined)
 		: null;
-	const requestingOfficer = formatOfficerLegal(
-		requestingOfficerDetails ??
-			(caseData.submitting_officer_details as OfficerDetails | null | undefined)
-	);
+	const requestingOfficer = requestingOfficerDetails
+		? formatOfficerLegal(requestingOfficerDetails)
+		: null;
 
 	const receiptDate = formatCertificateDate(
 		caseData.received as string | null | undefined
@@ -280,8 +278,10 @@ export const CertificateDocument = ({
 						<p>
 							I received for examination {bagCountWord} sealed drug movement{" "}
 							{bagWord}, tag {tagWord} {tagNumbers} containing {description}{" "}
-							marked <strong>{defendantDisplay}</strong> from{" "}
-							{submittingOfficer} on {receiptDate}.
+							marked <strong>{defendantDisplay}</strong> from {conveyingOfficer}
+							{requestingOfficer
+								? ` on behalf of ${requestingOfficer}`
+								: ""} on {receiptDate}.
 						</p>
 					) : (
 						<p style={{ color: "#888", fontStyle: "italic" }}>
@@ -333,7 +333,7 @@ export const CertificateDocument = ({
 							</p>
 							<p style={{ marginTop: "8px" }}>
 								{sealedPhrase} {newTagNumbers}. {handoverPhrase} handed over to{" "}
-								{requestingOfficer} who was present during the examination.
+								{conveyingOfficer} who was present during the examination.
 							</p>
 						</>
 					) : (

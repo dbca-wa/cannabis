@@ -1,6 +1,6 @@
-import { afterEach, vi } from "vitest";
+import { afterEach, expect, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import { toHaveNoViolations } from "jest-axe";
 
 // Extend vitest's expect with the jest-axe accessibility matcher.

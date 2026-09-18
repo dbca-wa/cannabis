@@ -1,4 +1,5 @@
 import type { CertificateData } from "@/features/cases/stores/caseForm.store";
+import { joinWithAnd } from "@/shared/utils/certificate-format.utils";
 
 /**
  * Generate HTML for M.D.14 Certificate of Approved Botanist
@@ -98,18 +99,12 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 	// Format quantity as words (without "a")
 	const quantityOfBags = numberToWords(total_bags);
 
-	// Format tag numbers (comma-separated)
-	const tagNumbers =
-		bags
-			.map((b) => b.seal_tag_numbers)
-			.filter(Boolean)
-			.join(", ") || "N/A";
+	// Tag numbers and content types read as prose on the certificate.
+	const tagNumbers = joinWithAnd(bags.map((b) => b.seal_tag_numbers)) || "N/A";
 
-	// Format description (content types)
 	const description =
-		bags.length > 0
-			? bags.map((b) => formatContentType(b.content_type)).join(", ")
-			: "plant material";
+		joinWithAnd(bags.map((b) => formatContentType(b.content_type))) ||
+		"plant material";
 
 	// Format defendants list - "LASTNAME, Given Names" format
 	const defendantsList =
@@ -123,21 +118,28 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 					.join(", ")
 			: "Unknown";
 
-	// Format police officer with rank, badge, and name (e.g., "Unsworn Officer PD99456 DELLAR, David")
-	const officer = requesting_officer || submitting_officer;
-	let policeOfficerWithBadge = '<span class="missing-data">Not Assigned</span>';
-
-	if (officer) {
+	/** Format an officer as "Rank Badge SURNAME, Given Names". */
+	const formatOfficer = (officer: typeof submitting_officer): string | null => {
+		if (!officer) return null;
 		const rank = officer.rank_display || "Officer";
 		const badge = officer.badge_number || "";
 		const lastName = officer.last_name?.toUpperCase() || "";
 		const firstName = officer.given_names || "";
 		const fullName = firstName ? `${lastName}, ${firstName}` : lastName;
+		return badge ? `${rank} ${badge} ${fullName}` : `${rank} ${fullName}`;
+	};
 
-		policeOfficerWithBadge = badge
-			? `${rank} ${badge} ${fullName}`
-			: `${rank} ${fullName}`;
-	}
+	// The conveying officer delivered the samples and was present at the
+	// examination — named in both section (a) and section (b).
+	const conveyingOfficer =
+		formatOfficer(submitting_officer) ??
+		'<span class="missing-data">Not Assigned</span>';
+
+	// The requesting officer is optional and only qualifies section (a).
+	const requestingOfficerName = formatOfficer(requesting_officer);
+	const onBehalfOf = requestingOfficerName
+		? ` on behalf of <strong>${requestingOfficerName}</strong>`
+		: "";
 
 	// Generate examination result (section b) based on bag determinations
 	let examinationResult: string;
@@ -176,22 +178,19 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 						? "Cannabis (hybrid)"
 						: "Cannabis sativa";
 
-			// Get new seal tag numbers
-			const newTags = cannabisBags
-				.map((b) => b.new_seal_tag_numbers)
-				.filter(Boolean)
-				.join(", ");
+			const newTags = joinWithAnd(
+				cannabisBags.map((b) => b.new_seal_tag_numbers)
+			);
 
 			const resealText = newTags
 				? ` The plant was resealed in a new drug movement bag, tag numbers ${newTags}.`
 				: "";
 
-			// Officer present during examination — the requesting officer if the
-			// samples were submitted on their behalf, otherwise the submitting officer
-			const presentOfficer = requesting_officer || submitting_officer;
-			const officerPresent = presentOfficer
-				? `${presentOfficer.rank_display || "Officer"} ${
-						presentOfficer.last_name?.toUpperCase() || ""
+			// The officer present during the examination is always the conveying
+			// officer, who physically delivered and received back the samples.
+			const officerPresent = submitting_officer
+				? `${submitting_officer.rank_display || "Officer"} ${
+						submitting_officer.last_name?.toUpperCase() || ""
 					}`
 				: "";
 
@@ -573,7 +572,7 @@ export const generateCertificateHTML = (data: CertificateData): string => {
                     I received for examination <strong>${quantityOfBags}</strong> sealed drug
                     movement bag(s), tag number(s) <strong>${tagNumbers}</strong>, containing quantity of
                     <strong>${description}</strong> marked <strong>${defendantsList}</strong> from
-                    <strong>${policeOfficerWithBadge}</strong> on <strong>${formattedDate}</strong>.
+                    <strong>${conveyingOfficer}</strong>${onBehalfOf} on <strong>${formattedDate}</strong>.
                 </div>
             </div>
 

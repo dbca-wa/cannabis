@@ -687,6 +687,16 @@ export interface SystemSettings {
 	send_emails_to_self: boolean;
 	environment: string;
 	send_emails_to_self_editable: boolean;
+	certificate_counter?: number;
+	/** Pre-selected botanist for new cases. Null when unset or no longer eligible. */
+	default_approved_botanist?: number | null;
+	default_approved_botanist_details?: {
+		id: number;
+		email: string;
+		given_names: string | null;
+		last_name: string | null;
+		full_name: string;
+	} | null;
 	last_modified_by?: {
 		id: number;
 		email: string;
@@ -696,9 +706,11 @@ export interface SystemSettings {
 	last_modified_at?: string | null; // ISO datetime string
 }
 
-// Lightweight feature flags readable by any app user (GET /system/feature-flags)
+// Lightweight system defaults readable by any app user (GET /system/feature-flags)
 export interface FeatureFlags {
 	ocr_enabled: boolean;
+	/** Botanist to pre-select on new cases. Null when unset or no longer eligible. */
+	default_approved_botanist: number | null;
 }
 // ============================================================================
 // DASHBOARD TYPES (for dashboard-specific API responses)

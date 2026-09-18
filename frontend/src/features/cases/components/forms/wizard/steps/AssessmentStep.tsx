@@ -13,6 +13,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { cn } from "@/shared/utils/style.utils";
 import { useDrugBagWranglerStore } from "@/app/providers/store.provider";
 import type { BagValidationError } from "@/app/stores/derived/drug-bag-wrangler.store";
 import { SectionCard } from "../SectionCard";
@@ -31,6 +32,7 @@ import type {
 	DrugBagUpdateRequest,
 	BotanicalDetermination,
 } from "../../../../types/drugBags.types";
+import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 interface AssessmentStepProps {
 	/** Case data from TanStack Query — contains bags array and text fields */
@@ -46,6 +48,58 @@ interface AssessmentStepProps {
 }
 
 const MAX_BAGS = 5;
+
+interface BatchCreateBag {
+	seal_tag_numbers: string;
+	new_seal_tag_numbers: string | null;
+	content_type: DrugBagContentType;
+	determination: BotanicalDetermination;
+	contains_female_plants?: boolean;
+}
+
+interface BatchCreatePayload {
+	bags: BatchCreateBag[];
+}
+
+/**
+ * Build the placeholder a submitted bag is shown as until the server responds.
+ *
+ * Ids are negative so they cannot collide with a real record, and are only ever
+ * used as React keys — the list is replaced by server data once the request
+ * settles.
+ */
+const buildProvisionalBag = (
+	bag: BatchCreateBag,
+	caseId: number,
+	index: number
+): DrugBag => {
+	const now = new Date().toISOString();
+	return {
+		id: -(Date.now() + index),
+		case: caseId,
+		content_type: bag.content_type,
+		content_type_display: bag.content_type,
+		seal_tag_numbers: bag.seal_tag_numbers,
+		new_seal_tag_numbers: bag.new_seal_tag_numbers,
+		property_reference: null,
+		gross_weight: null,
+		net_weight: null,
+		contains_female_plants: bag.contains_female_plants ?? false,
+		security_movement_envelope: "",
+		assessment: {
+			id: -(Date.now() + index),
+			determination: bag.determination,
+			determination_display: bag.determination,
+			is_cannabis: bag.determination.startsWith("cannabis"),
+			assessment_date: now,
+			botanist_notes: null,
+			created_at: now,
+			updated_at: now,
+		},
+		created_at: now,
+		updated_at: now,
+	};
+};
 
 /**
  * Map a backend batch-create error of the shape
@@ -80,7 +134,7 @@ const mapBatchErrorsToBags = (
 
 /**
  * Assessment step — Approved Botanist selection, form-scoped drug bags (max
- * five per form producing one certificate), and internal comments.
+ * five per form producing one certificate) and the form's Section C notes.
  */
 export const AssessmentStep = observer(function AssessmentStep({
 	caseData,
@@ -97,23 +151,49 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 	const { updateDrugBag, deleteDrugBag } = useDrugBags(caseId || null);
 
-	// Form-scoped batch creation mutation
+	// Form-scoped batch creation mutation.
+	//
+	// Applied optimistically: the saved list shows the new bags the moment the
+	// request is accepted rather than waiting for the form to be refetched, so a
+	// slow or cache-obstructed read cannot make a successful save look lost.
 	const batchCreateMutation = useMutation({
-		mutationFn: (data: {
-			bags: Array<{
-				seal_tag_numbers: string;
-				new_seal_tag_numbers: string | null;
-				content_type: DrugBagContentType;
-				determination: BotanicalDetermination;
-				contains_female_plants?: boolean;
-			}>;
-		}) => addBagsToForm(formId, data),
-		onSuccess: async () => {
+		mutationFn: (data: BatchCreatePayload) => addBagsToForm(formId, data),
+		onMutate: async (data: BatchCreatePayload) => {
+			const formQueryKey = ["cases", "forms", formId];
+			// Stop an in-flight read from overwriting the optimistic list.
+			await queryClient.cancelQueries({ queryKey: formQueryKey });
+
+			const previousForm =
+				queryClient.getQueryData<Priority3Form>(formQueryKey);
+			if (previousForm) {
+				queryClient.setQueryData<Priority3Form>(formQueryKey, {
+					...previousForm,
+					bags: [
+						...(previousForm.bags ?? []),
+						...data.bags.map((bag, index) =>
+							buildProvisionalBag(bag, caseId, index)
+						),
+					],
+				});
+			}
+
+			return { previousForm, formQueryKey };
+		},
+		onError: (_error, _data, context) => {
+			// Put the server's last known list back so the user does not see bags
+			// that were rejected.
+			if (context?.previousForm) {
+				queryClient.setQueryData(context.formQueryKey, context.previousForm);
+			}
+		},
+		onSuccess: () => {
+			toast.success("Bags saved successfully");
+		},
+		onSettled: async () => {
 			await queryClient.invalidateQueries({
 				queryKey: ["cases", "forms", formId],
 			});
 			await invalidateRelatedQueries(queryClient, "drugBags");
-			toast.success("Bags saved successfully");
 		},
 	});
 
@@ -153,17 +233,15 @@ export const AssessmentStep = observer(function AssessmentStep({
 	});
 
 	// Local state for textareas to avoid flicker during debounced PATCH
+	// Highlights the notes field while it has focus, so the operator can see at a
+	// glance where their typing will land on a long page.
+	const [notesFocused, setNotesFocused] = useState(false);
+
 	const serverNotes = (caseData?.additional_notes as string) ?? "";
 	const [localNotes, setLocalNotes] = useState(serverNotes);
 	useEffect(() => {
 		setLocalNotes(serverNotes);
 	}, [serverNotes, formId]);
-
-	const serverComments = (caseData?.internal_comments as string) ?? "";
-	const [localComments, setLocalComments] = useState(serverComments);
-	useEffect(() => {
-		setLocalComments(serverComments);
-	}, [serverComments]);
 
 	// ALL hooks above this line — early return AFTER all hooks
 	if (!formId) {
@@ -193,6 +271,18 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 	const totalBags = serverBags.length + wrangler.state.bags.length;
 	const capReached = totalBags >= MAX_BAGS;
+
+	// Matches the case-level assessment rule so this card can never report the
+	// form's bags done while the page summary still asks for attention.
+	const allServerBagsAssessed = serverBags.every(
+		(bag) =>
+			!!bag.assessment?.determination &&
+			bag.assessment.determination !== "pending"
+	);
+	const bagsComplete =
+		serverBags.length > 0 &&
+		allServerBagsAssessed &&
+		wrangler.state.bags.length === 0;
 
 	const handleAddBag = () => wrangler.addBag();
 
@@ -321,7 +411,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 			{/* Drug Bags Section */}
 			<SectionCard
 				title="Priority 3 Drug Bags"
-				isComplete={serverBags.length > 0}
+				isComplete={bagsComplete}
 				isInvalid={isTouched && serverBags.length === 0}
 			>
 				{serverBags.length === 0 && wrangler.state.bags.length === 0 ? (
@@ -534,8 +624,13 @@ export const AssessmentStep = observer(function AssessmentStep({
 			{/* Security Movement Envelope (per form) */}
 			<SectionCard
 				title="Security Movement Envelope"
-				isComplete={true}
+				isComplete={
+					((caseData?.security_movement_envelope as string) ?? "").trim()
+						.length > 0
+				}
 				isInvalid={false}
+				optional
+				completionLabel="Security movement envelope recorded"
 			>
 				<div className="space-y-2">
 					<Label htmlFor="security_movement_envelope">SME Number</Label>
@@ -554,7 +649,13 @@ export const AssessmentStep = observer(function AssessmentStep({
 			</SectionCard>
 
 			{/* Section C Notes (other matters for the certificate) */}
-			<SectionCard title="Section C Notes" isComplete={true} isInvalid={false}>
+			<SectionCard
+				title="Section C Notes"
+				isComplete={localNotes.trim().length > 0}
+				isInvalid={false}
+				optional
+				completionLabel="Section C notes written"
+			>
 				<div className="space-y-4">
 					<TemplatePicker
 						caseData={caseData}
@@ -573,8 +674,15 @@ export const AssessmentStep = observer(function AssessmentStep({
 								setLocalNotes(e.target.value);
 								onFieldChange("additional_notes", e.target.value);
 							}}
+							onFocus={() => setNotesFocused(true)}
+							onBlur={() => setNotesFocused(false)}
 							placeholder="Enter section C notes for the certificate (e.g. subsample details)..."
-							className="min-h-[100px] resize-y"
+							className={cn(
+								"min-h-[100px] resize-y border-2 transition-colors",
+								notesFocused
+									? "border-emerald-500 ring-2 ring-emerald-500/25"
+									: "border-input hover:border-muted-foreground/50"
+							)}
 							aria-describedby="additional-notes-hint"
 						/>
 						<div className="flex items-center gap-2">
@@ -593,34 +701,6 @@ export const AssessmentStep = observer(function AssessmentStep({
 							</p>
 						</div>
 					</div>
-				</div>
-			</SectionCard>
-
-			{/* Internal Comments */}
-			<SectionCard
-				title="Case Internal Comments"
-				isComplete={true}
-				isInvalid={false}
-			>
-				<div className="space-y-2">
-					<Label htmlFor="internal_comments">Internal Comments</Label>
-					<Textarea
-						id="internal_comments"
-						value={localComments}
-						onChange={(e) => {
-							setLocalComments(e.target.value);
-							onFieldChange("internal_comments", e.target.value);
-						}}
-						placeholder="Add internal comments..."
-						className="min-h-[120px] resize-y"
-						aria-describedby="internal-comments-hint"
-					/>
-					<p
-						id="internal-comments-hint"
-						className="text-xs text-muted-foreground"
-					>
-						Not shown on the certificate.
-					</p>
 				</div>
 			</SectionCard>
 

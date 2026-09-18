@@ -113,18 +113,41 @@ export const formatOfficerLegal = (
 };
 
 /**
+ * Join values as a readable English list.
+ *
+ * Certificates are read aloud in court, so lists of tag numbers and content
+ * types need to read as prose rather than as comma-separated data.
+ *
+ *     []              -> ""
+ *     ["A"]           -> "A"
+ *     ["A", "B"]      -> "A and B"
+ *     ["A", "B", "C"] -> "A, B and C"
+ *
+ * Empty and whitespace-only values are dropped. No serial comma before "and",
+ * matching Australian usage. Mirrors the backend join_with_and helper.
+ */
+export const joinWithAnd = (
+	values: Array<string | null | undefined>
+): string => {
+	const items = values
+		.map((value) => value?.trim())
+		.filter((value): value is string => !!value);
+
+	if (items.length === 0) return "";
+	if (items.length === 1) return items[0];
+	if (items.length === 2) return `${items[0]} and ${items[1]}`;
+	return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+};
+
+/**
  * Build the content description string from an array of bags.
  * Deduplicates content types, filters out falsy values.
- * Returns "quantity of Plant Material, Seed" or "quantity of [Pending]" if empty.
+ * Returns "quantity of Plant Material and Seed" or "quantity of [Pending]".
  */
 export const formatContentDescription = (
 	bags: Array<{ content_type_display?: string }>
 ): string => {
-	const types = [
-		...new Set(bags.map((b) => b.content_type_display).filter(Boolean)),
-	];
-	if (types.length === 0) return "quantity of [Pending]";
-	if (types.length === 1) return `quantity of ${types[0]}`;
-	if (types.length === 2) return `quantity of ${types[0]} and ${types[1]}`;
-	return `quantity of ${types.slice(0, -1).join(", ")} and ${types[types.length - 1]}`;
+	const types = [...new Set(bags.map((b) => b.content_type_display))];
+	const joined = joinWithAnd(types);
+	return `quantity of ${joined || "[Pending]"}`;
 };

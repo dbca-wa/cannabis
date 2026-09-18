@@ -11,7 +11,7 @@ const SIDEBAR_VARIANT: keyof typeof SIDEBAR_BG_VARIANTS = "cannabis";
 const Sidebar = () => {
 	return (
 		<aside
-			className={`w-[260px] shrink-0 h-screen sticky top-0 border-r border-border ${SIDEBAR_BG_VARIANTS[SIDEBAR_VARIANT]} flex flex-col`}
+			className={`w-[260px] shrink-0 h-full border-r border-border ${SIDEBAR_BG_VARIANTS[SIDEBAR_VARIANT]} flex flex-col`}
 		>
 			<NavLink
 				to="/"

@@ -27,21 +27,16 @@ vi.mock("@/features/cases/components/providers/CaseStoresProvider", () => ({
 	),
 }));
 
-vi.mock(
-	"@/features/cases/components/forms/wizard/CaseCreationWizardContainer",
-	() => ({
-		CaseCreationWizardContainer: () => (
-			<div data-testid="case-creation-wizard" />
-		),
-	})
-);
+vi.mock("@/features/cases/components/forms/page/CaseCreationForm", () => ({
+	CaseCreationForm: () => <div data-testid="case-creation-form" />,
+}));
 
 const CreateCase = await import("./CreateCase").then((m) => m.CreateCase);
 
 describe("CreateCase Page", () => {
-	it("renders the case creation wizard", () => {
+	it("renders the case creation form", () => {
 		renderPage(<CreateCase />);
-		expect(screen.getByTestId("case-creation-wizard")).toBeInTheDocument();
+		expect(screen.getByTestId("case-creation-form")).toBeInTheDocument();
 	});
 
 	it("has no accessibility violations", async () => {

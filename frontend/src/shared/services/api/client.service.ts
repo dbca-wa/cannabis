@@ -61,6 +61,28 @@ export class ApiClientService {
 			return config;
 		});
 
+		// Make every read uncacheable.
+		//
+		// The backend already sends no-store on API responses, but users behind a
+		// corporate proxy or a TLS-inspecting endpoint agent have been served
+		// stale reads after a successful write. A cache that ignores the response
+		// directives still keys entries on the URL, so a unique parameter per
+		// request cannot be satisfied from a previous entry. The request headers
+		// cover well-behaved caches that would otherwise reuse a fresh entry
+		// without revalidating.
+		this.client.interceptors.request.use((config) => {
+			if ((config.method ?? "get").toLowerCase() !== "get") {
+				return config;
+			}
+			config.headers["Cache-Control"] = "no-cache, no-store";
+			config.headers.Pragma = "no-cache";
+			config.params = {
+				...(config.params as Record<string, unknown> | undefined),
+				_: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+			};
+			return config;
+		});
+
 		// Handle 401 responses with token refresh
 		this.client.interceptors.response.use(
 			(response) => response,

@@ -291,6 +291,7 @@ class CasePhaseHistory(AuditModel):
         max_length=20,
         choices=[
             ("advance", "Advanced"),
+            ("repair", "Repaired"),
         ],
         help_text="Type of action that caused this transition",
     )
@@ -609,10 +610,23 @@ class Certificate(AuditModel):
 
     @property
     def is_batch_eligible(self):
-        """Eligible for batching once ALL forms on the case have reached the
-        Batching phase (or beyond) and this certificate is not already batched."""
+        """Whether this certificate can be added to a batch.
+
+        Three conditions must all hold:
+
+        1. It is not already in a batch.
+        2. Its own form is in the Batching phase. A form at In Batch or Complete
+           has already been through batching and cannot be advanced again —
+           offering it would fail partway with a phase transition error.
+        3. Every form on the case has reached Batching or beyond, so a case is
+           only ever batched once all of its forms are ready.
+        """
         if self.batch_id is not None:
             return False
+
+        if self.form.phase != Case.PhaseChoices.BATCHING:
+            return False
+
         # All forms on the case must be at batching or later
         non_batching_forms = self.form.case.forms.exclude(
             phase__in=[

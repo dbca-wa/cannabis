@@ -181,7 +181,7 @@ class APIRequestLoggingMiddleware:
 class SecurityHeadersMiddleware:
     """
     Adds security response headers to all responses:
-    - Cache-Control: no-store for API responses (prevents caching sensitive data)
+    - Cache-Control: no-store for API and generated-document responses
     - Content-Security-Policy: restrictive policy for the application
     - Referrer-Policy: strict-origin-when-cross-origin
     - Permissions-Policy: disables unused browser features
@@ -190,16 +190,27 @@ class SecurityHeadersMiddleware:
     via settings (SECURE_CONTENT_TYPE_NOSNIFF, X_FRAME_OPTIONS).
     """
 
+    # Paths whose responses must never be stored by a browser or intermediary.
+    # /api/ carries case data; /files/ serves generated certificates and batch
+    # packages, which are replaced in place at a stable URL when a certificate is
+    # regenerated or a batch repackaged — a cached copy would show the superseded
+    # document indefinitely.
+    NO_STORE_PREFIXES = ("/api/", "/files/")
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         response = self.get_response(request)
 
-        # Cache-Control: no-store for all API responses containing sensitive data
-        if request.path.startswith("/api/"):
+        if request.path.startswith(self.NO_STORE_PREFIXES):
             response["Cache-Control"] = "no-store, no-cache, must-revalidate"
             response["Pragma"] = "no-cache"
+            # Django's static serve view sets Last-Modified, which licenses a
+            # conditional request that could still yield a 304 for a replaced
+            # document. Dropping it forces a full re-fetch.
+            if "Last-Modified" in response:
+                del response["Last-Modified"]
 
         # Content-Security-Policy — restrictive baseline
         # The frontend is a separate SPA, so the backend only serves JSON API

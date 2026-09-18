@@ -130,25 +130,6 @@ export const DrugBagsSection = observer(() => {
 						</div>
 					</div>
 				)}
-
-				{/* Internal Comments - Optional, at bottom */}
-				<div className="space-y-2 pt-4 border-t">
-					<label htmlFor="internal_comments" className="text-sm font-medium">
-						Internal Comments (Optional)
-					</label>
-					<textarea
-						id="internal_comments"
-						value={formStore.formData.internal_comments}
-						onChange={(e) =>
-							formStore.updateField("internal_comments", e.target.value)
-						}
-						placeholder="Add any internal notes or comments (not shown on certificate)..."
-						className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md resize-y"
-					/>
-					<p className="text-xs text-muted-foreground">
-						Optional notes for internal use only (not shown on certificate)
-					</p>
-				</div>
 			</CardContent>
 		</Card>
 	);

@@ -1,31 +1,35 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { Loader2 } from "lucide-react";
-import { useCaseCreationWizardStore } from "@/app/providers/store.provider";
+import { useCaseCreationFormStore } from "@/app/providers/store.provider";
 import { Button } from "@/shared/components/ui/button";
-import { CaseDetailsStep } from "./steps/CaseDetailsStep";
-import { DefendantsStep } from "./steps/DefendantsStep";
-import { OfficersStep } from "./steps/OfficersStep";
+import { CaseDetailsStep } from "../wizard/steps/CaseDetailsStep";
+import { DefendantsStep } from "../wizard/steps/DefendantsStep";
+import { OfficersStep } from "../wizard/steps/OfficersStep";
 import { useCaseNumberAvailability } from "@/features/cases/hooks/useCaseNumberAvailability";
 
-interface CaseCreationWizardContainerProps {
-	/** Case data from TanStack Query */
+interface CaseCreationFormProps {
+	/** Case field values, bridged from the CaseFormStore */
 	caseData: Record<string, unknown> | null;
-	/** Callback to persist field changes via mutation */
+	/** Callback to record a field change */
 	onFieldChange: (field: string, value: unknown) => void;
-	/** Callback to finalise and submit the case */
+	/** Callback to create the case */
 	onSubmit: () => void;
-	/** Callback to discard the draft case (kept for API compat) */
-	onDiscard?: () => void;
+	/** Callback to abandon the draft and leave */
+	onDiscard: () => void;
 }
 
 /**
- * Single-page case creation form. Renders all sections (Case Details,
- * Defendants, Officers) in a scrollable layout with one "Create Case" action.
+ * Single-page case creation form.
+ *
+ * Renders the case details, defendants and officers sections in one scrollable
+ * layout with a single Create Case action. Creation captures base case data
+ * only — the security movement envelope, drug bags and scanned image belong to
+ * a Priority 3 form and are recorded once a form is added.
  */
-export const CaseCreationWizardContainer = observer(
-	({ caseData, onFieldChange, onSubmit }: CaseCreationWizardContainerProps) => {
-		const store = useCaseCreationWizardStore();
+export const CaseCreationForm = observer(
+	({ caseData, onFieldChange, onSubmit, onDiscard }: CaseCreationFormProps) => {
+		const store = useCaseCreationFormStore();
 		const [touched, setTouched] = useState(false);
 
 		const { isChecking, matchedCase } = useCaseNumberAvailability(
@@ -38,7 +42,8 @@ export const CaseCreationWizardContainer = observer(
 			store.setMatchedExistingCaseId(matchedCaseId);
 		}, [store, matchedCaseId]);
 
-		// Validation — minimum required fields before submission
+		// Minimum required data before the case can be created. The requesting
+		// officer is optional — only the conveying officer is required.
 		const caseNumber = (caseData?.case_number as string) ?? "";
 		const received = (caseData?.received as string) ?? "";
 		const submittingOfficer = caseData?.submitting_officer_id;
@@ -47,12 +52,16 @@ export const CaseCreationWizardContainer = observer(
 		const defendants = (caseData?.defendants as number[]) ?? [];
 		const hasDefendants =
 			defendants.length > 0 || store.state.defendantUnknownAcknowledged;
+
+		// A single officer must not fill both roles.
+		const officersDistinct =
+			!requestingOfficer || requestingOfficer !== submittingOfficer;
+
 		const isValid =
 			!!caseNumber.trim() &&
 			!!received &&
 			!!submittingOfficer &&
-			!!requestingOfficer &&
-			submittingOfficer !== requestingOfficer &&
+			officersDistinct &&
 			!!approvedBotanist &&
 			hasDefendants &&
 			!store.hasMatchedExistingCase &&
@@ -83,6 +92,13 @@ export const CaseCreationWizardContainer = observer(
 				</div>
 
 				<div className="flex items-center justify-end gap-3">
+					<Button
+						variant="outline"
+						onClick={onDiscard}
+						disabled={store.state.isSubmitting}
+					>
+						Cancel
+					</Button>
 					<Button
 						onClick={() => {
 							setTouched(true);

@@ -118,6 +118,18 @@ class SystemSettings(models.Model):
         help_text="User who receives all emails when testing mode is enabled",
     )
 
+    # Case defaults
+    default_approved_botanist = models.ForeignKey(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="default_botanist_settings",
+        help_text=(
+            "Pre-selected as the approved botanist on new cases. Leave unset to "
+            "start each case with no botanist chosen."
+        ),
+    )
     # Feature flags
     ocr_enabled = models.BooleanField(
         default=False,

@@ -75,9 +75,12 @@ const LoadingOrchestrator = observer(function LoadingOrchestrator({
 
 const AppContent = ({ children }: RootProviderProps) => {
 	return (
+		// Full-viewport shell for the app. No centring here — the loader centres
+		// itself. Centring the whole app made the shell size to content and left
+		// the blank strip below it.
 		<div
 			className={cn(
-				"flex h-screen w-screen items-center justify-center transition-colors duration-200",
+				"h-screen w-screen overflow-hidden transition-colors duration-200",
 				"dark:bg-gray-900 bg-gray-50"
 			)}
 		>

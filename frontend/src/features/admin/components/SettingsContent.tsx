@@ -13,6 +13,7 @@ import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
 import { securityService } from "@/features/admin/services/security.service";
 import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
 import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
+import { DefaultBotanistCard } from "@/features/admin/components/settings/DefaultBotanistCard";
 import { TemplatesSettingsCard } from "@/features/cases/components/templates/TemplatesSettingsCard";
 import { logger } from "@/shared/services/logger.service";
 
@@ -101,12 +102,10 @@ const SettingsContent = () => {
 	const [counterLoaded, setCounterLoaded] = useState(false);
 
 	const applySettingsChanges = useCallback(
-		async (changes: Record<string, string>) => {
+		async (changes: SystemSettingsUpdateRequest) => {
 			if (!settings || !user) return;
 
-			const success = await updateSettings(
-				changes as SystemSettingsUpdateRequest
-			);
+			const success = await updateSettings(changes);
 
 			if (success) {
 				settingsNotificationService.showUpdateSuccess(
@@ -179,13 +178,29 @@ const SettingsContent = () => {
 				return;
 			}
 
-			await applySettingsChanges({ [field]: value });
+			await applySettingsChanges({
+				[field]: value,
+			} as SystemSettingsUpdateRequest);
+		},
+		[settings, user, clearError, applySettingsChanges]
+	);
+
+	/**
+	 * Save the default botanist. Not routed through handleSettingsUpdate because
+	 * the value is a user id rather than a display string, and the change needs
+	 * no confirmation — it only affects cases created afterwards.
+	 */
+	const handleSaveDefaultBotanist = useCallback(
+		(botanistId: number | null) => {
+			if (!settings || !user) return;
+			clearError();
+			void applySettingsChanges({ default_approved_botanist: botanistId });
 		},
 		[settings, user, clearError, applySettingsChanges]
 	);
 
 	const handleConfirmChanges = useCallback(() => {
-		applySettingsChanges(pendingChanges);
+		void applySettingsChanges(pendingChanges as SystemSettingsUpdateRequest);
 	}, [applySettingsChanges, pendingChanges]);
 
 	const handleCancelChanges = useCallback(() => {
@@ -378,6 +393,15 @@ const SettingsContent = () => {
 						Setting it to 5 means the next certificate will be R000006.
 					</p>
 				</Card>
+				{/* Default botanist for new cases */}
+				<DefaultBotanistCard
+					value={settings.default_approved_botanist ?? null}
+					valueName={
+						settings.default_approved_botanist_details?.full_name ?? null
+					}
+					isSaving={isUpdating}
+					onSave={handleSaveDefaultBotanist}
+				/>
 				{/* Section C Templates management */}
 				<TemplatesSettingsCard />
 			</div>

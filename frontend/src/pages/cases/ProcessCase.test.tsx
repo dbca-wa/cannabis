@@ -33,23 +33,18 @@ vi.mock("@/features/cases/components/providers/CaseStoresProvider", () => ({
 	),
 }));
 
-vi.mock(
-	"@/features/cases/components/forms/wizard/CaseProcessingWizardContainer",
-	() => ({
-		CaseProcessingWizardContainer: () => (
-			<div data-testid="case-processing-wizard" />
-		),
-	})
-);
+vi.mock("@/features/cases/components/forms/page/CaseProcessingPage", () => ({
+	CaseProcessingPage: () => <div data-testid="case-processing-page" />,
+}));
 
 const ProcessCase = await import("./ProcessCase").then((m) => m.ProcessCase);
 
 describe("ProcessCase Page", () => {
-	it("renders the processing wizard once the case has loaded", () => {
+	it("renders the processing page once the case has loaded", () => {
 		caseState.isLoading = false;
 		caseState.isError = false;
 		renderPage(<ProcessCase />);
-		expect(screen.getByTestId("case-processing-wizard")).toBeInTheDocument();
+		expect(screen.getByTestId("case-processing-page")).toBeInTheDocument();
 	});
 
 	it("shows a not-found state when the case fails to load", () => {
@@ -58,7 +53,7 @@ describe("ProcessCase Page", () => {
 			renderPage(<ProcessCase />);
 			expect(screen.getByText(/case not found/i)).toBeInTheDocument();
 			expect(
-				screen.queryByTestId("case-processing-wizard")
+				screen.queryByTestId("case-processing-page")
 			).not.toBeInTheDocument();
 		} finally {
 			caseState.isError = false;

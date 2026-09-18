@@ -21,17 +21,10 @@
             line-height: 1.5;
             font-size: 11px;
             background: white;
-            /* Create a flex container for the entire page */
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
 
-        /* Main content wrapper - takes available space */
         .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
+            display: block;
         }
 
         /* Header styling */
@@ -179,11 +172,24 @@
             border-left: 4px solid #ffc958;
         }
 
-        /* Bottom content that gets pushed to bottom */
+        /* Signature block and departmental address, pinned to the bottom of the
+           page they fall on.
+
+           This is a page float, a Prince extension that moves an element in the
+           block direction rather than the inline direction. Unlike a running
+           element in an @page margin box it is not repeated on every page, which
+           is what a signature needs: it belongs once, at the foot of the final
+           page.
+
+           The previous approach — a flex column on body with min-height: 100vh
+           and margin-top: auto — is a screen-media idiom. Viewport units and
+           flex auto-margins do not resolve against the page box in paged media,
+           so the block floated up under the content instead of sitting at the
+           bottom. */
         .bottom-content {
-            /* Position at bottom of page */
-            margin-top: auto;
-            /* Prevent breaking inside */
+            float: bottom;
+            width: 100%;
+            /* Never split the signature across a page boundary. */
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -305,11 +311,6 @@
                 page-break-inside: avoid;
             }
 
-            /* Force new page if bottom content doesn't fit */
-            .bottom-content-new-page {
-                page-break-before: always;
-            }
-
             /* Force background colors to print */
             .section-content,
             .certification-box {
@@ -393,12 +394,16 @@
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bag, tag number {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                    {{ requesting_officer }}{% endif %} on
+                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% else %}
                     I received for examination {{ quantity_of_bags_words }} sealed drug
                     movement bags, tag numbers {{ tag_numbers }} containing a quantity of
                     {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ police_officer }} on <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                    {{ requesting_officer }}{% endif %} on
+                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
                     {% endif %}
                 </div>
             </div>
@@ -419,11 +424,11 @@
                     {% if quantity_of_bags == 1 %}
                     The {{ section_b_description }} was sealed in a new drug movement bag, tag number
                     {{ new_tag_numbers }}. This bag was handed over to
-                    {{ receiving_officer }} who was present during the examination.
+                    {{ conveying_officer }} who was present during the examination.
                     {% else %}
                     The {{ section_b_description }} were sealed in new drug movement bags, tag numbers
                     {{ new_tag_numbers }}. These bags were handed over to
-                    {{ receiving_officer }} who was present during the examination.
+                    {{ conveying_officer }} who was present during the examination.
                     {% endif %}
                 </div>
             </div>
