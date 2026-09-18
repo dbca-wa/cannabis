@@ -439,10 +439,17 @@ jobs:
       (needs.merge-frontend-prod.result == 'success' || needs.merge-backend-prod.result == 'success')
 
     steps:
+      # This job is best-effort housekeeping. The GitHub Packages delete API
+      # intermittently returns "fetch failed" partway through a run; when it
+      # does, the versions it already removed stay removed and the next deploy
+      # prunes the rest. A transient prune failure must never fail an otherwise
+      # successful deploy, so every step is continue-on-error.
+
       # Step 1: Remove orphaned untagged versions (platform manifests from old builds)
       # Keep 10 most recent untagged versions to support the 10 most recent tagged releases
       - name: Cleanup untagged frontend versions
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           owner: dbca-wa
           package-name: cannabis-frontend
@@ -453,6 +460,7 @@ jobs:
 
       - name: Cleanup untagged backend versions
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           owner: dbca-wa
           package-name: cannabis-backend
@@ -465,6 +473,7 @@ jobs:
       # The 'stable' tag is always preserved via ignore-versions regex
       - name: Cleanup old frontend releases
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           owner: dbca-wa
           package-name: cannabis-frontend
@@ -475,6 +484,7 @@ jobs:
 
       - name: Cleanup old backend releases
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           owner: dbca-wa
           package-name: cannabis-backend
