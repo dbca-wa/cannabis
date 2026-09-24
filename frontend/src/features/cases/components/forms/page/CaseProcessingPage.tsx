@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { observer } from "mobx-react-lite";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 
 import { useCaseProcessingPageStore } from "@/app/providers/store.provider";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -38,6 +38,8 @@ interface CaseProcessingPageProps {
 	onSubmit: () => void;
 	/** Leave the case without finalising */
 	onDiscard: () => void;
+	/** Delete the whole case and its unique data (opens a confirmation) */
+	onDelete: () => void;
 	onFormSelect?: (formId: number) => void;
 	onAddForm?: () => void;
 	onDeleteForm?: (formId: number) => void;
@@ -63,6 +65,7 @@ export const CaseProcessingPage = observer(
 		onFieldChange,
 		onSubmit,
 		onDiscard,
+		onDelete,
 		onFormSelect,
 		onAddForm,
 		onDeleteForm,
@@ -198,6 +201,19 @@ export const CaseProcessingPage = observer(
 							Process Case
 						</h1>
 					</div>
+
+					{/* Deleting is a rare, destructive action, so it sits apart from
+					    the primary workflow controls with muted styling and its own
+					    typed-confirmation step in the dialog it opens. */}
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={onDelete}
+						className="shrink-0 text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+					>
+						<Trash2 className="mr-2 h-4 w-4" />
+						Delete case
+					</Button>
 				</div>
 
 				{/* Stays reachable on a long page. */}
