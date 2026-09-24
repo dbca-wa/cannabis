@@ -144,16 +144,34 @@ export const UnsignedCertificateStep = ({
 		}
 	};
 
+	const formsQueryKey = ["cases", caseId, "forms"] as const;
+
 	const toggleReadyMutation = useMutation({
 		mutationFn: ({ fId, ready }: { fId: number; ready: boolean }) =>
 			updateForm(fId, { marked_ready: ready }),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["cases", caseId, "forms"],
-			});
+		// Flip the circle immediately rather than waiting for the PATCH and a
+		// refetch to land. The button felt laggy because its state came only from
+		// server data.
+		onMutate: async ({ fId, ready }) => {
+			await queryClient.cancelQueries({ queryKey: formsQueryKey });
+			const previous = queryClient.getQueryData<Priority3Form[]>(formsQueryKey);
+			queryClient.setQueryData<Priority3Form[]>(formsQueryKey, (old) =>
+				Array.isArray(old)
+					? old.map((f) => (f.id === fId ? { ...f, marked_ready: ready } : f))
+					: old
+			);
+			return { previous };
 		},
-		onError: () => {
+		onError: (_err, _vars, context) => {
+			// Roll back to the pre-click state.
+			if (context?.previous) {
+				queryClient.setQueryData(formsQueryKey, context.previous);
+			}
 			toast.error("Failed to update readiness");
+		},
+		onSettled: () => {
+			// Reconcile with the server once the request resolves.
+			queryClient.invalidateQueries({ queryKey: formsQueryKey });
 		},
 	});
 
@@ -169,14 +187,31 @@ export const UnsignedCertificateStep = ({
 					.filter((f) => !f.marked_ready)
 					.map((f) => updateForm(f.id, { marked_ready: true }))
 			),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["cases", caseId, "forms"],
-			});
+		// Mark every eligible form ready in the cache up front so all the circles
+		// fill at once, then reconcile.
+		onMutate: async () => {
+			await queryClient.cancelQueries({ queryKey: formsQueryKey });
+			const previous = queryClient.getQueryData<Priority3Form[]>(formsQueryKey);
+			queryClient.setQueryData<Priority3Form[]>(formsQueryKey, (old) =>
+				Array.isArray(old)
+					? old.map((f) =>
+							(f.bags?.length ?? 0) > 0 ? { ...f, marked_ready: true } : f
+						)
+					: old
+			);
+			return { previous };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(formsQueryKey, context.previous);
+			}
+			toast.error("Failed to mark all ready");
+		},
+		onSuccess: () => {
 			toast.success("All forms marked ready");
 		},
-		onError: () => {
-			toast.error("Failed to mark all ready");
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: formsQueryKey });
 		},
 	});
 

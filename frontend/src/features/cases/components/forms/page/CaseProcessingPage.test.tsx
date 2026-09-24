@@ -66,9 +66,11 @@ const renderPageWith = (
 		caseData?: Record<string, unknown> | null;
 		forms?: Priority3Form[];
 		onSubmit?: () => void;
+		onDelete?: () => void;
 	} = {}
 ) => {
 	const onSubmit = overrides.onSubmit ?? vi.fn();
+	const onDelete = overrides.onDelete ?? vi.fn();
 	const result = renderPage(
 		<CaseProcessingPage
 			caseData={overrides.caseData ?? completeCaseData()}
@@ -78,9 +80,10 @@ const renderPageWith = (
 			onFieldChange={vi.fn()}
 			onSubmit={onSubmit}
 			onDiscard={vi.fn()}
+			onDelete={onDelete}
 		/>
 	);
-	return { ...result, onSubmit };
+	return { ...result, onSubmit, onDelete };
 };
 
 describe("CaseProcessingPage", () => {
@@ -139,6 +142,15 @@ describe("CaseProcessingPage", () => {
 			expect(
 				screen.getByRole("button", { name: /back to cases/i })
 			).toBeInTheDocument();
+		});
+
+		it("offers a delete-case action that opens the confirmation", async () => {
+			const user = userEvent.setup();
+			const { onDelete } = renderPageWith();
+
+			await user.click(screen.getByRole("button", { name: /delete case/i }));
+
+			expect(onDelete).toHaveBeenCalledOnce();
 		});
 	});
 

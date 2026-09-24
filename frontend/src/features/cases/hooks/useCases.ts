@@ -52,6 +52,14 @@ export const useCases = (params: CasesSearchParams = {}) => {
 		onSuccess: async (newCase) => {
 			queryClient.setQueryData(casesQueryKeys.detail(newCase.id), newCase);
 			await invalidateRelatedQueries(queryClient, "cases");
+			// Force the cases list to refetch now, even though it is not the active
+			// query while the create modal is open. Without this the list mounts
+			// from stale cache when we navigate back to it and the new case is
+			// missing until an interaction (sort toggle) changes the query key.
+			await queryClient.refetchQueries({
+				queryKey: casesQueryKeys.lists(),
+				type: "all",
+			});
 			toast.success(`Case "${newCase.case_number}" created successfully!`);
 			logger.info("Case created via hook", {
 				submissionId: newCase.id,
@@ -174,6 +182,9 @@ export const useCases = (params: CasesSearchParams = {}) => {
 
 		// Mutations
 		createCase: createCaseMutation.mutate,
+		// Awaitable form so callers can wait for the list invalidation to settle
+		// before navigating, so a newly created case is present on the list.
+		createCaseAsync: createCaseMutation.mutateAsync,
 		updateCase: updateCaseMutation.mutate,
 		deleteCase: deleteCaseMutation.mutate,
 		executeWorkflowAction: workflowActionMutation.mutate,

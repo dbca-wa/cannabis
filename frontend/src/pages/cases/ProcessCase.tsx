@@ -613,6 +613,12 @@ const ProcessCaseContent = observer(() => {
 		navigate("/cases");
 	}, [navigate]);
 
+	/** Open the delete confirmation for this case. */
+	const handleDelete = useCallback(() => {
+		if (!parsedId) return;
+		navigate(`/cases/${parsedId}/delete`);
+	}, [parsedId, navigate]);
+
 	/** Callback for FormsNavigator form selection. */
 	const handleFormSelect = useCallback(
 		(nextFormId: number) => {
@@ -690,6 +696,7 @@ const ProcessCaseContent = observer(() => {
 				onFieldChange={handleFieldChange}
 				onSubmit={handleSubmit}
 				onDiscard={handleDiscard}
+				onDelete={handleDelete}
 				onFormSelect={handleFormSelect}
 				onAddForm={handleAddForm}
 				onDeleteForm={handleDeleteForm}

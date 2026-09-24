@@ -13,7 +13,7 @@ import { useState } from "react";
 const CreateCaseRouteModalContent = observer(() => {
 	const navigate = useNavigate();
 	const formStore = useCaseFormStore();
-	const { createCase } = useCases();
+	const { createCaseAsync } = useCases();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isSavingDraft, setIsSavingDraft] = useState(false);
 
@@ -25,19 +25,13 @@ const CreateCaseRouteModalContent = observer(() => {
 		setIsSubmitting(true);
 		try {
 			const submissionData = formStore.getCaseCreateRequest();
-			await new Promise<void>((resolve, reject) => {
-				createCase(submissionData, {
-					onSuccess: () => {
-						void formStore.clearDraft();
-						formStore.resetForm();
-						resolve();
-						handleClose();
-					},
-					onError: (error) => {
-						reject(error);
-					},
-				});
-			});
+			// Await the mutation fully — including the list invalidation/refetch in
+			// the hook's onSuccess — before navigating, so the cases list already
+			// holds the new case (at the top) when we land on it.
+			await createCaseAsync(submissionData);
+			void formStore.clearDraft();
+			formStore.resetForm();
+			handleClose();
 		} catch (error) {
 			console.error("Create case error:", error);
 		} finally {
