@@ -94,12 +94,14 @@ class Priority3FormSerializer(serializers.ModelSerializer):
             "marked_ready",
             "certificates_generated_at",
             "completed_at",
+            "updated_at",
         ]
         read_only_fields = [
             "id",
             "phase",
             "certificates_generated_at",
             "completed_at",
+            "updated_at",
         ]
 
     def get_scanned_image_url(self, obj):

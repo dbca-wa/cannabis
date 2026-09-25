@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/shared/utils/style.utils";
 import type { CaseSectionState } from "../../../utils/caseSections";
 
@@ -49,6 +49,7 @@ export const CaseSection = ({
 							"flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors",
 							state === "complete" && "bg-emerald-100 dark:bg-emerald-900/40",
 							state === "attention" && "bg-red-100 dark:bg-red-900/40",
+							state === "outOfDate" && "bg-orange-100 dark:bg-orange-900/40",
 							state === "notStarted" && "bg-muted"
 						)}
 					>
@@ -56,6 +57,8 @@ export const CaseSection = ({
 							<Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
 						) : state === "attention" ? (
 							<AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+						) : state === "outOfDate" ? (
+							<AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
 						) : (
 							<span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
 						)}
@@ -72,7 +75,9 @@ export const CaseSection = ({
 								"text-xs truncate",
 								state === "attention"
 									? "text-red-600 dark:text-red-400"
-									: "text-muted-foreground"
+									: state === "outOfDate"
+										? "text-orange-600 dark:text-orange-400"
+										: "text-muted-foreground"
 							)}
 						>
 							{reason ?? description}
@@ -83,7 +88,9 @@ export const CaseSection = ({
 							? `${title} complete`
 							: state === "attention"
 								? `${title} needs attention`
-								: `${title} not started`}
+								: state === "outOfDate"
+									? `${title} out of date`
+									: `${title} not started`}
 					</span>
 				</div>
 				{actions && <div className="shrink-0">{actions}</div>}

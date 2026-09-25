@@ -33,6 +33,31 @@ const form = (
 		certificate,
 	}) as unknown as Priority3Form;
 
+/**
+ * A form with an assessed bag and a generated certificate that is stale — the
+ * bag was updated after the certificate.
+ */
+const staleForm = (id: number): Priority3Form =>
+	({
+		id,
+		bags: [
+			{
+				id: id * 100,
+				assessment: {
+					determination: "cannabis_sativa",
+					updated_at: "2026-03-20T09:00:00Z",
+				},
+				updated_at: "2026-03-20T12:00:00Z", // after the certificate
+			},
+		],
+		certificate: {
+			id: id,
+			batch_id: null,
+			pdf_url: "cert.pdf",
+			updated_at: "2026-03-20T10:00:00Z", // before the bag change
+		},
+	}) as unknown as Priority3Form;
+
 describe("CASE_SECTIONS", () => {
 	it("lists the three sections in the order they are shown", () => {
 		expect(CASE_SECTIONS.map((s) => s.id)).toEqual([
@@ -272,6 +297,14 @@ describe("deriveCaseSectionStates", () => {
 
 		expect(deriveCaseSectionStates(flags).certificates).toBe("attention");
 	});
+
+	it("marks certificates out of date when a generated one is stale", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [staleForm(1)]);
+
+		expect(flags.certificatesStale).toBe(true);
+		expect(flags.certificates).toBe(false);
+		expect(deriveCaseSectionStates(flags).certificates).toBe("outOfDate");
+	});
 });
 
 describe("describeSectionState", () => {
@@ -339,5 +372,11 @@ describe("describeSectionState", () => {
 		expect(describeSectionState("certificates", flags)).toMatch(
 			/generated certificate/i
 		);
+	});
+
+	it("says a certificate is out of date when one is stale", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [staleForm(1)]);
+
+		expect(describeSectionState("certificates", flags)).toMatch(/out of date/i);
 	});
 });

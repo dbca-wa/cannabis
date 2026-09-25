@@ -73,6 +73,19 @@ if (!window.scrollTo) {
 
 Element.prototype.scrollIntoView = vi.fn();
 
+// Radix UI primitives (Select, Dropdown, etc.) call these pointer-capture and
+// layout APIs that jsdom does not implement. Polyfill them so those components
+// can be exercised in tests rather than throwing.
+if (!Element.prototype.hasPointerCapture) {
+	Element.prototype.hasPointerCapture = vi.fn(() => false);
+}
+if (!Element.prototype.setPointerCapture) {
+	Element.prototype.setPointerCapture = vi.fn();
+}
+if (!Element.prototype.releasePointerCapture) {
+	Element.prototype.releasePointerCapture = vi.fn();
+}
+
 // ---------------------------------------------------------------------------
 // Cleanup after every test
 // ---------------------------------------------------------------------------

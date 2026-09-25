@@ -1,4 +1,4 @@
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/shared/utils/style.utils";
 import {
 	CASE_SECTIONS,
@@ -36,6 +36,9 @@ export const CaseSectionIndex = ({
 	const attentionCount = CASE_SECTIONS.filter(
 		(section) => states[section.id] === "attention"
 	).length;
+	const outOfDateCount = CASE_SECTIONS.filter(
+		(section) => states[section.id] === "outOfDate"
+	).length;
 
 	return (
 		<nav
@@ -69,6 +72,8 @@ export const CaseSectionIndex = ({
 											"bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
 										state === "attention" &&
 											"bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+										state === "outOfDate" &&
+											"bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
 										state === "notStarted" && "bg-muted text-muted-foreground"
 									)}
 								>
@@ -76,6 +81,8 @@ export const CaseSectionIndex = ({
 										<Check className="h-4 w-4" />
 									) : state === "attention" ? (
 										<AlertCircle className="h-4 w-4" />
+									) : state === "outOfDate" ? (
+										<AlertTriangle className="h-4 w-4" />
 									) : (
 										<span>{index + 1}</span>
 									)}
@@ -86,7 +93,9 @@ export const CaseSectionIndex = ({
 											"flex items-center gap-1.5 text-sm font-medium",
 											state === "attention"
 												? "text-red-700 dark:text-red-300"
-												: "text-foreground"
+												: state === "outOfDate"
+													? "text-orange-700 dark:text-orange-300"
+													: "text-foreground"
 										)}
 									>
 										<span className="truncate">{section.label}</span>
@@ -102,7 +111,9 @@ export const CaseSectionIndex = ({
 											"block text-[11px] truncate",
 											state === "attention"
 												? "text-red-600 dark:text-red-400"
-												: "text-muted-foreground"
+												: state === "outOfDate"
+													? "text-orange-600 dark:text-orange-400"
+													: "text-muted-foreground"
 										)}
 									>
 										{state === "complete"
@@ -118,6 +129,7 @@ export const CaseSectionIndex = ({
 			<p className="sr-only" aria-live="polite">
 				{completedCount} of {CASE_SECTIONS.length} sections complete
 				{attentionCount > 0 && `, ${attentionCount} needing attention`}
+				{outOfDateCount > 0 && `, ${outOfDateCount} out of date`}
 			</p>
 		</nav>
 	);

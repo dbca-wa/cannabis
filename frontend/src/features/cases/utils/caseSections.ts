@@ -1,4 +1,5 @@
 import type { Priority3Form } from "@/shared/types/backend-api.types";
+import { isFormStale } from "./certificateStaleness";
 
 /**
  * Sections of the case processing page, in the order they are rendered.
@@ -45,6 +46,8 @@ export interface CaseSectionFlags extends CaseSectionValidity {
 	allBagsAssessed: boolean;
 	/** At least one form exists and every form has a generated certificate. */
 	allFormsHaveCerts: boolean;
+	/** A generated certificate no longer matches its bag data. */
+	certificatesStale: boolean;
 	/** At least one form exists. */
 	hasForms: boolean;
 }
@@ -98,14 +101,20 @@ export const deriveCaseSectionFlags = (
 	const allFormsHaveCerts =
 		hasForms && forms!.every((form) => !!form.certificate);
 
+	// A certificate whose bag data changed after it was generated is out of date
+	// and must be regenerated before the case can be finalised.
+	const certificatesStale = hasForms && forms!.some(isFormStale);
+
 	return {
 		details,
 		// Section C notes are not required — they default to "None".
 		assessment: allFormsHaveBags && allBagsAssessed,
-		certificates: allFormsHaveCerts,
+		// A stale certificate is not a finished certificate.
+		certificates: allFormsHaveCerts && !certificatesStale,
 		allFormsHaveBags,
 		allBagsAssessed,
 		allFormsHaveCerts,
+		certificatesStale,
 		hasForms,
 	};
 };
@@ -128,7 +137,8 @@ export const firstIncompleteSection = (
  * certificate sections are not *wrong*, they are simply not reachable yet.
  * Colouring them red on a brand new case would cry wolf.
  */
-export type CaseSectionState = "complete" | "attention" | "notStarted";
+export type CaseSectionState =
+	"complete" | "attention" | "outOfDate" | "notStarted";
 
 /** Derive the presentation state of every section from one set of flags. */
 export const deriveCaseSectionStates = (
@@ -145,12 +155,15 @@ export const deriveCaseSectionStates = (
 			: "notStarted",
 
 	// Certificates cannot be generated until the assessment is finished, so
-	// they only ask for attention once it is.
+	// they only ask for attention once it is. A generated-but-stale certificate
+	// is its own state: not incomplete, but out of date and needing regeneration.
 	certificates: flags.certificates
 		? "complete"
-		: flags.assessment
-			? "attention"
-			: "notStarted",
+		: flags.certificatesStale
+			? "outOfDate"
+			: flags.assessment
+				? "attention"
+				: "notStarted",
 });
 
 /** Plain-language reason a section is not complete, for a tooltip or hint. */
@@ -170,6 +183,8 @@ export const describeSectionState = (
 	}
 
 	if (flags.certificates) return null;
+	if (flags.certificatesStale)
+		return "A certificate is out of date — regenerate it";
 	if (!flags.hasForms) return "Add a Priority 3 form to begin";
 	if (!flags.assessment) return "Finish the assessment first";
 	return "Every form needs a generated certificate";

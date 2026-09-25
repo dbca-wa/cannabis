@@ -316,12 +316,18 @@ class CertificateService:
             certificate.pdf_file.delete(save=False)
         certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
         certificate.pdf_size = len(pdf_bytes)
-        certificate.save()
 
+        # Save the form (and advance it) before the certificate so the
+        # certificate's updated_at is the most recent timestamp. Staleness is
+        # detected by comparing the form's updated_at against the certificate's;
+        # saving the form last would bump its auto_now updated_at past the
+        # certificate and make a freshly generated certificate look out of date.
         form.certificates_generated_at = timezone.now()
         if form.phase == Case.PhaseChoices.ASSESSMENT:
             WorkflowService.advance_form(form, user)
         form.save(update_fields=["certificates_generated_at"])
+
+        certificate.save()
 
         settings.LOGGER.info(
             f"User {user} generated certificate {certificate.certificate_number} "

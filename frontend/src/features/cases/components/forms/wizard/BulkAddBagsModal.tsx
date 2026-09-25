@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useCallback, useId, useEffect, useMemo } from "react";
+import { useState, useId, useEffect, useMemo } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -20,6 +20,11 @@ import type {
 	BotanicalDetermination,
 	DrugBagContentType,
 } from "../../../types/drugBags.types";
+import {
+	isPlantContent,
+	resizeEntries,
+	type BulkBagEntry,
+} from "./bulkAddBags.utils";
 
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "plant", label: "Plant" },
@@ -57,16 +62,9 @@ interface BulkAddBagsModalProps {
 			new_seal_tag_numbers: string;
 			content_type: DrugBagContentType;
 			determination: BotanicalDetermination;
+			contains_female_plants: boolean;
 		}>
 	) => void;
-}
-
-interface BulkBagEntry {
-	id: string;
-	seal_tag_numbers: string;
-	new_seal_tag_numbers: string;
-	content_type: DrugBagContentType;
-	determination: BotanicalDetermination;
 }
 
 const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
@@ -131,32 +129,27 @@ export const BulkAddBagsModal = ({
 					new_seal_tag_numbers: "",
 					content_type: DEFAULT_CONTENT_TYPE,
 					determination: DEFAULT_DETERMINATION,
+					contains_female_plants: false,
 				},
 			]);
 		}
 	}, [open, instanceId]);
 
-	const regenerateEntries = useCallback(
-		(newCount: number) => {
-			const newEntries: BulkBagEntry[] = [];
-			for (let i = 0; i < newCount; i++) {
-				newEntries.push({
-					id: `${instanceId}-${i}`,
-					seal_tag_numbers: "",
-					new_seal_tag_numbers: "",
-					content_type: setAllContentType,
-					determination: setAllDetermination,
-				});
-			}
-			setEntries(newEntries);
-		},
-		[instanceId, setAllContentType, setAllDetermination]
-	);
-
 	const handleCountChange = (value: string) => {
 		const parsed = Math.min(maxAllowed, Math.max(1, Number(value) || 1));
 		setCount(parsed);
-		regenerateEntries(parsed);
+		// Preserve what the user has already entered; only add or trim the delta.
+		setEntries((prev) =>
+			resizeEntries(
+				prev,
+				parsed,
+				{
+					content_type: setAllContentType,
+					determination: setAllDetermination,
+				},
+				(i) => `${instanceId}-${i}`
+			)
+		);
 	};
 
 	const handleSetAllContentTypes = (value: string) => {
@@ -215,6 +208,16 @@ export const BulkAddBagsModal = ({
 		);
 	};
 
+	const handleEntryFemaleChange = (entryId: string, checked: boolean) => {
+		setEntries((prev) =>
+			prev.map((entry) =>
+				entry.id === entryId
+					? { ...entry, contains_female_plants: checked }
+					: entry
+			)
+		);
+	};
+
 	// Format validation across all entries.
 	const entryErrors = useMemo(() => computeEntryErrors(entries), [entries]);
 	const hasErrors = entryErrors.some(
@@ -229,6 +232,9 @@ export const BulkAddBagsModal = ({
 			new_seal_tag_numbers: entry.new_seal_tag_numbers,
 			content_type: entry.content_type,
 			determination: entry.determination,
+			// Female plants only apply to plant content types.
+			contains_female_plants:
+				isPlantContent(entry.content_type) && entry.contains_female_plants,
 		}));
 
 		onAddBags(bags);
@@ -443,6 +449,28 @@ export const BulkAddBagsModal = ({
 											</SelectContent>
 										</Select>
 									</div>
+
+									{/* Female plants — only for plant content types, matching
+									    the single-bag add/edit control. */}
+									{isPlantContent(entry.content_type) && (
+										<div className="col-span-full flex items-center gap-2 pt-1">
+											<input
+												type="checkbox"
+												id={`${instanceId}-female-${index}`}
+												checked={entry.contains_female_plants}
+												onChange={(e) =>
+													handleEntryFemaleChange(entry.id, e.target.checked)
+												}
+												className="h-4 w-4 cursor-pointer rounded border-input"
+											/>
+											<label
+												htmlFor={`${instanceId}-female-${index}`}
+												className="text-sm text-muted-foreground cursor-pointer select-none"
+											>
+												Contains female plants
+											</label>
+										</div>
+									)}
 								</div>
 							);
 						})}

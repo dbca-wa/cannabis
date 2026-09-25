@@ -81,17 +81,20 @@ export const CertificateDocument = ({
 			: "UNKNOWN";
 
 	// The conveying officer delivered the samples and was present at the
-	// examination, so they are named in both section (a) and section (b).
+	// examination, so they are named in both section (a) and section (b). On the
+	// certificate they are always the unsworn officer, so the preview must use
+	// the same "Unsworn Officer" label rather than the officer's rank.
 	const conveyingOfficer = formatOfficerLegal(
-		caseData.submitting_officer_details as OfficerDetails | null | undefined
+		caseData.submitting_officer_details as OfficerDetails | null | undefined,
+		"Unsworn Officer"
 	);
 	// The requesting officer is optional and appears only in section (a), as the
-	// officer the samples were conveyed on behalf of.
+	// sworn officer the samples were conveyed on behalf of.
 	const requestingOfficerDetails = caseData.requesting_officer_id
 		? (caseData.requesting_officer_details as OfficerDetails | null | undefined)
 		: null;
 	const requestingOfficer = requestingOfficerDetails
-		? formatOfficerLegal(requestingOfficerDetails)
+		? formatOfficerLegal(requestingOfficerDetails, "Sworn Officer")
 		: null;
 
 	const receiptDate = formatCertificateDate(
@@ -177,7 +180,9 @@ export const CertificateDocument = ({
 							textUnderlineOffset: "4px",
 							color: "#1a365d",
 							letterSpacing: "1px",
-							marginBottom: "8px",
+							// Extra space below the title so the reference line does not
+							// sit cramped right beneath it (matches the PDF template).
+							marginBottom: "32px",
 						}}
 					>
 						Certificate of Approved Botanist

@@ -169,7 +169,11 @@ export const CaseProcessingPage = observer(
 			);
 
 		const canFinalise =
-			flags.hasForms && flags.allFormsHaveBags && allFormsReady;
+			flags.hasForms &&
+			flags.allFormsHaveBags &&
+			// A stale certificate would batch an out-of-date document.
+			!flags.certificatesStale &&
+			allFormsReady;
 
 		const finaliseTitle = lockForNonAdmin
 			? COMPLETE_LOCK_MESSAGE
@@ -177,9 +181,11 @@ export const CaseProcessingPage = observer(
 				? "Add a Priority 3 form before finalising"
 				: !flags.allFormsHaveBags
 					? "Every form needs at least one drug bag"
-					: !allFormsReady
-						? "Generate every certificate and mark each form ready before finalising"
-						: undefined;
+					: flags.certificatesStale
+						? "A certificate is out of date — regenerate it before finalising"
+						: !allFormsReady
+							? "Generate every certificate and mark each form ready before finalising"
+							: undefined;
 
 		return (
 			// Scrolls in the layout's main region like every other page. A nested

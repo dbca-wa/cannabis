@@ -18,18 +18,18 @@ vi.mock("@/features/batches", () => ({
 const { SidebarNav, navGroups } = await import("./SidebarNav");
 
 describe("navGroups", () => {
-	it("puts Settings in its own group, last", () => {
+	it("pins How To and Settings to the bottom, Settings last", () => {
 		const last = navGroups[navGroups.length - 1];
 
-		expect(last.items).toHaveLength(1);
-		expect(last.items[0].to).toBe("/settings");
+		expect(last.items.map((item) => item.to)).toEqual(["/guide", "/settings"]);
 		expect(last.pinToBottom).toBe(true);
 	});
 
-	it("no longer keeps Settings in the Casework group", () => {
+	it("no longer keeps Settings or How To in the Casework group", () => {
 		const casework = navGroups.find((group) => group.label === "Casework");
 
 		expect(casework?.items.some((item) => item.to === "/settings")).toBe(false);
+		expect(casework?.items.some((item) => item.to === "/guide")).toBe(false);
 	});
 
 	it("leaves the Settings group unlabelled", () => {
