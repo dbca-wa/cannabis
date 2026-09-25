@@ -6,8 +6,10 @@ import {
 	Loader2,
 	CheckCircle2,
 	AlertCircle,
+	AlertTriangle,
 	Check,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -23,6 +25,7 @@ import {
 	updateForm,
 } from "../../../../services/forms.service";
 import { GeneratedCertificatesViewer } from "../GeneratedCertificatesViewer";
+import { isFormStale } from "../../../../utils/certificateStaleness";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 interface UnsignedCertificateStepProps {
@@ -80,6 +83,9 @@ export const UnsignedCertificateStep = ({
 	);
 
 	const allGenerated = eligibleForms.length > 0 && pendingForms.length === 0;
+
+	const staleForms = eligibleForms.filter(isFormStale);
+	const hasStaleCertificates = staleForms.length > 0;
 
 	// Check if any certificate is already batched (blocks regeneration)
 	const anyBatched = eligibleForms.some((f) => f.certificate?.batch_id != null);
@@ -219,14 +225,33 @@ export const UnsignedCertificateStep = ({
 		markAllReadyMutation.mutate();
 	};
 
-	// Notify parent when all-ready state changes
+	// Notify parent when all-ready state changes. A stale certificate is never
+	// "ready" — its earlier review no longer applies to the changed data.
 	const allFormsReady =
 		eligibleForms.length > 0 &&
 		allGenerated &&
+		!hasStaleCertificates &&
 		eligibleForms.every((f) => readyFormIds.has(f.id));
 	useEffect(() => {
 		onAllReadyChange?.(allFormsReady);
 	}, [allFormsReady, onAllReadyChange]);
+
+	// When a certificate goes stale, its "ready" mark reflects a review of data
+	// that has since changed. Clear it on the server so the botanist must review
+	// and re-mark the regenerated certificate. Guarded so it only fires for forms
+	// still flagged ready, avoiding a loop.
+	const staleReadyFormIds = staleForms
+		.filter((f) => f.marked_ready)
+		.map((f) => f.id);
+	const staleReadyKey = staleReadyFormIds.join(",");
+	useEffect(() => {
+		if (!staleReadyKey) return;
+		for (const id of staleReadyKey.split(",").map(Number)) {
+			toggleReadyMutation.mutate({ fId: id, ready: false });
+		}
+		// Fire only when the set of stale-yet-ready forms changes.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [staleReadyKey]);
 
 	if (eligibleForms.length === 0) {
 		return (
@@ -243,7 +268,70 @@ export const UnsignedCertificateStep = ({
 	return (
 		<div className="space-y-6">
 			{/* Summary */}
-			{allGenerated ? (
+			{hasStaleCertificates ? (
+				// A generated certificate no longer matches its bag data. Reuse the
+				// summary banner's shape but in an attention-getting orange, animate
+				// it in, and keep a continuously pulsing chip so it is obvious the
+				// certificate on screen is out of date and should be regenerated.
+				<motion.div
+					initial={{ opacity: 0, y: -8 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.25, ease: "easeOut" }}
+					className="flex items-center justify-between gap-3 rounded-lg border border-orange-300 bg-orange-50 p-3 dark:border-orange-700 dark:bg-orange-950/30"
+				>
+					<div className="flex items-center gap-3 min-w-0">
+						<motion.span
+							animate={{ opacity: [1, 0.4, 1] }}
+							transition={{
+								duration: 1.4,
+								repeat: Infinity,
+								ease: "easeInOut",
+							}}
+							className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-200 px-2 py-0.5 text-xs font-semibold text-orange-900 dark:bg-orange-800 dark:text-orange-100"
+						>
+							<AlertTriangle className="h-3 w-3" />
+							Out of date
+						</motion.span>
+						<p className="text-sm text-orange-800 dark:text-orange-200">
+							{staleForms.length} of {generatedForms.length} certificate
+							{generatedForms.length !== 1 ? "s" : ""}{" "}
+							{staleForms.length === 1 ? "is" : "are"} based on old data. The
+							bags changed after generating — regenerate to update the
+							certificate.
+						</p>
+					</div>
+					<div className="flex shrink-0 items-center gap-2">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span>
+									<Button
+										size="sm"
+										onClick={handleRegenerateAll}
+										disabled={
+											lockActions || generatingFormIds.size > 0 || anyBatched
+										}
+										className="bg-orange-600 text-white hover:bg-orange-700"
+									>
+										{generatingFormIds.size > 0 ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<RefreshCw className="mr-2 h-4 w-4" />
+										)}
+										Regenerate All
+									</Button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>
+								{anyBatched
+									? "Certificates are batched. Use Repackage on the Batches page to regenerate."
+									: lockActions
+										? lockMessage
+										: "Regenerate all certificates with the latest data"}
+							</TooltipContent>
+						</Tooltip>
+					</div>
+				</motion.div>
+			) : allGenerated ? (
 				<div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-3">
 					<p className="text-sm text-emerald-800 dark:text-emerald-200">
 						All certificates generated ({generatedForms.length} of{" "}
@@ -354,17 +442,22 @@ export const UnsignedCertificateStep = ({
 					const isGenerating = generatingFormIds.has(form.id);
 					const bagCount = form.bags?.length ?? 0;
 					const isReady = form.marked_ready;
+					const stale = isFormStale(form);
 
 					return (
 						<div
 							key={form.id}
 							className={cn(
 								"rounded-lg border p-4 space-y-3 transition-colors duration-300",
-								isReady
-									? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
-									: hasGenerated
-										? "border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
-										: "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
+								// A stale certificate takes visual priority so the row that
+								// needs regenerating stands out even if it was marked ready.
+								stale
+									? "border-orange-300 bg-orange-50/60 dark:border-orange-700 dark:bg-orange-950/20"
+									: isReady
+										? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30"
+										: hasGenerated
+											? "border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
+											: "border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
 							)}
 						>
 							<div className="flex items-center justify-between">
@@ -384,11 +477,25 @@ export const UnsignedCertificateStep = ({
 									>
 										{bagCount} bag{bagCount !== 1 ? "s" : ""}
 									</Badge>
-									{hasGenerated && (
+									{hasGenerated && !stale && (
 										<Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-[10px]">
 											<CheckCircle2 className="mr-1 h-3 w-3" />
 											Generated
 										</Badge>
+									)}
+									{stale && (
+										<motion.span
+											animate={{ opacity: [1, 0.4, 1] }}
+											transition={{
+												duration: 1.4,
+												repeat: Infinity,
+												ease: "easeInOut",
+											}}
+											className="inline-flex items-center gap-1 rounded-full bg-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-900 dark:bg-orange-800 dark:text-orange-100"
+										>
+											<AlertTriangle className="h-3 w-3" />
+											Out of date
+										</motion.span>
 									)}
 								</div>
 								<div className="flex items-center gap-2">

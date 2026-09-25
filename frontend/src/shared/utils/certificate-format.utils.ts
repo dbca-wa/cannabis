@@ -85,12 +85,16 @@ export const numberToWords = (n: number): string => {
 
 /**
  * Format officer details in legal certificate format:
- * "Rank BadgeNumber SURNAME, FirstName of Organisation"
+ * "RoleLabelOrRank BadgeNumber SURNAME, FirstName of Organisation"
  *
- * Returns "[Pending]" for null/undefined officer or when all fields are empty.
+ * When `roleLabel` is given (e.g. "Unsworn Officer" or "Sworn Officer") it takes
+ * the place of the rank, matching the generated certificate. Without it, the
+ * officer's rank is used. Returns "[Pending]" for a null/undefined officer or
+ * when all fields are empty.
  */
 export const formatOfficerLegal = (
-	officer: OfficerDetails | null | undefined
+	officer: OfficerDetails | null | undefined,
+	roleLabel?: string
 ): string => {
 	if (!officer) return "[Pending]";
 
@@ -101,7 +105,9 @@ export const formatOfficerLegal = (
 	const org = officer.station_name || "";
 
 	let result = "";
-	if (rank && !["unknown", "other"].includes(rank.toLowerCase())) {
+	if (roleLabel) {
+		result = roleLabel;
+	} else if (rank && !["unknown", "other"].includes(rank.toLowerCase())) {
 		result = rank;
 	}
 	if (badge) result += result ? ` ${badge}` : badge;

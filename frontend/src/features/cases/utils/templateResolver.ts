@@ -24,6 +24,8 @@ export interface TemplateContext {
 	non_female_plant_tags: string;
 	female_plant_count: string;
 	non_female_plant_count: string;
+	female_bag_label: string;
+	female_plant_sentence: string;
 	conveying_officer: string;
 	requesting_officer: string;
 }
@@ -61,6 +63,15 @@ export const TEMPLATE_VARIABLES: { key: string; description: string }[] = [
 		description: "Number of bags NOT containing female plants",
 	},
 	{
+		key: "female_bag_label",
+		description: '"Bag" if one bag contains female plants, "Bags" if more',
+	},
+	{
+		key: "female_plant_sentence",
+		description:
+			'Complete female-plant sentence, e.g. "Bags A and B contained female plants." or "All bags contained female plants."',
+	},
+	{
 		key: "conveying_officer",
 		description: "Conveying (submitting) officer name",
 	},
@@ -84,6 +95,8 @@ export const MOCK_TEMPLATE_CONTEXT: TemplateContext = {
 	non_female_plant_tags: "T119008",
 	female_plant_count: "2",
 	non_female_plant_count: "1",
+	female_bag_label: "Bags",
+	female_plant_sentence: "Bags T119007 and T119009 contained female plants.",
 	conveying_officer: "Unsworn Officer NEUTRON, Jimmy",
 	requesting_officer: "Sworn Officer PD9998 LIGHTYEAR, Buzz",
 };
@@ -129,6 +142,8 @@ export const buildTemplateContext = (
 			non_female_plant_tags: "",
 			female_plant_count: "0",
 			non_female_plant_count: "0",
+			female_bag_label: "",
+			female_plant_sentence: "",
 			conveying_officer: "",
 			requesting_officer: "",
 		};
@@ -167,6 +182,20 @@ export const buildTemplateContext = (
 		(b) => !b.contains_female_plants
 	).length;
 
+	// The leading word agrees in number with how many bags held female plants.
+	const femaleBagLabel = femalePlantCount === 1 ? "Bag" : "Bags";
+
+	// A ready-made sentence so a template can render the whole female-plant
+	// clause with one variable, including the all-female wording that the label
+	// and tag list cannot express on their own.
+	let femalePlantSentence = "";
+	if (femalePlantCount > 0) {
+		femalePlantSentence =
+			bags.length > 0 && femalePlantCount === bags.length
+				? "All bags contained female plants."
+				: `${femaleBagLabel} ${femalePlantTags} contained female plants.`;
+	}
+
 	return {
 		defendant_name: defendantName,
 		case_number: caseNumber,
@@ -182,6 +211,8 @@ export const buildTemplateContext = (
 		female_plant_count: femalePlantCount > 0 ? String(femalePlantCount) : "",
 		non_female_plant_count:
 			nonFemalePlantCount > 0 ? String(nonFemalePlantCount) : "",
+		female_bag_label: femalePlantCount > 0 ? femaleBagLabel : "",
+		female_plant_sentence: femalePlantSentence,
 		conveying_officer: (caseData.submitting_officer_name as string) ?? "",
 		requesting_officer: (caseData.requesting_officer_name as string) ?? "",
 	};

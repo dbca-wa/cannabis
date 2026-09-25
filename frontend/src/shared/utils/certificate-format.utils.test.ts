@@ -61,6 +61,30 @@ describe("certificate-format.utils", () => {
 		it("returns [Pending] when every field is empty", () => {
 			expect(formatOfficerLegal({})).toBe("[Pending]");
 		});
+
+		it("uses a role label in place of the rank when given", () => {
+			expect(
+				formatOfficerLegal(
+					{
+						rank_display: "Sergeant",
+						badge_number: "PD57706",
+						last_name: "Smith",
+						given_names: "John",
+						station_name: "Mandurah",
+					},
+					"Unsworn Officer"
+				)
+			).toBe("Unsworn Officer PD57706 SMITH, John of Mandurah");
+		});
+
+		it("uses the sworn officer label for the requesting officer", () => {
+			expect(
+				formatOfficerLegal(
+					{ badge_number: "PD17722", last_name: "Doe", given_names: "Jane" },
+					"Sworn Officer"
+				)
+			).toBe("Sworn Officer PD17722 DOE, Jane");
+		});
 	});
 
 	describe("formatContentDescription", () => {

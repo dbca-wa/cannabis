@@ -128,6 +128,8 @@ export interface Priority3Form {
 	marked_ready: boolean;
 	certificates_generated_at: string | null;
 	completed_at: string | null;
+	/** Last time the form itself changed (SME, Section C notes, etc.) */
+	updated_at: string;
 }
 
 // Lightweight Priority 3 form for nesting in case listings

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { Package, Plus, Layers, Save, Trash2, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -239,9 +239,17 @@ export const AssessmentStep = observer(function AssessmentStep({
 
 	const serverNotes = (caseData?.additional_notes as string) ?? "";
 	const [localNotes, setLocalNotes] = useState(serverNotes);
+	// Re-seed the note from the server only when the active form changes. Seeding
+	// on every server change let a debounced save's echo overwrite freshly typed
+	// or template-applied text, which is what made switching templates need a few
+	// tries before the old note was replaced.
+	const notesFormIdRef = useRef(formId);
 	useEffect(() => {
-		setLocalNotes(serverNotes);
-	}, [serverNotes, formId]);
+		if (notesFormIdRef.current !== formId) {
+			notesFormIdRef.current = formId;
+			setLocalNotes(serverNotes);
+		}
+	}, [formId, serverNotes]);
 
 	// ALL hooks above this line — early return AFTER all hooks
 	if (!formId) {
@@ -348,6 +356,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 			new_seal_tag_numbers: string;
 			content_type: DrugBagContentType;
 			determination: BotanicalDetermination;
+			contains_female_plants: boolean;
 		}>
 	) => {
 		const remaining = MAX_BAGS - serverBags.length - wrangler.state.bags.length;
@@ -364,7 +373,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 				new_seal_tag_numbers: b.new_seal_tag_numbers,
 				content_type: b.content_type,
 				determination: b.determination,
-				contains_female_plants: false,
+				contains_female_plants: b.contains_female_plants,
 			}))
 		);
 	};
@@ -660,6 +669,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 					<TemplatePicker
 						caseData={caseData}
 						bags={serverBags}
+						currentValue={localNotes}
 						onApply={(resolved) => {
 							setLocalNotes(resolved);
 							onFieldChange("additional_notes", resolved);

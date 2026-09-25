@@ -56,7 +56,6 @@ export const navGroups: NavGroup[] = [
 				adminOnly: true,
 				devOnly: true,
 			},
-			{ to: "/guide", label: "How To", icon: BookOpen },
 		],
 	},
 	{
@@ -74,9 +73,13 @@ export const navGroups: NavGroup[] = [
 			{ to: "/defendants", label: "Defendants", icon: UserSquare2 },
 		],
 	},
-	// Configuration sits apart from day-to-day navigation, at the very bottom.
+	// Help and configuration sit apart from day-to-day navigation, at the very
+	// bottom. How To sits just above Settings.
 	{
-		items: [{ to: "/settings", label: "Settings", icon: Settings }],
+		items: [
+			{ to: "/guide", label: "How To", icon: BookOpen },
+			{ to: "/settings", label: "Settings", icon: Settings },
+		],
 		pinToBottom: true,
 	},
 ];
