@@ -146,6 +146,34 @@ export const joinWithAnd = (
 };
 
 /**
+ * Escape the five HTML-significant characters so user-authored text can be
+ * safely interpolated into a certificate HTML string.
+ */
+export const escapeHtml = (value: string): string =>
+	value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+
+/**
+ * Convert a plain-text, user-authored note into certificate HTML, preserving
+ * line breaks. Mirrors Django's `|linebreaksbr` filter used by the backend PDF
+ * template: the text is HTML-escaped first, then every newline becomes a `<br>`.
+ *
+ * This keeps the live preview panel in step with the generated PDF, where notes
+ * authored with line breaks (for example from a Section C template) would
+ * otherwise collapse onto a single line in the preview.
+ */
+export const notesToCertificateHtml = (
+	value: string | null | undefined
+): string => {
+	if (!value) return "";
+	return escapeHtml(value).replace(/\r\n|\r|\n/g, "<br>");
+};
+
+/**
  * Build the content description string from an array of bags.
  * Deduplicates content types, filters out falsy values.
  * Returns "quantity of Plant Material and Seed" or "quantity of [Pending]".

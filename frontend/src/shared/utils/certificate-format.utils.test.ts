@@ -5,6 +5,8 @@ import {
 	formatContentDescription,
 	formatCertificateDate,
 	joinWithAnd,
+	escapeHtml,
+	notesToCertificateHtml,
 } from "./certificate-format.utils";
 
 describe("certificate-format.utils", () => {
@@ -190,5 +192,60 @@ describe("formatContentDescription — conjunctions", () => {
 
 	it("reports a placeholder when content types are missing", () => {
 		expect(formatContentDescription([{}, {}])).toBe("quantity of [Pending]");
+	});
+});
+
+describe("escapeHtml", () => {
+	it("escapes the five HTML-significant characters", () => {
+		expect(escapeHtml(`<b>"Tom & Jerry's"</b>`)).toBe(
+			"&lt;b&gt;&quot;Tom &amp; Jerry&#39;s&quot;&lt;/b&gt;"
+		);
+	});
+
+	it("escapes ampersands before other entities", () => {
+		expect(escapeHtml("a & <b>")).toBe("a &amp; &lt;b&gt;");
+	});
+
+	it("leaves plain text untouched", () => {
+		expect(escapeHtml("Plant material only")).toBe("Plant material only");
+	});
+});
+
+/**
+ * The live certificate preview must render Section C notes the same way the
+ * generated PDF does. The backend passes the note through Django's linebreaksbr
+ * filter, so newlines become <br> and the text is HTML-escaped first.
+ */
+describe("notesToCertificateHtml", () => {
+	it("returns an empty string for falsy input", () => {
+		expect(notesToCertificateHtml(null)).toBe("");
+		expect(notesToCertificateHtml(undefined)).toBe("");
+		expect(notesToCertificateHtml("")).toBe("");
+	});
+
+	it("converts a single newline to a line break", () => {
+		expect(notesToCertificateHtml("Line one\nLine two")).toBe(
+			"Line one<br>Line two"
+		);
+	});
+
+	it("converts carriage returns and Windows line endings", () => {
+		expect(notesToCertificateHtml("a\r\nb\rc")).toBe("a<br>b<br>c");
+	});
+
+	it("preserves consecutive blank lines", () => {
+		expect(notesToCertificateHtml("a\n\nb")).toBe("a<br><br>b");
+	});
+
+	it("escapes HTML in the note before converting newlines", () => {
+		expect(notesToCertificateHtml("<script>\nalert(1)")).toBe(
+			"&lt;script&gt;<br>alert(1)"
+		);
+	});
+
+	it("leaves single-line plain text unchanged", () => {
+		expect(notesToCertificateHtml("No further matters.")).toBe(
+			"No further matters."
+		);
 	});
 });
