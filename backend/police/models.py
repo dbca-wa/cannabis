@@ -1,6 +1,11 @@
 from django.db import models
 
 from common.models import AuditModel
+from common.practice import (
+    IS_PRACTICE_HELP,
+    RealManager,
+    practice_owner_field,
+)
 
 
 class PoliceStation(AuditModel):
@@ -20,6 +25,12 @@ class PoliceStation(AuditModel):
         null=True,
         help_text="Police Station phone number",
     )
+
+    is_practice = models.BooleanField(default=False, help_text=IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_stations")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.name
@@ -118,6 +129,12 @@ class PoliceOfficer(AuditModel):
             self.SeniorityChoices.OTHER,
         ]
         return self.rank not in unsworn_ranks
+
+    is_practice = models.BooleanField(default=False, help_text=IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_officers")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         station_info = f" at {self.station.name}" if self.station else ""

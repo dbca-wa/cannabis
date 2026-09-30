@@ -5,6 +5,7 @@ import MobileSidebar from "./MobileSidebar";
 import { NavigationProvider } from "@/app/providers/navigation.provider";
 import { useUIStore } from "@/app/providers/store.provider";
 import { OutdatedBuildNotice } from "@/shared/components/feedback/OutdatedBuildNotice";
+import { PracticeModeBanner } from "@/features/practice/components/PracticeModeBanner";
 import { observer } from "mobx-react-lite";
 
 const MainLayout = observer(function MainLayout() {
@@ -49,6 +50,8 @@ const MainLayout = observer(function MainLayout() {
 				  the fixed-height shell via flex rather than its own 100vh.
 				*/}
 				<main className="flex-1 min-w-0 h-full overflow-y-auto [contain:layout_paint]">
+					{/* Always-visible marker that the whole app is in practice mode. */}
+					<PracticeModeBanner />
 					<div className="max-w-[1400px] mx-auto px-8 py-8 pt-14 lg:pt-8">
 						<Outlet />
 					</div>

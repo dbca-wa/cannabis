@@ -14,8 +14,10 @@ import {
 	Moon,
 	KeyRound,
 	LogOut,
+	GraduationCap,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useNavigate } from "react-router";
 import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
@@ -34,9 +36,19 @@ interface UserMenuProps {
 
 const UserMenu = observer((_props: UserMenuProps) => {
 	const { user, logout } = useAuth();
+	const practice = usePracticeMode();
 	const uiStore = useUIStore();
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
+
+	const handlePracticeToggle = () => {
+		setOpen(false);
+		if (practice.isOn) {
+			practice.disable();
+		} else {
+			practice.enable();
+		}
+	};
 
 	const isDark = uiStore.resolvedTheme === "dark";
 	const initials =
@@ -184,6 +196,28 @@ const UserMenu = observer((_props: UserMenuProps) => {
 					<div className="px-2 text-[11px] text-muted-foreground">
 						Cannabis Version {getAppVersion()} ({getAppEnvironment()})
 					</div>
+				</div>
+
+				{/* Practice mode toggle */}
+				<div className="border-t border-border/60 p-2">
+					<button
+						onClick={handlePracticeToggle}
+						disabled={practice.isToggling}
+						className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-[13px] transition-colors cursor-pointer disabled:opacity-60 ${
+							practice.isOn
+								? "bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200"
+								: "hover:bg-accent"
+						}`}
+					>
+						<GraduationCap className="w-4 h-4 text-muted-foreground" />
+						{practice.isOn ? "Leave practice mode" : "Enter practice mode"}
+					</button>
+					{!practice.isOn && (
+						<div className="px-2 pt-1 text-[11px] text-muted-foreground">
+							Rehearse the workflow with a fake case. Nothing is saved to real
+							data.
+						</div>
+					)}
 				</div>
 
 				{/* Actions */}

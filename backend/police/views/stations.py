@@ -54,9 +54,18 @@ class PoliceStationListView(ListCreateAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        # Annotate with case count (submissions linked to this station)
+        # Annotate with case count (submissions linked to this station), counting
+        # only cases of the same kind as the stations being listed.
+        from django.db.models import Q as _Q
+
+        from common.practice import active_is_practice
+
         queryset = queryset.annotate(
-            case_count=Count("case_involvement", distinct=True)
+            case_count=Count(
+                "case_involvement",
+                filter=_Q(case_involvement__is_practice=active_is_practice()),
+                distinct=True,
+            )
         )
 
         # Search functionality

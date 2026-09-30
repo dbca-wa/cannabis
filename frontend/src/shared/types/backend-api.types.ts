@@ -125,6 +125,10 @@ export interface User {
 	// Authentication status
 	is_authenticated: boolean; // Always true for authenticated responses
 
+	// Practice mode — a per-user, self-expiring mode for rehearsing the workflow
+	practice_mode?: boolean;
+	practice_mode_expires_at?: string | null;
+
 	// Nested preferences
 	preferences: UserPreferences;
 

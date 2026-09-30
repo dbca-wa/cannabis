@@ -56,12 +56,20 @@ class PoliceOfficerListView(ListCreateAPIView):
         return PoliceOfficerSerializer
 
     def get_queryset(self):
+        from django.db.models import Q as _Q
+
+        from common.practice import active_is_practice
+
         queryset = super().get_queryset()
 
-        # Annotate with case count (cases where officer is submitting or requesting)
+        # Count only cases of the same kind as the officers being listed —
+        # practice cases in practice mode, real cases otherwise — so a real
+        # officer never shows a practice case in its count, and vice versa.
+        _mode = _Q(cases_made__is_practice=active_is_practice())
+        _mode_req = _Q(cases_requested__is_practice=active_is_practice())
         queryset = queryset.annotate(
-            case_count=Count("cases_made", distinct=True)
-            + Count("cases_requested", distinct=True)
+            case_count=Count("cases_made", filter=_mode, distinct=True)
+            + Count("cases_requested", filter=_mode_req, distinct=True)
         )
 
         # Search functionality — supports multi-word queries

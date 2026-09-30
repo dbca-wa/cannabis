@@ -1,6 +1,11 @@
 from django.db import models
 
 from common.models import AuditModel
+from common.practice import (
+    IS_PRACTICE_HELP,
+    RealManager,
+    practice_owner_field,
+)
 
 
 class Defendant(AuditModel):
@@ -20,6 +25,12 @@ class Defendant(AuditModel):
         verbose_name=("Last Name"),
         help_text=("Last name or surname."),
     )
+
+    is_practice = models.BooleanField(default=False, help_text=IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_defendants")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     @property
     def pdf_name(self):

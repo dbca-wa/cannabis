@@ -483,3 +483,21 @@ class SectionCTemplateAdmin(admin.ModelAdmin):
     list_display = ("name", "created_at", "updated_at")
     search_fields = ("name", "content")
     ordering = ("name",)
+
+
+# Practice/demo data is hidden from the live app by the models' default
+# managers. Admin, however, should see everything so staff can inspect and
+# clean practice rows. Repoint these admins at the all-rows manager.
+def _all_objects_queryset(self, request):
+    return self.model.all_objects.get_queryset()
+
+
+for _admin_cls in (
+    CaseAdmin,
+    Priority3FormAdmin,
+    DrugBagAdmin,
+    BotanicalAssessmentAdmin,
+    CertificateAdmin,
+    BatchAdmin,
+):
+    _admin_cls.get_queryset = _all_objects_queryset

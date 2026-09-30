@@ -30,6 +30,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { PracticeCoachmark } from "@/features/practice/components/PracticeCoachmark";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { useOfficerById } from "@/features/police/hooks/useOfficerById";
 import {
@@ -266,6 +267,11 @@ const Batches = () => {
 				title={`Batches${!isLoading ? ` (${batches.length})` : ""}`}
 				subtitle="Packaged certificate batches and their cost summaries."
 			/>
+
+			<PracticeCoachmark id="batches" title="Step 4 — batch and invoice">
+				Your finalised practice case is here. Select it and create a batch, then
+				open the batch and record a practice invoice number to complete the run.
+			</PracticeCoachmark>
 
 			{/* Outstanding invoices. A batch sits unfinished until its invoice number
 			    is recorded, so say so plainly rather than leaving it to a badge in

@@ -1,0 +1,157 @@
+"""Request-scoped practice-mode context.
+
+Practice mode is a per-user mode layered over the real application. While it is
+on, the real screens operate on that user's practice data only. To make every
+real query honour that without a filter at each call site, the active user and
+their mode are stored on a thread-local for the duration of the request, and the
+models' default manager consults it.
+
+This context scopes reads and writes only. It is never used for authorisation.
+"""
+
+from __future__ import annotations
+
+import threading
+from dataclasses import dataclass
+from datetime import timedelta
+
+from django.db import models
+from django.utils import timezone
+
+# How long a practice session lives before it is treated as off and purged.
+PRACTICE_TTL = timedelta(days=1)
+
+_state = threading.local()
+
+
+@dataclass(frozen=True)
+class PracticeContext:
+    user_id: int
+    in_practice: bool
+
+
+def is_in_practice_mode(user) -> bool:
+    """Whether this user is currently in a live (non-expired) practice session.
+
+    Reads the user's preferences. Expired sessions count as off; callers that
+    can write should also purge expired data (see PracticeService)."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    prefs = user.get_preferences
+    if not getattr(prefs, "practice_mode", False):
+        return False
+    started = getattr(prefs, "practice_mode_started_at", None)
+    if started is None:
+        return False
+    return timezone.now() - started < PRACTICE_TTL
+
+
+def practice_expires_at(user):
+    """When this user's practice session expires, or None if not in one."""
+    if not is_in_practice_mode(user):
+        return None
+    prefs = user.get_preferences
+    return prefs.practice_mode_started_at + PRACTICE_TTL
+
+
+def set_context(user, in_practice: bool) -> None:
+    _state.context = PracticeContext(user_id=user.pk, in_practice=in_practice)
+
+
+def clear_context() -> None:
+    _state.context = None
+
+
+def current() -> PracticeContext | None:
+    """The active practice context for this request, or None outside a request."""
+    return getattr(_state, "context", None)
+
+
+def active_is_practice() -> bool:
+    """Whether the current request is operating on practice data.
+
+    Use this to scope related-count annotations (e.g. an officer's case count) so
+    they count cases of the same kind as the entities being listed: practice
+    cases in practice mode, real cases otherwise.
+    """
+    ctx = current()
+    return bool(ctx and ctx.in_practice)
+
+
+# Shared help text so every practice-capable model reads the same.
+IS_PRACTICE_HELP = (
+    "True for demo/practice records created in practice mode. Hidden from the "
+    "live application and excluded from all real statistics."
+)
+PRACTICE_OWNER_HELP = (
+    "The user who owns this practice record; null for real data. A user only "
+    "ever sees their own practice data."
+)
+
+
+class RealManager(models.Manager):
+    """Context-aware default manager for practice-capable models.
+
+    Practice mode is a per-user mode layered over the real application. This
+    manager makes every ``.objects`` query honour that mode without a filter at
+    each call site:
+
+    * Out of practice mode (the normal case): only real rows
+      (``is_practice=False``).
+    * In practice mode: only the current user's practice rows
+      (``is_practice=True`` and ``practice_owner`` is that user).
+
+    The active user and mode come from the request-scoped context above.
+    Practice code, the admin and migrations use an explicit ``all_objects``
+    manager to reach every row regardless of context.
+    """
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        ctx = current()
+        if ctx and ctx.in_practice:
+            return qs.filter(is_practice=True, practice_owner_id=ctx.user_id)
+        return qs.filter(is_practice=False)
+
+
+def practice_owner_field(related_name):
+    """A standard nullable FK marking the user who owns a practice record."""
+    return models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name=related_name,
+        help_text=PRACTICE_OWNER_HELP,
+    )
+
+
+def stamp_practice_on_create(sender, instance, **kwargs):
+    """pre_save receiver: stamp new rows created while in practice mode.
+
+    When the active request is in practice mode, any new practice-capable row is
+    flagged ``is_practice`` and owned by the current user — so every create path
+    (serializers, services, the shell) is covered without editing each. Rows made
+    outside practice mode, and existing rows, are left untouched.
+    """
+    if instance.pk is not None:
+        return
+    if getattr(instance, "is_practice", False):
+        return  # already explicitly stamped (e.g. by the practice service)
+    ctx = current()
+    if ctx and ctx.in_practice:
+        instance.is_practice = True
+        if getattr(instance, "practice_owner_id", None) is None:
+            instance.practice_owner_id = ctx.user_id
+
+
+def connect_practice_stamping(*model_classes):
+    """Connect the stamping receiver for the given practice-capable models."""
+    from django.db.models.signals import pre_save
+
+    for model in model_classes:
+        pre_save.connect(
+            stamp_practice_on_create,
+            sender=model,
+            dispatch_uid=f"practice_stamp_{model._meta.label}",
+        )
