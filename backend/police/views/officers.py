@@ -42,7 +42,6 @@ class PoliceOfficerListView(ListCreateAPIView):
     POST: Create new police officer
     """
 
-    queryset = PoliceOfficer.objects.all().select_related("station")
     permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
@@ -60,7 +59,8 @@ class PoliceOfficerListView(ListCreateAPIView):
 
         from common.practice import active_is_practice
 
-        queryset = super().get_queryset()
+        # Fresh per request so the practice-mode manager sees the active context.
+        queryset = PoliceOfficer.objects.all().select_related("station")
 
         # Count only cases of the same kind as the officers being listed —
         # practice cases in practice mode, real cases otherwise — so a real
@@ -238,9 +238,11 @@ class PoliceOfficerDetailView(RetrieveUpdateDestroyAPIView):
     DELETE: Delete police officer
     """
 
-    queryset = PoliceOfficer.objects.all().select_related("station")
     serializer_class = PoliceOfficerSerializer
     permission_classes = [HasAppAccess]
+
+    def get_queryset(self):
+        return PoliceOfficer.objects.all().select_related("station")
 
     def perform_update(self, serializer):
         settings.LOGGER.info(

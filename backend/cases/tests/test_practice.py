@@ -197,6 +197,62 @@ class TestAttachingRealEntities:
         assert not officer.cases_made.filter(pk=case.pk).exists()
 
 
+class TestFullWorkflowThroughMiddleware:
+    """Drive the real workflow endpoints with a JWT bearer token so the
+    PracticeModeMiddleware actually runs and sets the request context — the path
+    the browser uses. force_authenticate bypasses middleware, so these cover the
+    gap that let a created form 404 on the next read."""
+
+    @staticmethod
+    def _jwt_client(user):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        client = APIClient()
+        token = str(RefreshToken.for_user(user).access_token)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        return client
+
+    def test_add_form_is_immediately_readable_and_deletable(self, botanist_user):
+        client = self._jwt_client(botanist_user)
+        client.post("/api/v1/practice/mode")
+
+        case = client.post(
+            "/api/v1/cases/list",
+            {"case_number": "PRACTICE-MW-1", "received": timezone.now().isoformat()},
+            format="json",
+        )
+        assert case.status_code in (200, 201), case.data
+        case_id = case.data["id"]
+
+        # Add a form — it must be readable immediately afterwards.
+        added = client.post(f"/api/v1/cases/{case_id}/forms", {}, format="json")
+        assert added.status_code in (200, 201), added.data
+        form_id = added.data["id"]
+
+        got = client.get(f"/api/v1/cases/forms/{form_id}")
+        assert got.status_code == 200, "a newly added practice form must be readable"
+
+        # And it must be listed on the case.
+        listed = client.get(f"/api/v1/cases/{case_id}/forms")
+        assert any(f["id"] == form_id for f in listed.data)
+
+        # A bag added to the practice form must save and be readable.
+        bag = client.post(
+            f"/api/v1/cases/{case_id}/bags",
+            {"form": form_id, "seal_tag_numbers": "T99001"},
+            format="json",
+        )
+        assert bag.status_code in (200, 201), bag.data
+        bag_id = bag.data["id"]
+        assert client.get(f"/api/v1/cases/{case_id}/bags").status_code == 200
+
+        # And deletable, like any other form.
+        assert client.delete(f"/api/v1/cases/bags/{bag_id}").status_code in (200, 204)
+        deleted = client.delete(f"/api/v1/cases/forms/{form_id}")
+        assert deleted.status_code in (200, 204), deleted.data
+
+
 class TestModeEndpoints:
     def test_toggle_mode_on_and_off(self, botanist_client, botanist_user):
         on = botanist_client.post("/api/v1/practice/mode")
