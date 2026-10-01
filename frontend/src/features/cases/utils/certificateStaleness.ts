@@ -1,13 +1,22 @@
 /**
  * Whether a form's generated certificate no longer matches its underlying data.
  *
- * A certificate is stale when anything that feeds it was changed after the PDF
- * was generated: the form itself (its Security Movement Envelope or Section C
- * notes), or a bag (or its botanical assessment). All appear on the certificate,
- * so any of them changing means the PDF on screen is out of date and should be
- * regenerated. Only unbatched, actually-generated certificates are considered;
- * a batched certificate is frozen and a form with no generated PDF has nothing
- * to be stale against.
+ * A certificate is stale when a bag, or its botanical assessment, was changed
+ * after the PDF was generated — the "the bags changed after generating" case.
+ * Those are the only live inputs the rendered certificate reads; the Section C
+ * notes are snapshotted onto the certificate at generation, and the case-level
+ * fields (officers, defendants, dates) are not treated as staleness triggers
+ * here.
+ *
+ * The form's own row timestamp is deliberately NOT used: it is bumped by actions
+ * that do not change the certificate — marking a form ready, phase advances,
+ * recording who last actioned it — which previously flagged a freshly generated
+ * certificate as out of date the moment it was marked ready, with no way to
+ * clear it.
+ *
+ * Only unbatched, actually-generated certificates are considered; a batched
+ * certificate is frozen and a form with no generated PDF has nothing to be stale
+ * against.
  */
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
@@ -17,11 +26,6 @@ export const isFormStale = (form: Priority3Form): boolean => {
 	if (!(cert.pdf_url || cert.pdf_file)) return false;
 
 	const certTime = new Date(cert.updated_at).getTime();
-
-	// The form's own fields (SME, Section C notes) are on the certificate too.
-	if (form.updated_at && new Date(form.updated_at).getTime() > certTime) {
-		return true;
-	}
 
 	return (form.bags ?? []).some((bag) => {
 		const bagTime = new Date(bag.updated_at).getTime();

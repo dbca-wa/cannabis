@@ -106,8 +106,11 @@ describe("isFormStale", () => {
 		).toBe(true);
 	});
 
-	// The form's own fields (SME, Section C notes) are on the certificate too.
-	it("is true when the form itself changed after the certificate", () => {
+	// The form row's own timestamp must NOT trigger staleness. It is bumped by
+	// marking a form ready, phase advances and other non-certificate actions.
+	// Treating that as stale flagged a freshly generated certificate the moment
+	// it was marked ready, with no way to clear it (the reported bug).
+	it("is false when only the form row changed after the certificate (e.g. marked ready)", () => {
 		expect(
 			isFormStale(
 				form({
@@ -116,16 +119,18 @@ describe("isFormStale", () => {
 					formUpdatedAt: T1,
 				})
 			)
-		).toBe(true);
+		).toBe(false);
 	});
 
-	it("is false when the form last changed before the certificate", () => {
+	it("stays not stale after regenerating, even if marked ready afterwards", () => {
+		// Regenerate makes the cert newest; a later mark-ready bumps only the
+		// form row, which no longer counts.
 		expect(
 			isFormStale(
 				form({
 					cert: { updated_at: T1, pdf_url: "c.pdf" },
-					bags: [{ updated_at: T0 }],
-					formUpdatedAt: T0,
+					bags: [{ updated_at: T0, assessmentUpdatedAt: T0 }],
+					formUpdatedAt: T1,
 				})
 			)
 		).toBe(false);
