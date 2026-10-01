@@ -1,18 +1,19 @@
 /**
  * Whether a form's generated certificate no longer matches its underlying data.
  *
- * A certificate is stale when a bag, or its botanical assessment, was changed
- * after the PDF was generated — the "the bags changed after generating" case.
- * Those are the only live inputs the rendered certificate reads; the Section C
- * notes are snapshotted onto the certificate at generation, and the case-level
- * fields (officers, defendants, dates) are not treated as staleness triggers
- * here.
+ * A certificate is stale when something it actually renders has changed since it
+ * was generated:
  *
- * The form's own row timestamp is deliberately NOT used: it is bumped by actions
- * that do not change the certificate — marking a form ready, phase advances,
- * recording who last actioned it — which previously flagged a freshly generated
- * certificate as out of date the moment it was marked ready, with no way to
- * clear it.
+ *  - a bag, or its botanical assessment, was updated after the PDF was built
+ *    (the "the bags changed after generating" case); or
+ *  - the form's Section C "other matters" note no longer matches the note
+ *    snapshotted onto the certificate at generation.
+ *
+ * Section C is compared by content, not by timestamp. The form's row timestamp
+ * is deliberately NOT used: it is bumped by actions that do not change the
+ * certificate — marking a form ready, phase advances, recording who last
+ * actioned it — which previously flagged a freshly generated certificate as out
+ * of date the moment it was marked ready, with no way to clear it.
  *
  * Only unbatched, actually-generated certificates are considered; a batched
  * certificate is frozen and a form with no generated PDF has nothing to be stale
@@ -20,10 +21,25 @@
  */
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
+/** Normalise a note the way the backend does: trimmed, with empty becoming null. */
+const normaliseNote = (value: string | null | undefined): string | null => {
+	const trimmed = (value ?? "").trim();
+	return trimmed === "" ? null : trimmed;
+};
+
 export const isFormStale = (form: Priority3Form): boolean => {
 	const cert = form.certificate;
 	if (!cert || cert.batch_id != null) return false;
 	if (!(cert.pdf_url || cert.pdf_file)) return false;
+
+	// Section C note edited after generation — the note is printed on the
+	// certificate, which stores its own snapshot taken at generation.
+	if (
+		normaliseNote(form.additional_notes) !==
+		normaliseNote(cert.additional_notes)
+	) {
+		return true;
+	}
 
 	const certTime = new Date(cert.updated_at).getTime();
 

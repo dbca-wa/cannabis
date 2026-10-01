@@ -415,6 +415,12 @@ const ProcessCaseContent = observer(() => {
 				.then(() => {
 					toast.success("Section C notes saved");
 					queryClient.invalidateQueries({ queryKey: ["cases", "forms", fId] });
+					// Also refresh the forms list that drives the certificate
+					// staleness check, so an edited Section C note flags the
+					// certificate out of date straight away.
+					queryClient.invalidateQueries({
+						queryKey: ["cases", parsedId, "forms"],
+					});
 				})
 				.catch(() => {
 					toast.error("Failed to save section C notes");
@@ -423,7 +429,7 @@ const ProcessCaseContent = observer(() => {
 					setIsSavingNotes(false);
 				});
 		}
-	}, [queryClient]);
+	}, [queryClient, parsedId]);
 
 	/** Field change handler — debounces text fields (800ms), saves others immediately. */
 	const handleFieldChange = useCallback(
@@ -462,6 +468,11 @@ const ProcessCaseContent = observer(() => {
 							queryClient.invalidateQueries({
 								queryKey: ["cases", "forms", pending.formId],
 							});
+							// Refresh the forms list so the certificate staleness check
+							// reacts to the edited Section C note immediately.
+							queryClient.invalidateQueries({
+								queryKey: ["cases", parsedId, "forms"],
+							});
 						})
 						.catch(() => {
 							toast.error("Failed to save section C notes");
@@ -485,6 +496,9 @@ const ProcessCaseContent = observer(() => {
 						.then(() => {
 							queryClient.invalidateQueries({
 								queryKey: ["cases", "forms", activeFormId],
+							});
+							queryClient.invalidateQueries({
+								queryKey: ["cases", parsedId, "forms"],
 							});
 						})
 						.catch(() => {
