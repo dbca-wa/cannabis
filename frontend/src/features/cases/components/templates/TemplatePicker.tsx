@@ -25,6 +25,11 @@ import type { ISectionCTemplate } from "../../types/templates.types";
 // uncontrolled, which breaks reselecting a template afterwards).
 const FREE_VALUE = "__free__";
 
+// resolveTemplate renders any missing variable as this token. A note must never
+// contain it, so applying (or re-resolving) a template that produces it is
+// blocked — the data it needs is not present on this form.
+const PENDING_TOKEN = "[Pending]";
+
 interface TemplatePickerProps {
 	/** Current case data for variable resolution */
 	caseData: Record<string, unknown> | null;
@@ -60,6 +65,10 @@ export const TemplatePicker = ({
 	const applyTemplate = (template: ISectionCTemplate) => {
 		const context = buildTemplateContext(caseData, bags);
 		const resolved = resolveTemplate(template.content, context);
+		// Never write an unresolved note. If the template needs data this form
+		// does not have, leave the note untouched rather than inserting
+		// "[Pending]"; the option is disabled anyway, this is defence in depth.
+		if (resolved.includes(PENDING_TOKEN)) return;
 		lastAppliedRef.current = resolved;
 		pendingApplyRef.current = resolved;
 		onApply(resolved);
@@ -130,6 +139,9 @@ export const TemplatePicker = ({
 	useEffect(() => {
 		if (resolvedForCurrentData === null) return;
 		if (resolvedForCurrentData === lastAppliedRef.current) return;
+		// Do not push an unresolved note. This also stops a selected template
+		// bleeding onto another form whose data cannot resolve it.
+		if (resolvedForCurrentData.includes(PENDING_TOKEN)) return;
 		lastAppliedRef.current = resolvedForCurrentData;
 		pendingApplyRef.current = resolvedForCurrentData;
 		onApply(resolvedForCurrentData);
