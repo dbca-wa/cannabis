@@ -1,5 +1,9 @@
 from rest_framework import serializers
 
+from defendants.models import Defendant
+from police.models import PoliceOfficer, PoliceStation
+from users.models import User
+
 from ..models import Case
 
 
@@ -11,6 +15,29 @@ class CaseCreateSerializer(serializers.ModelSerializer):
     the scanned image, and the security movement envelope belong to a form and
     are captured when a form is added, not at case creation.
     """
+
+    # Resolve related entities against every row, not the mode-scoped default
+    # manager. In practice mode the dropdowns show only practice entities, but a
+    # user may still attach a genuinely real officer/station/defendant/botanist,
+    # so validation must be able to find them. (The practice case stays hidden
+    # from those real entities' own case lists via the Case default manager.)
+    requesting_officer = serializers.PrimaryKeyRelatedField(
+        queryset=PoliceOfficer.all_objects.all(), required=False, allow_null=True
+    )
+    submitting_officer = serializers.PrimaryKeyRelatedField(
+        queryset=PoliceOfficer.all_objects.all(), required=False, allow_null=True
+    )
+    station = serializers.PrimaryKeyRelatedField(
+        queryset=PoliceStation.all_objects.all(), required=False, allow_null=True
+    )
+    approved_botanist = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=False, allow_null=True
+    )
+    defendants = serializers.PrimaryKeyRelatedField(
+        queryset=Defendant.all_objects.all(),
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = Case
@@ -41,9 +68,11 @@ class CaseCreateSerializer(serializers.ModelSerializer):
 
     def validate_case_number(self, value):
         """Ensure case numbers are unique (only for non-empty values)"""
-        # Allow empty case numbers for drafts
+        # Allow empty case numbers for drafts. Check across all rows (not the
+        # mode-scoped default manager) so a practice case cannot reuse a real
+        # case number and vice versa.
         if value and value.strip():
-            if Case.objects.filter(case_number=value).exists():
+            if Case.all_objects.filter(case_number=value).exists():
                 raise serializers.ValidationError("Case number must be unique.")
         return value
 

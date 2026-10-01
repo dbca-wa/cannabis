@@ -171,6 +171,32 @@ class TestEntityCaseCounts:
         assert annotated.c == 0
 
 
+class TestAttachingRealEntities:
+    def test_practice_case_can_reference_a_real_officer(self, botanist_user):
+        # The real officer exists only in real mode's manager, but a practice
+        # user picking it from the dropdown must still be able to save the case.
+        from cases.serializers import CaseCreateSerializer
+
+        officer = PoliceOfficer.objects.create(last_name="RealOfficer")
+
+        _in_practice(botanist_user)
+        serializer = CaseCreateSerializer(
+            data={
+                "case_number": "PRACTICE-REAL-1",
+                "received": timezone.now().isoformat(),
+                "submitting_officer": officer.pk,
+            }
+        )
+        assert serializer.is_valid(), serializer.errors
+        case = serializer.save()
+        assert case.is_practice is True
+        assert case.submitting_officer_id == officer.pk
+        _real_mode()
+
+        # The real officer's case list still excludes this practice case.
+        assert not officer.cases_made.filter(pk=case.pk).exists()
+
+
 class TestModeEndpoints:
     def test_toggle_mode_on_and_off(self, botanist_client, botanist_user):
         on = botanist_client.post("/api/v1/practice/mode")
