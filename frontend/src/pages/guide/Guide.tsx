@@ -23,6 +23,7 @@ const STAGES: Stage[] = [
 	{ id: "finalising", title: "5. Finalising the case" },
 	{ id: "batching", title: "6. Batching for invoicing" },
 	{ id: "invoicing", title: "7. Recording the invoice" },
+	{ id: "practice", title: "Practice mode" },
 	{ id: "settings", title: "Settings" },
 	{ id: "account", title: "Your account" },
 	{ id: "glossary", title: "Glossary" },
@@ -70,6 +71,16 @@ const Guide = () => {
 						You do not have to finish a case in one sitting. Everything you type
 						is saved as you go, so you can leave a case and come back to it.
 					</p>
+					<div className="not-prose rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+						<p className="text-sm text-amber-900 dark:text-amber-100">
+							<strong className="font-semibold">New here?</strong> Turn on{" "}
+							<strong>practice mode</strong> from the menu under your initials.
+							You&apos;ll be handed a fake case and can work through every step
+							— creating the case, generating certificates, batching and
+							recording the invoice — on the real screens, without touching any
+							real data. See <a href="#practice">Practice mode</a> below.
+						</p>
+					</div>
 				</section>
 
 				<hr />
@@ -408,6 +419,52 @@ const Guide = () => {
 
 				<hr />
 
+				{/* Practice mode */}
+				<section id="practice" className="scroll-mt-6">
+					<h2>Practice mode</h2>
+					<p>
+						<strong>Practice mode</strong> is a safe way to learn the workflow
+						on the real screens. Turn it on from the menu under your initials.
+						While it is on, an amber banner stays at the top of every page, and
+						the Cases and Batches pages show only your practice work.
+					</p>
+					<ol>
+						<li>
+							Open the menu under your initials and choose{" "}
+							<strong>Enter practice mode</strong>.
+						</li>
+						<li>
+							You are handed a fake Priority 3 brief on the case page. Work it
+							through just like a real case: create the case, record the
+							samples, generate certificates, finalise, then batch and record
+							the invoice. Short hints guide each step.
+						</li>
+						<li>
+							When the officer or station on your brief isn&apos;t found, add
+							them through the normal <strong>Add new</strong> path — in
+							practice mode these are fake too.
+						</li>
+						<li>
+							Choose <strong>Leave practice mode</strong> (in the banner or the
+							menu) when you&apos;re done.
+						</li>
+					</ol>
+					<p>
+						Nothing you do in practice mode is real. Practice cases,
+						certificates, invoices and the fake officers you create are kept
+						entirely separate from live work: they never appear in anyone
+						else&apos;s view, never affect the dashboard figures, and never use
+						a real certificate or invoice number. Practice data clears when you
+						leave practice mode, and automatically after a day.
+					</p>
+					<Outcome>
+						You have taken a fake case all the way to a recorded invoice, and
+						know what each step looks like before doing it for real.
+					</Outcome>
+				</section>
+
+				<hr />
+
 				{/* Settings */}
 				<section id="settings" className="scroll-mt-6">
 					<h2>Settings</h2>
@@ -638,6 +695,15 @@ const Guide = () => {
 							<dd className="text-muted-foreground">
 								The person named on the submission. Recorded with surname, which
 								appears in capitals on the certificate, and given names.
+							</dd>
+						</div>
+						<div>
+							<dt className="font-semibold">Practice mode</dt>
+							<dd className="text-muted-foreground">
+								A per-user mode for rehearsing the workflow on the real screens
+								against a fake case. Everything done in it is kept separate from
+								live work, is only ever seen by you, and clears when you leave
+								or after a day.
 							</dd>
 						</div>
 					</dl>

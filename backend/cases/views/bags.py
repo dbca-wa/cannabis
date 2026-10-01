@@ -57,13 +57,16 @@ class DrugBagDetailView(RetrieveUpdateDestroyAPIView):
     DELETE: Delete drug bag
     """
 
-    queryset = (
-        DrugBag.objects.all()
-        .select_related("form", "form__case")
-        .prefetch_related("assessment")
-    )
     serializer_class = DrugBagSerializer
     permission_classes = [HasAppAccess]
+
+    def get_queryset(self):
+        # Per request so the practice-mode manager sees the active context.
+        return (
+            DrugBag.objects.all()
+            .select_related("form", "form__case")
+            .prefetch_related("assessment")
+        )
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
@@ -116,9 +119,11 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
     DELETE: Delete assessment
     """
 
-    queryset = BotanicalAssessment.objects.all().select_related("drug_bag__form__case")
     serializer_class = BotanicalAssessmentSerializer
     permission_classes = [HasAppAccess]
+
+    def get_queryset(self):
+        return BotanicalAssessment.objects.all().select_related("drug_bag__form__case")
 
     def check_object_permissions(self, request, obj):
         """Check permissions for assessment access"""

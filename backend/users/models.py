@@ -248,6 +248,18 @@ class UserPreferences(models.Model):
         help_text="Reduce animations and motion",
     )
 
+    # Practice mode — a per-user, self-expiring mode for rehearsing the workflow
+    # against isolated practice data. See common.practice.
+    practice_mode = models.BooleanField(
+        default=False,
+        help_text="Whether the user is currently in practice mode",
+    )
+    practice_mode_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the current practice session began; it expires after a day",
+    )
+
     # Created/Updated timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from common.models import AuditModel, SystemSettings
+from common.practice import IS_PRACTICE_HELP as _IS_PRACTICE_HELP
+from common.practice import RealManager, practice_owner_field
 
 
 class Case(AuditModel):
@@ -111,6 +113,9 @@ class Case(AuditModel):
         help_text="True for ETL-imported historical cases that predate the current workflow.",
     )
 
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_cases")
+
     # Tracks the user who last actioned (moved/edited) the case
     last_actioned_by = models.ForeignKey(
         "users.User",
@@ -120,6 +125,10 @@ class Case(AuditModel):
         related_name="last_actioned_cases",
         help_text="User who last performed a workflow action on this case",
     )
+
+    # Default manager hides practice rows; all_objects reaches every row.
+    objects = RealManager()
+    all_objects = models.Manager()
 
     @property
     def bag_count(self):
@@ -245,6 +254,12 @@ class Priority3Form(AuditModel):
         related_name="last_actioned_forms",
         help_text="User who last performed a workflow action on this form",
     )
+
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_forms")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"Priority 3 Form {self.pk} - {self.case.case_number}"
@@ -420,7 +435,9 @@ class DrugBag(AuditModel):
         """
         if self.form_id is None:
             return False
-        siblings = DrugBag.objects.filter(form_id=self.form_id)
+        # all_objects so the cap counts practice siblings too — a practice form
+        # is still capped at five bags.
+        siblings = DrugBag.all_objects.filter(form_id=self.form_id)
         if self.pk is not None:
             siblings = siblings.exclude(pk=self.pk)
         return siblings.count() >= Priority3Form.MAX_BAGS
@@ -447,6 +464,12 @@ class DrugBag(AuditModel):
                 f"drug bags."
             )
         super().save(*args, **kwargs)
+
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_bags")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"Bag {self.seal_tag_numbers} - {self.form.case.case_number}"
@@ -528,6 +551,12 @@ class BotanicalAssessment(AuditModel):
             self.DeterminationChoices.PAPAVER_SOMNIFERUM,  # Opium poppy
         ]
         return self.determination in controlled_substances
+
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_assessments")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         determination = (
@@ -644,12 +673,40 @@ class Certificate(AuditModel):
         (R1, R2, R3...). Existing certificates that still have the old CRT
         format get reassigned a new R-number on next save (e.g., regenerate).
         """
+        # Stamp practice ownership before the numbering guard, since save() runs
+        # before the pre_save signal that stamps the other models.
+        if self.pk is None and not self.is_practice:
+            from common.practice import current
+
+            ctx = current()
+            if ctx and ctx.in_practice:
+                self.is_practice = True
+                if self.practice_owner_id is None:
+                    self.practice_owner_id = ctx.user_id
+        # Practice certificates carry a per-user PRACTICE- number and must never
+        # draw from the live counter, which would leave a permanent gap in the
+        # real R-number sequence.
+        if self.is_practice:
+            if not self.certificate_number:
+                from .services.practice_service import PracticeService
+
+                self.certificate_number = PracticeService.next_certificate_number(
+                    self.practice_owner
+                )
+            super().save(*args, **kwargs)
+            return
         if not self.certificate_number or not self.certificate_number.startswith("R"):
             from common.models import SystemSettings
 
             settings_obj = SystemSettings.load()
             self.certificate_number = settings_obj.get_next_certificate_number()
         super().save(*args, **kwargs)
+
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_certificates")
+
+    objects = RealManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"Certificate {self.certificate_number} - {self.form.case.case_number}"
@@ -760,8 +817,35 @@ class Batch(AuditModel):
         help_text="User who created the batch",
     )
 
+    is_practice = models.BooleanField(default=False, help_text=_IS_PRACTICE_HELP)
+    practice_owner = practice_owner_field("practice_batches")
+
+    objects = RealManager()
+    all_objects = models.Manager()
+
     def save(self, *args, **kwargs):
         """Auto-generate batch number on creation."""
+        # Stamp practice ownership before the numbering guard (save runs before
+        # the pre_save stamping signal).
+        if self.pk is None and not self.is_practice:
+            from common.practice import current
+
+            ctx = current()
+            if ctx and ctx.in_practice:
+                self.is_practice = True
+                if self.practice_owner_id is None:
+                    self.practice_owner_id = ctx.user_id
+        # Practice batches get a per-user PRACTICE- number and must never advance
+        # the live batch counter.
+        if self.is_practice:
+            if not self.batch_number:
+                from .services.practice_service import PracticeService
+
+                self.batch_number = PracticeService.next_batch_number(
+                    self.practice_owner
+                )
+            super().save(*args, **kwargs)
+            return
         if not self.batch_number:
             settings_obj = SystemSettings.load()
             self.batch_number = settings_obj.get_next_batch_number()
