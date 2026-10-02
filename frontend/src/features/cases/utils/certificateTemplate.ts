@@ -121,25 +121,39 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 					.join(", ")
 			: "Unknown";
 
-	/** Format an officer as "Rank Badge SURNAME, Given Names". */
-	const formatOfficer = (officer: typeof submitting_officer): string | null => {
+	/**
+	 * Format an officer with a fixed role label, as "RoleLabel Badge SURNAME,
+	 * Given Names" — matching the generated PDF, which labels the conveying
+	 * officer "Unsworn Officer" and the requesting officer "Sworn Officer"
+	 * rather than their rank.
+	 */
+	const formatOfficer = (
+		officer: typeof submitting_officer,
+		roleLabel: string
+	): string | null => {
 		if (!officer) return null;
-		const rank = officer.rank_display || "Officer";
 		const badge = officer.badge_number || "";
 		const lastName = officer.last_name?.toUpperCase() || "";
 		const firstName = officer.given_names || "";
 		const fullName = firstName ? `${lastName}, ${firstName}` : lastName;
-		return badge ? `${rank} ${badge} ${fullName}` : `${rank} ${fullName}`;
+		return badge
+			? `${roleLabel} ${badge} ${fullName}`
+			: `${roleLabel} ${fullName}`;
 	};
 
 	// The conveying officer delivered the samples and was present at the
-	// examination — named in both section (a) and section (b).
+	// examination — named in both section (a) and section (b), always as the
+	// unsworn conveying officer.
 	const conveyingOfficer =
-		formatOfficer(submitting_officer) ??
+		formatOfficer(submitting_officer, "Unsworn Officer") ??
 		'<span class="missing-data">Not Assigned</span>';
 
-	// The requesting officer is optional and only qualifies section (a).
-	const requestingOfficerName = formatOfficer(requesting_officer);
+	// The requesting officer is optional and only qualifies section (a), as the
+	// sworn officer the samples were conveyed on behalf of.
+	const requestingOfficerName = formatOfficer(
+		requesting_officer,
+		"Sworn Officer"
+	);
 	const onBehalfOf = requestingOfficerName
 		? ` on behalf of <strong>${requestingOfficerName}</strong>`
 		: "";
@@ -190,12 +204,9 @@ export const generateCertificateHTML = (data: CertificateData): string => {
 				: "";
 
 			// The officer present during the examination is always the conveying
-			// officer, who physically delivered and received back the samples.
-			const officerPresent = submitting_officer
-				? `${submitting_officer.rank_display || "Officer"} ${
-						submitting_officer.last_name?.toUpperCase() || ""
-					}`
-				: "";
+			// officer, named as the unsworn officer to match the certificate.
+			const officerPresent =
+				formatOfficer(submitting_officer, "Unsworn Officer") ?? "";
 
 			const handoverText = officerPresent
 				? ` These bags were handed over to ${officerPresent} who was present during the examination.`
