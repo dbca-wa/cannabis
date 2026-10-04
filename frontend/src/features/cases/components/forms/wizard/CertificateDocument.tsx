@@ -280,14 +280,22 @@ export const CertificateDocument = ({
 					}}
 				>
 					{bagCount > 0 ? (
-						<p>
-							I received for examination {bagCountWord} sealed drug movement{" "}
-							{bagWord}, tag {tagWord} {tagNumbers} containing {description}{" "}
-							marked <strong>{defendantDisplay}</strong> from {conveyingOfficer}
-							{requestingOfficer
-								? ` on behalf of ${requestingOfficer}`
-								: ""} on {receiptDate}.
-						</p>
+						<>
+							<p style={{ margin: 0 }}>
+								I received for examination {bagCountWord} sealed drug movement{" "}
+								{bagWord}, tag {tagWord} {tagNumbers} containing {description}
+							</p>
+							{/* "marked ..." begins on its own line with a blank line above,
+							    matching the generated certificate. */}
+							<p style={{ margin: "1em 0 0 0" }}>
+								marked <strong>{defendantDisplay}</strong> from{" "}
+								{conveyingOfficer}
+								{requestingOfficer
+									? ` on behalf of ${requestingOfficer}`
+									: ""}{" "}
+								on {receiptDate}.
+							</p>
+						</>
 					) : (
 						<p style={{ color: "#888", fontStyle: "italic" }}>
 							[Pending — add drug bags to populate this section]
