@@ -60,3 +60,17 @@ describe("generateCertificateHTML — officer role labels", () => {
 		expect(afterHandover).toContain("Unsworn Officer");
 	});
 });
+
+describe("generateCertificateHTML — section (a) paragraph break", () => {
+	const html = generateCertificateHTML(data);
+
+	it("puts 'marked ...' in its own paragraph, separated from the material", () => {
+		// The material description and the "marked ..." clause are separate
+		// paragraphs, so "marked" starts on its own line with a blank line above.
+		expect(html).toContain('<p class="receipt-intro">');
+		expect(html).toContain('<p class="receipt-marked">');
+		const markedPara = html.slice(html.indexOf('class="receipt-marked"'));
+		expect(markedPara.trimStart().startsWith('">')).toBe(false);
+		expect(markedPara).toMatch(/marked\s+<strong>/);
+	});
+});

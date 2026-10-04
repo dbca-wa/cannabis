@@ -174,6 +174,16 @@
             border-left: 4px solid #ffc958;
         }
 
+        /* Section (a): "marked ..." begins on its own line, with a blank line
+           above it separating it from the material description. */
+        .section-content .receipt-intro {
+            margin: 0;
+        }
+
+        .section-content .receipt-marked {
+            margin: 1em 0 0 0;
+        }
+
         /* Signature block and departmental address, pinned to the bottom of the
            page they fall on.
 
@@ -393,19 +403,29 @@
                 </div>
                 <div class="section-content blue-border">
                     {% if quantity_of_bags == 1 %}
-                    I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bag, tag number {{ tag_numbers }} containing a quantity of
-                    {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
-                    {{ requesting_officer }}{% endif %} on
-                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    <p class="receipt-intro">
+                        I received for examination {{ quantity_of_bags_words }} sealed drug
+                        movement bag, tag number {{ tag_numbers }} containing a quantity of
+                        {{ description }}
+                    </p>
+                    <p class="receipt-marked">
+                        marked <strong>{{ defendant }}</strong> from
+                        {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                        {{ requesting_officer }}{% endif %} on
+                        <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    </p>
                     {% else %}
-                    I received for examination {{ quantity_of_bags_words }} sealed drug
-                    movement bags, tag numbers {{ tag_numbers }} containing a quantity of
-                    {{ description }} marked <strong>{{ defendant }}</strong> from
-                    {{ conveying_officer }}{% if requesting_officer %} on behalf of
-                    {{ requesting_officer }}{% endif %} on
-                    <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    <p class="receipt-intro">
+                        I received for examination {{ quantity_of_bags_words }} sealed drug
+                        movement bags, tag numbers {{ tag_numbers }} containing a quantity of
+                        {{ description }}
+                    </p>
+                    <p class="receipt-marked">
+                        marked <strong>{{ defendant }}</strong> from
+                        {{ conveying_officer }}{% if requesting_officer %} on behalf of
+                        {{ requesting_officer }}{% endif %} on
+                        <span style="white-space: nowrap;">{{ receipt_date }}</span>.
+                    </p>
                     {% endif %}
                 </div>
             </div>

@@ -417,6 +417,15 @@ export const generateCertificateHTML = (data: CertificateData): string => {
             border-left: 4px solid #ffc958;
         }
 
+        /* Section (a): "marked ..." on its own line, blank line above it. */
+        .certificate-container .section-content .receipt-intro {
+            margin: 0;
+        }
+
+        .certificate-container .section-content .receipt-marked {
+            margin: 1em 0 0 0;
+        }
+
         .certificate-container .bottom-content {
             margin-top: auto;
             page-break-inside: avoid;
@@ -586,10 +595,15 @@ export const generateCertificateHTML = (data: CertificateData): string => {
                     (a) Receipt of Evidence:
                 </div>
                 <div class="section-content blue-border">
-                    I received for examination <strong>${quantityOfBags}</strong> sealed drug
-                    movement bag(s), tag number(s) <strong>${tagNumbers}</strong>, containing quantity of
-                    <strong>${description}</strong> marked <strong>${defendantsList}</strong> from
-                    <strong>${conveyingOfficer}</strong>${onBehalfOf} on <strong>${formattedDate}</strong>.
+                    <p class="receipt-intro">
+                        I received for examination <strong>${quantityOfBags}</strong> sealed drug
+                        movement bag(s), tag number(s) <strong>${tagNumbers}</strong>, containing quantity of
+                        <strong>${description}</strong>
+                    </p>
+                    <p class="receipt-marked">
+                        marked <strong>${defendantsList}</strong> from
+                        <strong>${conveyingOfficer}</strong>${onBehalfOf} on <strong>${formattedDate}</strong>.
+                    </p>
                 </div>
             </div>
 
