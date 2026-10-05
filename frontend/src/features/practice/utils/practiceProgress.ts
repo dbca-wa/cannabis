@@ -41,11 +41,20 @@ interface LiveForm {
 export interface LiveCase {
 	case_number?: string | null;
 	submitting_officer?: number | null;
+	/** Flat name from the list serializer / live create data. */
 	submitting_officer_name?: string | null;
+	/** Nested record from the case detail serializer. */
+	submitting_officer_details?: { full_name?: string | null } | null;
 	station?: number | null;
+	/** Flat name from the list serializer / live create data. */
 	station_name?: string | null;
+	/** Nested record from the case detail serializer. */
+	station_details?: { name?: string | null } | null;
 	approved_botanist?: number | null;
+	/** Flat names from the list serializer / live create data. */
 	defendant_names?: string[] | null;
+	/** Nested records from the case detail serializer. */
+	defendants_details?: Array<{ full_name?: string | null }> | null;
 }
 
 /** Case-level checklist: the details entered when the case is created. */
@@ -56,7 +65,20 @@ export const buildCaseChecklist = (
 	const c = liveCase ?? {};
 	const defendantExpected = `${brief.defendant.last_name.toUpperCase()}, ${brief.defendant.given_names}`;
 	const officerExpected = `${brief.officer.last_name.toUpperCase()}, ${brief.officer.given_names}`;
-	const defendantNames = (c.defendant_names ?? []).join("; ");
+
+	// The create flow and the case-list serializer expose flat *_name fields;
+	// the case-detail serializer (shown on the process-case page) exposes nested
+	// *_details records instead. Read whichever is present so items stay ticked
+	// after the case is saved and the guide switches to the detail data.
+	const officerName =
+		c.submitting_officer_name ??
+		c.submitting_officer_details?.full_name ??
+		null;
+	const stationName = c.station_name ?? c.station_details?.name ?? null;
+	const defendantNames = (
+		c.defendant_names ??
+		(c.defendants_details ?? []).map((d) => d.full_name ?? "")
+	).join("; ");
 
 	return {
 		title: "On the case",
@@ -77,14 +99,14 @@ export const buildCaseChecklist = (
 				label: "Submitting officer",
 				expected: officerExpected,
 				done:
-					contains(c.submitting_officer_name, brief.officer.last_name) ||
+					contains(officerName, brief.officer.last_name) ||
 					(c.submitting_officer != null &&
-						contains(c.submitting_officer_name, brief.officer.given_names)),
+						contains(officerName, brief.officer.given_names)),
 			},
 			{
 				label: "Station",
 				expected: brief.station,
-				done: contains(c.station_name, brief.station),
+				done: contains(stationName, brief.station),
 			},
 			{
 				label: "Approved botanist (use the default)",
@@ -119,10 +141,22 @@ export const buildFormChecklists = (
 			const matched = liveBags.find((lb) =>
 				contains(lb.seal_tag_numbers, bag.original_seal)
 			);
+			// Spell out both seal tags so the user knows what to type into the
+			// original and new seal fields, plus the content and determination.
+			const details = [
+				bag.content_type.replace(/_/g, " "),
+				bag.determination.replace(/_/g, " "),
+				bag.female_plants ? "female plants" : null,
+			]
+				.filter(Boolean)
+				.join(" · ");
+			const newSealEntered =
+				!bag.new_seal || contains(matched?.new_seal_tag_numbers, bag.new_seal);
 			items.push({
-				label: `Bag ${bag.original_seal}`,
-				expected: `${bag.content_type.replace(/_/g, " ")} — ${bag.determination.replace(/_/g, " ")}${bag.female_plants ? " — female plants" : ""}`,
-				done: !!matched && !!matched.assessment?.determination,
+				label: `Bag — original ${bag.original_seal}, new ${bag.new_seal}`,
+				expected: details,
+				done:
+					!!matched && !!matched.assessment?.determination && newSealEntered,
 			});
 		}
 

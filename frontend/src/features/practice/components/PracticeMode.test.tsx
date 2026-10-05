@@ -97,7 +97,7 @@ describe("Practice mode UI", () => {
 			);
 			// Brief details as checklist items.
 			expect(await screen.findByText("PRACTICE-123456")).toBeInTheDocument();
-			expect(screen.getByText(/Bag T01234/)).toBeInTheDocument();
+			expect(screen.getByText(/original T01234/)).toBeInTheDocument();
 			expect(screen.getByText("SME1234")).toBeInTheDocument();
 			// Botanist is the default — the guide says so rather than naming one.
 			expect(screen.getByText(/use the default/i)).toBeInTheDocument();
