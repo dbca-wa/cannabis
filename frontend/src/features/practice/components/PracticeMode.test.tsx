@@ -113,7 +113,9 @@ describe("Practice mode UI", () => {
 				</PracticeSheetProvider>,
 				{ initialEntries: ["/batches"] }
 			);
-			expect(await screen.findByText(/Batch and invoice/i)).toBeInTheDocument();
+			expect(
+				await screen.findByText(/Step 5 — Batch the certificate/i)
+			).toBeInTheDocument();
 		});
 
 		it("can be hidden with the close button", async () => {

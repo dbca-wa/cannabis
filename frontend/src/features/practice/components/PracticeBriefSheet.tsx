@@ -11,12 +11,20 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { getCaseById } from "@/features/cases/services/cases.service";
+import { getCaseById, getCases } from "@/features/cases/services/cases.service";
 import { getCaseForms } from "@/features/cases/services/forms.service";
+import type {
+	CasePhase,
+	Priority3FormTiny,
+} from "@/features/cases/types/cases.types";
 import { usePracticeMode } from "../hooks/usePracticeMode";
 import { usePracticeBrief } from "../hooks/usePracticeBrief";
 import { usePracticeSheet } from "./practiceSheet.context";
-import { getPracticeGuidance } from "../utils/practiceGuidance";
+import {
+	getPracticeGuidance,
+	derivePracticeStep,
+	type PracticeFormProgress,
+} from "../utils/practiceGuidance";
 import {
 	buildCaseChecklist,
 	buildFormChecklists,
@@ -29,6 +37,51 @@ const caseIdFromPath = (pathname: string): number | null => {
 	const m = pathname.match(/^\/cases\/(\d+)/);
 	return m ? Number(m[1]) : null;
 };
+
+interface StepTrackerProps {
+	steps: {
+		number: number;
+		title: string;
+		current: boolean;
+		done: boolean;
+	}[];
+}
+
+/** Compact 1–6 journey tracker so the user always sees overall progress. */
+const StepTracker = ({ steps }: StepTrackerProps) => (
+	<ol className="space-y-1" aria-label="Practice progress">
+		{steps.map((s) => (
+			<li key={s.number} className="flex items-center gap-2">
+				<span
+					className={
+						"flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold " +
+						(s.done
+							? "bg-emerald-600 text-white dark:bg-emerald-500"
+							: s.current
+								? "bg-amber-600 text-white dark:bg-amber-500"
+								: "bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-200")
+					}
+					aria-hidden="true"
+				>
+					{s.done ? <Check size={12} /> : s.number}
+				</span>
+				<span
+					className={
+						"text-[13px] " +
+						(s.current
+							? "font-semibold text-amber-900 dark:text-amber-100"
+							: s.done
+								? "text-emerald-800 dark:text-emerald-300"
+								: "text-amber-800/70 dark:text-amber-100/60")
+					}
+				>
+					{s.title}
+					{s.current && <span className="sr-only"> (current step)</span>}
+				</span>
+			</li>
+		))}
+	</ol>
+);
 
 interface ChecklistProps {
 	group: ChecklistGroup;
@@ -107,9 +160,19 @@ export const PracticeBriefSheet = () => {
 		staleTime: 10_000,
 	});
 
+	// When not on a specific case page, track the user's one active practice
+	// case so the step tracker keeps advancing (e.g. after finalising returns
+	// the user to the cases list). Practice mode scopes this list to the user's
+	// own practice cases, so the most-advanced one is the case in play.
+	const { data: practiceCases } = useQuery({
+		queryKey: ["cases", "practice-progress"],
+		queryFn: () => getCases({ limit: 20 }),
+		enabled: isOn && isOpen && caseId == null,
+		staleTime: 10_000,
+	});
+
 	if (!isOn || !isOpen || !brief) return null;
 
-	const guidance = getPracticeGuidance(pathname);
 	// On the new-case form the data lives in memory (liveCreateData); on a saved
 	// case it comes from the query cache. Prefer whichever is present.
 	const caseSource: LiveCase | null =
@@ -119,6 +182,51 @@ export const PracticeBriefSheet = () => {
 		brief,
 		Array.isArray(liveForms) ? liveForms : []
 	);
+
+	// Derive the current step from live progress so the tracker follows the case
+	// from creation through to invoicing, rather than resetting per page.
+	const toFormProgress = (
+		forms:
+			| Array<{
+					phase: CasePhase;
+					marked_ready: boolean;
+					certificate?: { id: number } | null;
+			  }>
+			| undefined
+	): PracticeFormProgress[] =>
+		(forms ?? []).map((f) => ({
+			phase: f.phase,
+			marked_ready: f.marked_ready,
+			certificate: f.certificate ? { id: f.certificate.id } : null,
+		}));
+
+	let step: number;
+	if (caseId != null && liveCase) {
+		step = derivePracticeStep({
+			caseExists: true,
+			derivedStatus: liveCase.derived_status,
+			forms: toFormProgress(
+				Array.isArray(liveForms) ? liveForms : liveCase.forms
+			),
+		});
+	} else if (caseId == null && practiceCases?.results?.length) {
+		// Pick the most-advanced practice case as the one in play.
+		const steps = practiceCases.results.map((c) =>
+			derivePracticeStep({
+				caseExists: true,
+				derivedStatus: c.derived_status,
+				forms: toFormProgress(c.forms as Priority3FormTiny[]),
+			})
+		);
+		step = Math.max(...steps);
+	} else if (liveCreateData) {
+		// On the create form, filling fields in — still step 1.
+		step = 1;
+	} else {
+		step = 1;
+	}
+
+	const guidance = getPracticeGuidance(pathname, step);
 
 	return (
 		<aside
@@ -144,7 +252,21 @@ export const PracticeBriefSheet = () => {
 			</div>
 
 			<div className="space-y-5 px-4 py-4 text-sm">
+				{/* Overall journey tracker — always visible so the user sees where
+				    they are from create through to invoice. */}
 				<section>
+					<div className="mb-2 flex items-center justify-between">
+						<h3 className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+							Your progress
+						</h3>
+						<span className="text-xs tabular-nums text-amber-800 dark:text-amber-200">
+							Step {guidance.currentStep} of {guidance.steps.length}
+						</span>
+					</div>
+					<StepTracker steps={guidance.steps} />
+				</section>
+
+				<section className="border-t border-amber-300 pt-4 dark:border-amber-800">
 					<h3 className="mb-2 text-[15px] font-semibold text-amber-900 dark:text-amber-100">
 						{guidance.heading}
 					</h3>
