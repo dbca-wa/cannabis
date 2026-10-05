@@ -439,59 +439,51 @@ jobs:
       (needs.merge-frontend-prod.result == 'success' || needs.merge-backend-prod.result == 'success')
 
     steps:
-      # This job is best-effort housekeeping. The GitHub Packages delete API
-      # intermittently returns "fetch failed" partway through a run; when it
-      # does, the versions it already removed stay removed and the next deploy
-      # prunes the rest. A transient prune failure must never fail an otherwise
-      # successful deploy, so every step is continue-on-error.
+      # Release-safe pruning. The old flat "keep N most recent versions" rule
+      # counted the moving test tags and per-arch build parts against the budget,
+      # which pushed real release manifests out of the window and deleted
+      # production images the cluster still needed.
+      #
+      # The prune script (.github/scripts/prune_ghcr.py) instead:
+      #   * keeps the newest KEEP_RELEASES releases chosen by SEMVER order, and
+      #     resolves each kept index's child digests from the registry so a kept
+      #     release can never be orphaned;
+      #   * always keeps 'stable' and the single latest 'test' build;
+      #   * prunes a beyond-quota release only once the quota is genuinely
+      #     exceeded, deleting that release and all its children together;
+      #   * removes orphaned untagged leftovers beyond KEEP_JUNK;
+      #   * ABORTS (deletes nothing) if it cannot resolve a release's children,
+      #     if the listing is empty, or if a deletion would ever hit a protected
+      #     version — so a bug or a flaky API can never eat a release.
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # Step 1: Remove orphaned untagged versions (platform manifests from old builds)
-      # Keep 10 most recent untagged versions to support the 10 most recent tagged releases
-      - name: Cleanup untagged frontend versions
-        uses: actions/delete-package-versions@v5
-        continue-on-error: true
-        with:
-          owner: dbca-wa
-          package-name: cannabis-frontend
-          package-type: container
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # Safety gate: the prune logic's guarantees are unit-tested. If the tests
+      # fail, the prune steps below do not run (this step is NOT best-effort).
+      - name: Verify prune logic (unit tests)
+        run: python3 .github/scripts/test_prune_ghcr.py
 
-      - name: Cleanup untagged backend versions
-        uses: actions/delete-package-versions@v5
+      # KEEP_RELEASES: tagged semver releases to retain, each with all children.
+      # KEEP_JUNK: orphaned untagged leftover layers to retain (recent history).
+      - name: Prune frontend package versions
         continue-on-error: true
-        with:
-          owner: dbca-wa
-          package-name: cannabis-backend
-          package-type: container
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_OWNER: dbca-wa
+          GHCR_PACKAGE: cannabis-frontend
+          KEEP_RELEASES: '15'
+          KEEP_JUNK: '10'
+        run: python3 .github/scripts/prune_ghcr.py
 
-      # Step 2: Remove old tagged versions, keeping the 10 most recent releases
-      # The 'stable' tag is always preserved via ignore-versions regex
-      - name: Cleanup old frontend releases
-        uses: actions/delete-package-versions@v5
+      - name: Prune backend package versions
         continue-on-error: true
-        with:
-          owner: dbca-wa
-          package-name: cannabis-frontend
-          package-type: container
-          min-versions-to-keep: 10
-          ignore-versions: '^stable$'
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Cleanup old backend releases
-        uses: actions/delete-package-versions@v5
-        continue-on-error: true
-        with:
-          owner: dbca-wa
-          package-name: cannabis-backend
-          package-type: container
-          min-versions-to-keep: 10
-          ignore-versions: '^stable$'
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_OWNER: dbca-wa
+          GHCR_PACKAGE: cannabis-backend
+          KEEP_RELEASES: '15'
+          KEEP_JUNK: '10'
+        run: python3 .github/scripts/prune_ghcr.py
 
   # ====================== VULNERABILITY SCAN ======================
   scan-frontend:
