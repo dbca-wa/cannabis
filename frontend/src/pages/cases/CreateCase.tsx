@@ -9,6 +9,7 @@ import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationForm } from "@/features/cases/components/forms/page/CaseCreationForm";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { usePracticeSheet } from "@/features/practice/components/PracticeSheetContext";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 /**
@@ -71,6 +72,36 @@ const CreateCaseContent = observer(() => {
 	}, [creationStore]);
 
 	const caseData = buildCaseData(formStore);
+
+	// Publish the in-progress values to the practice guide so its checklist can
+	// tick off as the operator fills the new-case form (before any case exists).
+	const { setLiveCreateData } = usePracticeSheet();
+	useEffect(() => {
+		setLiveCreateData({
+			case_number: formStore.formData.case_number,
+			submitting_officer: formStore.formData.submitting_officer_id ?? null,
+			submitting_officer_name:
+				formStore.selectedOfficers.submitting?.full_name ?? null,
+			station: formStore.formData.station_id ?? null,
+			station_name: formStore.selectedStation?.name ?? null,
+			approved_botanist: formStore.formData.approved_botanist_id ?? null,
+			defendant_names: formStore.selectedDefendants.map((d) =>
+				d.full_name && d.full_name.trim()
+					? d.full_name
+					: `${(d.last_name ?? "").toUpperCase()}, ${d.given_names ?? ""}`
+			),
+		});
+		return () => setLiveCreateData(null);
+	}, [
+		setLiveCreateData,
+		formStore.formData.case_number,
+		formStore.formData.submitting_officer_id,
+		formStore.formData.station_id,
+		formStore.formData.approved_botanist_id,
+		formStore.selectedOfficers.submitting,
+		formStore.selectedStation,
+		formStore.selectedDefendants,
+	]);
 
 	/**
 	 * Field change handler — updates the CaseFormStore field.

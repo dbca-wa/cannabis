@@ -41,6 +41,8 @@ const brief = {
 vi.mock("@/features/practice/data/practiceBriefs", () => ({
 	PRACTICE_BRIEFS: [brief],
 	getSessionPracticeBrief: () => brief,
+	getPracticeBriefIndex: () => 0,
+	setPracticeBriefIndex: () => {},
 }));
 
 const { PracticeModeBanner } = await import("./PracticeModeBanner");

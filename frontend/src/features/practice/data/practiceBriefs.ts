@@ -109,7 +109,7 @@ const SESSION_KEY = "practice-brief-index";
  * sessionStorage so it stays the same while the user works, and rotates to a new
  * example on the next session.
  */
-export const getSessionPracticeBrief = (): IPracticeBrief => {
+export const getPracticeBriefIndex = (): number => {
 	const stored = sessionStorage.getItem(SESSION_KEY);
 	let index = stored === null ? NaN : Number(stored);
 	if (
@@ -120,5 +120,15 @@ export const getSessionPracticeBrief = (): IPracticeBrief => {
 		index = Math.floor(Math.random() * PRACTICE_BRIEFS.length);
 		sessionStorage.setItem(SESSION_KEY, String(index));
 	}
-	return PRACTICE_BRIEFS[index];
+	return index;
 };
+
+/** Persist the chosen brief index (used by the prev/next controls). */
+export const setPracticeBriefIndex = (index: number): void => {
+	const n = PRACTICE_BRIEFS.length;
+	const clamped = ((index % n) + n) % n;
+	sessionStorage.setItem(SESSION_KEY, String(clamped));
+};
+
+export const getSessionPracticeBrief = (): IPracticeBrief =>
+	PRACTICE_BRIEFS[getPracticeBriefIndex()];

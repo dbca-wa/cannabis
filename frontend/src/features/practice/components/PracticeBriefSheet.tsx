@@ -1,4 +1,11 @@
-import { ClipboardList, X, Check, Circle, ChevronRight } from "lucide-react";
+import {
+	ClipboardList,
+	X,
+	Check,
+	Circle,
+	ChevronRight,
+	ChevronLeft,
+} from "lucide-react";
 import { useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 
@@ -79,8 +86,8 @@ const Checklist = ({ group }: ChecklistProps) => (
  */
 export const PracticeBriefSheet = () => {
 	const { isOn } = usePracticeMode();
-	const { isOpen, close } = usePracticeSheet();
-	const { data: brief } = usePracticeBrief(isOn);
+	const { isOpen, close, liveCreateData } = usePracticeSheet();
+	const { data: brief, index, total, next, previous } = usePracticeBrief(isOn);
 	const { pathname } = useLocation();
 
 	const caseId = caseIdFromPath(pathname);
@@ -103,10 +110,11 @@ export const PracticeBriefSheet = () => {
 	if (!isOn || !isOpen || !brief) return null;
 
 	const guidance = getPracticeGuidance(pathname);
-	const caseChecklist = buildCaseChecklist(
-		brief,
-		(liveCase as LiveCase | undefined) ?? null
-	);
+	// On the new-case form the data lives in memory (liveCreateData); on a saved
+	// case it comes from the query cache. Prefer whichever is present.
+	const caseSource: LiveCase | null =
+		liveCreateData ?? (liveCase as LiveCase | undefined) ?? null;
+	const caseChecklist = buildCaseChecklist(brief, caseSource);
 	const formChecklists = buildFormChecklists(
 		brief,
 		Array.isArray(liveForms) ? liveForms : []
@@ -159,15 +167,43 @@ export const PracticeBriefSheet = () => {
 
 				{/* Live checklist of the brief, ticking off as data is entered. */}
 				<section className="space-y-4 border-t border-amber-300 pt-4 dark:border-amber-800">
-					<div className="flex items-center gap-2">
-						<h3 className="text-[15px] font-semibold text-amber-900 dark:text-amber-100">
-							Your Priority 3 brief
-						</h3>
-						<Badge variant="secondary">Fake data</Badge>
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<h3 className="text-[15px] font-semibold text-amber-900 dark:text-amber-100">
+								Your Priority 3 brief
+							</h3>
+							<Badge variant="secondary">Fake data</Badge>
+						</div>
+						{total > 1 && (
+							<div className="flex items-center gap-1">
+								<Button
+									size="icon"
+									variant="outline"
+									className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
+									onClick={previous}
+									aria-label="Previous example"
+								>
+									<ChevronLeft size={16} />
+								</Button>
+								<span className="text-xs tabular-nums text-amber-800 dark:text-amber-200">
+									{index + 1}/{total}
+								</span>
+								<Button
+									size="icon"
+									variant="outline"
+									className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
+									onClick={next}
+									aria-label="Next example"
+								>
+									<ChevronRight size={16} />
+								</Button>
+							</div>
+						)}
 					</div>
 					<p className="text-xs text-amber-800/80 dark:text-amber-100/70">
 						Items tick off as you enter them. The approved botanist is the
-						default one, already selected for you — leave it as is.
+						default one, already selected for you — leave it as is. Use the
+						arrows to try a different example.
 					</p>
 
 					<Checklist group={caseChecklist} />
