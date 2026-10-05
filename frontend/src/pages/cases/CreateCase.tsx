@@ -9,7 +9,7 @@ import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationForm } from "@/features/cases/components/forms/page/CaseCreationForm";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
-import { usePracticeSheet } from "@/features/practice/components/PracticeSheetContext";
+import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 /**

@@ -15,7 +15,7 @@ import { getCaseById } from "@/features/cases/services/cases.service";
 import { getCaseForms } from "@/features/cases/services/forms.service";
 import { usePracticeMode } from "../hooks/usePracticeMode";
 import { usePracticeBrief } from "../hooks/usePracticeBrief";
-import { usePracticeSheet } from "./PracticeSheetContext";
+import { usePracticeSheet } from "./practiceSheet.context";
 import { getPracticeGuidance } from "../utils/practiceGuidance";
 import {
 	buildCaseChecklist,

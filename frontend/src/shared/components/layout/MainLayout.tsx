@@ -7,10 +7,8 @@ import { OutdatedBuildNotice } from "@/shared/components/feedback/OutdatedBuildN
 import { PracticeModeBanner } from "@/features/practice/components/PracticeModeBanner";
 import { PracticeBriefSheet } from "@/features/practice/components/PracticeBriefSheet";
 import { PracticeSheetReopenTab } from "@/features/practice/components/PracticeSheetReopenTab";
-import {
-	PracticeSheetProvider,
-	usePracticeSheet,
-} from "@/features/practice/components/PracticeSheetContext";
+import { PracticeSheetProvider } from "@/features/practice/components/PracticeSheetContext";
+import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { Outlet as RouterOutlet } from "react-router";
 import { observer } from "mobx-react-lite";

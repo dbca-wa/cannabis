@@ -2,7 +2,7 @@ import { Hand } from "lucide-react";
 import { motion } from "motion/react";
 
 import { usePracticeMode } from "../hooks/usePracticeMode";
-import { usePracticeSheet } from "./PracticeSheetContext";
+import { usePracticeSheet } from "./practiceSheet.context";
 
 interface PracticeActionPromptProps {
 	/** Short nudge, e.g. "Start here — create your practice case". */

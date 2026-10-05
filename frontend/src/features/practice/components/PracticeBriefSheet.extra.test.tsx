@@ -42,8 +42,8 @@ vi.mock("@/features/practice/data/practiceBriefs", () => ({
 }));
 
 const { PracticeBriefSheet } = await import("./PracticeBriefSheet");
-const { PracticeSheetProvider, usePracticeSheet } =
-	await import("./PracticeSheetContext");
+const { PracticeSheetProvider } = await import("./PracticeSheetContext");
+const { usePracticeSheet } = await import("./practiceSheet.context");
 
 describe("PracticeBriefSheet — example navigation", () => {
 	beforeEach(() => {

@@ -1,7 +1,7 @@
 import { ClipboardList } from "lucide-react";
 
 import { usePracticeMode } from "../hooks/usePracticeMode";
-import { usePracticeSheet } from "./PracticeSheetContext";
+import { usePracticeSheet } from "./practiceSheet.context";
 
 /**
  * A fixed tab on the right edge that reopens the practice guide once it has been

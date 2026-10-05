@@ -1,25 +1,11 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { LiveCase } from "../utils/practiceProgress";
-
-/**
- * Shared state for the practice brief sheet: its open/closed flag (so floating
- * prompts can open it from anywhere) and the live case-creation values the sheet
- * ticks against while the user fills in the new-case form, before any case
- * exists in the query cache.
- */
-interface PracticeSheetValue {
-	isOpen: boolean;
-	open: () => void;
-	close: () => void;
-	toggle: () => void;
-	/** Live values from the in-progress new-case form, or null when not on it. */
-	liveCreateData: LiveCase | null;
-	setLiveCreateData: (data: LiveCase | null) => void;
-}
-
-const PracticeSheetContext = createContext<PracticeSheetValue | null>(null);
+import {
+	PracticeSheetContext,
+	type PracticeSheetValue,
+} from "./practiceSheet.context";
 
 export const PracticeSheetProvider = ({
 	children,
@@ -46,20 +32,5 @@ export const PracticeSheetProvider = ({
 		<PracticeSheetContext.Provider value={value}>
 			{children}
 		</PracticeSheetContext.Provider>
-	);
-};
-
-/** Access the practice sheet controls. Safe no-op outside a provider. */
-export const usePracticeSheet = (): PracticeSheetValue => {
-	const ctx = useContext(PracticeSheetContext);
-	return (
-		ctx ?? {
-			isOpen: false,
-			open: () => {},
-			close: () => {},
-			toggle: () => {},
-			liveCreateData: null,
-			setLiveCreateData: () => {},
-		}
 	);
 };

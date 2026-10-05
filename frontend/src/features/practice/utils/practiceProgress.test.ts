@@ -62,6 +62,21 @@ describe("buildCaseChecklist", () => {
 		expect(done["Station"]).toBe(true);
 	});
 
+	it("leaves officer and station unticked when only ids are present", () => {
+		// Reproduces the reported bug: the create flow had set the officer/station
+		// ids but not their display names, so the guide could not match them.
+		const live: LiveCase = {
+			submitting_officer: 5,
+			submitting_officer_name: null,
+			station: 2,
+			station_name: null,
+		};
+		const group = buildCaseChecklist(brief, live);
+		const done = Object.fromEntries(group.items.map((i) => [i.label, i.done]));
+		expect(done["Submitting officer"]).toBe(false);
+		expect(done["Station"]).toBe(false);
+	});
+
 	it("ticks the botanist once one is set (the default)", () => {
 		const group = buildCaseChecklist(brief, { approved_botanist: 9 });
 		const bot = group.items.find((i) =>

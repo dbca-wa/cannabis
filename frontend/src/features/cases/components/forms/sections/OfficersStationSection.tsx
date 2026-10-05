@@ -14,7 +14,30 @@ import { ocrResultStore } from "../../../stores/ocrResult.store";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
-import { useOfficerById } from "@/features/police/hooks";
+import { useOfficerById, useStationById } from "@/features/police/hooks";
+import type {
+	PoliceOfficer,
+	PoliceOfficerTiny,
+} from "@/shared/types/backend-api.types";
+
+/**
+ * Project the full officer record onto the lightweight shape the form store
+ * keeps for display, so the certificate preview and practice guide can read a
+ * name even though the combobox only hands back an id.
+ */
+const toOfficerTiny = (officer: PoliceOfficer): PoliceOfficerTiny => ({
+	id: officer.id,
+	badge_number: officer.badge_number,
+	given_names: officer.given_names,
+	last_name: officer.last_name,
+	full_name: officer.full_name,
+	rank: officer.rank,
+	rank_display: officer.rank_display,
+	station: officer.station,
+	station_name: officer.station_details?.name ?? null,
+	email: "",
+	is_sworn: officer.is_sworn,
+});
 
 export const OfficersStationSection = observer(() => {
 	const formStore = useCaseFormStore();
@@ -58,26 +81,61 @@ export const OfficersStationSection = observer(() => {
 		formStore.formData.requesting_officer_id ?? null
 	);
 
+	// Keep the store's display records in step with the chosen officers. The
+	// comboboxes only emit an id, so without this the certificate preview and
+	// practice guide have no officer name to show or match against.
+	useEffect(() => {
+		if (
+			submittingOfficer &&
+			formStore.selectedOfficers.submitting?.id !== submittingOfficer.id
+		) {
+			formStore.setSelectedOfficer(
+				"submitting",
+				toOfficerTiny(submittingOfficer)
+			);
+		}
+	}, [submittingOfficer, formStore]);
+
+	useEffect(() => {
+		if (
+			requestingOfficer &&
+			formStore.selectedOfficers.requesting?.id !== requestingOfficer.id
+		) {
+			formStore.setSelectedOfficer(
+				"requesting",
+				toOfficerTiny(requestingOfficer)
+			);
+		}
+	}, [requestingOfficer, formStore]);
+
 	// Show station section when at least the submitting officer is set
 	const showStationSection = !!formStore.formData.submitting_officer_id;
 
 	// Derive station: prefer requesting officer's station, fallback to submitting
 	const derivedStationId =
 		requestingOfficer?.station || submittingOfficer?.station || null;
+	// The lightweight station record attached to whichever officer we derived
+	// from, used to populate the store's display station without a second fetch.
+	const derivedStationDetails =
+		requestingOfficer?.station_details ||
+		submittingOfficer?.station_details ||
+		null;
 
-	// Auto-set station when derived from officers changes
+	// Auto-set station when derived from officers changes. Store the full record
+	// (not just the id) so the station name is available for display and matching.
 	useEffect(() => {
-		if (showStationSection && derivedStationId) {
+		if (!showStationSection || !derivedStationId) return;
+		if (
+			derivedStationDetails &&
+			derivedStationDetails.id === derivedStationId
+		) {
+			if (formStore.selectedStation?.id !== derivedStationDetails.id) {
+				formStore.setSelectedStation(derivedStationDetails);
+			}
+		} else if (formStore.formData.station_id !== derivedStationId) {
 			formStore.updateField("station_id", derivedStationId);
 		}
-	}, [derivedStationId, showStationSection, formStore]);
-
-	// Also auto-set when only requesting officer has a station (don't wait for both)
-	useEffect(() => {
-		if (requestingOfficer?.station && !formStore.formData.station_id) {
-			formStore.updateField("station_id", requestingOfficer.station);
-		}
-	}, [requestingOfficer, formStore]);
+	}, [derivedStationId, derivedStationDetails, showStationSection, formStore]);
 
 	// Whether manual station selection is needed (neither officer has a station)
 	const needsManualStation = showStationSection && !derivedStationId;
@@ -89,6 +147,24 @@ export const OfficersStationSection = observer(() => {
 			formStore.setSelectedStation(null);
 		}
 	};
+
+	// When the station was chosen manually (no officer-derived station), fetch
+	// its details so the store carries the station name for display and matching.
+	const manualStationId = needsManualStation
+		? (formStore.formData.station_id ?? null)
+		: null;
+	const { data: manualStation } = useStationById(manualStationId);
+	useEffect(() => {
+		if (!manualStation) return;
+		if (formStore.selectedStation?.id === manualStation.id) return;
+		formStore.setSelectedStation({
+			id: manualStation.id,
+			name: manualStation.name,
+			phone: manualStation.phone,
+			address: manualStation.address ?? "",
+			postcode: "",
+		});
+	}, [manualStation, formStore]);
 
 	const handleBotanistChange = (botanistId: number | null) => {
 		if (botanistId) {

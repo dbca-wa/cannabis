@@ -48,8 +48,8 @@ vi.mock("@/features/practice/data/practiceBriefs", () => ({
 const { PracticeModeBanner } = await import("./PracticeModeBanner");
 const { PracticeBriefSheet } = await import("./PracticeBriefSheet");
 const { PracticeActionPrompt } = await import("./PracticeActionPrompt");
-const { PracticeSheetProvider, usePracticeSheet } =
-	await import("./PracticeSheetContext");
+const { PracticeSheetProvider } = await import("./PracticeSheetContext");
+const { usePracticeSheet } = await import("./practiceSheet.context");
 
 describe("Practice mode UI", () => {
 	beforeEach(() => {
