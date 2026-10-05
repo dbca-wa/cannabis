@@ -9,6 +9,8 @@ import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationForm } from "@/features/cases/components/forms/page/CaseCreationForm";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
+import { useOfficerById, useStationById } from "@/features/police/hooks";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
 /**
@@ -71,6 +73,50 @@ const CreateCaseContent = observer(() => {
 	}, [creationStore]);
 
 	const caseData = buildCaseData(formStore);
+
+	// Resolve the chosen officer and station to their display names. The officer
+	// steps only record ids on the form store (they never populate the store's
+	// "selected" display records), so the practice guide needs the names fetched
+	// here to tick its submitting-officer and station items off.
+	const submittingOfficerId = formStore.formData.submitting_officer_id ?? null;
+	const stationId = formStore.formData.station_id ?? null;
+	const { data: submittingOfficer } = useOfficerById(submittingOfficerId);
+	const { data: station } = useStationById(stationId);
+	const submittingOfficerName =
+		submittingOfficer?.id === submittingOfficerId
+			? (submittingOfficer?.full_name ?? null)
+			: null;
+	const stationName =
+		station?.id === stationId ? (station?.name ?? null) : null;
+
+	// Publish the in-progress values to the practice guide so its checklist can
+	// tick off as the operator fills the new-case form (before any case exists).
+	const { setLiveCreateData } = usePracticeSheet();
+	useEffect(() => {
+		setLiveCreateData({
+			case_number: formStore.formData.case_number,
+			submitting_officer: submittingOfficerId,
+			submitting_officer_name: submittingOfficerName,
+			station: stationId,
+			station_name: stationName,
+			approved_botanist: formStore.formData.approved_botanist_id ?? null,
+			defendant_names: formStore.selectedDefendants.map((d) =>
+				d.full_name && d.full_name.trim()
+					? d.full_name
+					: `${(d.last_name ?? "").toUpperCase()}, ${d.given_names ?? ""}`
+			),
+		});
+		return () => setLiveCreateData(null);
+	}, [
+		setLiveCreateData,
+		formStore.formData.case_number,
+		submittingOfficerId,
+		submittingOfficerName,
+		stationId,
+		stationName,
+		formStore.formData.approved_botanist_id,
+		formStore.selectedDefendants,
+	]);
 
 	/**
 	 * Field change handler — updates the CaseFormStore field.

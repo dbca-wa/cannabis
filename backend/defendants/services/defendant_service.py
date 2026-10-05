@@ -6,7 +6,7 @@ import json
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -42,8 +42,16 @@ class DefendantService:
         Raises:
             NotFound: If the defendant does not exist.
         """
+        from django.db.models import Q
+
+        from common.practice import active_is_practice
+
         try:
-            return Defendant.objects.annotate(cases_count=Count("cases")).get(pk=pk)
+            return Defendant.objects.annotate(
+                cases_count=Count(
+                    "cases", filter=Q(cases__is_practice=active_is_practice())
+                )
+            ).get(pk=pk)
         except Defendant.DoesNotExist:
             raise NotFound(f"Defendant with pk {pk} not found.")
 
@@ -58,9 +66,15 @@ class DefendantService:
         Returns:
             An annotated QuerySet of Defendant objects.
         """
+        from django.db.models import Q
+
+        from common.practice import active_is_practice
+
+        # Count only cases of the same kind as the defendants being listed.
+        _mode = Q(cases__is_practice=active_is_practice())
         queryset = Defendant.objects.annotate(
-            cases_count=Count("cases"),
-            case_count=Count("cases", distinct=True),
+            cases_count=Count("cases", filter=_mode),
+            case_count=Count("cases", filter=_mode, distinct=True),
         ).order_by("last_name", "given_names")
 
         if search:

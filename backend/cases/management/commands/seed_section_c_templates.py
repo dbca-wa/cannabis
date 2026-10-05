@@ -20,8 +20,15 @@ from ...models import SectionCTemplate
 
 # Each template is (name, content). Names are unique and used for matching.
 TEMPLATES = [
+    # Named to match the agreed feedback. "Female Plants" lists the bags as prose
+    # (e.g. "Bags T1, T2 and T3 contained female plants.") via the ready-made
+    # sentence, which never includes the word "numbers".
     (
-        "SME",
+        "Female Plants",
+        "{{female_plant_sentence}}",
+    ),
+    (
+        "SME Number",
         "Subsamples placed into Security Movement Envelope "
         "{{security_movement_envelope}}.",
     ),

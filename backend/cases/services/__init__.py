@@ -17,6 +17,7 @@ from .drug_bag_service import DrugBagService
 from .ocr_service import OcrService, ServiceUnavailable
 from .pdf_service import PDFService
 from .pdf_test_service import TestPDFService
+from .practice_service import PracticeService
 from .workflow_service import (
     WorkflowService,
     advance_form_phase,
@@ -33,6 +34,7 @@ __all__ = [
     "DrugBagService",
     "OcrService",
     "PDFService",
+    "PracticeService",
     "ServiceUnavailable",
     "TestPDFService",
     "WorkflowService",

@@ -1,0 +1,8 @@
+/**
+ * Practice mode API endpoint constants. Paths are relative to the API base URL,
+ * which already includes /api/v1/.
+ */
+export const PRACTICE_ENDPOINTS = {
+	MODE: "/practice/mode",
+	BRIEF: "/practice/brief",
+} as const;

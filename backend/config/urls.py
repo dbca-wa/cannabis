@@ -25,6 +25,7 @@ urlpatterns = [
     path("api/v1/users/", include("users.urls")),
     path("api/v1/police/", include("police.urls")),
     path("api/v1/cases/", include("cases.urls")),
+    path("api/v1/practice/", include("cases.practice_urls")),
     path("api/v1/defendants/", include("defendants.urls")),
     path("api/v1/system/", include("common.urls")),
     re_path(r"^files/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),

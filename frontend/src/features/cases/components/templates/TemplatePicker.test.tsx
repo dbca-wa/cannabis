@@ -16,6 +16,14 @@ const templates: ISectionCTemplate[] = [
 		created_at: "",
 		updated_at: "",
 	},
+	{
+		id: 2,
+		name: "SME",
+		content:
+			"Subsamples placed into Security Movement Envelope {{security_movement_envelope}}.",
+		created_at: "",
+		updated_at: "",
+	},
 ];
 const inertMutation = () => ({
 	mutate: vi.fn(),
@@ -194,5 +202,83 @@ describe("TemplatePicker — free typing after a template", () => {
 		await selectTagsTemplate(user);
 
 		expect(screen.queryByRole("status")).not.toBeInTheDocument();
+	});
+});
+
+describe("TemplatePicker — never applies an unresolvable template", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("disables a template whose data is missing on this form", async () => {
+		const user = userEvent.setup();
+		// No security_movement_envelope in caseData, so the SME template cannot
+		// resolve and must be offered disabled, not applicable.
+		renderPage(<Harness bags={[bag("A")]} onApplySpy={vi.fn()} />);
+		await user.click(screen.getByRole("combobox"));
+
+		const smeOption = screen.getByRole("option", { name: /SME/i });
+		expect(smeOption).toHaveAttribute("aria-disabled", "true");
+		expect(smeOption).toHaveTextContent(/missing data/i);
+	});
+
+	it("never emits a note containing [Pending] when data would re-resolve short", () => {
+		// Select the Tags template with bags, then re-render with NO bags so the
+		// template can no longer resolve. The picker must not push "[Pending]".
+		const onApply = vi.fn();
+		const { rerender } = renderPage(
+			<Harness bags={[bag("A")]} onApplySpy={onApply} />
+		);
+		// Simulate a selection having been applied, then the data going missing.
+		rerender(<Harness bags={[]} onApplySpy={onApply} />);
+
+		for (const call of onApply.mock.calls) {
+			expect(call[0]).not.toContain("[Pending]");
+		}
+	});
+});
+
+describe("TemplatePicker — per-form isolation", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	// AssessmentStep keys the picker by formId, so switching forms remounts it.
+	// A template selected on one form must not carry over and re-resolve onto
+	// another form's note (the reported SME "[Pending]" leak).
+	it("does not carry a selected template across a form switch", async () => {
+		const user = userEvent.setup();
+		const onApply = vi.fn();
+
+		// Form 2: has an SME, pick the SME template — it resolves and applies.
+		const { rerender } = renderPage(
+			<div>
+				<TemplatePicker
+					key={2}
+					caseData={{ case_number: "IR 2", security_movement_envelope: "WW1" }}
+					bags={[bag("A")]}
+					currentValue=""
+					onApply={onApply}
+				/>
+			</div>
+		);
+		await user.click(screen.getByRole("combobox"));
+		await user.click(screen.getByRole("option", { name: /SME/i }));
+		expect(onApply).toHaveBeenLastCalledWith(
+			"Subsamples placed into Security Movement Envelope WW1."
+		);
+		onApply.mockClear();
+
+		// Switch to form 1 (no SME) — the keyed remount starts with no selection,
+		// so nothing is applied to form 1's note.
+		rerender(
+			<div>
+				<TemplatePicker
+					key={1}
+					caseData={{ case_number: "IR 1" }}
+					bags={[bag("A")]}
+					currentValue=""
+					onApply={onApply}
+				/>
+			</div>
+		);
+
+		expect(onApply).not.toHaveBeenCalled();
 	});
 });

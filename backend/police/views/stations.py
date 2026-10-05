@@ -40,7 +40,6 @@ class PoliceStationListView(ListCreateAPIView):
     POST: Create new police station
     """
 
-    queryset = PoliceStation.objects.all().order_by("name")
     permission_classes = [HasAppAccess]
 
     def get_serializer_class(self):
@@ -52,11 +51,21 @@ class PoliceStationListView(ListCreateAPIView):
         return PoliceStationSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        # Fresh per request so the practice-mode manager sees the active context.
+        queryset = PoliceStation.objects.all().order_by("name")
 
-        # Annotate with case count (submissions linked to this station)
+        # Annotate with case count (submissions linked to this station), counting
+        # only cases of the same kind as the stations being listed.
+        from django.db.models import Q as _Q
+
+        from common.practice import active_is_practice
+
         queryset = queryset.annotate(
-            case_count=Count("case_involvement", distinct=True)
+            case_count=Count(
+                "case_involvement",
+                filter=_Q(case_involvement__is_practice=active_is_practice()),
+                distinct=True,
+            )
         )
 
         # Search functionality
@@ -122,9 +131,11 @@ class PoliceStationDetailView(RetrieveUpdateDestroyAPIView):
     DELETE: Delete police station
     """
 
-    queryset = PoliceStation.objects.all()
     serializer_class = PoliceStationSerializer
     permission_classes = [HasAppAccess]
+
+    def get_queryset(self):
+        return PoliceStation.objects.all()
 
     def perform_update(self, serializer):
         settings.LOGGER.info(

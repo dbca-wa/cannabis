@@ -17,6 +17,7 @@ import {
 	firstIncompleteSection,
 	type CaseSectionId,
 } from "../../../utils/caseSections";
+
 import { FormsNavigator } from "../FormsNavigator";
 import { CaseSection } from "./CaseSection";
 import { CaseSectionIndex } from "./CaseSectionIndex";
@@ -286,10 +287,11 @@ export const CaseProcessingPage = observer(
 								// Sole panel — fill the section rather than cap at the
 								// form's reading width.
 								<WizardPreviewPanel caseData={caseData} />
-							) : (
+							) : hasPreviewContent ? (
+								// Preview exists but is toggled off: on ultra-wide, show the
+								// assessment beside the preview; the two-column grid only
+								// applies when there is a preview to sit alongside.
 								<div className="min-[1920px]:grid min-[1920px]:grid-cols-2 min-[1920px]:gap-8">
-									{/* Fills the section width like Case Details; only
-									    shares the row with the preview on ultra-wide. */}
 									<div className="min-w-0">
 										{renderLockable(
 											<AssessmentStep
@@ -301,12 +303,23 @@ export const CaseProcessingPage = observer(
 											/>
 										)}
 									</div>
-									{hasPreviewContent && (
-										<div className="hidden min-[1920px]:block min-w-0 border-l pl-8">
-											<WizardPreviewPanel caseData={caseData} />
-										</div>
-									)}
+									<div className="hidden min-[1920px]:block min-w-0 border-l pl-8">
+										<WizardPreviewPanel caseData={caseData} />
+									</div>
 								</div>
+							) : (
+								// No preview to sit alongside — fill the full section width
+								// so the content and the Add Bag button line up with the
+								// other sections rather than hugging the left on wide screens.
+								renderLockable(
+									<AssessmentStep
+										caseData={caseData}
+										caseId={(caseData?.id as number) ?? 0}
+										isTouched
+										onFieldChange={onFieldChange}
+										onAddForm={onAddForm}
+									/>
+								)
 							)}
 						</div>
 					</CaseSection>

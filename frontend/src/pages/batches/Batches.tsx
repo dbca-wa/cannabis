@@ -30,6 +30,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { PracticeActionPrompt } from "@/features/practice/components/PracticeActionPrompt";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { useOfficerById } from "@/features/police/hooks/useOfficerById";
 import {
@@ -266,6 +267,8 @@ const Batches = () => {
 				title={`Batches${!isLoading ? ` (${batches.length})` : ""}`}
 				subtitle="Packaged certificate batches and their cost summaries."
 			/>
+
+			<PracticeActionPrompt message="Open your practice guide for the batching steps" />
 
 			{/* Outstanding invoices. A batch sits unfinished until its invoice number
 			    is recorded, so say so plainly rather than leaving it to a badge in

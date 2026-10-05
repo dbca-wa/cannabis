@@ -70,7 +70,10 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
 
     serializer_class = CertificateSerializer
     permission_classes = [HasAppAccess]
-    queryset = Certificate.objects.select_related("form", "form__case")
+
+    def get_queryset(self):
+        # Per request so the practice-mode manager sees the active context.
+        return Certificate.objects.select_related("form", "form__case")
 
     def perform_update(self, serializer):
         certificate = serializer.save()

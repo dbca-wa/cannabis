@@ -67,9 +67,15 @@ class FormDetailView(RetrieveUpdateDestroyAPIView):
 
     permission_classes = [HasAppAccess]
     serializer_class = Priority3FormSerializer
-    queryset = Priority3Form.objects.select_related(
-        "case", "certificate"
-    ).prefetch_related("bags__assessment")
+
+    def get_queryset(self):
+        # Evaluated per request so the practice-mode manager sees the active
+        # request context. A class-level ``queryset`` attribute is built once at
+        # import, before any request, which would freeze it to real-only and
+        # 404 every practice form.
+        return Priority3Form.objects.select_related(
+            "case", "certificate"
+        ).prefetch_related("bags__assessment")
 
     def perform_update(self, serializer):
         ensure_form_editable(serializer.instance, self.request.user)

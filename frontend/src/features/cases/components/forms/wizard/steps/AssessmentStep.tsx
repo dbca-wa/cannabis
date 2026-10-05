@@ -666,7 +666,11 @@ export const AssessmentStep = observer(function AssessmentStep({
 				completionLabel="Section C notes written"
 			>
 				<div className="space-y-4">
+					{/* Keyed by form so switching forms gives a fresh picker: its
+					    selected template never carries over and re-resolves onto
+					    another form's note. Section C is strictly per form. */}
 					<TemplatePicker
+						key={formId}
 						caseData={caseData}
 						bags={serverBags}
 						currentValue={localNotes}

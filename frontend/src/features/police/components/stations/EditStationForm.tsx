@@ -30,6 +30,7 @@ export const EditStationForm = ({
 		handleSubmit,
 		formState: { errors, isSubmitting, isValid },
 		setError,
+		setValue,
 	} = useForm<EditStationFormData>({
 		resolver: zodResolver(editStationSchema),
 		mode: "onChange",
@@ -39,6 +40,14 @@ export const EditStationForm = ({
 			phone: station.phone || "",
 		},
 	});
+
+	/** Title-case a string, handling spaces and hyphens (e.g. "south perth" → "South Perth"). */
+	const toTitleCase = (value: string): string =>
+		value
+			.replace(/\b\w/g, (char) => char.toUpperCase())
+			.replace(/-\w/g, (match) => `-${match.charAt(1).toUpperCase()}`);
+
+	const nameField = register("name");
 
 	const onSubmit = async (data: EditStationFormData) => {
 		try {
@@ -74,7 +83,13 @@ export const EditStationForm = ({
 				</Label>
 				<Input
 					id="name"
-					{...register("name")}
+					{...nameField}
+					onChange={(e) => {
+						setValue("name", toTitleCase(e.target.value), {
+							shouldValidate: true,
+							shouldDirty: true,
+						});
+					}}
 					placeholder="Enter station name"
 					disabled={isLoading}
 				/>

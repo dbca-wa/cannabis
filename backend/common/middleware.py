@@ -240,3 +240,56 @@ class SecurityHeadersMiddleware:
         )
 
         return response
+
+
+class PracticeModeMiddleware:
+    """Set the request-scoped practice context from the authenticated user.
+
+    Authentication is JWT, resolved by DRF during view dispatch rather than by
+    Django's AuthenticationMiddleware, so this middleware resolves the JWT user
+    itself for API requests. The context scopes which data the real queries
+    return; it is never used for authorisation.
+
+    Expired practice sessions are treated as off and their data purged lazily
+    here, so a user who leaves and returns the next day starts clean.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from common import practice
+
+        user = self._resolve_user(request)
+        in_practice = False
+        if user is not None and getattr(user, "is_authenticated", False):
+            if practice.is_in_practice_mode(user):
+                in_practice = True
+            else:
+                # Lazily clear and purge an expired session.
+                self._purge_if_expired(user)
+            practice.set_context(user, in_practice)
+        try:
+            return self.get_response(request)
+        finally:
+            practice.clear_context()
+
+    @staticmethod
+    def _resolve_user(request):
+        if not request.path.startswith("/api/"):
+            return None
+        try:
+            from rest_framework_simplejwt.authentication import JWTAuthentication
+
+            result = JWTAuthentication().authenticate(request)
+            return result[0] if result else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _purge_if_expired(user):
+        prefs = user.get_preferences
+        if getattr(prefs, "practice_mode", False):
+            from cases.services.practice_service import PracticeService
+
+            PracticeService.disable_for_user(user)
