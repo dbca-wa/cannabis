@@ -1,20 +1,21 @@
 /**
  * The fake brief to work through on the case page while in practice mode.
  *
- * The brief is generated server-side. It is fetched once and kept for the life
- * of the session (the endpoint regenerates on each call, so it is not refetched)
- * giving the user a stable set of details to enter.
+ * The brief is hardcoded (see data/practiceBriefs.ts) so the examples can be
+ * controlled and extended directly. One is chosen per session and kept stable
+ * for the life of that session.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
-import { getPracticeBrief } from "../services/practice.service";
+import { getSessionPracticeBrief } from "../data/practiceBriefs";
+import type { IPracticeBrief } from "../types/practice.types";
 
-export const usePracticeBrief = (enabled: boolean) =>
-	useQuery({
-		queryKey: ["practice", "brief"],
-		queryFn: getPracticeBrief,
-		enabled,
-		staleTime: Infinity,
-		gcTime: Infinity,
-		refetchOnWindowFocus: false,
-	});
+export const usePracticeBrief = (
+	enabled: boolean
+): { data: IPracticeBrief | null; isLoading: boolean } => {
+	const data = useMemo(
+		() => (enabled ? getSessionPracticeBrief() : null),
+		[enabled]
+	);
+	return { data, isLoading: false };
+};

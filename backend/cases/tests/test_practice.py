@@ -263,26 +263,3 @@ class TestModeEndpoints:
         off = botanist_client.delete("/api/v1/practice/mode")
         assert off.status_code == 200
         assert off.data["practice_mode"] is False
-
-    def test_brief_uses_only_going_forward_determinations(self, botanist_client):
-        resp = botanist_client.get("/api/v1/practice/brief")
-        assert resp.status_code == 200
-        allowed = {"cannabis_sativa", "degraded", "inconclusive", "not_cannabis"}
-        for bag in resp.data["bags"]:
-            assert bag["determination"] in allowed
-
-    def test_brief_includes_the_expected_fields(self, botanist_client):
-        resp = botanist_client.get("/api/v1/practice/brief")
-        data = resp.data
-        assert data["case_number"].startswith("PRACTICE-")
-        assert {"rank_display", "badge_number", "last_name"} <= set(
-            data["officer"].keys()
-        )
-        bag = data["bags"][0]
-        assert {
-            "original_seal",
-            "new_seal",
-            "content_type",
-            "determination",
-            "female_plants",
-        } <= set(bag.keys())

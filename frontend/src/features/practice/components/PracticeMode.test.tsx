@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderPage } from "@/test/page-test-utils";
 
 const authState: { user: Record<string, unknown> | null } = { user: null };
@@ -8,21 +9,11 @@ vi.mock("@/features/auth/hooks/useAuth", () => ({
 	useAuth: () => ({ user: authState.user, refetchUser: vi.fn() }),
 }));
 
-const briefMock = vi.fn();
-vi.mock("@/features/practice/services/practice.service", () => ({
-	enablePracticeMode: vi.fn(),
-	disablePracticeMode: vi.fn(),
-	getPracticeBrief: () => briefMock(),
-}));
-
-const { PracticeModeBanner } = await import("./PracticeModeBanner");
-const { PracticeBriefPanel } = await import("./PracticeBriefPanel");
-const { PracticeCoachmark } = await import("./PracticeCoachmark");
-
+// The brief is hardcoded; mock the session picker to a known example.
 const brief = {
+	label: "Test brief",
 	case_number: "PRACTICE-123456",
 	officer: {
-		rank: "sergeant",
 		rank_display: "Sergeant",
 		badge_number: "PD51021",
 		given_names: "Alex",
@@ -31,23 +22,36 @@ const brief = {
 	},
 	station: "Fremantle",
 	defendant: { given_names: "Chris", last_name: "Nguyen" },
-	botanist: { given_names: "Sam", last_name: "Patel" },
-	security_movement_envelope: "SME1234",
-	bags: [
+	forms: [
 		{
-			original_seal: "T01234",
-			new_seal: "N01234",
-			content_type: "plant_material",
-			determination: "cannabis_sativa",
-			female_plants: true,
+			security_movement_envelope: "SME1234",
+			bags: [
+				{
+					original_seal: "T01234",
+					new_seal: "N01234",
+					content_type: "plant_material",
+					determination: "cannabis_sativa",
+					female_plants: true,
+				},
+			],
 		},
 	],
 };
 
+vi.mock("@/features/practice/data/practiceBriefs", () => ({
+	PRACTICE_BRIEFS: [brief],
+	getSessionPracticeBrief: () => brief,
+}));
+
+const { PracticeModeBanner } = await import("./PracticeModeBanner");
+const { PracticeBriefSheet } = await import("./PracticeBriefSheet");
+const { PracticeActionPrompt } = await import("./PracticeActionPrompt");
+const { PracticeSheetProvider, usePracticeSheet } =
+	await import("./PracticeSheetContext");
+
 describe("Practice mode UI", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		briefMock.mockResolvedValue(brief);
 	});
 
 	describe("PracticeModeBanner", () => {
@@ -70,42 +74,116 @@ describe("Practice mode UI", () => {
 		});
 	});
 
-	describe("PracticeBriefPanel", () => {
+	describe("PracticeBriefSheet", () => {
 		it("renders nothing when not in practice mode", () => {
 			authState.user = { practice_mode: false };
-			const { container } = renderPage(<PracticeBriefPanel />);
+			const { container } = renderPage(
+				<PracticeSheetProvider>
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>
+			);
 			expect(container).toBeEmptyDOMElement();
 		});
 
-		it("shows the brief details when in practice mode", async () => {
+		it("shows the brief checklist and route guidance when in practice mode", async () => {
 			authState.user = { practice_mode: true };
-			renderPage(<PracticeBriefPanel />);
+			renderPage(
+				<PracticeSheetProvider>
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>,
+				{ initialEntries: ["/cases/add"] }
+			);
+			// Brief details as checklist items.
 			expect(await screen.findByText("PRACTICE-123456")).toBeInTheDocument();
-			expect(screen.getByText(/T01234/)).toBeInTheDocument();
-			expect(screen.getByText(/SME1234/)).toBeInTheDocument();
+			expect(screen.getByText(/Bag T01234/)).toBeInTheDocument();
+			expect(screen.getByText("SME1234")).toBeInTheDocument();
+			// Botanist is the default — the guide says so rather than naming one.
+			expect(screen.getByText(/use the default/i)).toBeInTheDocument();
+			// Route-aware guidance for the case-creation page.
+			expect(screen.getByText(/Step 1 — Create the case/i)).toBeInTheDocument();
+		});
+
+		it("gives batching guidance on the Batches page", async () => {
+			authState.user = { practice_mode: true };
+			renderPage(
+				<PracticeSheetProvider>
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>,
+				{ initialEntries: ["/batches"] }
+			);
+			expect(await screen.findByText(/Batch and invoice/i)).toBeInTheDocument();
+		});
+
+		it("can be hidden with the close button", async () => {
+			const user = userEvent.setup();
+			authState.user = { practice_mode: true };
+			renderPage(
+				<PracticeSheetProvider>
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>
+			);
+			await screen.findByText("PRACTICE-123456");
+			await user.click(
+				screen.getByRole("button", { name: /hide practice guide/i })
+			);
+			expect(screen.queryByText("PRACTICE-123456")).not.toBeInTheDocument();
 		});
 	});
 
-	describe("PracticeCoachmark", () => {
+	describe("PracticeActionPrompt", () => {
 		it("hides outside practice mode", () => {
 			authState.user = { practice_mode: false };
 			const { container } = renderPage(
-				<PracticeCoachmark id="t1" title="Hint">
-					body
-				</PracticeCoachmark>
+				<PracticeSheetProvider>
+					<PracticeActionPrompt message="Start here" />
+				</PracticeSheetProvider>
 			);
 			expect(container).toBeEmptyDOMElement();
 		});
 
-		it("shows guidance in practice mode", () => {
+		it("shows the nudge in practice mode", () => {
 			authState.user = { practice_mode: true };
 			renderPage(
-				<PracticeCoachmark id="t2" title="Do this">
-					helpful body
-				</PracticeCoachmark>
+				<PracticeSheetProvider>
+					<PracticeActionPrompt message="Start here — create your practice case" />
+				</PracticeSheetProvider>
 			);
-			expect(screen.getByText("Do this")).toBeInTheDocument();
-			expect(screen.getByText("helpful body")).toBeInTheDocument();
+			expect(
+				screen.getByText(/start here — create your practice case/i)
+			).toBeInTheDocument();
+		});
+
+		it("opens the sheet when clicked", async () => {
+			const user = userEvent.setup();
+			authState.user = { practice_mode: true };
+
+			// A probe that reports the sheet's open state, closed to start.
+			const Probe = () => {
+				const { isOpen } = usePracticeSheet();
+				return <span>sheet:{isOpen ? "open" : "closed"}</span>;
+			};
+			const Closer = () => {
+				const { close } = usePracticeSheet();
+				return (
+					<button type="button" onClick={close}>
+						closeit
+					</button>
+				);
+			};
+
+			renderPage(
+				<PracticeSheetProvider>
+					<Closer />
+					<Probe />
+					<PracticeActionPrompt message="Start here" />
+				</PracticeSheetProvider>
+			);
+
+			await user.click(screen.getByRole("button", { name: "closeit" }));
+			expect(screen.getByText("sheet:closed")).toBeInTheDocument();
+
+			await user.click(screen.getByRole("button", { name: /start here/i }));
+			expect(screen.getByText("sheet:open")).toBeInTheDocument();
 		});
 	});
 });

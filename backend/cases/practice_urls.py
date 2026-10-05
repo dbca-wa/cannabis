@@ -6,5 +6,4 @@ from . import views
 
 urlpatterns = [
     path("mode", views.PracticeModeView.as_view(), name="practice_mode"),
-    path("brief", views.PracticeBriefView.as_view(), name="practice_brief"),
 ]

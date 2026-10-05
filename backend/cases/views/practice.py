@@ -1,7 +1,8 @@
 """Practice mode endpoints.
 
-Turning the mode on/off and fetching the fake brief. The actual workflow is done
-through the real screens, which honour the mode via the request-scoped context.
+Turning the mode on and off. The fake brief itself is hardcoded on the client
+(it drives the on-screen guide), and the actual workflow is done through the real
+screens, which honour the mode via the request-scoped context.
 """
 
 from rest_framework.response import Response
@@ -11,7 +12,6 @@ from rest_framework.views import APIView
 from common.practice import is_in_practice_mode, practice_expires_at
 from users.permissions import HasAppAccess
 
-from ..serializers import PracticeBriefSerializer
 from ..services.practice_service import PracticeService
 
 
@@ -37,13 +37,3 @@ class PracticeModeView(APIView):
     def delete(self, request):
         PracticeService.disable_for_user(request.user)
         return Response(_mode_payload(request.user), status=HTTP_200_OK)
-
-
-class PracticeBriefView(APIView):
-    """GET: a fresh fake brief for the user to work through on the case page."""
-
-    permission_classes = [HasAppAccess]
-
-    def get(self, request):
-        brief = PracticeService.generate_brief()
-        return Response(PracticeBriefSerializer(brief).data, status=HTTP_200_OK)

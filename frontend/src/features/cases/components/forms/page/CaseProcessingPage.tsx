@@ -17,8 +17,7 @@ import {
 	firstIncompleteSection,
 	type CaseSectionId,
 } from "../../../utils/caseSections";
-import { PracticeBriefPanel } from "@/features/practice/components/PracticeBriefPanel";
-import { PracticeCoachmark } from "@/features/practice/components/PracticeCoachmark";
+
 import { FormsNavigator } from "../FormsNavigator";
 import { CaseSection } from "./CaseSection";
 import { CaseSectionIndex } from "./CaseSectionIndex";
@@ -240,9 +239,6 @@ export const CaseProcessingPage = observer(
 					</div>
 				)}
 
-				{/* The fake paperwork to enter, shown only in practice mode. */}
-				<PracticeBriefPanel />
-
 				<div className="space-y-10 pb-10">
 					<CaseSection
 						id="details"
@@ -251,15 +247,6 @@ export const CaseProcessingPage = observer(
 						state={sectionStates.details}
 						reason={describeSectionState("details", flags)}
 					>
-						<PracticeCoachmark
-							id="details"
-							title="Step 1 — fill in the case details"
-						>
-							Copy the police reference, received date, defendant and officers
-							from your brief. If the officer isn&apos;t found, use{" "}
-							<strong>Add new officer</strong> to create them — their station is
-							tied to them as you go.
-						</PracticeCoachmark>
 						{renderLockable(
 							<CaseCreationSummaryStep
 								caseData={caseData}
@@ -288,15 +275,6 @@ export const CaseProcessingPage = observer(
 						}
 					>
 						<div className="space-y-4">
-							<PracticeCoachmark
-								id="assessment"
-								title="Step 2 — record the samples"
-							>
-								Add a Priority 3 form, then add each drug bag from your brief:
-								its original and new seal tag numbers, the content type, your
-								determination, and whether it holds female plants. Add the
-								security movement envelope if your brief lists one.
-							</PracticeCoachmark>
 							<FormsNavigator
 								caseId={caseId}
 								activeFormId={activeFormId}
@@ -353,16 +331,6 @@ export const CaseProcessingPage = observer(
 						state={sectionStates.certificates}
 						reason={describeSectionState("certificates", flags)}
 					>
-						<PracticeCoachmark
-							id="certificates"
-							title="Step 3 — generate the certificates"
-						>
-							Generate a certificate for each form and review it, then mark the
-							form <strong>Ready</strong>. Once every form is ready,{" "}
-							<strong>Finalise</strong> the case, then head to{" "}
-							<strong>Batches</strong> to batch it and record a practice
-							invoice.
-						</PracticeCoachmark>
 						<UnsignedCertificateStep
 							caseId={caseId}
 							lockActions={lockForNonAdmin}
