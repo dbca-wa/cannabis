@@ -57,13 +57,21 @@ export interface PracticeProgressInput {
 	derivedStatus?: CasePhase | null;
 	/** This case's Priority 3 forms. */
 	forms?: PracticeFormProgress[];
+	/**
+	 * Whether every per-form brief item is recorded (form added, bags entered
+	 * and assessed, SME where required). When true, the "record the samples"
+	 * step is done and the guide advances to "generate certificates" even before
+	 * a certificate is generated.
+	 */
+	formsRecorded?: boolean;
 }
 
 /**
  * Derive the current step (1–6) from the live case and its forms.
  *
  * - No saved case yet .................................. 1 (create)
- * - Case in assessment ................................ 2 (record samples)
+ * - Case in assessment, samples not all recorded ...... 2 (record samples)
+ * - Case in assessment, all samples recorded .......... 3 (generate certs)
  * - Certificates generated, not all marked ready ...... 3 (generate/review)
  * - All forms generated and marked ready .............. 4 (finalise)
  * - Finalised, awaiting batching ...................... 5 (batch)
@@ -87,8 +95,9 @@ export const derivePracticeStep = (p: PracticeProgressInput): number => {
 		return allReady ? 4 : 3;
 	}
 
-	// assessment (or anything earlier): still recording the samples.
-	return 2;
+	// Assessment phase: still recording the samples, unless every per-form brief
+	// item is recorded — then the next action is to generate the certificates.
+	return p.formsRecorded ? 3 : 2;
 };
 
 const INSTRUCTIONS: Record<
@@ -98,28 +107,31 @@ const INSTRUCTIONS: Record<
 	1: {
 		heading: "Step 1 — Create the case",
 		instructions: [
-			"Type the police reference from your brief into Police Reference Number.",
-			"Set the Received Date.",
-			"Add the defendant, submitting officer and station from your brief.",
+			"From the Dashboard or Cases page, click 'New Case' on the top right.",
+			"Type the police reference from your brief below into Police Reference Number. In real work this comes from an official Priority 3 form.",
+			"Leave the Received Date — it defaults to the date you create the case.",
+			"Add the defendant, submitting officer and station from your brief below.",
 			"If an officer or station is not found, use Add New to create it.",
-			"Click Create Case when every field matches your brief.",
+			"The Approved Botanist is the default one, already selected for you — leave it as is.",
+			"Create Case stays disabled until every field matches your brief below.",
 		],
 	},
 	2: {
 		heading: "Step 2 — Record the samples",
 		instructions: [
 			"In the Assessment section, add a Priority 3 form.",
-			"Add each drug bag from your brief: the original and new seal tag numbers, content type and determination.",
+			"Add each drug bag from your brief below: the original and new seal tag numbers, content type and determination.",
 			"Mark whether a bag holds female plants where your brief says so.",
 			"Add the Section C note or template if your brief lists a security movement envelope or female plants.",
-			"Every bag in the checklist ticks off as you record it.",
+			"Each item in the 'On the form' checklist ticks off as you record it.",
 		],
 	},
 	3: {
 		heading: "Step 3 — Generate the certificates",
 		instructions: [
+			"The samples are all recorded — now produce the certificates.",
 			"In the Certificates section, click Generate for each form.",
-			"Review the generated certificate against your brief.",
+			"Review the generated certificate against your brief below.",
 			"Click Mark Ready on each certificate once it looks right.",
 		],
 	},
@@ -175,9 +187,19 @@ export const getPracticeGuidance = (
 	}
 
 	const copy = INSTRUCTIONS[n] ?? INSTRUCTIONS[1];
+	let instructions = copy.instructions;
+
+	// Once the user is on the new-case form, the "click New Case" nudge is no
+	// longer relevant — drop it so the first instruction is the first field.
+	if (n === 1 && pathname.startsWith("/cases/add")) {
+		instructions = instructions.filter(
+			(line) => !line.includes("click 'New Case'")
+		);
+	}
+
 	return {
 		heading: copy.heading,
-		instructions: copy.instructions,
+		instructions,
 		steps: buildSteps(n),
 		currentStep: n,
 	};

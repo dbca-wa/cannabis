@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
 	buildCaseChecklist,
 	buildFormChecklists,
+	isCaseChecklistComplete,
+	areFormChecklistsComplete,
 	type LiveCase,
 } from "./practiceProgress";
 import type { IPracticeBrief } from "../types/practice.types";
@@ -107,6 +109,20 @@ describe("buildCaseChecklist", () => {
 });
 
 describe("buildFormChecklists", () => {
+	it("includes an 'Add a Priority 3 form' item that ticks when a form exists", () => {
+		const empty = buildFormChecklists(brief, []);
+		const addItem = empty[0].items.find((i) =>
+			i.label.includes("Add a Priority 3 form")
+		);
+		expect(addItem?.done).toBe(false);
+
+		const withForm = buildFormChecklists(brief, [{ bags: [] }]);
+		expect(
+			withForm[0].items.find((i) => i.label.includes("Add a Priority 3 form"))
+				?.done
+		).toBe(true);
+	});
+
 	it("labels a bag with both the original and new seal tags", () => {
 		const groups = buildFormChecklists(brief, []);
 		const bag = groups[0].items.find((i) => i.label.startsWith("Bag"));
@@ -168,5 +184,42 @@ describe("buildFormChecklists", () => {
 		expect(groups[0].items.find((i) => i.label.startsWith("Bag"))?.done).toBe(
 			false
 		);
+	});
+});
+
+describe("completeness helpers", () => {
+	const fullCase: LiveCase = {
+		case_number: "PRACTICE-480021",
+		submitting_officer: 5,
+		submitting_officer_name: "Alex Turner",
+		station: 2,
+		station_name: "Fremantle",
+		approved_botanist: 9,
+		defendant_names: ["NGUYEN, Chris"],
+	};
+
+	it("isCaseChecklistComplete is false until every item matches, then true", () => {
+		expect(isCaseChecklistComplete(brief, null)).toBe(false);
+		expect(isCaseChecklistComplete(brief, fullCase)).toBe(true);
+	});
+
+	it("areFormChecklistsComplete is false until the form, SME and bag are recorded", () => {
+		expect(areFormChecklistsComplete(brief, [])).toBe(false);
+		// Form added but nothing else — still incomplete.
+		expect(areFormChecklistsComplete(brief, [{ bags: [] }])).toBe(false);
+		// Fully recorded: SME + the assessed, re-sealed bag.
+		const complete = [
+			{
+				security_movement_envelope: "SME100",
+				bags: [
+					{
+						seal_tag_numbers: "T10041",
+						new_seal_tag_numbers: "N20041",
+						assessment: { determination: "cannabis_sativa" },
+					},
+				],
+			},
+		];
+		expect(areFormChecklistsComplete(brief, complete)).toBe(true);
 	});
 });

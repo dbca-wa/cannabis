@@ -6,10 +6,20 @@ describe("derivePracticeStep", () => {
 		expect(derivePracticeStep({ caseExists: false })).toBe(1);
 	});
 
-	it("is step 2 while recording samples (assessment)", () => {
+	it("is step 2 while recording samples (assessment, not all recorded)", () => {
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "assessment" })
 		).toBe(2);
+	});
+
+	it("advances to step 3 once all samples are recorded, before any cert", () => {
+		expect(
+			derivePracticeStep({
+				caseExists: true,
+				derivedStatus: "assessment",
+				formsRecorded: true,
+			})
+		).toBe(3);
 	});
 
 	it("is step 3 once certificates are generated but not all marked ready", () => {
@@ -71,5 +81,21 @@ describe("getPracticeGuidance", () => {
 	it("does not pull a later step back on the batches page", () => {
 		const g = getPracticeGuidance("/batches", 6);
 		expect(g.currentStep).toBe(6);
+	});
+
+	it("tells the user to click New Case when not yet on the create form", () => {
+		const g = getPracticeGuidance("/cases", 1);
+		expect(g.instructions[0]).toMatch(/click 'New Case'/);
+	});
+
+	it("drops the New Case nudge once on the create form", () => {
+		const g = getPracticeGuidance("/cases/add", 1);
+		expect(g.instructions.some((l) => l.includes("click 'New Case'"))).toBe(
+			false
+		);
+		// The received-date default note is present.
+		expect(g.instructions.some((l) => /defaults to the date/.test(l))).toBe(
+			true
+		);
 	});
 });

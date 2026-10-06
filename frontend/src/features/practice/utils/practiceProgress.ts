@@ -126,6 +126,13 @@ export const buildFormChecklists = (
 		const liveBags = live?.bags ?? [];
 		const items: ChecklistItem[] = [];
 
+		// The first thing to do on this step is add the Priority 3 form itself;
+		// it ticks off once the matching live form exists.
+		items.push({
+			label: "Add a Priority 3 form",
+			done: !!live,
+		});
+
 		if (bf.security_movement_envelope) {
 			items.push({
 				label: "Security movement envelope",
@@ -166,4 +173,26 @@ export const buildFormChecklists = (
 			items,
 		};
 	});
+};
+
+/** Whether every case-level checklist item matches the brief. */
+export const isCaseChecklistComplete = (
+	brief: IPracticeBrief,
+	liveCase: LiveCase | null
+): boolean => buildCaseChecklist(brief, liveCase).items.every((i) => i.done);
+
+/**
+ * Whether every per-form checklist item is complete — the Priority 3 form is
+ * added, its bags recorded and assessed, and any SME entered. Used to advance
+ * the guide from "record the samples" to "generate certificates".
+ */
+export const areFormChecklistsComplete = (
+	brief: IPracticeBrief,
+	liveForms: LiveForm[]
+): boolean => {
+	const groups = buildFormChecklists(brief, liveForms);
+	return (
+		groups.length > 0 &&
+		groups.every((g) => g.items.length > 0 && g.items.every((i) => i.done))
+	);
 };

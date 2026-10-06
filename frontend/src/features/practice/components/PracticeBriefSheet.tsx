@@ -28,6 +28,7 @@ import {
 import {
 	buildCaseChecklist,
 	buildFormChecklists,
+	areFormChecklistsComplete,
 	type ChecklistGroup,
 	type LiveCase,
 } from "../utils/practiceProgress";
@@ -202,11 +203,18 @@ export const PracticeBriefSheet = () => {
 
 	let step: number;
 	if (caseId != null && liveCase) {
+		const formsForProgress = Array.isArray(liveForms)
+			? liveForms
+			: liveCase.forms;
 		step = derivePracticeStep({
 			caseExists: true,
 			derivedStatus: liveCase.derived_status,
-			forms: toFormProgress(
-				Array.isArray(liveForms) ? liveForms : liveCase.forms
+			forms: toFormProgress(formsForProgress),
+			// Advance to "generate certificates" once every per-form brief item
+			// is recorded, even before a certificate exists.
+			formsRecorded: areFormChecklistsComplete(
+				brief,
+				Array.isArray(liveForms) ? liveForms : []
 			),
 		});
 	} else if (caseId == null && practiceCases?.results?.length) {
@@ -323,9 +331,10 @@ export const PracticeBriefSheet = () => {
 						)}
 					</div>
 					<p className="text-xs text-amber-800/80 dark:text-amber-100/70">
-						Items tick off as you enter them. The approved botanist is the
-						default one, already selected for you — leave it as is. Use the
-						arrows to try a different example.
+						This is practice data. In real work it would come from an official
+						Priority 3 form. Items tick off as you enter them from your brief
+						below. The approved botanist is the default one, already selected
+						for you — leave it as is. Use the arrows to try a different example.
 					</p>
 
 					<Checklist group={caseChecklist} />
