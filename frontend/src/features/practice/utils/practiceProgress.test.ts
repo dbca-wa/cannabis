@@ -124,67 +124,76 @@ describe("buildFormChecklists", () => {
 		).toBe(true);
 	});
 
-	it("labels a bag with both the original and new seal tags", () => {
+	// A fully-correct live bag matching the brief's single bag.
+	const correctBag = {
+		seal_tag_numbers: "T10041",
+		new_seal_tag_numbers: "N20041",
+		content_type: "plant",
+		contains_female_plants: true,
+		assessment: { determination: "cannabis_sativa" },
+	};
+
+	it("labels a bag 'Add Bag' with both the original and new seal tags", () => {
 		const groups = buildFormChecklists(brief, []);
-		const bag = groups[0].items.find((i) => i.label.startsWith("Bag"));
+		const bag = groups[0].items.find((i) => i.label.startsWith("Add Bag"));
 		expect(bag?.label).toContain("original T10041");
 		expect(bag?.label).toContain("new N20041");
 	});
 
-	it("ticks the SME and a bag once recorded, assessed and re-sealed", () => {
+	it("ticks the SME and a bag once every detail matches the brief", () => {
 		const live = [
-			{
-				security_movement_envelope: "SME100",
-				bags: [
-					{
-						seal_tag_numbers: "T10041",
-						new_seal_tag_numbers: "N20041",
-						assessment: { determination: "cannabis_sativa" },
-					},
-				],
-			},
+			{ security_movement_envelope: "SME100", bags: [{ ...correctBag }] },
 		];
 		const groups = buildFormChecklists(brief, live);
 		const items = groups[0].items;
 		expect(items.find((i) => i.label.includes("envelope"))?.done).toBe(true);
-		const bag = items.find((i) => i.label.startsWith("Bag"));
-		expect(bag?.done).toBe(true);
+		expect(items.find((i) => i.label.startsWith("Add Bag"))?.done).toBe(true);
+	});
+
+	it("leaves a bag unticked when the content type is wrong", () => {
+		const live = [{ bags: [{ ...correctBag, content_type: "seed" }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked when the determination is wrong", () => {
+		const live = [
+			{
+				bags: [
+					{ ...correctBag, assessment: { determination: "not_cannabis" } },
+				],
+			},
+		];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked when the female-plants flag is wrong", () => {
+		const live = [{ bags: [{ ...correctBag, contains_female_plants: false }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
 	});
 
 	it("leaves a bag unticked until the new seal tag is entered", () => {
-		const live = [
-			{
-				bags: [
-					{
-						seal_tag_numbers: "T10041",
-						new_seal_tag_numbers: "",
-						assessment: { determination: "cannabis_sativa" },
-					},
-				],
-			},
-		];
+		const live = [{ bags: [{ ...correctBag, new_seal_tag_numbers: "" }] }];
 		const groups = buildFormChecklists(brief, live);
-		expect(groups[0].items.find((i) => i.label.startsWith("Bag"))?.done).toBe(
-			false
-		);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
 	});
 
 	it("leaves a bag unticked until it has an assessment", () => {
-		const live = [
-			{
-				bags: [
-					{
-						seal_tag_numbers: "T10041",
-						new_seal_tag_numbers: "N20041",
-						assessment: null,
-					},
-				],
-			},
-		];
+		const live = [{ bags: [{ ...correctBag, assessment: null }] }];
 		const groups = buildFormChecklists(brief, live);
-		expect(groups[0].items.find((i) => i.label.startsWith("Bag"))?.done).toBe(
-			false
-		);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
 	});
 });
 
@@ -242,6 +251,8 @@ describe("completeness helpers", () => {
 					{
 						seal_tag_numbers: "T10041",
 						new_seal_tag_numbers: "N20041",
+						content_type: "plant",
+						contains_female_plants: true,
 						assessment: { determination: "cannabis_sativa" },
 					},
 				],

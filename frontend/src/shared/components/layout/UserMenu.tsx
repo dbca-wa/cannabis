@@ -198,26 +198,45 @@ const UserMenu = observer((_props: UserMenuProps) => {
 					</div>
 				</div>
 
-				{/* Practice mode toggle */}
+				{/* Practice mode toggle — styled like the theme toggle */}
 				<div className="border-t border-border/60 p-2">
-					<button
-						onClick={handlePracticeToggle}
-						disabled={practice.isToggling}
-						className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-[13px] transition-colors cursor-pointer disabled:opacity-60 ${
-							practice.isOn
-								? "bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200"
-								: "hover:bg-accent"
-						}`}
-					>
-						<GraduationCap className="w-4 h-4 text-muted-foreground" />
-						{practice.isOn ? "Leave practice mode" : "Enter practice mode"}
-					</button>
-					{!practice.isOn && (
-						<div className="px-2 pt-1 text-[11px] text-muted-foreground">
-							Rehearse the workflow with a fake case. Nothing is saved to real
-							data.
+					<div className="flex items-center justify-between px-2 py-1.5">
+						<div className="flex items-center gap-2">
+							<GraduationCap className="w-4 h-4 text-muted-foreground" />
+							<span className="text-[13px]">Practice mode</span>
 						</div>
-					)}
+						<button
+							onClick={handlePracticeToggle}
+							disabled={practice.isToggling}
+							role="switch"
+							aria-checked={practice.isOn}
+							aria-label="Toggle practice mode"
+							className={`relative h-7 w-14 rounded-full transition-colors cursor-pointer disabled:opacity-60 ${
+								practice.isOn ? "bg-amber-500" : "bg-gray-200 dark:bg-muted"
+							}`}
+						>
+							<motion.div
+								animate={{ x: practice.isOn ? 28 : 2 }}
+								transition={{
+									type: "spring",
+									stiffness: 500,
+									damping: 30,
+								}}
+								className="absolute top-[2px] w-6 h-6 rounded-full bg-white shadow flex items-center justify-center"
+							>
+								<GraduationCap
+									className={`w-3 h-3 ${
+										practice.isOn ? "text-amber-600" : "text-muted-foreground"
+									}`}
+								/>
+							</motion.div>
+						</button>
+					</div>
+					<div className="px-2 text-[11px] text-muted-foreground">
+						{practice.isOn
+							? "Rehearsing with a fake case. Nothing here is real."
+							: "Rehearse the workflow with a fake case. Nothing is saved to real data."}
+					</div>
 				</div>
 
 				{/* Actions */}

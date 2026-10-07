@@ -133,6 +133,7 @@ const INSTRUCTIONS: Record<
 			"In the Certificates section, click Generate for each form.",
 			"Review the generated certificate against your brief below.",
 			"Click Mark Ready on each certificate once it looks right.",
+			"When every certificate is generated and marked ready, click Finalise Case.",
 		],
 	},
 	4: {

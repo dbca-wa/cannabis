@@ -26,11 +26,16 @@ const norm = (v: unknown): string =>
 		.toLowerCase();
 const contains = (haystack: unknown, needle: string): boolean =>
 	norm(haystack).includes(norm(needle)) && norm(needle) !== "";
+/** Exact (case/space-insensitive) equality — used where the brief must match
+ * precisely, e.g. a bag's content type or determination. */
+const eq = (a: unknown, b: unknown): boolean =>
+	norm(a) === norm(b) && norm(b) !== "";
 
 /** Minimal shapes we read from the live case/forms (via the query cache). */
 interface LiveBag {
 	seal_tag_numbers?: string | null;
 	new_seal_tag_numbers?: string | null;
+	content_type?: string | null;
 	contains_female_plants?: boolean;
 	assessment?: { determination?: string | null } | null;
 }
@@ -161,13 +166,29 @@ export const buildFormChecklists = (
 			]
 				.filter(Boolean)
 				.join(" · ");
-			const newSealEntered =
-				!bag.new_seal || contains(matched?.new_seal_tag_numbers, bag.new_seal);
+			// A bag only ticks when every detail matches the brief exactly: the
+			// new seal tag, the content type, the determination, and whether it
+			// holds female plants. Matching the seal tag alone is not enough —
+			// entering the wrong type or determination must leave it unticked.
+			const newSealMatches =
+				!bag.new_seal || eq(matched?.new_seal_tag_numbers, bag.new_seal);
+			const contentTypeMatches = eq(matched?.content_type, bag.content_type);
+			const determinationMatches = eq(
+				matched?.assessment?.determination,
+				bag.determination
+			);
+			const femalePlantsMatches =
+				!!matched?.contains_female_plants === !!bag.female_plants;
 			items.push({
-				label: `Bag — original ${bag.original_seal}, new ${bag.new_seal}`,
+				label: `Add Bag — original ${bag.original_seal}, new ${bag.new_seal}`,
 				expected: details,
 				done:
-					!!matched && !!matched.assessment?.determination && newSealEntered,
+					!!matched &&
+					!!matched.assessment?.determination &&
+					newSealMatches &&
+					contentTypeMatches &&
+					determinationMatches &&
+					femalePlantsMatches,
 			});
 		}
 
