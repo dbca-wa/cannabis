@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import BotanicalAssessment, DrugBag, Priority3Form
@@ -45,8 +46,8 @@ class DrugBagListView(ListCreateAPIView):
     def perform_create(self, serializer):
         bag = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} created drug bag {bag.seal_tag_numbers} "
-            f"for case {bag.form.case.case_number}"
+            f"{describe_user(self.request.user)} created drug bag "
+            f"{bag.seal_tag_numbers} for case {bag.form.case.case_number}"
         )
 
 
@@ -70,13 +71,15 @@ class DrugBagDetailView(RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
-            f"User {self.request.user} updated drug bag: {serializer.instance}"
+            f"{describe_user(self.request.user)} updated drug bag "
+            f"{serializer.instance.seal_tag_numbers}"
         )
         serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.warning(
-            f"User {self.request.user} deleted drug bag: {instance}"
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted drug bag "
+            f"{instance.seal_tag_numbers}"
         )
         super().perform_destroy(instance)
 
@@ -103,9 +106,11 @@ class BotanicalAssessmentCreateView(APIView):
 
         serializer = BotanicalAssessmentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(drug_bag=drug_bag)
+            assessment = serializer.save(drug_bag=drug_bag)
             settings.LOGGER.info(
-                f"User {request.user} created assessment for bag {drug_bag.seal_tag_numbers}"
+                f"{describe_user(request.user)} created assessment "
+                f"({assessment.pk}) for bag {drug_bag.seal_tag_numbers} "
+                f"({drug_bag.pk})"
             )
             return Response(serializer.data, status=HTTP_201_CREATED)
 
@@ -141,7 +146,8 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
             serializer.save()
 
         settings.LOGGER.info(
-            f"User {self.request.user} updated assessment: {serializer.instance}"
+            f"{describe_user(self.request.user)} updated assessment "
+            f"{serializer.instance.pk}"
         )
 
 

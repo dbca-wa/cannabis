@@ -10,6 +10,8 @@ from django.db.models import Count
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.logging import describe_user
+
 from ..models import Defendant
 from ..serializers import DefendantTinySerializer
 
@@ -108,7 +110,9 @@ class DefendantService:
             The created Defendant instance.
         """
         defendant = Defendant.objects.create(**data)
-        settings.LOGGER.info(f"User {user} created defendant: {defendant}")
+        settings.LOGGER.info(
+            f"{describe_user(user)} created defendant {defendant} ({defendant.pk})"
+        )
         return defendant
 
     @staticmethod
@@ -126,7 +130,9 @@ class DefendantService:
         for field, value in data.items():
             setattr(defendant, field, value)
         defendant.save()
-        settings.LOGGER.info(f"User {user} updated defendant: {defendant}")
+        settings.LOGGER.info(
+            f"{describe_user(user)} updated defendant {defendant} ({defendant.pk})"
+        )
         return defendant
 
     @staticmethod
@@ -148,7 +154,9 @@ class DefendantService:
                 f"Please remove them from all cases before deletion."
             )
 
-        settings.LOGGER.warning(f"User {user} deleted defendant: {defendant}")
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted defendant {defendant} ({defendant.pk})"
+        )
         defendant.delete()
 
     @staticmethod
@@ -263,7 +271,8 @@ class DefendantService:
                 response = DefendantService._json_response(queryset)
 
         settings.LOGGER.info(
-            f"User {user} exported {total_count} defendants as {export_format}"
+            f"{describe_user(user)} exported {total_count} defendants "
+            f"as {export_format}"
         )
         return response
 

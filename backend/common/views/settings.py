@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import SystemSettings
@@ -120,9 +121,8 @@ class SystemSettingsView(APIView):
         # Staff or superuser can modify settings
         if not (request.user.is_staff or request.user.is_superuser):
             logger.warning(
-                f"Non-staff user {request.user.email} (ID: {request.user.id}) "
-                f"attempted to modify system settings. "
-                f"is_staff: {request.user.is_staff}, is_superuser: {request.user.is_superuser}"
+                f"{describe_user(request.user)} (non-staff) attempted to modify "
+                f"system settings"
             )
             raise PermissionDenied(
                 "Only staff or admin users can modify system settings."
@@ -373,7 +373,8 @@ class SystemSettingsView(APIView):
         # Return validation errors if any
         if validation_errors:
             logger.warning(
-                f"Settings validation failed for user {request.user.username}: {validation_errors}"
+                f"Settings validation failed for {describe_user(request.user)}: "
+                f"{validation_errors}"
             )
 
             # Format errors for frontend consumption
@@ -404,13 +405,14 @@ class SystemSettingsView(APIView):
                     changes_summary.append(f"{field}: {old_val} → {new_val}")
 
                 logger.info(
-                    f"System settings updated by {request.user.username} "
-                    f"(ID: {request.user.id}). Changes: {'; '.join(changes_summary)}"
+                    f"{describe_user(request.user)} updated system settings. "
+                    f"Changes: {'; '.join(changes_summary)}"
                 )
 
             except Exception as e:
                 logger.error(
-                    f"Failed to save system settings for user {request.user.username}: {str(e)}"
+                    f"Failed to save system settings for "
+                    f"{describe_user(request.user)}: {str(e)}"
                 )
                 raise
 

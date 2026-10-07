@@ -15,6 +15,8 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.logging import describe_user
+
 from ..models import Case, CasePhaseHistory
 
 # Ordered phase sequence for transition validation
@@ -141,7 +143,7 @@ class WorkflowService:
         )
 
         settings.LOGGER.info(
-            f"User {user} advanced form {form.pk} "
+            f"{describe_user(user)} advanced form {form.pk} "
             f"(case {form.case.case_number}) from {old_phase} to {next_phase}"
         )
 

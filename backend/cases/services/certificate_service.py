@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.logging import describe_user
 from common.utils import join_with_and
 
 from ..models import Case, Certificate
@@ -329,15 +330,17 @@ class CertificateService:
 
         certificate.save()
 
+        verb = "generated" if existing is None else "regenerated"
         settings.LOGGER.info(
-            f"User {user} generated certificate {certificate.certificate_number} "
+            f"{describe_user(user)} {verb} certificate "
+            f"{certificate.certificate_number} ({certificate.pk}) "
             f"for form {form.pk} (case {form.case.case_number})"
         )
 
         return certificate
 
     @staticmethod
-    def regenerate_certificate_pdf(certificate):
+    def regenerate_certificate_pdf(certificate, user=None):
         """Re-render and replace the stored PDF for an existing certificate.
 
         Raises:
@@ -358,6 +361,11 @@ class CertificateService:
         certificate.pdf_size = len(pdf_bytes)
         certificate.save(update_fields=["pdf_file", "pdf_size"])
 
+        settings.LOGGER.info(
+            f"{describe_user(user)} regenerated certificate "
+            f"{certificate.certificate_number}"
+        )
+
         return certificate
 
 
@@ -372,6 +380,6 @@ def generate_certificate(form, user, section_c_note=None):
     return CertificateService.generate_certificate(form, user, section_c_note)
 
 
-def regenerate_certificate_pdf(certificate):
+def regenerate_certificate_pdf(certificate, user=None):
     """Backward-compatible alias."""
-    return CertificateService.regenerate_certificate_pdf(certificate)
+    return CertificateService.regenerate_certificate_pdf(certificate, user)

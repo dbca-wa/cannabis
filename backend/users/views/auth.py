@@ -22,6 +22,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from common.logging import describe_user
+
 from ..error_handlers import (
     ErrorCodes,
     ErrorResponseBuilder,
@@ -77,6 +79,7 @@ class JWTLogoutView(APIView):
 
         refresh_token = request.data.get("refresh_token")
         AuthService.logout(refresh_token)
+        settings.LOGGER.info(f"{describe_user(request.user)} logged out")
         return Response(
             {"message": "Logged out successfully", "status": "success"},
             status=HTTP_200_OK,

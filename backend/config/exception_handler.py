@@ -14,6 +14,8 @@ from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as default_exception_handler
 
+from common.logging import describe_user
+
 logger = logging.getLogger(__name__)
 
 # Regex to strip HTML tags from error messages that slip through.
@@ -49,9 +51,12 @@ def custom_exception_handler(exc, context):
 
     if response is None:
         # Unhandled exception — log it and return a generic 500.
+        request = context.get("request")
+        acting_user = describe_user(getattr(request, "user", None))
         logger.error(
-            "Unhandled exception in %s: %s",
+            "Unhandled exception in %s by %s: %s",
             context.get("view", "unknown view"),
+            acting_user,
             exc,
             exc_info=True,
         )

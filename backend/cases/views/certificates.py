@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import Case, Certificate
@@ -78,13 +79,13 @@ class CertificateDetailView(RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         certificate = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} updated certificate "
+            f"{describe_user(self.request.user)} updated certificate "
             f"{certificate.certificate_number}"
         )
 
     def perform_destroy(self, instance):
         settings.LOGGER.info(
-            f"User {self.request.user} deleted certificate "
+            f"{describe_user(self.request.user)} deleted certificate "
             f"{instance.certificate_number}"
         )
         instance.delete()
@@ -167,6 +168,8 @@ class CertificateRegenerateView(APIView):
     def post(self, request, pk, certificate_id):
         case = get_object_or_404(Case, pk=pk)
         certificate = CertificateService.get_certificate_for_case(case, certificate_id)
-        certificate = CertificateService.regenerate_certificate_pdf(certificate)
+        certificate = CertificateService.regenerate_certificate_pdf(
+            certificate, request.user
+        )
         serializer = CertificateSerializer(certificate, context={"request": request})
         return Response(serializer.data, status=HTTP_200_OK)

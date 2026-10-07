@@ -1,12 +1,15 @@
 """Drug bag service — drug bag and botanical assessment business logic.
 
-Handles drug bag CRUD operations and botanical assessment creation/update logic.
+Handles drug bag creation and the five-bag-per-form capacity rule. Botanical
+assessment create/update is handled directly in the assessment views.
 """
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
+
+from common.logging import describe_user
 
 from ..models import BotanicalAssessment, DrugBag, Priority3Form
 
@@ -42,77 +45,6 @@ class DrugBagService:
             .prefetch_related("assessment")
             .order_by("seal_tag_numbers")
         )
-
-    @staticmethod
-    def validate_assessment_creation(drug_bag, user):
-        """Validate that a botanical assessment can be created for the drug bag.
-
-        Checks:
-        - The drug bag does not already have an assessment.
-
-        Raises:
-            ValidationError: If an assessment already exists.
-        """
-        if BotanicalAssessment.objects.filter(drug_bag=drug_bag).exists():
-            raise ValidationError("Assessment already exists for this drug bag.")
-
-    @staticmethod
-    def create_assessment(drug_bag, data, user):
-        """Create a botanical assessment for a drug bag.
-
-        Validates that no assessment already exists, then creates the record.
-
-        Args:
-            drug_bag: The DrugBag instance.
-            data: Validated assessment data dict.
-            user: The user creating the assessment.
-
-        Returns:
-            The newly created BotanicalAssessment instance.
-
-        Raises:
-            ValidationError: If assessment already exists.
-        """
-        DrugBagService.validate_assessment_creation(drug_bag, user)
-
-        assessment = BotanicalAssessment.objects.create(drug_bag=drug_bag, **data)
-
-        settings.LOGGER.info(
-            f"User {user} created assessment for bag " f"{drug_bag.seal_tag_numbers}"
-        )
-
-        return assessment
-
-    @staticmethod
-    def validate_assessment_update_permission(user):
-        """Validate that the user can update botanical assessments.
-
-        Any authenticated user with a role can update assessments.
-        """
-        # No role restriction — IsAuthenticated on the view is sufficient
-
-    @staticmethod
-    def update_assessment_with_auto_date(assessment, validated_data):
-        """Update an assessment, auto-setting assessment_date if determination is set.
-
-        If the determination field is being set for the first time and
-        assessment_date is not already set, auto-populate it with now().
-
-        Args:
-            assessment: The BotanicalAssessment instance.
-            validated_data: The validated data to apply.
-
-        Returns:
-            The updated BotanicalAssessment instance.
-        """
-        if validated_data.get("determination") and not assessment.assessment_date:
-            validated_data["assessment_date"] = timezone.now()
-
-        for key, value in validated_data.items():
-            setattr(assessment, key, value)
-        assessment.save()
-
-        return assessment
 
     @staticmethod
     def _ensure_form_capacity(form, additional):
@@ -155,8 +87,8 @@ class DrugBagService:
         bag = DrugBag.objects.create(form=form, **fields)
 
         settings.LOGGER.info(
-            f"User {user} created drug bag {bag.seal_tag_numbers} "
-            f"for form {form.pk} on case {form.case.case_number}"
+            f"{describe_user(user)} created drug bag {bag.seal_tag_numbers} "
+            f"({bag.pk}) for form {form.pk} on case {form.case.case_number}"
         )
 
         return bag
@@ -208,7 +140,7 @@ class DrugBagService:
             created_bags.append(bag)
 
         settings.LOGGER.info(
-            f"User {user} batch-created {len(created_bags)} bags "
+            f"{describe_user(user)} batch-created {len(created_bags)} bags "
             f"for form {form.pk} on case {form.case.case_number}"
         )
 

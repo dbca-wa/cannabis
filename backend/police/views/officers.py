@@ -18,6 +18,7 @@ from rest_framework.status import (
 )
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
@@ -227,7 +228,8 @@ class PoliceOfficerListView(ListCreateAPIView):
     def perform_create(self, serializer):
         officer = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} created police officer: {officer}"
+            f"{describe_user(self.request.user)} created police officer "
+            f"{officer} ({officer.pk})"
         )
 
 
@@ -246,13 +248,15 @@ class PoliceOfficerDetailView(RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
-            f"User {self.request.user} updated police officer: {serializer.instance}"
+            f"{describe_user(self.request.user)} updated police officer "
+            f"{serializer.instance} ({serializer.instance.pk})"
         )
         serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.warning(
-            f"User {self.request.user} deleted police officer: {instance}"
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted police officer "
+            f"{instance} ({instance.pk})"
         )
         super().perform_destroy(instance)
 
@@ -403,18 +407,6 @@ class PoliceOfficerExportView(APIView):
         """Export police officers data"""
         export_format = request.query_params.get("export_format", "csv").lower()
 
-        # Comprehensive debug logging
-        logger.info("=== POLICE OFFICERS EXPORT REQUEST DEBUG ===")
-        logger.info(f"User: {request.user}")
-        logger.info(f"Method: {request.method}")
-        logger.info(f"Path: {request.path}")
-        logger.info(f"Full URL: {request.build_absolute_uri()}")
-        logger.info(f"Format: {export_format}")
-        logger.info(f"Query params: {dict(request.query_params)}")
-        logger.info(f"Headers: {dict(request.headers)}")
-        logger.info(f"Content type: {request.content_type}")
-        logger.info("=== END DEBUG ===")
-
         if export_format not in ["csv", "json"]:
             raise ValidationError(
                 {"detail": "Invalid format. Supported formats: csv, json"}
@@ -501,7 +493,8 @@ class PoliceOfficerExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} police officers as CSV"
+            f"{describe_user(self.request.user)} exported {queryset.count()} "
+            f"police officers as CSV"
         )
         return response
 
@@ -518,7 +511,8 @@ class PoliceOfficerExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} police officers as JSON"
+            f"{describe_user(self.request.user)} exported {queryset.count()} "
+            f"police officers as JSON"
         )
         return response
 
@@ -587,7 +581,8 @@ class PoliceOfficerExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} police officers as CSV"
+            f"{describe_user(self.request.user)} started streaming export of "
+            f"{queryset.count()} police officers as CSV"
         )
         return response
 
@@ -620,7 +615,8 @@ class PoliceOfficerExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} police officers as JSON"
+            f"{describe_user(self.request.user)} started streaming export of "
+            f"{queryset.count()} police officers as JSON"
         )
         return response
 
@@ -674,8 +670,8 @@ class OfficerMergeView(APIView):
             source.delete()
 
         settings.LOGGER.info(
-            f"User {request.user} merged officer '{source_name}' (id={source_id}) "
-            f"into '{target.full_name}' (id={target_id}). "
+            f"{describe_user(request.user)} merged officer '{source_name}' "
+            f"(id={source_id}) into '{target.full_name}' (id={target_id}). "
             f"Reassigned {sub_count + req_count} cases."
         )
 

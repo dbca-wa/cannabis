@@ -5,6 +5,8 @@ import re
 from django.http import HttpRequest, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from common.logging import describe_user
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,9 +100,13 @@ class AdminOnlyCsrfMiddleware:
 
 class APIRequestLoggingMiddleware:
     """
-    Logs every API request under /api/v1/ with method, path, user info,
-    and request body for mutation requests. Logs error response bodies
-    on 4xx/5xx for debugging DRF validation failures.
+    Failure-only logger for API requests under /api/v1/.
+
+    Successful (2xx) and redirect (3xx) responses are not logged — successful
+    actions are logged once in the service layer. A client error (4xx) produces
+    a single WARNING line with method, path, acting user, status, and the
+    redacted request body for mutating methods. Server errors (5xx) are owned by
+    the DRF exception handler and are not logged here.
 
     Sensitive fields (password, tokens) are redacted from logged bodies.
     """
@@ -150,30 +156,21 @@ class APIRequestLoggingMiddleware:
 
         response = self.get_response(request)
 
-        # Resolve user AFTER response — DRF authenticates during view processing
-        user_info = "anonymous"
-        if hasattr(request, "user") and request.user.is_authenticated:
-            user_info = f"{request.user.email} (id={request.user.id})"
+        # Success paths are silent; the service layer owns success logging.
+        # 5xx is owned by the DRF exception handler. Only 4xx is logged here.
+        if not (400 <= response.status_code < 500):
+            return response
 
-        # Log the request
-        log_parts = [f"[API] {request.method} {request.path} by {user_info}"]
+        # Resolve user AFTER response — DRF authenticates during view processing
+        user_info = describe_user(getattr(request, "user", None))
+
+        log_parts = [
+            f"[API] {response.status_code} {request.method} {request.path} "
+            f"by {user_info}"
+        ]
         if body_str:
             log_parts.append(f"body: {self._redact_body(body_str)}")
-        self.logger.info(" | ".join(log_parts))
-
-        # Log error responses with response body
-        if response.status_code >= 400:
-            try:
-                response_body = response.content.decode("utf-8", errors="replace")[
-                    :2000
-                ]
-                self.logger.warning(
-                    f"[API] {response.status_code} {response.reason_phrase} | {response_body}"
-                )
-            except Exception:
-                self.logger.warning(
-                    f"[API] {response.status_code} {response.reason_phrase}"
-                )
+        self.logger.warning(" | ".join(log_parts))
 
         return response
 

@@ -24,6 +24,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.logging import describe_user
 from common.models import SystemSettings
 
 from ..models import Batch, Case, Certificate
@@ -189,8 +190,8 @@ class BatchService:
         BatchService.build_zip(batch)
 
         settings.LOGGER.info(
-            f"User {user} created {batch.batch_number} with "
-            f"{len(certs)} certificate(s)"
+            f"{describe_user(user)} created {batch.batch_number} ({batch.pk}) "
+            f"with {len(certs)} certificate(s)"
         )
         return batch
 
@@ -339,7 +340,8 @@ class BatchService:
             form.save(update_fields=["completed_at"])
 
         settings.LOGGER.info(
-            f"User {user} recorded invoice {number} on {batch.batch_number}; "
+            f"{describe_user(user)} recorded invoice {number} on "
+            f"{batch.batch_number} ({batch.pk}); "
             f"{len(certificates)} certificate(s) completed"
         )
         return batch
@@ -377,7 +379,8 @@ class BatchService:
                 form.save(update_fields=["phase", "completed_at", "last_actioned_by"])
 
         settings.LOGGER.info(
-            f"User {user} unset invoice {number} on {batch.batch_number}; "
+            f"{describe_user(user)} unset invoice {number} on "
+            f"{batch.batch_number} ({batch.pk}); "
             f"{len(certificates)} certificate(s) returned to in-batch"
         )
         return batch
@@ -405,8 +408,11 @@ class BatchService:
             batch.zip_file.delete(save=False)
 
         number = batch.batch_number
+        batch_id = batch.pk
         batch.delete()
-        settings.LOGGER.info(f"User {user} deleted batch {number}")
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted batch {number} ({batch_id})"
+        )
 
     @staticmethod
     def export_rows(batches):
