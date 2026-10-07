@@ -37,6 +37,10 @@ interface LiveBag {
 interface LiveForm {
 	security_movement_envelope?: string | null;
 	bags?: LiveBag[];
+	/** The form's single certificate, once generated. */
+	certificate?: { id: number } | null;
+	/** Whether the generated certificate has been reviewed and marked ready. */
+	marked_ready?: boolean;
 }
 export interface LiveCase {
 	case_number?: string | null;
@@ -171,6 +175,32 @@ export const buildFormChecklists = (
 			title:
 				brief.forms.length > 1 ? `Priority 3 form ${i + 1}` : "On the form",
 			items,
+		};
+	});
+};
+
+/**
+ * Per-form certificate checklist for step 3: generate the certificate, then
+ * review and mark it ready. One group per brief form so multi-form cases show
+ * progress for each certificate.
+ */
+export const buildCertificateChecklists = (
+	brief: IPracticeBrief,
+	liveForms: LiveForm[]
+): ChecklistGroup[] => {
+	return brief.forms.map((_bf, i) => {
+		const live = liveForms[i];
+		const generated = !!live?.certificate;
+		const ready = !!live?.marked_ready;
+		return {
+			title:
+				brief.forms.length > 1
+					? `Certificate — form ${i + 1}`
+					: "Certificate",
+			items: [
+				{ label: "Generate the certificate", done: generated },
+				{ label: "Review and mark it ready", done: generated && ready },
+			],
 		};
 	});
 };

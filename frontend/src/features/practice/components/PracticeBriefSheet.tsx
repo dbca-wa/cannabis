@@ -28,6 +28,7 @@ import {
 import {
 	buildCaseChecklist,
 	buildFormChecklists,
+	buildCertificateChecklists,
 	areFormChecklistsComplete,
 	type ChecklistGroup,
 	type LiveCase,
@@ -179,10 +180,9 @@ export const PracticeBriefSheet = () => {
 	const caseSource: LiveCase | null =
 		liveCreateData ?? (liveCase as LiveCase | undefined) ?? null;
 	const caseChecklist = buildCaseChecklist(brief, caseSource);
-	const formChecklists = buildFormChecklists(
-		brief,
-		Array.isArray(liveForms) ? liveForms : []
-	);
+	const liveFormsArr = Array.isArray(liveForms) ? liveForms : [];
+	const formChecklists = buildFormChecklists(brief, liveFormsArr);
+	const certificateChecklists = buildCertificateChecklists(brief, liveFormsArr);
 
 	// Derive the current step from live progress so the tracker follows the case
 	// from creation through to invoicing, rather than resetting per page.
@@ -341,6 +341,12 @@ export const PracticeBriefSheet = () => {
 					{formChecklists.map((group) => (
 						<Checklist key={group.title} group={group} />
 					))}
+					{/* Certificate progress appears once the samples are recorded and
+					    the guide is on (or past) the generate-certificates step. */}
+					{guidance.currentStep >= 3 &&
+						certificateChecklists.map((group) => (
+							<Checklist key={group.title} group={group} />
+						))}
 				</section>
 			</div>
 		</aside>

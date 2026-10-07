@@ -110,8 +110,19 @@ export const UnsignedCertificateStep = ({
 				toast.success("Certificate generated");
 			}
 		},
-		onError: () => {
-			toast.error("Failed to generate certificate");
+		onError: (error: unknown) => {
+			// A 404 here means the form no longer exists on the server — most
+			// often a practice case that was reset (practice mode toggled or the
+			// session expired) while this tab still showed the old form. Give a
+			// clear message rather than a generic failure.
+			const status = (error as { status?: number })?.status;
+			if (status === 404) {
+				toast.error(
+					"This form no longer exists — your practice case may have been reset. Reload and start a new practice case."
+				);
+			} else {
+				toast.error("Failed to generate certificate");
+			}
 		},
 		onSettled: (_data, _err, fId) => {
 			setGeneratingFormIds((prev) => {
