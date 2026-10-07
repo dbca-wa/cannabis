@@ -45,7 +45,7 @@ from .forms import (  # noqa: F401
     FormScannedImageUploadView,
 )
 from .ocr import OcrUploadView, ServiceUnavailable  # noqa: F401
-from .practice import PracticeModeView  # noqa: F401
+from .practice import PracticeModeView, PracticeResetView  # noqa: F401
 from .previews import CertificatePreviewView  # noqa: F401
 from .templates import (  # noqa: F401
     SectionCTemplateDetailView,
@@ -101,6 +101,7 @@ __all__ = [
     "ServiceUnavailable",
     # practice
     "PracticeModeView",
+    "PracticeResetView",
     # previews
     "CertificatePreviewView",
     # templates

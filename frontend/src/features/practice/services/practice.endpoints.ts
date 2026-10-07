@@ -4,5 +4,5 @@
  */
 export const PRACTICE_ENDPOINTS = {
 	MODE: "/practice/mode",
-	BRIEF: "/practice/brief",
+	RESET: "/practice/reset",
 } as const;

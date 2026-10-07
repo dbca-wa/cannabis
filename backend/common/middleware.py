@@ -263,11 +263,7 @@ class PracticeModeMiddleware:
         user = self._resolve_user(request)
         in_practice = False
         if user is not None and getattr(user, "is_authenticated", False):
-            if practice.is_in_practice_mode(user):
-                in_practice = True
-            else:
-                # Lazily clear and purge an expired session.
-                self._purge_if_expired(user)
+            in_practice = practice.is_in_practice_mode(user)
             practice.set_context(user, in_practice)
         try:
             return self.get_response(request)
@@ -285,11 +281,3 @@ class PracticeModeMiddleware:
             return result[0] if result else None
         except Exception:
             return None
-
-    @staticmethod
-    def _purge_if_expired(user):
-        prefs = user.get_preferences
-        if getattr(prefs, "practice_mode", False):
-            from cases.services.practice_service import PracticeService
-
-            PracticeService.disable_for_user(user)

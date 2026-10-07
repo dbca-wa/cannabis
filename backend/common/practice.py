@@ -13,13 +13,8 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from datetime import timedelta
 
 from django.db import models
-from django.utils import timezone
-
-# How long a practice session lives before it is treated as off and purged.
-PRACTICE_TTL = timedelta(days=1)
 
 _state = threading.local()
 
@@ -31,27 +26,24 @@ class PracticeContext:
 
 
 def is_in_practice_mode(user) -> bool:
-    """Whether this user is currently in a live (non-expired) practice session.
+    """Whether this user is currently in practice mode.
 
-    Reads the user's preferences. Expired sessions count as off; callers that
-    can write should also purge expired data (see PracticeService)."""
+    Practice mode stays on until the user turns it off — there is no automatic
+    expiry. A user's practice data persists between sessions and is only removed
+    when they explicitly reset it, so returning to practice mode always shows
+    their existing work rather than a purged, empty slate.
+    """
     if not getattr(user, "is_authenticated", False):
         return False
     prefs = user.get_preferences
-    if not getattr(prefs, "practice_mode", False):
-        return False
-    started = getattr(prefs, "practice_mode_started_at", None)
-    if started is None:
-        return False
-    return timezone.now() - started < PRACTICE_TTL
+    return bool(getattr(prefs, "practice_mode", False))
 
 
-def practice_expires_at(user):
-    """When this user's practice session expires, or None if not in one."""
+def practice_started_at(user):
+    """When this user's current practice session began, or None if not in one."""
     if not is_in_practice_mode(user):
         return None
-    prefs = user.get_preferences
-    return prefs.practice_mode_started_at + PRACTICE_TTL
+    return user.get_preferences.practice_mode_started_at
 
 
 def set_context(user, in_practice: bool) -> None:

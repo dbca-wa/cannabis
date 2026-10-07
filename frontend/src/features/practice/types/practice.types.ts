@@ -4,7 +4,8 @@
 
 export interface IPracticeModeState {
 	practice_mode: boolean;
-	practice_mode_expires_at: string | null;
+	/** When the current practice session began. Null when not in practice mode. */
+	practice_mode_started_at: string | null;
 }
 
 export interface IPracticeBriefBag {

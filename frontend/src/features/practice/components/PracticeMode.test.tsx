@@ -63,15 +63,18 @@ describe("Practice mode UI", () => {
 			expect(container).toBeEmptyDOMElement();
 		});
 
-		it("shows the banner and a leave button when practice mode is on", () => {
+		it("shows the banner, a leave button and a reset button in practice mode", () => {
 			authState.user = {
 				practice_mode: true,
-				practice_mode_expires_at: "2026-10-02T09:00:00Z",
+				practice_mode_started_at: "2026-10-02T09:00:00Z",
 			};
 			renderPage(<PracticeModeBanner />);
 			expect(screen.getByText(/nothing here is real/i)).toBeInTheDocument();
 			expect(
 				screen.getByRole("button", { name: /leave practice mode/i })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: /reset practice data/i })
 			).toBeInTheDocument();
 		});
 	});

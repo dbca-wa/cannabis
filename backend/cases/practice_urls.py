@@ -6,4 +6,5 @@ from . import views
 
 urlpatterns = [
     path("mode", views.PracticeModeView.as_view(), name="practice_mode"),
+    path("reset", views.PracticeResetView.as_view(), name="practice_reset"),
 ]

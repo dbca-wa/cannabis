@@ -3,22 +3,22 @@
  */
 import { apiClient } from "@/shared/services/api";
 import { PRACTICE_ENDPOINTS } from "./practice.endpoints";
-import type {
-	IPracticeBrief,
-	IPracticeModeState,
-} from "../types/practice.types";
+import type { IPracticeModeState } from "../types/practice.types";
 
 /** Turn practice mode on for the current user. */
 export const enablePracticeMode = async (): Promise<IPracticeModeState> => {
 	return apiClient.post<IPracticeModeState>(PRACTICE_ENDPOINTS.MODE, {});
 };
 
-/** Turn practice mode off and delete the user's practice data. */
+/**
+ * Turn practice mode off. The user's practice data is kept (hidden from the live
+ * application) and shown again next time they enter practice mode.
+ */
 export const disablePracticeMode = async (): Promise<IPracticeModeState> => {
 	return apiClient.delete<IPracticeModeState>(PRACTICE_ENDPOINTS.MODE);
 };
 
-/** Fetch a fresh fake brief to work through on the case page. */
-export const getPracticeBrief = async (): Promise<IPracticeBrief> => {
-	return apiClient.get<IPracticeBrief>(PRACTICE_ENDPOINTS.BRIEF);
+/** Clear the user's practice data and start a fresh practice session. */
+export const resetPracticeData = async (): Promise<IPracticeModeState> => {
+	return apiClient.post<IPracticeModeState>(PRACTICE_ENDPOINTS.RESET, {});
 };

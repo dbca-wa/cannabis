@@ -1,12 +1,12 @@
 """Practice mode.
 
 Practice mode is a per-user mode layered over the real workflow. Rows made in it
-persist but must stay invisible to the live application and to other users, must
-never consume real numbers, and must disappear when the mode is turned off or its
-one-day window lapses. These tests pin down that isolation and the mode toggle.
+must stay invisible to the live application and to other users, and must never
+consume real numbers. The data persists between sessions — turning the mode off
+keeps it, so re-entering shows the user's existing work — and is only removed
+when the user explicitly resets it. These tests pin down that isolation, the
+mode toggle, and the persist/reset behaviour.
 """
-
-from datetime import timedelta
 
 import pytest
 from django.utils import timezone
@@ -114,21 +114,48 @@ class TestNumbering:
         assert after.batch_counter == batch_before
 
 
-class TestExpiryAndPurge:
-    def test_session_past_a_day_counts_as_off(self, botanist_user):
+class TestPersistenceAndReset:
+    def test_practice_mode_does_not_expire_with_time(self, botanist_user):
+        # There is no TTL any more: an old start time must not flip the mode off.
         PracticeService.enable_for_user(botanist_user)
         prefs = botanist_user.get_preferences
-        prefs.practice_mode_started_at = timezone.now() - timedelta(days=1, minutes=1)
+        prefs.practice_mode_started_at = timezone.now() - timezone.timedelta(days=30)
         prefs.save(update_fields=["practice_mode_started_at"])
-        assert practice.is_in_practice_mode(botanist_user) is False
+        assert practice.is_in_practice_mode(botanist_user) is True
 
-    def test_disable_purges_the_users_practice_data(self, botanist_user):
+    def test_disable_keeps_the_users_practice_data(self, botanist_user):
         _in_practice(botanist_user)
-        _make_practice_case(botanist_user)
+        case, _ = _make_practice_case(botanist_user)
         officer = PoliceOfficer.objects.create(last_name="Fake")
         _real_mode()
 
         PracticeService.disable_for_user(botanist_user)
+
+        # Mode is off, but the data is retained for next time.
+        assert practice.is_in_practice_mode(botanist_user) is False
+        assert Case.all_objects.filter(pk=case.pk).exists()
+        assert PoliceOfficer.all_objects.filter(pk=officer.pk).exists()
+
+    def test_reentering_practice_mode_shows_retained_data(self, botanist_user):
+        _in_practice(botanist_user)
+        case, _ = _make_practice_case(botanist_user)
+        _real_mode()
+        PracticeService.disable_for_user(botanist_user)
+
+        # Re-enter: the earlier case is visible again, not an empty slate.
+        _in_practice(botanist_user)
+        assert Case.objects.filter(pk=case.pk).exists()
+        _real_mode()
+
+    def test_reset_clears_data_and_keeps_mode_on(self, botanist_user):
+        _in_practice(botanist_user)
+        case, _ = _make_practice_case(botanist_user)
+        officer = PoliceOfficer.objects.create(last_name="Fake")
+        _real_mode()
+
+        PracticeService.reset_for_user(botanist_user)
+
+        # Data gone, but still in practice mode (a fresh session).
         assert (
             Case.all_objects.filter(
                 is_practice=True, practice_owner=botanist_user
@@ -136,19 +163,7 @@ class TestExpiryAndPurge:
             == 0
         )
         assert PoliceOfficer.all_objects.filter(pk=officer.pk).count() == 0
-        assert practice.is_in_practice_mode(botanist_user) is False
-
-    def test_purge_expired_sweeps_lapsed_users(self, botanist_user):
-        _in_practice(botanist_user)
-        _make_practice_case(botanist_user)
-        _real_mode()
-        prefs = botanist_user.get_preferences
-        prefs.practice_mode_started_at = timezone.now() - timedelta(days=2)
-        prefs.save(update_fields=["practice_mode_started_at"])
-
-        swept = PracticeService.purge_expired()
-        assert swept == 1
-        assert Case.all_objects.filter(is_practice=True).count() == 0
+        assert practice.is_in_practice_mode(botanist_user) is True
 
 
 class TestEntityCaseCounts:
@@ -258,8 +273,37 @@ class TestModeEndpoints:
         on = botanist_client.post("/api/v1/practice/mode")
         assert on.status_code == 200
         assert on.data["practice_mode"] is True
-        assert on.data["practice_mode_expires_at"] is not None
+        assert on.data["practice_mode_started_at"] is not None
 
         off = botanist_client.delete("/api/v1/practice/mode")
         assert off.status_code == 200
         assert off.data["practice_mode"] is False
+
+    def test_reset_endpoint_clears_data_and_stays_in_practice(
+        self, botanist_user
+    ):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        client = APIClient()
+        token = str(RefreshToken.for_user(botanist_user).access_token)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        client.post("/api/v1/practice/mode")
+        created = client.post(
+            "/api/v1/cases/list",
+            {"case_number": "PRACTICE-RESET-1", "received": timezone.now().isoformat()},
+            format="json",
+        )
+        assert created.status_code in (200, 201), created.data
+
+        reset = client.post("/api/v1/practice/reset")
+        assert reset.status_code == 200
+        assert reset.data["practice_mode"] is True
+        # The practice case is gone after reset.
+        assert (
+            Case.all_objects.filter(
+                is_practice=True, practice_owner=botanist_user
+            ).count()
+            == 0
+        )

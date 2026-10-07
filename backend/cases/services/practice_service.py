@@ -33,14 +33,32 @@ class PracticeService:
         return prefs
 
     @staticmethod
-    @transaction.atomic
     def disable_for_user(user):
-        """Turn practice mode off and delete all of the user's practice data."""
+        """Turn practice mode off, keeping the user's practice data intact.
+
+        The data stays flagged ``is_practice`` and hidden from the live
+        application, so re-entering practice mode shows the user's existing work
+        instead of an empty slate. Use ``reset_for_user`` to clear it on demand.
+        """
         prefs = user.get_preferences
         prefs.practice_mode = False
-        prefs.practice_mode_started_at = None
-        prefs.save(update_fields=["practice_mode", "practice_mode_started_at"])
+        prefs.save(update_fields=["practice_mode"])
+        return prefs
+
+    @staticmethod
+    @transaction.atomic
+    def reset_for_user(user):
+        """Explicitly clear the user's practice data and start a fresh session.
+
+        This is the only path that deletes practice data, and it is only reached
+        when the user asks for a clean slate. Practice mode is left on with a new
+        start time so the user keeps practising, now from scratch.
+        """
         PracticeService.purge_for_user(user)
+        prefs = user.get_preferences
+        prefs.practice_mode = True
+        prefs.practice_mode_started_at = timezone.now()
+        prefs.save(update_fields=["practice_mode", "practice_mode_started_at"])
         return prefs
 
     # ----- numbering -----------------------------------------------------
@@ -82,22 +100,6 @@ class PracticeService:
         PoliceOfficer.all_objects.filter(is_practice=True, practice_owner=user).delete()
         PoliceStation.all_objects.filter(is_practice=True, practice_owner=user).delete()
         Defendant.all_objects.filter(is_practice=True, practice_owner=user).delete()
-
-    @staticmethod
-    def purge_expired():
-        """Sweep practice data for every user whose session has lapsed."""
-        from common.practice import PRACTICE_TTL
-        from users.models import UserPreferences
-
-        cutoff = timezone.now() - PRACTICE_TTL
-        lapsed = UserPreferences.objects.filter(
-            practice_mode=True, practice_mode_started_at__lt=cutoff
-        ).select_related("user")
-        count = 0
-        for prefs in lapsed:
-            PracticeService.disable_for_user(prefs.user)
-            count += 1
-        return count
 
 
 def practice_stamp():

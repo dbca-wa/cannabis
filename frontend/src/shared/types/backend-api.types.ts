@@ -125,9 +125,10 @@ export interface User {
 	// Authentication status
 	is_authenticated: boolean; // Always true for authenticated responses
 
-	// Practice mode — a per-user, self-expiring mode for rehearsing the workflow
+	// Practice mode — a per-user mode for rehearsing the workflow. Data persists
+	// between sessions and is only cleared when the user explicitly resets it.
 	practice_mode?: boolean;
-	practice_mode_expires_at?: string | null;
+	practice_mode_started_at?: string | null;
 
 	// Nested preferences
 	preferences: UserPreferences;

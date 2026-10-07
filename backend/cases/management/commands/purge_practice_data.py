@@ -1,16 +1,15 @@
 """Delete practice data.
 
 Practice rows are flagged ``is_practice=True`` and hidden from the live
-application. This command removes them. With ``--expired`` it only removes data
-for users whose one-day practice window has lapsed (safe for a scheduled job);
-otherwise it removes all practice data. It reports by default and only deletes
-with ``--confirm``.
+application. Practice data is no longer auto-expired — a user's practice work
+persists until they explicitly reset it in the app. This command remains for
+operators who need to clear practice data across all users (e.g. before a
+teardown). It reports by default and only deletes with ``--confirm``.
 """
 
 from django.core.management.base import BaseCommand
 
 from cases.models import Batch, Case
-from cases.services.practice_service import PracticeService
 from defendants.models import Defendant
 from police.models import PoliceOfficer, PoliceStation
 
@@ -23,11 +22,6 @@ class Command(BaseCommand):
             "--confirm",
             action="store_true",
             help="Actually delete. Without this flag the command only reports.",
-        )
-        parser.add_argument(
-            "--expired",
-            action="store_true",
-            help="Only purge users whose practice window has lapsed.",
         )
 
     def handle(self, *args, **options):
@@ -44,13 +38,6 @@ class Command(BaseCommand):
 
         if not options["confirm"]:
             self.stdout.write(self.style.WARNING("Dry run — pass --confirm to delete."))
-            return
-
-        if options["expired"]:
-            n = PracticeService.purge_expired()
-            self.stdout.write(
-                self.style.SUCCESS(f"Purged {n} lapsed practice session(s).")
-            )
             return
 
         # Delete every practice row regardless of owner/mode state. Cases cascade
