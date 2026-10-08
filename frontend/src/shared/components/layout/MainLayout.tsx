@@ -18,9 +18,12 @@ import { observer } from "mobx-react-lite";
  * guide sheet when it is open, so the fixed sheet never covers page content.
  */
 const MainContent = () => {
-	const { isOpen } = usePracticeSheet();
+	const { isOpen, guideEnabled } = usePracticeSheet();
 	const { isOn } = usePracticeMode();
-	const reserveForSheet = isOn && isOpen;
+	// The docked sheet is visible — and so needs room reserved — whenever it is
+	// open and either practice mode is on (the brief) or the reference guide is
+	// toggled on outside practice mode. Mirrors the sheet's own render gate.
+	const reserveForSheet = isOpen && (isOn || guideEnabled);
 
 	return (
 		<main
