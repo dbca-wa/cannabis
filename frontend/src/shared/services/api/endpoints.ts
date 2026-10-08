@@ -159,5 +159,6 @@ export const ENDPOINTS = {
 	SYSTEM: {
 		SETTINGS: "/system/settings",
 		FEATURE_FLAGS: "/system/feature-flags",
+		PAGE_VIEW: "/system/page-view", // Audit beacon: one line per page visited
 	},
 } as const;

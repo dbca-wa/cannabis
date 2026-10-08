@@ -39,18 +39,13 @@ class SecurityAuditMiddleware(MiddlewareMixin):
     def process_response(self, request: HttpRequest, response: HttpResponse):
         """Log security-relevant responses"""
 
-        # Log system settings access (now that auth is processed)
+        # System settings: successful reads are silent (reads never log on
+        # success). Only a denied access is worth a line, as a real problem.
         if request.path.startswith("/api/v1/system/settings"):
-            user_info = "anonymous"
-            if hasattr(request, "user") and request.user.is_authenticated:
-                user_info = f"{request.user.email} (ID: {request.user.id})"
-
-            if response.status_code == 200:
-                logger.info(
-                    f"[Security] System settings access successful: {request.method} {request.path} "
-                    f"by {user_info} from {self.get_client_ip(request)}"
-                )
-            elif response.status_code == 403:
+            if response.status_code == 403:
+                user_info = "anonymous"
+                if hasattr(request, "user") and request.user.is_authenticated:
+                    user_info = f"{request.user.email} (ID: {request.user.id})"
                 logger.warning(
                     f"[Security] Access denied to system settings: {request.method} {request.path} "
                     f"by {user_info} from {self.get_client_ip(request)} - Status: {response.status_code}"

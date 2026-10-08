@@ -563,6 +563,10 @@ class PasswordUpdateView(APIView):
 
             # Log the password change
             SecurityEventLogger.log_password_update_success(user.email, is_first_time)
+            settings.LOGGER.info(
+                f"{describe_user(user)} "
+                f"{'set their initial password' if is_first_time else 'changed their password'}"
+            )
 
             # Return success response
             return Response(

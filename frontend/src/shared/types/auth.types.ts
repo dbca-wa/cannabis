@@ -84,6 +84,9 @@ export interface UserPreferences {
 	// Accessibility preferences
 	reduce_motion: boolean;
 
+	// Reference guide toggle (shown outside practice mode)
+	guide_enabled: boolean;
+
 	// Date/Time preferences
 	date_format: DateFormatChoice;
 	time_format: TimeFormatChoice;

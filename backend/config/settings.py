@@ -500,7 +500,6 @@ LOGGING = {
             }
             for logger_name in (
                 "django",
-                "django.request",
                 "django.db.backends",
                 "django.template",
                 "core",
@@ -510,6 +509,24 @@ LOGGING = {
                 "azure.core.pipeline.policies.http_logging_policy",
                 "urllib3",
             )
+        },
+        # Client errors (4xx) are already reported once by the failure-only
+        # request middleware ("[API] 4xx ... by <user>"). Django's own
+        # "Unauthorized: /path" / "Bad Request: /path" lines on the
+        # django.request logger would duplicate that, so only let genuine
+        # server errors (5xx, logged at ERROR) through here.
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # The dev server's per-request access log ("GET ... 200") is pure
+        # noise next to the action/read audit. Keep only failed-to-serve
+        # lines by holding it at ERROR.
+        "django.server": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
         # Action logs use settings.LOGGER (logger name "config.settings"); the
         # failure-only request middleware uses "api.request". Both must reach

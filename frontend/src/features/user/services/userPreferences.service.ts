@@ -40,6 +40,15 @@ export class UserPreferencesService {
 	}
 
 	/**
+	 * Update the reference-guide toggle only
+	 */
+	static async updateGuideEnabled(
+		guide_enabled: UserPreferences["guide_enabled"]
+	): Promise<UserPreferences> {
+		return this.updatePreferences({ guide_enabled });
+	}
+
+	/**
 	 * Update loader style preference only
 	 */
 	static async updateLoaderStyle(

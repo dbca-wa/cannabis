@@ -10,6 +10,7 @@ import { PracticeSheetReopenTab } from "@/features/practice/components/PracticeS
 import { PracticeSheetProvider } from "@/features/practice/components/PracticeSheetContext";
 import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
+import { usePageViewAudit } from "@/shared/hooks/usePageViewAudit";
 import { Outlet as RouterOutlet } from "react-router";
 import { observer } from "mobx-react-lite";
 
@@ -41,6 +42,10 @@ const MainContent = () => {
 
 const MainLayout = observer(function MainLayout() {
 	const uiStore = useUIStore();
+
+	// One audit beacon per page the user navigates to (what they're doing),
+	// independent of the data-fetch calls each page makes.
+	usePageViewAudit();
 
 	return (
 		<NavigationProvider>

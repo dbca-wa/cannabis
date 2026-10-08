@@ -590,6 +590,21 @@ export class UIStore extends BaseStore<UIStoreState> {
 			storage.setItem(this.storageKey, preferences.theme);
 			storage.setItem(this.loaderStorageKey, preferences.loader_style);
 
+			// Mirror the server's reference-guide toggle into the key the
+			// practice sheet reads (raw localStorage, "true"/"false"), so the
+			// guide follows the user across devices. Guarded so an older server
+			// payload without the field leaves the local value untouched.
+			if (typeof preferences.guide_enabled === "boolean") {
+				try {
+					localStorage.setItem(
+						"cannabis.guideEnabled",
+						preferences.guide_enabled ? "true" : "false"
+					);
+				} catch {
+					// Non-fatal — the toggle just won't pre-seed from the server.
+				}
+			}
+
 			// Save items per page to localStorage if valid
 			if (
 				preferences.items_per_page &&

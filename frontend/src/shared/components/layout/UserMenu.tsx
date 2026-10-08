@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
+import { UserPreferencesService } from "@/features/user/services/userPreferences.service";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useNavigate } from "react-router";
 import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
@@ -45,7 +46,12 @@ const UserMenu = observer((_props: UserMenuProps) => {
 	const [open, setOpen] = useState(false);
 
 	const handleGuideToggle = () => {
-		setGuideEnabled(!guideEnabled);
+		const next = !guideEnabled;
+		// Update the UI immediately (localStorage-backed), then persist to the
+		// server so the preference follows the user across devices. The server
+		// write is best-effort — a failure must not block the toggle.
+		setGuideEnabled(next);
+		void UserPreferencesService.updateGuideEnabled(next).catch(() => {});
 	};
 
 	const handlePracticeToggle = () => {
