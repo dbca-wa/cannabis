@@ -13,6 +13,13 @@ export interface PracticeSheetValue {
 	open: () => void;
 	close: () => void;
 	toggle: () => void;
+	/**
+	 * Whether the user has turned the guide on outside practice mode. Practice
+	 * mode always shows the guide; this flag only controls the real-mode guide.
+	 * Persisted so it survives reloads.
+	 */
+	guideEnabled: boolean;
+	setGuideEnabled: (on: boolean) => void;
 	/** Live values from the in-progress new-case form, or null when not on it. */
 	liveCreateData: LiveCase | null;
 	setLiveCreateData: (data: LiveCase | null) => void;
@@ -31,6 +38,8 @@ export const usePracticeSheet = (): PracticeSheetValue => {
 			open: () => {},
 			close: () => {},
 			toggle: () => {},
+			guideEnabled: false,
+			setGuideEnabled: () => {},
 			liveCreateData: null,
 			setLiveCreateData: () => {},
 		}

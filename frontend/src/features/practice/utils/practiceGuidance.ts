@@ -82,11 +82,7 @@ export const derivePracticeStep = (p: PracticeProgressInput): number => {
 
 	// Finalised and beyond — batching, in a batch, or complete — are all the
 	// single "batch and complete" step now.
-	if (
-		status === "complete" ||
-		status === "in_batch" ||
-		status === "batching"
-	) {
+	if (status === "complete" || status === "in_batch" || status === "batching") {
 		return 5;
 	}
 
@@ -159,6 +155,66 @@ const INSTRUCTIONS: Record<
 	},
 };
 
+/**
+ * The same walkthrough for real work, with the practice-only phrasing removed:
+ * no "brief below", no fake data, no pre-selected default botanist. Used when
+ * the guide is toggled on outside practice mode as a reference.
+ */
+const INSTRUCTIONS_REAL: Record<
+	number,
+	{ heading: string; instructions: string[] }
+> = {
+	1: {
+		heading: "Step 1 — Create the case",
+		instructions: [
+			"From the Dashboard or Cases page, click 'New Case' on the top right.",
+			"Type the police reference from the Priority 3 form into Police Reference Number.",
+			"Set the Received Date (it defaults to today).",
+			"Add the defendant, submitting officer and station.",
+			"If an officer or station is not found, use Add New to create it.",
+			"Choose the Approved Botanist who will assess the samples.",
+			"Click Create Case once the details are complete.",
+		],
+	},
+	2: {
+		heading: "Step 2 — Record the samples",
+		instructions: [
+			"In the Assessment section, add a Priority 3 form.",
+			"Add each drug bag: the original and new seal tag numbers, content type and determination.",
+			"Mark whether a bag holds female plants.",
+			"Add the Section C note or template where a security movement envelope or female plants apply.",
+		],
+	},
+	3: {
+		heading: "Step 3 — Generate the certificates",
+		instructions: [
+			"Once the samples are recorded, produce the certificates.",
+			"In the Certificates section, click Generate for each form.",
+			"Review each generated certificate.",
+			"Click Mark Ready on each certificate once it is correct.",
+			"When every certificate is generated and marked ready, click Finalise Case.",
+		],
+	},
+	4: {
+		heading: "Step 4 — Finalise the case",
+		instructions: [
+			"Every certificate is generated and marked ready.",
+			"Click Finalise Case. You will be taken to the Cases page.",
+		],
+	},
+	5: {
+		heading: "Step 5 — Batch and complete the case",
+		instructions: [
+			"On the Cases page, tick the checkbox to the left of the finalised case.",
+			"The purple Create Batch button (top right) becomes active — click it.",
+			"You are taken to the Batches page, where the new batch is waiting.",
+			"Open the batch and click Download package to get the certificates — do this before recording the invoice.",
+			"Record the invoice number via the row's three-dots menu, or the green Record invoice number button when it is the only batch waiting.",
+			"The Dashboard chart updates with the completed batch.",
+		],
+	},
+};
+
 const buildSteps = (currentNumber: number): PracticeStep[] =>
 	STEP_TITLES.map((title, i) => ({
 		number: i + 1,
@@ -168,28 +224,36 @@ const buildSteps = (currentNumber: number): PracticeStep[] =>
 	}));
 
 /**
- * Guidance for the given step number. The step is derived from live progress
- * (see derivePracticeStep); the pathname only nudges the number when the user
- * is somewhere the case data cannot be read, so the guide still points forward.
+ * Guidance for the given step number.
+ *
+ * In practice mode the step is derived from live progress (see
+ * derivePracticeStep) and the pathname only nudges the number so the guide
+ * points forward. Outside practice mode the guide is a reference the user
+ * browses freely, so the pathname nudging is skipped and the practice-only
+ * phrasing (brief, fake data, pre-selected botanist) is dropped via the
+ * ``practice`` flag.
  */
 export const getPracticeGuidance = (
 	pathname: string,
-	step: number
+	step: number,
+	practice = true
 ): PracticeGuidance => {
 	let n = step;
 
-	// On the batches area, the user is acting on an already-finalised case; keep
-	// them in the batch/invoice half even if no case data is loaded here.
-	if (pathname.startsWith("/batches") && n < 5) {
+	// Practice mode follows the user to the batching half on the batches page.
+	// Outside practice mode the user is browsing, so leave their chosen step be.
+	if (practice && pathname.startsWith("/batches") && n < 5) {
 		n = 5;
 	}
 
-	const copy = INSTRUCTIONS[n] ?? INSTRUCTIONS[1];
+	const source = practice ? INSTRUCTIONS : INSTRUCTIONS_REAL;
+	const copy = source[n] ?? source[1];
 	let instructions = copy.instructions;
 
 	// Once the user is on the new-case form, the "click New Case" nudge is no
 	// longer relevant — drop it so the first instruction is the first field.
-	if (n === 1 && pathname.startsWith("/cases/add")) {
+	// (Practice mode only; outside it the user browses regardless of page.)
+	if (practice && n === 1 && pathname.startsWith("/cases/add")) {
 		instructions = instructions.filter(
 			(line) => !line.includes("click 'New Case'")
 		);

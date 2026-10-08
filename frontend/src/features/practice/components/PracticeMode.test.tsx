@@ -54,6 +54,13 @@ const { usePracticeSheet } = await import("./practiceSheet.context");
 describe("Practice mode UI", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// The guide-on preference persists to localStorage; clear it so one test's
+		// toggle does not leak into the next.
+		try {
+			localStorage.clear();
+		} catch {
+			/* no localStorage in this environment */
+		}
 	});
 
 	describe("PracticeModeBanner", () => {
@@ -134,6 +141,61 @@ describe("Practice mode UI", () => {
 				screen.getByRole("button", { name: /hide practice guide/i })
 			);
 			expect(screen.queryByText("PRACTICE-123456")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("PracticeBriefSheet — guide-only reference mode", () => {
+		// Turns the reference guide on from inside the provider.
+		const GuideEnabler = () => {
+			const { setGuideEnabled } = usePracticeSheet();
+			return (
+				<button type="button" onClick={() => setGuideEnabled(true)}>
+					enable-guide
+				</button>
+			);
+		};
+
+		it("stays hidden outside practice mode until the guide is enabled", async () => {
+			const user = userEvent.setup();
+			authState.user = { practice_mode: false };
+			renderPage(
+				<PracticeSheetProvider>
+					<GuideEnabler />
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>,
+				{ initialEntries: ["/cases"] }
+			);
+			// Nothing from the sheet yet.
+			expect(screen.queryByLabelText("Case guide")).not.toBeInTheDocument();
+
+			await user.click(screen.getByRole("button", { name: "enable-guide" }));
+
+			// The reference sheet appears with instructions, and no practice data.
+			expect(await screen.findByLabelText("Case guide")).toBeInTheDocument();
+			expect(screen.getByText(/Step 1 — Create the case/i)).toBeInTheDocument();
+			expect(screen.queryByText("PRACTICE-123456")).not.toBeInTheDocument();
+			expect(screen.queryByText(/Fake data/i)).not.toBeInTheDocument();
+		});
+
+		it("lets the user jump to another step by clicking it", async () => {
+			const user = userEvent.setup();
+			authState.user = { practice_mode: false };
+			renderPage(
+				<PracticeSheetProvider>
+					<GuideEnabler />
+					<PracticeBriefSheet />
+				</PracticeSheetProvider>,
+				{ initialEntries: ["/cases"] }
+			);
+			await user.click(screen.getByRole("button", { name: "enable-guide" }));
+			await screen.findByLabelText("Case guide");
+
+			await user.click(
+				screen.getByRole("button", { name: /Batch and complete/i })
+			);
+			expect(
+				screen.getByText(/Step 5 — Batch and complete the case/i)
+			).toBeInTheDocument();
 		});
 	});
 

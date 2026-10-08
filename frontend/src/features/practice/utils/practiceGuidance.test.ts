@@ -97,3 +97,35 @@ describe("getPracticeGuidance", () => {
 		);
 	});
 });
+
+describe("getPracticeGuidance — reference mode (practice = false)", () => {
+	it("drops the practice-only phrasing from the instructions", () => {
+		for (let step = 1; step <= 5; step++) {
+			const g = getPracticeGuidance("/cases", step, false);
+			const all = `${g.heading} ${g.instructions.join(" ")}`;
+			expect(all).not.toMatch(/brief below/i);
+			expect(all).not.toMatch(/fake data/i);
+			expect(all).not.toMatch(/already selected for you/i);
+		}
+	});
+
+	it("tells the user to choose the approved botanist, not accept a default", () => {
+		const g = getPracticeGuidance("/cases", 1, false);
+		expect(
+			g.instructions.some((l) => /choose the approved botanist/i.test(l))
+		).toBe(true);
+	});
+
+	it("does not force the final step on the batches page (free browsing)", () => {
+		const g = getPracticeGuidance("/batches", 2, false);
+		expect(g.currentStep).toBe(2);
+		expect(g.heading).toMatch(/Record the samples/i);
+	});
+
+	it("keeps the New Case nudge even on the create form (free browsing)", () => {
+		const g = getPracticeGuidance("/cases/add", 1, false);
+		expect(g.instructions.some((l) => l.includes("click 'New Case'"))).toBe(
+			true
+		);
+	});
+});

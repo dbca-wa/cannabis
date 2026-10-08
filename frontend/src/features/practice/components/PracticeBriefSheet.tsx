@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
 	ClipboardList,
 	X,
@@ -26,6 +27,7 @@ import {
 	getPracticeGuidance,
 	derivePracticeStep,
 	type PracticeFormProgress,
+	type PracticeGuidance,
 } from "../utils/practiceGuidance";
 import {
 	buildCaseChecklist,
@@ -50,13 +52,21 @@ interface StepTrackerProps {
 		current: boolean;
 		done: boolean;
 	}[];
+	/**
+	 * When provided, each step becomes a button that selects it. Used by the
+	 * guide-only reference so the user can jump through the steps freely.
+	 */
+	onSelectStep?: (step: number) => void;
 }
 
 /** Compact 1–6 journey tracker so the user always sees overall progress. */
-const StepTracker = ({ steps }: StepTrackerProps) => (
-	<ol className="space-y-1" aria-label="Practice progress">
-		{steps.map((s) => (
-			<li key={s.number} className="flex items-center gap-2">
+const StepTracker = ({ steps, onSelectStep }: StepTrackerProps) => (
+	<ol
+		className="space-y-1"
+		aria-label={onSelectStep ? "Guide steps" : "Practice progress"}
+	>
+		{steps.map((s) => {
+			const marker = (
 				<span
 					className={
 						"flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold " +
@@ -70,6 +80,8 @@ const StepTracker = ({ steps }: StepTrackerProps) => (
 				>
 					{s.done ? <Check size={12} /> : s.number}
 				</span>
+			);
+			const label = (
 				<span
 					className={
 						"text-[13px] " +
@@ -81,10 +93,35 @@ const StepTracker = ({ steps }: StepTrackerProps) => (
 					}
 				>
 					{s.title}
-					{s.current && <span className="sr-only"> (current step)</span>}
+					{s.current && (
+						<span className="sr-only">
+							{onSelectStep ? " (selected step)" : " (current step)"}
+						</span>
+					)}
 				</span>
-			</li>
-		))}
+			);
+
+			return (
+				<li key={s.number}>
+					{onSelectStep ? (
+						<button
+							type="button"
+							onClick={() => onSelectStep(s.number)}
+							aria-current={s.current ? "step" : undefined}
+							className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left hover:bg-amber-200/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 dark:hover:bg-amber-900/50"
+						>
+							{marker}
+							{label}
+						</button>
+					) : (
+						<div className="flex items-center gap-2">
+							{marker}
+							{label}
+						</div>
+					)}
+				</li>
+			);
+		})}
 	</ol>
 );
 
@@ -135,6 +172,84 @@ const Checklist = ({ group }: ChecklistProps) => (
 	</div>
 );
 
+interface GuideReferenceSheetProps {
+	guidance: PracticeGuidance;
+	onClose: () => void;
+	onSelectStep: (step: number) => void;
+}
+
+/**
+ * Reference-only guide, docked on the right, shown when the user turns the guide
+ * on outside practice mode. It has no practice data and watches nothing: just
+ * the step instructions, which the user can browse freely by clicking a step.
+ */
+const GuideReferenceSheet = ({
+	guidance,
+	onClose,
+	onSelectStep,
+}: GuideReferenceSheetProps) => (
+	<aside
+		aria-label="Case guide"
+		className="fixed right-0 top-0 z-[60] hidden h-full w-[360px] shrink-0 flex-col overflow-y-auto border-l border-amber-300 bg-amber-50 shadow-2xl dark:border-amber-800 dark:bg-amber-950/95 lg:flex"
+	>
+		<div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-amber-300 bg-amber-100 px-4 py-3 dark:border-amber-800 dark:bg-amber-950">
+			<h2 className="flex items-center gap-2 text-base font-semibold text-amber-900 dark:text-amber-100">
+				<ClipboardList size={18} aria-hidden="true" />
+				Guide
+			</h2>
+			<Button
+				size="icon"
+				variant="ghost"
+				className="h-7 w-7 text-amber-900 hover:bg-amber-200 dark:text-amber-100"
+				onClick={onClose}
+				aria-label="Hide guide"
+			>
+				<X size={16} />
+			</Button>
+		</div>
+
+		<div className="space-y-5 px-4 py-4 text-sm">
+			<p className="text-xs text-amber-800/80 dark:text-amber-100/70">
+				A quick reference for the case workflow. Click any step to read its
+				instructions.
+			</p>
+
+			<section>
+				<div className="mb-2 flex items-center justify-between">
+					<h3 className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+						Steps
+					</h3>
+					<span className="text-xs tabular-nums text-amber-800 dark:text-amber-200">
+						Step {guidance.currentStep} of {guidance.steps.length}
+					</span>
+				</div>
+				<StepTracker steps={guidance.steps} onSelectStep={onSelectStep} />
+			</section>
+
+			<section className="border-t border-amber-300 pt-4 dark:border-amber-800">
+				<h3 className="mb-2 text-[15px] font-semibold text-amber-900 dark:text-amber-100">
+					{guidance.heading}
+				</h3>
+				<ol className="space-y-2">
+					{guidance.instructions.map((line, i) => (
+						<li
+							key={i}
+							className="flex gap-2 text-amber-900/90 dark:text-amber-100/90"
+						>
+							<ChevronRight
+								size={16}
+								className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+								aria-hidden="true"
+							/>
+							<span>{line}</span>
+						</li>
+					))}
+				</ol>
+			</section>
+		</div>
+	</aside>
+);
+
 /**
  * Always-accessible practice guide, docked on the right. Shows what to do on the
  * current page, then a live checklist of the fake Priority 3 brief that ticks
@@ -144,9 +259,15 @@ const Checklist = ({ group }: ChecklistProps) => (
  */
 export const PracticeBriefSheet = () => {
 	const { isOn, restartCase, isToggling } = usePracticeMode();
-	const { isOpen, close, liveCreateData } = usePracticeSheet();
+	const { isOpen, close, liveCreateData, guideEnabled } = usePracticeSheet();
 	const { data: brief, index, total, next, previous } = usePracticeBrief(isOn);
 	const { pathname } = useLocation();
+
+	// Guide-only mode: the user turned the reference guide on while NOT in
+	// practice mode. It shows the instructions with freely browsable steps and
+	// no live/practice data at all.
+	const guideOnly = !isOn && guideEnabled;
+	const [selectedStep, setSelectedStep] = useState(1);
 
 	const caseId = caseIdFromPath(pathname);
 
@@ -184,7 +305,27 @@ export const PracticeBriefSheet = () => {
 		staleTime: 10_000,
 	});
 
-	if (!isOn || !isOpen || !brief) return null;
+	// Show the sheet in practice mode (always) or when the guide is toggled on
+	// outside practice mode. Hide it when closed, or when neither applies.
+	if (!isOpen) return null;
+	if (!isOn && !guideEnabled) return null;
+	// Practice mode needs a brief; the guide-only reference does not.
+	if (isOn && !brief) return null;
+
+	// ---- Guide-only mode: instructions only, freely browsable, no data. ----
+	if (guideOnly) {
+		const guidance = getPracticeGuidance(pathname, selectedStep, false);
+		return (
+			<GuideReferenceSheet
+				guidance={guidance}
+				onClose={close}
+				onSelectStep={setSelectedStep}
+			/>
+		);
+	}
+
+	// ---- Practice mode below: live, data-driven checklist. ----
+	if (!brief) return null; // narrows brief for the rest of the practice body
 
 	// On the new-case form the data lives in memory (liveCreateData); on a saved
 	// case it comes from the query cache. Prefer whichever is present.
@@ -351,58 +492,59 @@ export const PracticeBriefSheet = () => {
 				    Hidden once the case is finalised (step 5) — data entry is done,
 				    so only the batch-and-complete instructions and checklist remain. */}
 				{guidance.currentStep < 5 && (
-				<section className="space-y-4 border-t border-amber-300 pt-4 dark:border-amber-800">
-					<div className="flex items-center justify-between gap-2">
-						<div className="flex items-center gap-2">
-							<h3 className="text-[15px] font-semibold text-amber-900 dark:text-amber-100">
-								Your Priority 3 brief
-							</h3>
-							<Badge variant="secondary">Fake data</Badge>
-						</div>
-						{total > 1 && (
-							<div className="flex items-center gap-1">
-								<Button
-									size="icon"
-									variant="outline"
-									className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
-									onClick={previous}
-									aria-label="Previous example"
-								>
-									<ChevronLeft size={16} />
-								</Button>
-								<span className="text-xs tabular-nums text-amber-800 dark:text-amber-200">
-									{index + 1}/{total}
-								</span>
-								<Button
-									size="icon"
-									variant="outline"
-									className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
-									onClick={next}
-									aria-label="Next example"
-								>
-									<ChevronRight size={16} />
-								</Button>
+					<section className="space-y-4 border-t border-amber-300 pt-4 dark:border-amber-800">
+						<div className="flex items-center justify-between gap-2">
+							<div className="flex items-center gap-2">
+								<h3 className="text-[15px] font-semibold text-amber-900 dark:text-amber-100">
+									Your Priority 3 brief
+								</h3>
+								<Badge variant="secondary">Fake data</Badge>
 							</div>
-						)}
-					</div>
-					<p className="text-xs text-amber-800/80 dark:text-amber-100/70">
-						This is practice data. In real work it would come from an official
-						Priority 3 form. Items tick off as you enter them from your brief
-						below. The approved botanist is the default one, already selected
-						for you — leave it as is. Use the arrows to try a different example.
-					</p>
+							{total > 1 && (
+								<div className="flex items-center gap-1">
+									<Button
+										size="icon"
+										variant="outline"
+										className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
+										onClick={previous}
+										aria-label="Previous example"
+									>
+										<ChevronLeft size={16} />
+									</Button>
+									<span className="text-xs tabular-nums text-amber-800 dark:text-amber-200">
+										{index + 1}/{total}
+									</span>
+									<Button
+										size="icon"
+										variant="outline"
+										className="h-7 w-7 border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
+										onClick={next}
+										aria-label="Next example"
+									>
+										<ChevronRight size={16} />
+									</Button>
+								</div>
+							)}
+						</div>
+						<p className="text-xs text-amber-800/80 dark:text-amber-100/70">
+							This is practice data. In real work it would come from an official
+							Priority 3 form. Items tick off as you enter them from your brief
+							below. The approved botanist is the default one, already selected
+							for you — leave it as is. Use the arrows to try a different
+							example.
+						</p>
 
-					<Checklist group={caseChecklist} />
-					{formChecklists.map((group) => (
-						<Checklist key={group.title} group={group} />
-					))}
-					{/* Certificate progress appears once the samples are recorded and
-					    the guide is on (or past) the generate-certificates step. */}
-					{guidance.currentStep >= 3 &&
-						certificateChecklists.map((group) => (
+						<Checklist group={caseChecklist} />
+						{formChecklists.map((group) => (
 							<Checklist key={group.title} group={group} />
 						))}
-				</section>
+						{/* Certificate progress appears once the samples are recorded and
+					    the guide is on (or past) the generate-certificates step. */}
+						{guidance.currentStep >= 3 &&
+							certificateChecklists.map((group) => (
+								<Checklist key={group.title} group={group} />
+							))}
+					</section>
 				)}
 
 				{/* Step 5 — batch and complete. Interactive checklist ticking as the

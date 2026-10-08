@@ -15,9 +15,11 @@ import {
 	KeyRound,
 	LogOut,
 	GraduationCap,
+	BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
+import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { useUIStore } from "@/app/providers/store.provider";
 import { useNavigate } from "react-router";
 import { getAppVersion, getAppEnvironment } from "@/shared/utils/version.utils";
@@ -37,9 +39,14 @@ interface UserMenuProps {
 const UserMenu = observer((_props: UserMenuProps) => {
 	const { user, logout } = useAuth();
 	const practice = usePracticeMode();
+	const { guideEnabled, setGuideEnabled } = usePracticeSheet();
 	const uiStore = useUIStore();
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
+
+	const handleGuideToggle = () => {
+		setGuideEnabled(!guideEnabled);
+	};
 
 	const handlePracticeToggle = () => {
 		setOpen(false);
@@ -238,6 +245,49 @@ const UserMenu = observer((_props: UserMenuProps) => {
 							: "Rehearse the workflow with a fake case. Nothing is saved to real data."}
 					</div>
 				</div>
+
+				{/* Guide toggle — reference-only step instructions, outside practice
+				    mode. Hidden while practising, since practice already shows it. */}
+				{!practice.isOn && (
+					<div className="border-t border-border/60 p-2">
+						<div className="flex items-center justify-between px-2 py-1.5">
+							<div className="flex items-center gap-2">
+								<BookOpen className="w-4 h-4 text-muted-foreground" />
+								<span className="text-[13px]">Guide</span>
+							</div>
+							<button
+								onClick={handleGuideToggle}
+								role="switch"
+								aria-checked={guideEnabled}
+								aria-label="Toggle guide"
+								className={`relative h-7 w-14 rounded-full transition-colors cursor-pointer ${
+									guideEnabled ? "bg-amber-500" : "bg-gray-200 dark:bg-muted"
+								}`}
+							>
+								<motion.div
+									animate={{ x: guideEnabled ? 28 : 2 }}
+									transition={{
+										type: "spring",
+										stiffness: 500,
+										damping: 30,
+									}}
+									className="absolute top-[2px] w-6 h-6 rounded-full bg-white shadow flex items-center justify-center"
+								>
+									<BookOpen
+										className={`w-3 h-3 ${
+											guideEnabled ? "text-amber-600" : "text-muted-foreground"
+										}`}
+									/>
+								</motion.div>
+							</button>
+						</div>
+						<div className="px-2 text-[11px] text-muted-foreground">
+							{guideEnabled
+								? "Showing the case workflow guide. Click a step to read it."
+								: "Show a reference guide of the case workflow steps."}
+						</div>
+					</div>
+				)}
 
 				{/* Actions */}
 				<div className="border-t border-border/60 p-2">
