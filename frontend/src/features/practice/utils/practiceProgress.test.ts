@@ -3,6 +3,7 @@ import {
 	buildCaseChecklist,
 	buildFormChecklists,
 	buildCertificateChecklists,
+	buildBatchChecklist,
 	isCaseChecklistComplete,
 	areFormChecklistsComplete,
 	type LiveCase,
@@ -220,6 +221,36 @@ describe("buildCertificateChecklists", () => {
 		done = Object.fromEntries(groups[0].items.map((i) => [i.label, i.done]));
 		expect(done["Generate the certificate"]).toBe(true);
 		expect(done["Review and mark it ready"]).toBe(true);
+	});
+});
+
+describe("buildBatchChecklist", () => {
+	it("ticks nothing before a batch exists for the case", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", []);
+		expect(group.items.every((i) => !i.done)).toBe(true);
+	});
+
+	it("ticks create-batch once a batch covers the case, invoice still open", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-480021"], is_invoiced: false },
+		]);
+		const done = Object.fromEntries(group.items.map((i) => [i.label, i.done]));
+		expect(done["Create a batch for this case"]).toBe(true);
+		expect(done["Record the invoice number"]).toBe(false);
+	});
+
+	it("ticks everything once the batch is invoiced", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-480021"], is_invoiced: true },
+		]);
+		expect(group.items.every((i) => i.done)).toBe(true);
+	});
+
+	it("ignores batches that do not cover this case", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-999999"], is_invoiced: true },
+		]);
+		expect(group.items.every((i) => !i.done)).toBe(true);
 	});
 });
 

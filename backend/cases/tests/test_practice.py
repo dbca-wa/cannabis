@@ -307,3 +307,53 @@ class TestModeEndpoints:
             ).count()
             == 0
         )
+
+    def test_restart_case_removes_only_that_case(self, botanist_user):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        client = APIClient()
+        token = str(RefreshToken.for_user(botanist_user).access_token)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        client.post("/api/v1/practice/mode")
+
+        a = client.post(
+            "/api/v1/cases/list",
+            {"case_number": "PRACTICE-A", "received": timezone.now().isoformat()},
+            format="json",
+        )
+        b = client.post(
+            "/api/v1/cases/list",
+            {"case_number": "PRACTICE-B", "received": timezone.now().isoformat()},
+            format="json",
+        )
+        assert a.status_code in (200, 201) and b.status_code in (200, 201)
+        a_id, b_id = a.data["id"], b.data["id"]
+
+        res = client.post(f"/api/v1/practice/reset-case/{a_id}")
+        assert res.status_code == 200
+        # Only case A is gone; B remains.
+        assert not Case.all_objects.filter(pk=a_id).exists()
+        assert Case.all_objects.filter(pk=b_id).exists()
+
+    def test_restart_case_rejects_another_users_case(
+        self, botanist_user, finance_user
+    ):
+        # A case owned by someone else must not be removable.
+        _in_practice(finance_user)
+        other, _ = _make_practice_case(finance_user)
+        _real_mode()
+
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        client = APIClient()
+        token = str(RefreshToken.for_user(botanist_user).access_token)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        client.post("/api/v1/practice/mode")
+
+        # botanist cannot see finance's case, so this is a 404 in their practice
+        # scope, and the case survives.
+        res = client.post(f"/api/v1/practice/reset-case/{other.pk}")
+        assert res.status_code == 404
+        assert Case.all_objects.filter(pk=other.pk).exists()

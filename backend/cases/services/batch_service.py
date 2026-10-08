@@ -189,9 +189,10 @@ class BatchService:
 
         BatchService.build_zip(batch)
 
+        cert_desc = ", ".join(f"{c.certificate_number} ({c.pk})" for c in certs)
         settings.LOGGER.info(
-            f"{describe_user(user)} created {batch.batch_number} ({batch.pk}) "
-            f"with {len(certs)} certificate(s)"
+            f"{describe_user(user)} created batch {batch.batch_number} "
+            f"({batch.pk}) with {len(certs)} certificate(s): {cert_desc}"
         )
         return batch
 
@@ -339,10 +340,13 @@ class BatchService:
             form.completed_at = timezone.now()
             form.save(update_fields=["completed_at"])
 
+        cert_desc = ", ".join(
+            f"{c.certificate_number} ({c.pk})" for c in certificates
+        )
         settings.LOGGER.info(
-            f"{describe_user(user)} recorded invoice {number} on "
+            f"{describe_user(user)} recorded invoice {number} on batch "
             f"{batch.batch_number} ({batch.pk}); "
-            f"{len(certificates)} certificate(s) completed"
+            f"{len(certificates)} certificate(s) completed: {cert_desc}"
         )
         return batch
 

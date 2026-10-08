@@ -226,6 +226,37 @@ export const buildCertificateChecklists = (
 	});
 };
 
+/** A batch as the guide reads it: which cases it covers and its invoice state. */
+export interface LiveBatch {
+	case_numbers?: string[] | null;
+	is_invoiced?: boolean;
+}
+
+/**
+ * Step-5 checklist: batch the finalised case, download the package, then record
+ * the invoice. "Create a batch" ticks once a batch covering this case exists;
+ * "Record the invoice" ticks once that batch is invoiced. The download step is
+ * guidance (it is not observable server-side), placed before the invoice step.
+ */
+export const buildBatchChecklist = (
+	caseNumber: string | null,
+	batches: LiveBatch[]
+): ChecklistGroup => {
+	const batchForCase = (batches ?? []).find((b) =>
+		(b.case_numbers ?? []).some((n) => eq(n, caseNumber ?? ""))
+	);
+	const batched = !!batchForCase;
+	const invoiced = !!batchForCase?.is_invoiced;
+	return {
+		title: "Batch and complete",
+		items: [
+			{ label: "Create a batch for this case", done: batched },
+			{ label: "Download the batch package", done: invoiced },
+			{ label: "Record the invoice number", done: invoiced },
+		],
+	};
+};
+
 /** Whether every case-level checklist item matches the brief. */
 export const isCaseChecklistComplete = (
 	brief: IPracticeBrief,

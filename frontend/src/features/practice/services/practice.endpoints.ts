@@ -5,4 +5,5 @@
 export const PRACTICE_ENDPOINTS = {
 	MODE: "/practice/mode",
 	RESET: "/practice/reset",
+	RESET_CASE: (caseId: number) => `/practice/reset-case/${caseId}`,
 } as const;

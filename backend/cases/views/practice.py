@@ -5,6 +5,7 @@ Turning the mode on and off. The fake brief itself is hardcoded on the client
 screens, which honour the mode via the request-scoped context.
 """
 
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
@@ -47,12 +48,32 @@ class PracticeModeView(APIView):
 class PracticeResetView(APIView):
     """POST: clear the user's practice data and start a fresh practice session.
 
-    This is the only endpoint that deletes practice data, and only when the user
-    asks for a clean slate.
+    This is the only endpoint that deletes all of the user's practice data, and
+    only when the user asks for a clean slate.
     """
 
     permission_classes = [HasAppAccess]
 
     def post(self, request):
         PracticeService.reset_for_user(request.user)
+        return Response(_mode_payload(request.user), status=HTTP_200_OK)
+
+
+class PracticeCaseResetView(APIView):
+    """POST: restart a single practice case — delete it and its cascades.
+
+    Removes only the user's own practice case the guide is working on, so they
+    can start that case over without touching their other practice data.
+    """
+
+    permission_classes = [HasAppAccess]
+
+    def post(self, request, pk):
+        from ..models import Case
+
+        try:
+            case = Case.objects.get(pk=pk)
+        except Case.DoesNotExist:
+            raise NotFound("Practice case not found.")
+        PracticeService.reset_case_for_user(request.user, case)
         return Response(_mode_payload(request.user), status=HTTP_200_OK)

@@ -35,8 +35,7 @@ const STEP_TITLES = [
 	"Record the samples",
 	"Generate certificates",
 	"Finalise the case",
-	"Batch the certificate",
-	"Record the invoice",
+	"Batch and complete",
 ];
 
 export const PRACTICE_STEP_COUNT = STEP_TITLES.length;
@@ -74,18 +73,22 @@ export interface PracticeProgressInput {
  * - Case in assessment, all samples recorded .......... 3 (generate certs)
  * - Certificates generated, not all marked ready ...... 3 (generate/review)
  * - All forms generated and marked ready .............. 4 (finalise)
- * - Finalised, awaiting batching ...................... 5 (batch)
- * - In a batch ........................................ 5 (batch, in progress)
- * - Complete .......................................... 6 (invoice)
+ * - Finalised (batching / in a batch / complete) ...... 5 (batch and complete)
  */
 export const derivePracticeStep = (p: PracticeProgressInput): number => {
 	if (!p.caseExists) return 1;
 	const status = p.derivedStatus ?? "assessment";
 	const forms = p.forms ?? [];
 
-	if (status === "complete") return 6;
-	if (status === "in_batch") return 5;
-	if (status === "batching") return 5;
+	// Finalised and beyond — batching, in a batch, or complete — are all the
+	// single "batch and complete" step now.
+	if (
+		status === "complete" ||
+		status === "in_batch" ||
+		status === "batching"
+	) {
+		return 5;
+	}
 
 	if (status === "unsigned_generation") {
 		// Certificates exist. If every form is reviewed and marked ready, the
@@ -140,24 +143,18 @@ const INSTRUCTIONS: Record<
 		heading: "Step 4 — Finalise the case",
 		instructions: [
 			"Every certificate is generated and marked ready.",
-			"Click Finalise Case to send the certificates for batching.",
-			"You will then move on to batching from the Batches page.",
+			"Click Finalise Case. You will be taken to the Cases page.",
 		],
 	},
 	5: {
-		heading: "Step 5 — Batch the certificate",
+		heading: "Step 5 — Batch and complete the case",
 		instructions: [
-			"Go to Batches in the sidebar — your finalised practice case is waiting.",
-			"Select it and click Create Batch.",
-			"Open the batch to continue to the invoice.",
-		],
-	},
-	6: {
-		heading: "Step 6 — Record the invoice",
-		instructions: [
-			"Open your batch from the Batches page.",
-			"Record a practice invoice number to finish the journey.",
-			"That completes the practice run — well done.",
+			"On the Cases page, tick the checkbox to the left of your finalised case.",
+			"The purple Create Batch button (top right) becomes active — click it.",
+			"You are taken to the Batches page, where your new batch is waiting.",
+			"Open the batch and click Download package to get the certificates — do this before recording the invoice.",
+			"Record the invoice number via the row's three-dots menu, or the green Record invoice number button when it is the only batch waiting.",
+			"Finally, open the Dashboard to see the chart update with your completed batch.",
 		],
 	},
 };

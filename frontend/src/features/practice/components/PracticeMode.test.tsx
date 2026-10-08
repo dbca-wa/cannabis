@@ -117,7 +117,7 @@ describe("Practice mode UI", () => {
 				{ initialEntries: ["/batches"] }
 			);
 			expect(
-				await screen.findByText(/Step 5 — Batch the certificate/i)
+				await screen.findByText(/Step 5 — Batch and complete the case/i)
 			).toBeInTheDocument();
 		});
 

@@ -48,19 +48,16 @@ describe("derivePracticeStep", () => {
 		).toBe(4);
 	});
 
-	it("is step 5 once finalised and awaiting batching", () => {
+	it("is step 5 for all finalised states (batching, in_batch, complete)", () => {
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "batching" })
 		).toBe(5);
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "in_batch" })
 		).toBe(5);
-	});
-
-	it("is step 6 once complete", () => {
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "complete" })
-		).toBe(6);
+		).toBe(5);
 	});
 });
 
@@ -73,14 +70,15 @@ describe("getPracticeGuidance", () => {
 		expect(g.steps.find((s) => s.number === 4)?.done).toBe(false);
 	});
 
-	it("keeps the user in the batching half on the batches page", () => {
+	it("moves the user to the final step on the batches page", () => {
 		const g = getPracticeGuidance("/batches", 1);
 		expect(g.currentStep).toBe(5);
 	});
 
-	it("does not pull a later step back on the batches page", () => {
-		const g = getPracticeGuidance("/batches", 6);
-		expect(g.currentStep).toBe(6);
+	it("has five steps and a merged batch-and-complete final step", () => {
+		const g = getPracticeGuidance("/batches", 5);
+		expect(g.steps.length).toBe(5);
+		expect(g.heading).toMatch(/Batch and complete/i);
 	});
 
 	it("tells the user to click New Case when not yet on the create form", () => {

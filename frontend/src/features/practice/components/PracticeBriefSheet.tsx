@@ -5,6 +5,7 @@ import {
 	Circle,
 	ChevronRight,
 	ChevronLeft,
+	RotateCcw,
 } from "lucide-react";
 import { useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +14,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { getCaseById, getCases } from "@/features/cases/services/cases.service";
 import { getCaseForms } from "@/features/cases/services/forms.service";
+import { getBatches } from "@/features/batches/services/batches.service";
 import type {
 	CasePhase,
 	Priority3FormTiny,
@@ -29,6 +31,7 @@ import {
 	buildCaseChecklist,
 	buildFormChecklists,
 	buildCertificateChecklists,
+	buildBatchChecklist,
 	areFormChecklistsComplete,
 	type ChecklistGroup,
 	type LiveCase,
@@ -140,7 +143,7 @@ const Checklist = ({ group }: ChecklistProps) => (
  * modal overlays so it stays readable while a dialog is open.
  */
 export const PracticeBriefSheet = () => {
-	const { isOn } = usePracticeMode();
+	const { isOn, restartCase, isToggling } = usePracticeMode();
 	const { isOpen, close, liveCreateData } = usePracticeSheet();
 	const { data: brief, index, total, next, previous } = usePracticeBrief(isOn);
 	const { pathname } = useLocation();
@@ -170,6 +173,14 @@ export const PracticeBriefSheet = () => {
 		queryKey: ["cases", "practice-progress"],
 		queryFn: () => getCases({ limit: 20 }),
 		enabled: isOn && isOpen && caseId == null,
+		staleTime: 10_000,
+	});
+
+	// The user's practice batches drive the step-5 (batch and complete) ticks.
+	const { data: practiceBatches } = useQuery({
+		queryKey: ["batches", "practice-progress"],
+		queryFn: () => getBatches(),
+		enabled: isOn && isOpen,
 		staleTime: 10_000,
 	});
 
@@ -236,6 +247,47 @@ export const PracticeBriefSheet = () => {
 
 	const guidance = getPracticeGuidance(pathname, step);
 
+	// Identify the active practice case (for the batch checklist and the restart
+	// control): the one on the page, or the most-advanced one otherwise.
+	const activeCase =
+		caseId != null && liveCase
+			? { id: liveCase.id, case_number: liveCase.case_number }
+			: (() => {
+					const results = practiceCases?.results ?? [];
+					if (!results.length) return null;
+					const best = results.reduce((a, b) =>
+						derivePracticeStep({
+							caseExists: true,
+							derivedStatus: b.derived_status,
+							forms: toFormProgress(b.forms as Priority3FormTiny[]),
+						}) >=
+						derivePracticeStep({
+							caseExists: true,
+							derivedStatus: a.derived_status,
+							forms: toFormProgress(a.forms as Priority3FormTiny[]),
+						})
+							? b
+							: a
+					);
+					return { id: best.id, case_number: best.case_number };
+				})();
+
+	const batchChecklist = buildBatchChecklist(
+		activeCase?.case_number ?? null,
+		practiceBatches ?? []
+	);
+
+	const handleRestartCase = () => {
+		if (!activeCase) return;
+		if (
+			window.confirm(
+				`Restart practice case ${activeCase.case_number}? This deletes it and its forms, bags and certificates so you can start it over.`
+			)
+		) {
+			restartCase(activeCase.id);
+		}
+	};
+
 	return (
 		<aside
 			aria-label="Practice brief and guidance"
@@ -295,7 +347,10 @@ export const PracticeBriefSheet = () => {
 					</ol>
 				</section>
 
-				{/* Live checklist of the brief, ticking off as data is entered. */}
+				{/* Live checklist of the brief, ticking off as data is entered.
+				    Hidden once the case is finalised (step 5) — data entry is done,
+				    so only the batch-and-complete instructions and checklist remain. */}
+				{guidance.currentStep < 5 && (
 				<section className="space-y-4 border-t border-amber-300 pt-4 dark:border-amber-800">
 					<div className="flex items-center justify-between gap-2">
 						<div className="flex items-center gap-2">
@@ -348,6 +403,36 @@ export const PracticeBriefSheet = () => {
 							<Checklist key={group.title} group={group} />
 						))}
 				</section>
+				)}
+
+				{/* Step 5 — batch and complete. Interactive checklist ticking as the
+				    user batches, downloads and invoices this case. */}
+				{guidance.currentStep >= 5 && (
+					<section className="space-y-3 border-t border-amber-300 pt-4 dark:border-amber-800">
+						<Checklist group={batchChecklist} />
+					</section>
+				)}
+
+				{/* Restart control — removes this practice case and its data so the
+				    user can run it again from scratch. */}
+				{activeCase && (
+					<section className="border-t border-amber-300 pt-4 dark:border-amber-800">
+						<Button
+							size="sm"
+							variant="outline"
+							className="w-full border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-transparent dark:text-amber-100"
+							onClick={handleRestartCase}
+							disabled={isToggling}
+						>
+							<RotateCcw size={14} className="mr-1.5" aria-hidden="true" />
+							Restart this practice case
+						</Button>
+						<p className="mt-1 text-[11px] text-amber-800/70 dark:text-amber-100/60">
+							Deletes {activeCase.case_number} and its forms, bags and
+							certificates so you can start it over.
+						</p>
+					</section>
+				)}
 			</div>
 		</aside>
 	);

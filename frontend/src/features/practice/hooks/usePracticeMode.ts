@@ -15,6 +15,7 @@ import {
 	disablePracticeMode,
 	enablePracticeMode,
 	resetPracticeData,
+	restartPracticeCase,
 } from "../services/practice.service";
 
 export const usePracticeMode = () => {
@@ -58,13 +59,30 @@ export const usePracticeMode = () => {
 		},
 	});
 
+	const restartCase = useMutation({
+		mutationFn: (caseId: number) => restartPracticeCase(caseId),
+		onSuccess: () => {
+			// The case and its data are gone; return to the cases list to start
+			// that case over from the beginning.
+			window.location.assign("/cases");
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "Could not restart the practice case");
+		},
+	});
+
 	return {
 		isOn,
 		startedAt,
 		enable: () => enable.mutate(),
 		disable: () => disable.mutate(),
 		reset: () => reset.mutate(),
-		isToggling: enable.isPending || disable.isPending || reset.isPending,
+		restartCase: (caseId: number) => restartCase.mutate(caseId),
+		isToggling:
+			enable.isPending ||
+			disable.isPending ||
+			reset.isPending ||
+			restartCase.isPending,
 		refetchUser,
 	};
 };

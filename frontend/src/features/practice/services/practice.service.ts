@@ -22,3 +22,13 @@ export const disablePracticeMode = async (): Promise<IPracticeModeState> => {
 export const resetPracticeData = async (): Promise<IPracticeModeState> => {
 	return apiClient.post<IPracticeModeState>(PRACTICE_ENDPOINTS.RESET, {});
 };
+
+/** Restart a single practice case — delete it and its related data. */
+export const restartPracticeCase = async (
+	caseId: number
+): Promise<IPracticeModeState> => {
+	return apiClient.post<IPracticeModeState>(
+		PRACTICE_ENDPOINTS.RESET_CASE(caseId),
+		{}
+	);
+};

@@ -363,7 +363,9 @@ class CertificateService:
 
         settings.LOGGER.info(
             f"{describe_user(user)} regenerated certificate "
-            f"{certificate.certificate_number}"
+            f"{certificate.certificate_number} ({certificate.pk}) "
+            f"for form {certificate.form_id} "
+            f"(case {certificate.form.case.case_number})"
         )
 
         return certificate
