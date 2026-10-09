@@ -7,7 +7,6 @@ import { PageTransition } from "@/shared/components/PageTransition";
 import { PoliceButton } from "@/shared/components/NewCaseButton";
 import { CasesFilters } from "@/features/cases/components/CasesFilters";
 import { CasesTable } from "@/features/cases/components/CasesTable";
-import { PracticeActionPrompt } from "@/features/practice/components/PracticeActionPrompt";
 import { useCreateBatch } from "@/features/batches";
 import type { CaseTiny } from "@/shared/types/backend-api.types";
 import type { Certificate } from "@/features/certificates/types/certificates.types";
@@ -113,7 +112,6 @@ const Cases = () => {
 												: "Create Batch"}
 									</span>
 								</button>
-								<PracticeActionPrompt message="Start here — create your practice case" />
 								<PoliceButton to="/cases/add" label="New Case" size="lg" />
 							</div>
 						}

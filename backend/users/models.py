@@ -248,6 +248,14 @@ class UserPreferences(models.Model):
         help_text="Reduce animations and motion",
     )
 
+    # Reference guide — docks the workflow step instructions beside any page
+    # outside practice mode. A personal UI toggle, persisted so it survives
+    # reloads and follows the user across devices.
+    guide_enabled = models.BooleanField(
+        default=False,
+        help_text="Show the reference guide outside practice mode",
+    )
+
     # Practice mode — a per-user, self-expiring mode for rehearsing the workflow
     # against isolated practice data. See common.practice.
     practice_mode = models.BooleanField(

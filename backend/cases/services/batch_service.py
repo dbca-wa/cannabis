@@ -24,6 +24,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.logging import describe_user
 from common.models import SystemSettings
 
 from ..models import Batch, Case, Certificate
@@ -188,9 +189,10 @@ class BatchService:
 
         BatchService.build_zip(batch)
 
+        cert_desc = ", ".join(f"{c.certificate_number} ({c.pk})" for c in certs)
         settings.LOGGER.info(
-            f"User {user} created {batch.batch_number} with "
-            f"{len(certs)} certificate(s)"
+            f"{describe_user(user)} created batch {batch.batch_number} "
+            f"({batch.pk}) with {len(certs)} certificate(s): {cert_desc}"
         )
         return batch
 
@@ -338,9 +340,13 @@ class BatchService:
             form.completed_at = timezone.now()
             form.save(update_fields=["completed_at"])
 
+        cert_desc = ", ".join(
+            f"{c.certificate_number} ({c.pk})" for c in certificates
+        )
         settings.LOGGER.info(
-            f"User {user} recorded invoice {number} on {batch.batch_number}; "
-            f"{len(certificates)} certificate(s) completed"
+            f"{describe_user(user)} recorded invoice {number} on batch "
+            f"{batch.batch_number} ({batch.pk}); "
+            f"{len(certificates)} certificate(s) completed: {cert_desc}"
         )
         return batch
 
@@ -377,7 +383,8 @@ class BatchService:
                 form.save(update_fields=["phase", "completed_at", "last_actioned_by"])
 
         settings.LOGGER.info(
-            f"User {user} unset invoice {number} on {batch.batch_number}; "
+            f"{describe_user(user)} unset invoice {number} on "
+            f"{batch.batch_number} ({batch.pk}); "
             f"{len(certificates)} certificate(s) returned to in-batch"
         )
         return batch
@@ -405,8 +412,11 @@ class BatchService:
             batch.zip_file.delete(save=False)
 
         number = batch.batch_number
+        batch_id = batch.pk
         batch.delete()
-        settings.LOGGER.info(f"User {user} deleted batch {number}")
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted batch {number} ({batch_id})"
+        )
 
     @staticmethod
     def export_rows(batches):

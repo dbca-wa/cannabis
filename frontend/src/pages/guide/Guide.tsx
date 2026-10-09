@@ -24,6 +24,7 @@ const STAGES: Stage[] = [
 	{ id: "batching", title: "6. Batching for invoicing" },
 	{ id: "invoicing", title: "7. Recording the invoice" },
 	{ id: "practice", title: "Practice mode" },
+	{ id: "guide", title: "Quick reference guide" },
 	{ id: "settings", title: "Settings" },
 	{ id: "account", title: "Your account" },
 	{ id: "glossary", title: "Glossary" },
@@ -79,6 +80,13 @@ const Guide = () => {
 							— creating the case, generating certificates, batching and
 							recording the invoice — on the real screens, without touching any
 							real data. See <a href="#practice">Practice mode</a> below.
+						</p>
+						<p className="mt-2 text-sm text-amber-900 dark:text-amber-100">
+							Already know your way around and just want a reminder of a step?
+							Flip on the <strong>Guide</strong> toggle in that same menu — it
+							docks the step-by-step instructions to the side of any page,
+							without the fake case. See{" "}
+							<a href="#guide">Quick reference guide</a> below.
 						</p>
 					</div>
 				</section>
@@ -460,6 +468,50 @@ const Guide = () => {
 					<Outcome>
 						You have taken a fake case all the way to a recorded invoice, and
 						know what each step looks like before doing it for real.
+					</Outcome>
+				</section>
+
+				<hr />
+
+				{/* Quick reference guide */}
+				<section id="guide" className="scroll-mt-6">
+					<h2>Quick reference guide</h2>
+					<p>
+						The <strong>Guide</strong> toggle is a lighter companion to practice
+						mode: it shows the same step-by-step instructions, docked to the
+						side of whatever page you are on, but against your real work rather
+						than a fake case. Use it when you already know the system and just
+						want a reminder of what a particular step involves.
+					</p>
+					<ol>
+						<li>
+							Open the menu under your initials — the same place as the practice
+							mode toggle — and switch <strong>Guide</strong> on.
+						</li>
+						<li>
+							A panel docks to the right with the workflow steps. The page makes
+							room for it, so nothing is covered.
+						</li>
+						<li>
+							Click any step to read its instructions. Unlike practice mode, you
+							can jump around freely — the guide does not follow your progress
+							or track a case.
+						</li>
+						<li>
+							Switch <strong>Guide</strong> off in the menu, or use the panel's
+							close button, when you are done.
+						</li>
+					</ol>
+					<p>
+						Because it is only a reference, the guide shows no case details and
+						watches nothing — the wording drops anything specific to practice
+						(no fake brief, no pre-selected botanist). In practice mode you
+						don&apos;t need it: the practice panel already shows these
+						instructions alongside your fake brief.
+					</p>
+					<Outcome>
+						The step instructions sit beside your work for quick reference, and
+						switch off again from the same menu.
 					</Outcome>
 				</section>
 

@@ -14,13 +14,15 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
 	disablePracticeMode,
 	enablePracticeMode,
+	resetPracticeData,
+	restartPracticeCase,
 } from "../services/practice.service";
 
 export const usePracticeMode = () => {
 	const { user, refetchUser } = useAuth();
 
 	const isOn = !!user?.practice_mode;
-	const expiresAt = user?.practice_mode_expires_at ?? null;
+	const startedAt = user?.practice_mode_started_at ?? null;
 
 	const enable = useMutation({
 		mutationFn: enablePracticeMode,
@@ -36,8 +38,8 @@ export const usePracticeMode = () => {
 	const disable = useMutation({
 		mutationFn: disablePracticeMode,
 		onSuccess: () => {
-			// The server has purged the user's practice data; reload so the real
-			// lists return and nothing practice-related lingers in the cache.
+			// Practice data is kept server-side; reload so the real lists return
+			// and nothing practice-scoped lingers in the client cache.
 			window.location.assign("/");
 		},
 		onError: (error: Error) => {
@@ -45,12 +47,42 @@ export const usePracticeMode = () => {
 		},
 	});
 
+	const reset = useMutation({
+		mutationFn: resetPracticeData,
+		onSuccess: () => {
+			// A clean slate: reload so every list re-fetches the now-empty
+			// practice data and the guide starts from the first step again.
+			window.location.assign("/cases");
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "Could not reset practice data");
+		},
+	});
+
+	const restartCase = useMutation({
+		mutationFn: (caseId: number) => restartPracticeCase(caseId),
+		onSuccess: () => {
+			// The case and its data are gone; return to the cases list to start
+			// that case over from the beginning.
+			window.location.assign("/cases");
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || "Could not restart the practice case");
+		},
+	});
+
 	return {
 		isOn,
-		expiresAt,
+		startedAt,
 		enable: () => enable.mutate(),
 		disable: () => disable.mutate(),
-		isToggling: enable.isPending || disable.isPending,
+		reset: () => reset.mutate(),
+		restartCase: (caseId: number) => restartCase.mutate(caseId),
+		isToggling:
+			enable.isPending ||
+			disable.isPending ||
+			reset.isPending ||
+			restartCase.isPending,
 		refetchUser,
 	};
 };

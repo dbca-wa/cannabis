@@ -2,6 +2,7 @@
 User preferences views: profile management and dedicated preference endpoints.
 """
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -9,9 +10,43 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
 
+from common.logging import describe_user
+
 from ..serializers import UserJWTObjectSerializer
 
 User = get_user_model()
+
+# Preference fields worth an audit line when the user changes them, mapped to a
+# readable name. These are the personal settings a user toggles themselves.
+_LOGGED_PREFERENCE_FIELDS = {
+    "theme": "theme",
+    "guide_enabled": "reference guide",
+}
+
+
+def _log_preference_changes(user, preferences, incoming: dict) -> None:
+    """Log one line per tracked preference the user actually changed.
+
+    Compares the incoming values against what is already stored, so a PATCH that
+    doesn't change anything stays silent. Only whitelisted fields are logged.
+    """
+    for field, label in _LOGGED_PREFERENCE_FIELDS.items():
+        if field not in incoming:
+            continue
+        new_value = incoming[field]
+        old_value = getattr(preferences, field, None)
+        if new_value == old_value:
+            continue
+        # Booleans read better as turned on/off than "to True".
+        if isinstance(new_value, bool):
+            settings.LOGGER.info(
+                f"{describe_user(user)} turned their {label} "
+                f"{'on' if new_value else 'off'}"
+            )
+        else:
+            settings.LOGGER.info(
+                f"{describe_user(user)} changed their {label} to {new_value}"
+            )
 
 
 # ============================================================================
@@ -60,6 +95,9 @@ class UserProfileView(APIView):
                 preferences, data=preference_data, partial=True
             )
             if pref_serializer.is_valid():
+                _log_preference_changes(
+                    user, preferences, pref_serializer.validated_data
+                )
                 pref_serializer.save()
             else:
                 raise ValidationError(pref_serializer.errors)
@@ -99,6 +137,9 @@ class UserPreferencesView(APIView):
         )
 
         if serializer.is_valid():
+            # Log tracked changes before saving, while the stored values still
+            # reflect the previous state for comparison.
+            _log_preference_changes(user, preferences, serializer.validated_data)
             serializer.save()
             return Response(serializer.data, status=HTTP_200_OK)
         else:

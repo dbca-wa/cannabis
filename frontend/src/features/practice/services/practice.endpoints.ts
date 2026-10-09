@@ -4,5 +4,6 @@
  */
 export const PRACTICE_ENDPOINTS = {
 	MODE: "/practice/mode",
-	BRIEF: "/practice/brief",
+	RESET: "/practice/reset",
+	RESET_CASE: (caseId: number) => `/practice/reset-case/${caseId}`,
 } as const;

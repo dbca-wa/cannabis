@@ -114,7 +114,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     is_authenticated = serializers.SerializerMethodField()
     requires_password_change = serializers.SerializerMethodField()
     practice_mode = serializers.SerializerMethodField()
-    practice_mode_expires_at = serializers.SerializerMethodField()
+    practice_mode_started_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -133,7 +133,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
             "is_active",
             "requires_password_change",
             "practice_mode",
-            "practice_mode_expires_at",
+            "practice_mode_started_at",
         ]
 
     def get_practice_mode(self, obj):
@@ -141,10 +141,10 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
         return is_in_practice_mode(obj)
 
-    def get_practice_mode_expires_at(self, obj):
-        from common.practice import practice_expires_at
+    def get_practice_mode_started_at(self, obj):
+        from common.practice import practice_started_at
 
-        return practice_expires_at(obj)
+        return practice_started_at(obj)
 
     def get_requires_password_change(self, obj):
         """True if the user has never set their own password (invited users)."""

@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Q
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import SectionCTemplate
@@ -44,7 +45,8 @@ class SectionCTemplateListView(ListCreateAPIView):
     def perform_create(self, serializer):
         template = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} created Section C template: {template.name}"
+            f"{describe_user(self.request.user)} created Section C template "
+            f"{template.name}"
         )
 
 
@@ -66,12 +68,13 @@ class SectionCTemplateDetailView(RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         template = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} updated Section C template: {template.name}"
+            f"{describe_user(self.request.user)} updated Section C template "
+            f"{template.name}"
         )
 
     def perform_destroy(self, instance):
         name = instance.name
         instance.delete()
         settings.LOGGER.info(
-            f"User {self.request.user} deleted Section C template: {name}"
+            f"{describe_user(self.request.user)} deleted Section C template {name}"
         )

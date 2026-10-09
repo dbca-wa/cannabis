@@ -26,17 +26,26 @@ const norm = (v: unknown): string =>
 		.toLowerCase();
 const contains = (haystack: unknown, needle: string): boolean =>
 	norm(haystack).includes(norm(needle)) && norm(needle) !== "";
+/** Exact (case/space-insensitive) equality — used where the brief must match
+ * precisely, e.g. a bag's content type or determination. */
+const eq = (a: unknown, b: unknown): boolean =>
+	norm(a) === norm(b) && norm(b) !== "";
 
 /** Minimal shapes we read from the live case/forms (via the query cache). */
 interface LiveBag {
 	seal_tag_numbers?: string | null;
 	new_seal_tag_numbers?: string | null;
+	content_type?: string | null;
 	contains_female_plants?: boolean;
 	assessment?: { determination?: string | null } | null;
 }
 interface LiveForm {
 	security_movement_envelope?: string | null;
 	bags?: LiveBag[];
+	/** The form's single certificate, once generated. */
+	certificate?: { id: number } | null;
+	/** Whether the generated certificate has been reviewed and marked ready. */
+	marked_ready?: boolean;
 }
 export interface LiveCase {
 	case_number?: string | null;
@@ -126,6 +135,13 @@ export const buildFormChecklists = (
 		const liveBags = live?.bags ?? [];
 		const items: ChecklistItem[] = [];
 
+		// The first thing to do on this step is add the Priority 3 form itself;
+		// it ticks off once the matching live form exists.
+		items.push({
+			label: "Add a Priority 3 form",
+			done: !!live,
+		});
+
 		if (bf.security_movement_envelope) {
 			items.push({
 				label: "Security movement envelope",
@@ -150,13 +166,29 @@ export const buildFormChecklists = (
 			]
 				.filter(Boolean)
 				.join(" · ");
-			const newSealEntered =
-				!bag.new_seal || contains(matched?.new_seal_tag_numbers, bag.new_seal);
+			// A bag only ticks when every detail matches the brief exactly: the
+			// new seal tag, the content type, the determination, and whether it
+			// holds female plants. Matching the seal tag alone is not enough —
+			// entering the wrong type or determination must leave it unticked.
+			const newSealMatches =
+				!bag.new_seal || eq(matched?.new_seal_tag_numbers, bag.new_seal);
+			const contentTypeMatches = eq(matched?.content_type, bag.content_type);
+			const determinationMatches = eq(
+				matched?.assessment?.determination,
+				bag.determination
+			);
+			const femalePlantsMatches =
+				!!matched?.contains_female_plants === !!bag.female_plants;
 			items.push({
-				label: `Bag — original ${bag.original_seal}, new ${bag.new_seal}`,
+				label: `Add Bag — original ${bag.original_seal}, new ${bag.new_seal}`,
 				expected: details,
 				done:
-					!!matched && !!matched.assessment?.determination && newSealEntered,
+					!!matched &&
+					!!matched.assessment?.determination &&
+					newSealMatches &&
+					contentTypeMatches &&
+					determinationMatches &&
+					femalePlantsMatches,
 			});
 		}
 
@@ -166,4 +198,83 @@ export const buildFormChecklists = (
 			items,
 		};
 	});
+};
+
+/**
+ * Per-form certificate checklist for step 3: generate the certificate, then
+ * review and mark it ready. One group per brief form so multi-form cases show
+ * progress for each certificate.
+ */
+export const buildCertificateChecklists = (
+	brief: IPracticeBrief,
+	liveForms: LiveForm[]
+): ChecklistGroup[] => {
+	return brief.forms.map((_bf, i) => {
+		const live = liveForms[i];
+		const generated = !!live?.certificate;
+		const ready = !!live?.marked_ready;
+		return {
+			title:
+				brief.forms.length > 1
+					? `Certificate — form ${i + 1}`
+					: "Certificate",
+			items: [
+				{ label: "Generate the certificate", done: generated },
+				{ label: "Review and mark it ready", done: generated && ready },
+			],
+		};
+	});
+};
+
+/** A batch as the guide reads it: which cases it covers and its invoice state. */
+export interface LiveBatch {
+	case_numbers?: string[] | null;
+	is_invoiced?: boolean;
+}
+
+/**
+ * Step-5 checklist: batch the finalised case, download the package, then record
+ * the invoice. "Create a batch" ticks once a batch covering this case exists;
+ * "Record the invoice" ticks once that batch is invoiced. The download step is
+ * guidance (it is not observable server-side), placed before the invoice step.
+ */
+export const buildBatchChecklist = (
+	caseNumber: string | null,
+	batches: LiveBatch[]
+): ChecklistGroup => {
+	const batchForCase = (batches ?? []).find((b) =>
+		(b.case_numbers ?? []).some((n) => eq(n, caseNumber ?? ""))
+	);
+	const batched = !!batchForCase;
+	const invoiced = !!batchForCase?.is_invoiced;
+	return {
+		title: "Batch and complete",
+		items: [
+			{ label: "Create a batch for this case", done: batched },
+			{ label: "Download the batch package", done: invoiced },
+			{ label: "Record the invoice number", done: invoiced },
+		],
+	};
+};
+
+/** Whether every case-level checklist item matches the brief. */
+export const isCaseChecklistComplete = (
+	brief: IPracticeBrief,
+	liveCase: LiveCase | null
+): boolean => buildCaseChecklist(brief, liveCase).items.every((i) => i.done);
+
+/**
+ * Whether every per-form checklist item is complete — the Priority 3 form is
+ * added, its bags recorded and assessed, and any SME entered. Used to advance
+ * the guide from "record the samples" to "generate certificates".
+ */
+export const areFormChecklistsComplete = (
+	brief: IPracticeBrief,
+	liveForms: LiveForm[]
+): boolean => {
+	const groups = buildFormChecklists(brief, liveForms);
+	return (
+		groups.length > 0 &&
+		groups.every((g) => g.items.length > 0 && g.items.every((i) => i.done))
+	);
 };

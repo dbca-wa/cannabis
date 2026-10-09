@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("page-view", views.PageViewView.as_view(), name="page-view"),
     path("settings", views.SystemSettingsView.as_view(), name="system-settings"),
     path(
         "feature-flags",

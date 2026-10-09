@@ -3,28 +3,25 @@ import { TriangleAlert } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { usePracticeMode } from "../hooks/usePracticeMode";
 
-/** Format an ISO expiry as a short, friendly local time. */
-const formatExpiry = (iso: string | null): string => {
-	if (!iso) return "";
-	const date = new Date(iso);
-	return date.toLocaleString("en-AU", {
-		weekday: "short",
-		hour: "numeric",
-		minute: "2-digit",
-	});
-};
-
 /**
  * Persistent banner shown across the app whenever the user is in practice mode,
- * so it can never be mistaken for the live system. Offers a one-click exit that
- * clears the user's practice data.
+ * so it can never be mistaken for the live system. Leaving keeps the user's
+ * practice work for next time; a separate reset clears it on demand.
  */
 export const PracticeModeBanner = () => {
-	const { isOn, expiresAt, disable, isToggling } = usePracticeMode();
+	const { isOn, disable, reset, isToggling } = usePracticeMode();
 
 	if (!isOn) return null;
 
-	const expiry = formatExpiry(expiresAt);
+	const handleReset = () => {
+		if (
+			window.confirm(
+				"Clear all your practice data and start fresh? This cannot be undone."
+			)
+		) {
+			reset();
+		}
+	};
 
 	return (
 		<div
@@ -34,22 +31,29 @@ export const PracticeModeBanner = () => {
 			<TriangleAlert size={16} className="shrink-0" aria-hidden="true" />
 			<span>
 				<strong className="font-semibold">Practice mode.</strong> Nothing here
-				is real — this is a safe place to rehearse.
-				{expiry && (
-					<span className="ml-1 opacity-80">
-						Practice data clears {expiry}.
-					</span>
-				)}
+				is real — this is a safe place to rehearse. Your practice work is kept
+				for next time.
 			</span>
-			<Button
-				size="sm"
-				variant="outline"
-				className="ml-auto h-7 border-amber-400 bg-amber-50 hover:bg-amber-200 dark:bg-transparent"
-				onClick={disable}
-				disabled={isToggling}
-			>
-				{isToggling ? "Leaving…" : "Leave practice mode"}
-			</Button>
+			<div className="ml-auto flex items-center gap-2">
+				<Button
+					size="sm"
+					variant="outline"
+					className="h-7 border-amber-400 bg-amber-50 hover:bg-amber-200 dark:bg-transparent"
+					onClick={handleReset}
+					disabled={isToggling}
+				>
+					Reset practice data
+				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					className="h-7 border-amber-400 bg-amber-50 hover:bg-amber-200 dark:bg-transparent"
+					onClick={disable}
+					disabled={isToggling}
+				>
+					{isToggling ? "Working…" : "Leave practice mode"}
+				</Button>
+			</div>
 		</div>
 	);
 };

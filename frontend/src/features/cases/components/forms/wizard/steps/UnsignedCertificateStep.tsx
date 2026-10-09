@@ -8,6 +8,7 @@ import {
 	AlertCircle,
 	AlertTriangle,
 	Check,
+	Circle,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -110,8 +111,19 @@ export const UnsignedCertificateStep = ({
 				toast.success("Certificate generated");
 			}
 		},
-		onError: () => {
-			toast.error("Failed to generate certificate");
+		onError: (error: unknown) => {
+			// A 404 here means the form no longer exists on the server — most
+			// often a practice case that was reset (practice mode toggled or the
+			// session expired) while this tab still showed the old form. Give a
+			// clear message rather than a generic failure.
+			const status = (error as { status?: number })?.status;
+			if (status === 404) {
+				toast.error(
+					"This form no longer exists — your practice case may have been reset. Reload and start a new practice case."
+				);
+			} else {
+				toast.error("Failed to generate certificate");
+			}
 		},
 		onSettled: (_data, _err, fId) => {
 			setGeneratingFormIds((prev) => {
@@ -536,7 +548,8 @@ export const UnsignedCertificateStep = ({
 														: "Generate certificate PDF"}
 										</TooltipContent>
 									</Tooltip>
-									{/* Readiness toggle */}
+									{/* Readiness toggle — a labelled button so it's obvious it marks
+									    this certificate ready, with a tick and colour change once set. */}
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<button
@@ -544,28 +557,39 @@ export const UnsignedCertificateStep = ({
 												onClick={() => hasGenerated && toggleReady(form.id)}
 												disabled={!hasGenerated}
 												className={cn(
-													"w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 cursor-pointer",
+													"inline-flex items-center gap-1.5 h-8 px-3 rounded-md border-2 text-xs font-medium transition-all duration-200 cursor-pointer",
 													isReady
-														? "border-emerald-500 bg-emerald-500 text-white scale-110"
+														? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
 														: hasGenerated
-															? "border-amber-400 bg-amber-50 text-amber-400 hover:border-emerald-400 hover:bg-emerald-50 dark:bg-amber-950/30"
-															: "border-red-300 bg-red-50 text-red-300 cursor-not-allowed opacity-50 dark:bg-red-950/30"
+															? "border-amber-400 bg-amber-50 text-amber-700 hover:border-emerald-400 hover:bg-emerald-50 dark:bg-amber-950/30 dark:text-amber-300"
+															: "border-muted bg-muted/40 text-muted-foreground cursor-not-allowed opacity-60"
 												)}
+												aria-pressed={isReady}
 												aria-label={
-													isReady ? "Marked as ready" : "Mark as ready"
+													isReady
+														? "Certificate marked ready — click to unmark"
+														: "Mark this certificate ready"
 												}
 											>
-												{isReady && (
-													<Check className="h-4 w-4 animate-in zoom-in-50 duration-200" />
+												{isReady ? (
+													<>
+														<Check className="h-4 w-4 shrink-0 animate-in zoom-in-50 duration-200" />
+														Ready
+													</>
+												) : (
+													<>
+														<Circle className="h-4 w-4 shrink-0" />
+														Mark ready
+													</>
 												)}
 											</button>
 										</TooltipTrigger>
 										<TooltipContent>
 											{!hasGenerated
-												? "Generate certificate first"
+												? "Generate the certificate first"
 												: isReady
-													? "Click to unmark"
-													: "Mark as ready"}
+													? "This certificate is ready — click to unmark"
+													: "Mark this certificate ready for finalising"}
 										</TooltipContent>
 									</Tooltip>
 								</div>

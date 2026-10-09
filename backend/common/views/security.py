@@ -8,6 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.logging import describe_user
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,8 +24,8 @@ class SecurityMonitoringView(APIView):
         """Get current security monitoring information"""
         if not request.user.is_superuser:
             logger.warning(
-                f"Non-superuser {request.user.email} (ID: {request.user.id}) "
-                f"attempted to access security monitoring"
+                f"{describe_user(request.user)} (non-superuser) attempted to "
+                f"access security monitoring"
             )
             raise PermissionDenied("Superuser access required.")
 
@@ -47,10 +49,6 @@ class SecurityMonitoringView(APIView):
                 },
             }
 
-            logger.info(
-                f"Security monitoring accessed by {request.user.email} (ID: {request.user.id})"
-            )
-
             return Response(security_info, status=status.HTTP_200_OK)
 
         except PermissionDenied:
@@ -71,16 +69,14 @@ class ResetRateLimitsView(APIView):
         # Require superuser for this operation
         if not request.user.is_superuser:
             logger.warning(
-                f"Non-superuser {request.user.email} (ID: {request.user.id}) "
-                f"attempted to reset rate limits"
+                f"{describe_user(request.user)} (non-superuser) attempted to "
+                f"reset rate limits"
             )
             raise PermissionDenied("Superuser privileges required.")
 
         try:
             cache.clear()
-            logger.info(
-                f"Rate limits reset by {request.user.email} (ID: {request.user.id})"
-            )
+            logger.info(f"{describe_user(request.user)} reset rate limits")
             return Response(
                 {
                     "message": "Rate limits have been reset successfully",

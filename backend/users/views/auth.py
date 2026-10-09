@@ -22,6 +22,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from common.logging import describe_user
+
 from ..error_handlers import (
     ErrorCodes,
     ErrorResponseBuilder,
@@ -77,6 +79,7 @@ class JWTLogoutView(APIView):
 
         refresh_token = request.data.get("refresh_token")
         AuthService.logout(refresh_token)
+        settings.LOGGER.info(f"{describe_user(request.user)} logged out")
         return Response(
             {"message": "Logged out successfully", "status": "success"},
             status=HTTP_200_OK,
@@ -560,6 +563,10 @@ class PasswordUpdateView(APIView):
 
             # Log the password change
             SecurityEventLogger.log_password_update_success(user.email, is_first_time)
+            settings.LOGGER.info(
+                f"{describe_user(user)} "
+                f"{'set their initial password' if is_first_time else 'changed their password'}"
+            )
 
             # Return success response
             return Response(

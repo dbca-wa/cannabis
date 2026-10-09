@@ -1,4 +1,3 @@
-from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
@@ -15,10 +14,6 @@ class MyCasesView(APIView):
     permission_classes = [HasAppAccess]
 
     def get(self, request):
-        settings.LOGGER.info(
-            f"User {request.user.email} requesting their cases "
-            f"(role: {request.user.role})"
-        )
         data = DashboardService.get_my_cases(request.user)
         return Response(data, status=HTTP_200_OK)
 
@@ -29,9 +24,6 @@ class CertificateStatsView(APIView):
     permission_classes = [HasAppAccess]
 
     def get(self, request):
-        settings.LOGGER.info(
-            f"User {request.user.email} requesting certificate statistics"
-        )
         data = DashboardService.get_certificate_stats()
         return Response(data, status=HTTP_200_OK)
 
@@ -42,7 +34,6 @@ class RevenueStatsView(APIView):
     permission_classes = [HasAppAccess]
 
     def get(self, request):
-        settings.LOGGER.info(f"User {request.user.email} requesting revenue statistics")
         data = DashboardService.get_revenue_stats()
         return Response(data, status=HTTP_200_OK)
 

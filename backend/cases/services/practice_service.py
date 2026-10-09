@@ -9,9 +9,11 @@ re-implements them.
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from common.logging import describe_user
 from common.practice import current
 
 
@@ -25,23 +27,76 @@ class PracticeService:
     # ----- mode toggling -------------------------------------------------
     @staticmethod
     def enable_for_user(user):
-        """Turn practice mode on for the user and start the one-day clock."""
+        """Turn practice mode on for the user and record when the session began."""
         prefs = user.get_preferences
         prefs.practice_mode = True
         prefs.practice_mode_started_at = timezone.now()
         prefs.save(update_fields=["practice_mode", "practice_mode_started_at"])
+        settings.LOGGER.info(f"{describe_user(user)} entered practice mode")
+        return prefs
+
+    @staticmethod
+    def disable_for_user(user):
+        """Turn practice mode off, keeping the user's practice data intact.
+
+        The data stays flagged ``is_practice`` and hidden from the live
+        application, so re-entering practice mode shows the user's existing work
+        instead of an empty slate. Use ``reset_for_user`` to clear it on demand.
+        """
+        prefs = user.get_preferences
+        prefs.practice_mode = False
+        prefs.save(update_fields=["practice_mode"])
+        settings.LOGGER.info(f"{describe_user(user)} left practice mode")
         return prefs
 
     @staticmethod
     @transaction.atomic
-    def disable_for_user(user):
-        """Turn practice mode off and delete all of the user's practice data."""
-        prefs = user.get_preferences
-        prefs.practice_mode = False
-        prefs.practice_mode_started_at = None
-        prefs.save(update_fields=["practice_mode", "practice_mode_started_at"])
+    def reset_for_user(user):
+        """Explicitly clear the user's practice data and start a fresh session.
+
+        This is the only path that deletes all of a user's practice data, and it
+        is only reached when the user asks for a clean slate. Practice mode is
+        left on with a new start time so the user keeps practising, now from
+        scratch.
+        """
         PracticeService.purge_for_user(user)
+        prefs = user.get_preferences
+        prefs.practice_mode = True
+        prefs.practice_mode_started_at = timezone.now()
+        prefs.save(update_fields=["practice_mode", "practice_mode_started_at"])
+        settings.LOGGER.info(
+            f"{describe_user(user)} reset their practice data and started a "
+            f"fresh practice session"
+        )
         return prefs
+
+    @staticmethod
+    @transaction.atomic
+    def reset_case_for_user(user, case):
+        """Delete a single practice case (and its cascades) for the user.
+
+        The restart control on the guide removes just the case the user is
+        working on so they can start that one over, leaving any other practice
+        data untouched. Only the user's own practice cases can be removed.
+        """
+        if not case.is_practice or case.practice_owner_id != user.pk:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("That case is not your practice case.")
+
+        case_number = case.case_number
+        case_id = case.pk
+        forms = case.forms.count()
+        from ..models import Certificate
+
+        certs = Certificate.all_objects.filter(form__case=case).count()
+        # Deleting the case cascades to its forms, bags, assessments and
+        # certificates (and frees any batch via the certificate FK on_delete).
+        case.delete()
+        settings.LOGGER.info(
+            f"{describe_user(user)} restarted practice case {case_number} "
+            f"({case_id}); removed {forms} form(s) and {certs} certificate(s)"
+        )
 
     # ----- numbering -----------------------------------------------------
     @staticmethod
@@ -75,29 +130,27 @@ class PracticeService:
 
         from ..models import Batch, Case
 
+        def _owned(model):
+            return model.all_objects.filter(is_practice=True, practice_owner=user)
+
         # Cases cascade to forms, bags, assessments and certificates. Batches,
         # officers, stations and defendants are owned independently.
-        Batch.all_objects.filter(is_practice=True, practice_owner=user).delete()
-        Case.all_objects.filter(is_practice=True, practice_owner=user).delete()
-        PoliceOfficer.all_objects.filter(is_practice=True, practice_owner=user).delete()
-        PoliceStation.all_objects.filter(is_practice=True, practice_owner=user).delete()
-        Defendant.all_objects.filter(is_practice=True, practice_owner=user).delete()
-
-    @staticmethod
-    def purge_expired():
-        """Sweep practice data for every user whose session has lapsed."""
-        from common.practice import PRACTICE_TTL
-        from users.models import UserPreferences
-
-        cutoff = timezone.now() - PRACTICE_TTL
-        lapsed = UserPreferences.objects.filter(
-            practice_mode=True, practice_mode_started_at__lt=cutoff
-        ).select_related("user")
-        count = 0
-        for prefs in lapsed:
-            PracticeService.disable_for_user(prefs.user)
-            count += 1
-        return count
+        counts = {
+            "batch": _owned(Batch).count(),
+            "case": _owned(Case).count(),
+            "officer": _owned(PoliceOfficer).count(),
+            "station": _owned(PoliceStation).count(),
+            "defendant": _owned(Defendant).count(),
+        }
+        _owned(Batch).delete()
+        _owned(Case).delete()
+        _owned(PoliceOfficer).delete()
+        _owned(PoliceStation).delete()
+        _owned(Defendant).delete()
+        settings.LOGGER.info(
+            f"{describe_user(user)} practice data purged: "
+            + ", ".join(f"{n} {k}(s)" for k, n in counts.items())
+        )
 
 
 def practice_stamp():

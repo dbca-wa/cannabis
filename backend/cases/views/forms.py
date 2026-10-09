@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import Case, Priority3Form
@@ -53,7 +54,7 @@ class CaseFormListCreateView(ListCreateAPIView):
         case = self._get_case()
         form = serializer.save(case=case)
         settings.LOGGER.info(
-            f"User {self.request.user} added Priority 3 form {form.pk} "
+            f"{describe_user(self.request.user)} added Priority 3 form {form.pk} "
             f"to case {case.case_number}"
         )
 
@@ -81,7 +82,7 @@ class FormDetailView(RetrieveUpdateDestroyAPIView):
         ensure_form_editable(serializer.instance, self.request.user)
         form = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} updated Priority 3 form {form.pk}"
+            f"{describe_user(self.request.user)} updated Priority 3 form {form.pk}"
         )
 
     def perform_destroy(self, instance):
@@ -91,8 +92,9 @@ class FormDetailView(RetrieveUpdateDestroyAPIView):
             raise ValidationError(
                 "This form's certificate is in a batch and cannot be deleted."
             )
-        settings.LOGGER.warning(
-            f"User {self.request.user} deleted Priority 3 form {instance.pk}"
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted Priority 3 form "
+            f"{instance.pk}"
         )
         super().perform_destroy(instance)
 

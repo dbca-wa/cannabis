@@ -10,6 +10,7 @@ import { PracticeSheetReopenTab } from "@/features/practice/components/PracticeS
 import { PracticeSheetProvider } from "@/features/practice/components/PracticeSheetContext";
 import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
+import { usePageViewAudit } from "@/shared/hooks/usePageViewAudit";
 import { Outlet as RouterOutlet } from "react-router";
 import { observer } from "mobx-react-lite";
 
@@ -18,9 +19,12 @@ import { observer } from "mobx-react-lite";
  * guide sheet when it is open, so the fixed sheet never covers page content.
  */
 const MainContent = () => {
-	const { isOpen } = usePracticeSheet();
+	const { isOpen, guideEnabled } = usePracticeSheet();
 	const { isOn } = usePracticeMode();
-	const reserveForSheet = isOn && isOpen;
+	// The docked sheet is visible — and so needs room reserved — whenever it is
+	// open and either practice mode is on (the brief) or the reference guide is
+	// toggled on outside practice mode. Mirrors the sheet's own render gate.
+	const reserveForSheet = isOpen && (isOn || guideEnabled);
 
 	return (
 		<main
@@ -38,6 +42,10 @@ const MainContent = () => {
 
 const MainLayout = observer(function MainLayout() {
 	const uiStore = useUIStore();
+
+	// One audit beacon per page the user navigates to (what they're doing),
+	// independent of the data-fetch calls each page makes.
+	usePageViewAudit();
 
 	return (
 		<NavigationProvider>

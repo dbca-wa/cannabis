@@ -337,7 +337,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "common.middleware.AdminOnlyCsrfMiddleware",  # CSRF only for /admin/ routes
     "common.middleware.SecurityAuditMiddleware",  # Security audit logging
-    "common.middleware.APIRequestLoggingMiddleware",  # API request/response logging
+    "common.middleware.APIRequestLoggingMiddleware",  # Failure-only API request logging
     "common.middleware.PracticeModeMiddleware",  # Per-user practice-mode request context
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -492,18 +492,55 @@ LOGGING = {
         }
     },
     "loggers": {
-        logger_name: {
+        **{
+            logger_name: {
+                "handlers": ["console"],
+                "level": "WARNING",
+                "propagate": False,
+            }
+            for logger_name in (
+                "django",
+                "django.db.backends",
+                "django.template",
+                "core",
+                # Third-party loggers that dump full HTTP request/response
+                # headers at INFO. Quietened so only real problems surface.
+                "azure",
+                "azure.core.pipeline.policies.http_logging_policy",
+                "urllib3",
+            )
+        },
+        # Client errors (4xx) are already reported once by the failure-only
+        # request middleware ("[API] 4xx ... by <user>"). Django's own
+        # "Unauthorized: /path" / "Bad Request: /path" lines on the
+        # django.request logger would duplicate that, so only let genuine
+        # server errors (5xx, logged at ERROR) through here.
+        "django.request": {
             "handlers": ["console"],
-            "level": "WARNING",
+            "level": "ERROR",
             "propagate": False,
-        }
-        for logger_name in (
-            "django",
-            "django.request",
-            "django.db.backends",
-            "django.template",
-            "core",
-        )
+        },
+        # The dev server's per-request access log ("GET ... 200") is pure
+        # noise next to the action/read audit. Keep only failed-to-serve
+        # lines by holding it at ERROR.
+        "django.server": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Action logs use settings.LOGGER (logger name "config.settings"); the
+        # failure-only request middleware uses "api.request". Both must reach
+        # the console at INFO regardless of the root level.
+        "config.settings": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "api.request": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
     "root": {
         "level": "DEBUG",

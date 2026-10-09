@@ -5,6 +5,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import Case
@@ -229,10 +230,11 @@ class CaseListView(ListCreateAPIView):
         return _apply_ordering(queryset, ordering)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        settings.LOGGER.info(f"User {user.email} creating a case")
         case = serializer.save()
-        settings.LOGGER.info(f"User {user.email} created case: {case.case_number}")
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} created case "
+            f"{case.case_number} ({case.pk})"
+        )
 
 
 class CaseDetailView(RetrieveUpdateDestroyAPIView):
@@ -271,7 +273,8 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
 
         case = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} updated case {case.case_number}"
+            f"{describe_user(self.request.user)} updated case "
+            f"{case.case_number} ({case.pk})"
         )
 
     def perform_destroy(self, instance):
@@ -281,5 +284,8 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
 
         ensure_case_deletable(instance)
 
-        settings.LOGGER.warning(f"User {self.request.user} deleted case: {instance}")
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted case "
+            f"{instance.case_number} ({instance.pk})"
+        )
         super().perform_destroy(instance)

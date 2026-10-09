@@ -26,7 +26,9 @@ class DefendantListCreateView(ListCreateAPIView):
         return DefendantService.get_queryset(search=search, ordering=ordering)
 
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.instance = DefendantService.create_defendant(
+            serializer.validated_data, self.request.user
+        )
 
 
 class DefendantRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
@@ -37,6 +39,11 @@ class DefendantRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return DefendantService.get_queryset()
+
+    def perform_update(self, serializer):
+        serializer.instance = DefendantService.update_defendant(
+            serializer.instance, serializer.validated_data, self.request.user
+        )
 
     def perform_destroy(self, instance):
         DefendantService.delete_defendant(instance, self.request.user)

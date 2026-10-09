@@ -7,6 +7,10 @@ import { CaseDetailsStep } from "../wizard/steps/CaseDetailsStep";
 import { DefendantsStep } from "../wizard/steps/DefendantsStep";
 import { OfficersStep } from "../wizard/steps/OfficersStep";
 import { useCaseNumberAvailability } from "@/features/cases/hooks/useCaseNumberAvailability";
+import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
+import { usePracticeBrief } from "@/features/practice/hooks/usePracticeBrief";
+import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
+import { isCaseChecklistComplete } from "@/features/practice/utils/practiceProgress";
 
 interface CaseCreationFormProps {
 	/** Case field values, bridged from the CaseFormStore */
@@ -31,6 +35,19 @@ export const CaseCreationForm = observer(
 	({ caseData, onFieldChange, onSubmit, onDiscard }: CaseCreationFormProps) => {
 		const store = useCaseCreationFormStore();
 		const [touched, setTouched] = useState(false);
+
+		// In practice mode the operator must reproduce their fake brief exactly
+		// before the case can be created, so Create Case stays disabled until the
+		// live create data matches every brief item. The sheet ticks against the
+		// same liveCreateData, so the button unlocks precisely when the checklist
+		// is all green.
+		const { isOn: isPractice } = usePracticeMode();
+		const { data: practiceBrief } = usePracticeBrief(isPractice);
+		const { liveCreateData } = usePracticeSheet();
+		const practiceBriefMatched =
+			!isPractice ||
+			!practiceBrief ||
+			isCaseChecklistComplete(practiceBrief, liveCreateData);
 
 		const { isChecking, matchedCase } = useCaseNumberAvailability(
 			(caseData?.case_number as string) ?? "",
@@ -65,7 +82,8 @@ export const CaseCreationForm = observer(
 			!!approvedBotanist &&
 			hasDefendants &&
 			!store.hasMatchedExistingCase &&
-			!isChecking;
+			!isChecking &&
+			practiceBriefMatched;
 
 		return (
 			<div className="flex flex-col gap-6 h-full">
@@ -92,6 +110,11 @@ export const CaseCreationForm = observer(
 				</div>
 
 				<div className="flex items-center justify-end gap-3">
+					{isPractice && !practiceBriefMatched && (
+						<p className="mr-auto text-sm text-amber-700 dark:text-amber-400">
+							Match every item in your practice brief to enable Create Case.
+						</p>
+					)}
 					<Button
 						variant="outline"
 						onClick={onDiscard}

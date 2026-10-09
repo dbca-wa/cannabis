@@ -17,6 +17,7 @@ from rest_framework.status import (
 )
 from rest_framework.views import APIView
 
+from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
@@ -118,10 +119,11 @@ class PoliceStationListView(ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
+        station = serializer.save()
         settings.LOGGER.info(
-            f"User {self.request.user} created police station: {serializer.validated_data['name']}"
+            f"{describe_user(self.request.user)} created police station "
+            f"{station.name} ({station.pk})"
         )
-        serializer.save()
 
 
 class PoliceStationDetailView(RetrieveUpdateDestroyAPIView):
@@ -139,13 +141,15 @@ class PoliceStationDetailView(RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         settings.LOGGER.info(
-            f"User {self.request.user} updated police station: {serializer.instance}"
+            f"{describe_user(self.request.user)} updated police station "
+            f"{serializer.instance} ({serializer.instance.pk})"
         )
         serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.warning(
-            f"User {self.request.user} deleted police station: {instance}"
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted police station "
+            f"{instance} ({instance.pk})"
         )
         super().perform_destroy(instance)
 
@@ -190,18 +194,6 @@ class PoliceStationExportView(APIView):
     def get(self, request):
         """Export police stations data"""
         export_format = request.query_params.get("export_format", "csv").lower()
-
-        # Comprehensive debug logging
-        logger.info("=== POLICE STATIONS EXPORT REQUEST DEBUG ===")
-        logger.info(f"User: {request.user}")
-        logger.info(f"Method: {request.method}")
-        logger.info(f"Path: {request.path}")
-        logger.info(f"Full URL: {request.build_absolute_uri()}")
-        logger.info(f"Format: {export_format}")
-        logger.info(f"Query params: {dict(request.query_params)}")
-        logger.info(f"Headers: {dict(request.headers)}")
-        logger.info(f"Content type: {request.content_type}")
-        logger.info("=== END DEBUG ===")
 
         if export_format not in ["csv", "json"]:
             raise ValidationError(
@@ -281,7 +273,8 @@ class PoliceStationExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} police stations as CSV"
+            f"{describe_user(self.request.user)} exported {queryset.count()} "
+            f"police stations as CSV"
         )
         return response
 
@@ -298,7 +291,8 @@ class PoliceStationExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} police stations as JSON"
+            f"{describe_user(self.request.user)} exported {queryset.count()} "
+            f"police stations as JSON"
         )
         return response
 
@@ -359,7 +353,8 @@ class PoliceStationExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} police stations as CSV"
+            f"{describe_user(self.request.user)} started streaming export of "
+            f"{queryset.count()} police stations as CSV"
         )
         return response
 
@@ -392,7 +387,8 @@ class PoliceStationExportView(APIView):
         )
 
         settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} police stations as JSON"
+            f"{describe_user(self.request.user)} started streaming export of "
+            f"{queryset.count()} police stations as JSON"
         )
         return response
 
@@ -465,7 +461,7 @@ class StationMergeView(APIView):
                 secondary.delete()
 
         settings.LOGGER.info(
-            f"User {request.user} merged stations {secondary_ids} into "
+            f"{describe_user(request.user)} merged stations {secondary_ids} into "
             f"'{primary.name}' (id={primary_id}). "
             f"Reassigned {officers_reassigned} officers and {cases_reassigned} cases."
         )

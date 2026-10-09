@@ -17,6 +17,8 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.logging import describe_user
+
 from ..permissions import HasAppAccess
 from ..serializers import (
     UserCreateSerializer,
@@ -105,6 +107,12 @@ class UserListView(ListCreateAPIView):
 
         return queryset
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} created user " f"{describe_user(user)}"
+        )
+
 
 class UserDetailView(RetrieveUpdateDestroyAPIView):
     """
@@ -151,13 +159,17 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
                     "You do not have permission to change a user's role.",
                 )
         settings.LOGGER.info(
-            f"User {self.request.user} updated user {serializer.instance}"
+            f"{describe_user(self.request.user)} updated user "
+            f"{describe_user(serializer.instance)}"
         )
         serializer.save()
 
     def perform_destroy(self, instance):
         """Delete user permanently."""
-        settings.LOGGER.warning(f"User {self.request.user} deleted user {instance}")
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted user "
+            f"{describe_user(instance)}"
+        )
         instance.delete()
 
 
@@ -219,90 +231,41 @@ class UserExportView(APIView):
 
     def get(self, request):
         """Export users data"""
-        settings.LOGGER.info("=== USER EXPORT VIEW CALLED ===")
-        settings.LOGGER.info(f"User: {request.user}")
-        settings.LOGGER.info(f"Path: {request.path}")
-        settings.LOGGER.info(f"Query params: {dict(request.query_params)}")
-        settings.LOGGER.info(f"Method: {request.method}")
-        settings.LOGGER.info(f"Headers: {dict(request.headers)}")
-
         export_format = request.query_params.get("export_format", "csv").lower()
-        settings.LOGGER.info(f"Export format: {export_format}")
-
-        if export_format == "csv":
-            settings.LOGGER.error("CSV EXPORT REQUESTED - VIEW IS BEING CALLED")
-        else:
-            settings.LOGGER.error(f"NON-CSV EXPORT REQUESTED: {export_format}")
-
-        # Force CSV to work by bypassing format validation
-        if export_format == "csv":
-            settings.LOGGER.info("FORCING CSV EXPORT")
-            try:
-                queryset = self.get_queryset()
-                total_count = queryset.count()
-                settings.LOGGER.info(f"CSV: Got {total_count} users")
-
-                output = io.StringIO()
-                writer = csv.writer(output)
-
-                writer.writerow(["ID", "First Name", "Last Name", "Email"])
-                for user in queryset[:10]:
-                    writer.writerow(
-                        [user.id, user.given_names, user.last_name, user.email]
-                    )
-
-                response = HttpResponse(output.getvalue(), content_type="text/csv")
-                response["Content-Disposition"] = (
-                    'attachment; filename="users_test.csv"'
-                )
-                settings.LOGGER.info("CSV response created successfully")
-                return response
-            except Exception as e:
-                settings.LOGGER.error(f"CSV generation failed: {str(e)}")
-                raise
 
         if export_format not in ["csv", "json"]:
             raise ValidationError(
                 {"format": ["Invalid format. Supported formats: csv, json."]}
             )
 
-        try:
-            queryset = self.get_queryset()
+        queryset = self.get_queryset()
 
-            # Check if dataset is too large (safety limit)
-            max_export_limit = getattr(settings, "MAX_EXPORT_LIMIT", 10000)
-            total_count = queryset.count()
+        # Check if dataset is too large (safety limit)
+        max_export_limit = getattr(settings, "MAX_EXPORT_LIMIT", 10000)
+        total_count = queryset.count()
 
-            if total_count > max_export_limit:
-                raise ValidationError(
-                    f"Dataset too large for export. Maximum {max_export_limit} records allowed. Total: {total_count}."
-                )
+        if total_count > max_export_limit:
+            raise ValidationError(
+                f"Dataset too large for export. Maximum {max_export_limit} "
+                f"records allowed. Total: {total_count}."
+            )
 
-            # Use streaming response for large datasets
-            if total_count > 1000:
-                settings.LOGGER.info(
-                    f"Using streaming response for {total_count} records"
-                )
-                if export_format == "csv":
-                    return self._stream_csv_response(queryset)
-                else:
-                    return self._stream_json_response(queryset)
-            else:
-                settings.LOGGER.info(
-                    f"Using regular response for {total_count} records"
-                )
-                if export_format == "csv":
-                    return self._csv_response(queryset)
-                else:
-                    return self._json_response(queryset)
+        settings.LOGGER.info(
+            f"{describe_user(request.user)} exported users as {export_format}"
+        )
 
-        except Exception as e:
-            settings.LOGGER.error(f"Export error: {str(e)}")
-            raise
+        # Use streaming response for large datasets
+        if total_count > 1000:
+            if export_format == "csv":
+                return self._stream_csv_response(queryset)
+            return self._stream_json_response(queryset)
+
+        if export_format == "csv":
+            return self._csv_response(queryset)
+        return self._json_response(queryset)
 
     def _csv_response(self, queryset):
         """Generate CSV response for smaller datasets"""
-        settings.LOGGER.error("_csv_response METHOD CALLED - STARTING CSV GENERATION")
         output = io.StringIO()
         writer = csv.writer(output)
 
@@ -341,10 +304,6 @@ class UserExportView(APIView):
 
         response = HttpResponse(output.getvalue(), content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="users_export.csv"'
-
-        settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} users as CSV"
-        )
         return response
 
     def _json_response(self, queryset):
@@ -356,10 +315,6 @@ class UserExportView(APIView):
             json.dumps(data, indent=2), content_type="application/json"
         )
         response["Content-Disposition"] = 'attachment; filename="users_export.json"'
-
-        settings.LOGGER.info(
-            f"User {self.request.user} exported {queryset.count()} users as JSON"
-        )
         return response
 
     def _stream_csv_response(self, queryset):
@@ -413,10 +368,6 @@ class UserExportView(APIView):
 
         response = StreamingHttpResponse(csv_generator(), content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="users_export.csv"'
-
-        settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} users as CSV"
-        )
         return response
 
     def _stream_json_response(self, queryset):
@@ -444,10 +395,6 @@ class UserExportView(APIView):
             json_generator(), content_type="application/json"
         )
         response["Content-Disposition"] = 'attachment; filename="users_export.json"'
-
-        settings.LOGGER.info(
-            f"User {self.request.user} started streaming export of {queryset.count()} users as JSON"
-        )
         return response
 
 
@@ -505,61 +452,52 @@ class UserCSVExportView(APIView):
 
     def get(self, request):
         """Export users data as CSV only"""
-        settings.LOGGER.info("CSV-ONLY EXPORT VIEW CALLED")
-        settings.LOGGER.info(f"User: {request.user}")
-        settings.LOGGER.info(f"Path: {request.path}")
+        queryset = self.get_queryset()
+        total_count = queryset.count()
 
-        try:
-            queryset = self.get_queryset()
-            total_count = queryset.count()
+        output = io.StringIO()
+        writer = csv.writer(output)
 
-            settings.LOGGER.info(f"Exporting {total_count} users as CSV")
+        writer.writerow(
+            [
+                "ID",
+                "First Name",
+                "Last Name",
+                "Email",
+                "Role",
+                "Role Display",
+                "Is Active",
+                "Is Staff",
+                "Is Superuser",
+                "Employee ID",
+                "Date Joined",
+            ]
+        )
 
-            output = io.StringIO()
-            writer = csv.writer(output)
-
+        for user in queryset:
             writer.writerow(
                 [
-                    "ID",
-                    "First Name",
-                    "Last Name",
-                    "Email",
-                    "Role",
-                    "Role Display",
-                    "Is Active",
-                    "Is Staff",
-                    "Is Superuser",
-                    "Employee ID",
-                    "Date Joined",
+                    user.id,
+                    user.given_names,
+                    user.last_name,
+                    user.email,
+                    user.role,
+                    user.get_role_display(),
+                    user.is_active,
+                    user.is_staff,
+                    user.is_superuser,
+                    user.employee_id or "",
+                    user.date_joined.isoformat() if user.date_joined else "",
                 ]
             )
 
-            for user in queryset:
-                writer.writerow(
-                    [
-                        user.id,
-                        user.given_names,
-                        user.last_name,
-                        user.email,
-                        user.role,
-                        user.get_role_display(),
-                        user.is_active,
-                        user.is_staff,
-                        user.is_superuser,
-                        user.employee_id or "",
-                        user.date_joined.isoformat() if user.date_joined else "",
-                    ]
-                )
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="users_export.csv"'
 
-            response = HttpResponse(output.getvalue(), content_type="text/csv")
-            response["Content-Disposition"] = 'attachment; filename="users_export.csv"'
-
-            settings.LOGGER.info(f"CSV export successful: {total_count} users")
-            return response
-
-        except Exception as e:
-            settings.LOGGER.error(f"CSV export failed: {str(e)}")
-            raise
+        settings.LOGGER.info(
+            f"{describe_user(request.user)} exported {total_count} users as csv"
+        )
+        return response
 
 
 class AdminSendResetEmailView(APIView):
@@ -631,7 +569,7 @@ class AdminSendResetEmailView(APIView):
         )
 
         logger.info(
-            f"Admin {request.user.email} triggered password reset email "
+            f"{describe_user(request.user)} triggered password reset email "
             f"for user {target_user.email}"
         )
 
@@ -684,7 +622,8 @@ class UserAdminStatusView(APIView):
             target_user.is_staff = True
             target_user.save(update_fields=["is_staff"])
             logger.info(
-                f"Admin {request.user.email} promoted {target_user.email} to admin"
+                f"{describe_user(request.user)} promoted {target_user.email} "
+                f"to admin"
             )
             return Response(
                 {
@@ -698,7 +637,8 @@ class UserAdminStatusView(APIView):
             target_user.is_staff = False
             target_user.save(update_fields=["is_staff"])
             logger.info(
-                f"Admin {request.user.email} demoted {target_user.email} from admin"
+                f"{describe_user(request.user)} demoted {target_user.email} "
+                f"from admin"
             )
             return Response(
                 {

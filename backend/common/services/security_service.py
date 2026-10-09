@@ -5,6 +5,8 @@ import logging
 from django.core.cache import cache
 from django.utils import timezone
 
+from common.logging import describe_user
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +54,7 @@ class SecurityService:
             dict: Confirmation message with metadata.
         """
         cache.clear()
-        logger.info(f"Rate limits reset by {user.email} (ID: {user.id})")
+        logger.info(f"{describe_user(user)} reset rate limits")
         return {
             "message": "Rate limits have been reset successfully",
             "cleared_by": user.email,

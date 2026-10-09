@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
 	buildCaseChecklist,
 	buildFormChecklists,
+	buildCertificateChecklists,
+	buildBatchChecklist,
+	isCaseChecklistComplete,
+	areFormChecklistsComplete,
 	type LiveCase,
 } from "./practiceProgress";
 import type { IPracticeBrief } from "../types/practice.types";
@@ -107,66 +111,184 @@ describe("buildCaseChecklist", () => {
 });
 
 describe("buildFormChecklists", () => {
-	it("labels a bag with both the original and new seal tags", () => {
+	it("includes an 'Add a Priority 3 form' item that ticks when a form exists", () => {
+		const empty = buildFormChecklists(brief, []);
+		const addItem = empty[0].items.find((i) =>
+			i.label.includes("Add a Priority 3 form")
+		);
+		expect(addItem?.done).toBe(false);
+
+		const withForm = buildFormChecklists(brief, [{ bags: [] }]);
+		expect(
+			withForm[0].items.find((i) => i.label.includes("Add a Priority 3 form"))
+				?.done
+		).toBe(true);
+	});
+
+	// A fully-correct live bag matching the brief's single bag.
+	const correctBag = {
+		seal_tag_numbers: "T10041",
+		new_seal_tag_numbers: "N20041",
+		content_type: "plant",
+		contains_female_plants: true,
+		assessment: { determination: "cannabis_sativa" },
+	};
+
+	it("labels a bag 'Add Bag' with both the original and new seal tags", () => {
 		const groups = buildFormChecklists(brief, []);
-		const bag = groups[0].items.find((i) => i.label.startsWith("Bag"));
+		const bag = groups[0].items.find((i) => i.label.startsWith("Add Bag"));
 		expect(bag?.label).toContain("original T10041");
 		expect(bag?.label).toContain("new N20041");
 	});
 
-	it("ticks the SME and a bag once recorded, assessed and re-sealed", () => {
+	it("ticks the SME and a bag once every detail matches the brief", () => {
 		const live = [
+			{ security_movement_envelope: "SME100", bags: [{ ...correctBag }] },
+		];
+		const groups = buildFormChecklists(brief, live);
+		const items = groups[0].items;
+		expect(items.find((i) => i.label.includes("envelope"))?.done).toBe(true);
+		expect(items.find((i) => i.label.startsWith("Add Bag"))?.done).toBe(true);
+	});
+
+	it("leaves a bag unticked when the content type is wrong", () => {
+		const live = [{ bags: [{ ...correctBag, content_type: "seed" }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked when the determination is wrong", () => {
+		const live = [
+			{
+				bags: [
+					{ ...correctBag, assessment: { determination: "not_cannabis" } },
+				],
+			},
+		];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked when the female-plants flag is wrong", () => {
+		const live = [{ bags: [{ ...correctBag, contains_female_plants: false }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked until the new seal tag is entered", () => {
+		const live = [{ bags: [{ ...correctBag, new_seal_tag_numbers: "" }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+
+	it("leaves a bag unticked until it has an assessment", () => {
+		const live = [{ bags: [{ ...correctBag, assessment: null }] }];
+		const groups = buildFormChecklists(brief, live);
+		expect(
+			groups[0].items.find((i) => i.label.startsWith("Add Bag"))?.done
+		).toBe(false);
+	});
+});
+
+describe("buildCertificateChecklists", () => {
+	it("ticks generate then mark-ready as the certificate progresses", () => {
+		// No certificate yet.
+		let groups = buildCertificateChecklists(brief, [{ bags: [] }]);
+		let done = Object.fromEntries(groups[0].items.map((i) => [i.label, i.done]));
+		expect(done["Generate the certificate"]).toBe(false);
+		expect(done["Review and mark it ready"]).toBe(false);
+
+		// Certificate generated, not yet marked ready.
+		groups = buildCertificateChecklists(brief, [
+			{ bags: [], certificate: { id: 1 }, marked_ready: false },
+		]);
+		done = Object.fromEntries(groups[0].items.map((i) => [i.label, i.done]));
+		expect(done["Generate the certificate"]).toBe(true);
+		expect(done["Review and mark it ready"]).toBe(false);
+
+		// Generated and marked ready.
+		groups = buildCertificateChecklists(brief, [
+			{ bags: [], certificate: { id: 1 }, marked_ready: true },
+		]);
+		done = Object.fromEntries(groups[0].items.map((i) => [i.label, i.done]));
+		expect(done["Generate the certificate"]).toBe(true);
+		expect(done["Review and mark it ready"]).toBe(true);
+	});
+});
+
+describe("buildBatchChecklist", () => {
+	it("ticks nothing before a batch exists for the case", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", []);
+		expect(group.items.every((i) => !i.done)).toBe(true);
+	});
+
+	it("ticks create-batch once a batch covers the case, invoice still open", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-480021"], is_invoiced: false },
+		]);
+		const done = Object.fromEntries(group.items.map((i) => [i.label, i.done]));
+		expect(done["Create a batch for this case"]).toBe(true);
+		expect(done["Record the invoice number"]).toBe(false);
+	});
+
+	it("ticks everything once the batch is invoiced", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-480021"], is_invoiced: true },
+		]);
+		expect(group.items.every((i) => i.done)).toBe(true);
+	});
+
+	it("ignores batches that do not cover this case", () => {
+		const group = buildBatchChecklist("PRACTICE-480021", [
+			{ case_numbers: ["PRACTICE-999999"], is_invoiced: true },
+		]);
+		expect(group.items.every((i) => !i.done)).toBe(true);
+	});
+});
+
+describe("completeness helpers", () => {
+	const fullCase: LiveCase = {
+		case_number: "PRACTICE-480021",
+		submitting_officer: 5,
+		submitting_officer_name: "Alex Turner",
+		station: 2,
+		station_name: "Fremantle",
+		approved_botanist: 9,
+		defendant_names: ["NGUYEN, Chris"],
+	};
+
+	it("isCaseChecklistComplete is false until every item matches, then true", () => {
+		expect(isCaseChecklistComplete(brief, null)).toBe(false);
+		expect(isCaseChecklistComplete(brief, fullCase)).toBe(true);
+	});
+
+	it("areFormChecklistsComplete is false until the form, SME and bag are recorded", () => {
+		expect(areFormChecklistsComplete(brief, [])).toBe(false);
+		// Form added but nothing else — still incomplete.
+		expect(areFormChecklistsComplete(brief, [{ bags: [] }])).toBe(false);
+		// Fully recorded: SME + the assessed, re-sealed bag.
+		const complete = [
 			{
 				security_movement_envelope: "SME100",
 				bags: [
 					{
 						seal_tag_numbers: "T10041",
 						new_seal_tag_numbers: "N20041",
+						content_type: "plant",
+						contains_female_plants: true,
 						assessment: { determination: "cannabis_sativa" },
 					},
 				],
 			},
 		];
-		const groups = buildFormChecklists(brief, live);
-		const items = groups[0].items;
-		expect(items.find((i) => i.label.includes("envelope"))?.done).toBe(true);
-		const bag = items.find((i) => i.label.startsWith("Bag"));
-		expect(bag?.done).toBe(true);
-	});
-
-	it("leaves a bag unticked until the new seal tag is entered", () => {
-		const live = [
-			{
-				bags: [
-					{
-						seal_tag_numbers: "T10041",
-						new_seal_tag_numbers: "",
-						assessment: { determination: "cannabis_sativa" },
-					},
-				],
-			},
-		];
-		const groups = buildFormChecklists(brief, live);
-		expect(groups[0].items.find((i) => i.label.startsWith("Bag"))?.done).toBe(
-			false
-		);
-	});
-
-	it("leaves a bag unticked until it has an assessment", () => {
-		const live = [
-			{
-				bags: [
-					{
-						seal_tag_numbers: "T10041",
-						new_seal_tag_numbers: "N20041",
-						assessment: null,
-					},
-				],
-			},
-		];
-		const groups = buildFormChecklists(brief, live);
-		expect(groups[0].items.find((i) => i.label.startsWith("Bag"))?.done).toBe(
-			false
-		);
+		expect(areFormChecklistsComplete(brief, complete)).toBe(true);
 	});
 });
