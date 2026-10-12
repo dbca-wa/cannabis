@@ -44,6 +44,7 @@ class SystemFeatureFlagsView(APIView):
         return Response(
             {
                 "ocr_enabled": settings_obj.ocr_enabled,
+                "allow_saved_searches": settings_obj.allow_saved_searches,
                 "default_approved_botanist": default_botanist_id,
             }
         )
@@ -78,6 +79,7 @@ class SystemSettingsView(APIView):
             "tax_percentage": str(settings.tax_percentage),
             "certificate_counter": settings.certificate_counter,
             "ocr_enabled": settings.ocr_enabled,
+            "allow_saved_searches": settings.allow_saved_searches,
             "environment": environment,
         }
 
@@ -294,6 +296,17 @@ class SystemSettingsView(APIView):
             old_values["ocr_enabled"] = settings.ocr_enabled
             settings.ocr_enabled = bool_value
             updated_fields.append("ocr_enabled")
+
+        # Validate allow_saved_searches feature flag
+        if "allow_saved_searches" in request.data:
+            input_value = request.data["allow_saved_searches"]
+            if isinstance(input_value, str):
+                bool_value = input_value.lower() in ("true", "1", "yes", "on")
+            else:
+                bool_value = bool(input_value)
+            old_values["allow_saved_searches"] = settings.allow_saved_searches
+            settings.allow_saved_searches = bool_value
+            updated_fields.append("allow_saved_searches")
 
         # Validate certificate_counter field
         if "certificate_counter" in request.data:

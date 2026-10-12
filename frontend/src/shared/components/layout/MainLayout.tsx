@@ -11,6 +11,7 @@ import { PracticeSheetProvider } from "@/features/practice/components/PracticeSh
 import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { usePageViewAudit } from "@/shared/hooks/usePageViewAudit";
+import { useSavedSearchGate } from "@/shared/hooks/useSavedSearchGate";
 import { Outlet as RouterOutlet } from "react-router";
 import { observer } from "mobx-react-lite";
 
@@ -46,6 +47,9 @@ const MainLayout = observer(function MainLayout() {
 	// One audit beacon per page the user navigates to (what they're doing),
 	// independent of the data-fetch calls each page makes.
 	usePageViewAudit();
+
+	// Apply the system-wide saved-search flag to the search stores.
+	useSavedSearchGate();
 
 	return (
 		<NavigationProvider>

@@ -20,6 +20,8 @@ export interface SystemSettingsUpdateRequest {
 	send_emails_to_self?: boolean;
 	/** User id of the botanist to pre-select, or null to clear the default. */
 	default_approved_botanist?: number | null;
+	/** Allow list pages to remember a user's search between visits. */
+	allow_saved_searches?: boolean;
 }
 
 // Settings validation error response

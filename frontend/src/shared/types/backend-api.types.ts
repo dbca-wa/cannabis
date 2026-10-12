@@ -691,6 +691,7 @@ export interface SystemSettings {
 	cost_per_bag: string;
 	tax_percentage: string;
 	ocr_enabled: boolean;
+	allow_saved_searches: boolean;
 	forward_certificate_emails_to: string;
 	send_emails_to_self: boolean;
 	environment: string;
@@ -717,6 +718,8 @@ export interface SystemSettings {
 // Lightweight system defaults readable by any app user (GET /system/feature-flags)
 export interface FeatureFlags {
 	ocr_enabled: boolean;
+	/** Whether list pages may remember a user's search between visits. */
+	allow_saved_searches: boolean;
 	/** Botanist to pre-select on new cases. Null when unset or no longer eligible. */
 	default_approved_botanist: number | null;
 }

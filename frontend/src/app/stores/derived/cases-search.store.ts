@@ -1,4 +1,8 @@
 import { BaseStore, type BaseStoreState } from "@/app/stores/base.store";
+import {
+	isSavedSearchPersistenceAllowed,
+	registerSearchStoreReloader,
+} from "@/app/stores/derived/searchPersistence";
 import { logger } from "@/shared/services/logger.service";
 import { makeObservable, computed, action } from "mobx";
 
@@ -38,7 +42,7 @@ const INITIAL_STATE: CasesSearchStoreState = {
 	currentPage: 1,
 	totalPages: 1,
 	totalResults: 0,
-	saveSearch: true,
+	saveSearch: false,
 };
 
 export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
@@ -207,7 +211,14 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 	/**
 	 * Loads search state from localStorage if saveSearch was enabled.
 	 */
+	/** Restore persisted state once saved searches are allowed system-wide. */
+	restorePersistedState() {
+		this.loadFromStorage();
+	}
+
 	private loadFromStorage() {
+		// Saved searches are off system-wide unless an admin has enabled them.
+		if (!isSavedSearchPersistenceAllowed()) return;
 		try {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {
@@ -280,7 +291,9 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 	 * Removes stored data if saveSearch is disabled.
 	 */
 	private saveToStorage() {
-		if (this.state.saveSearch) {
+		// Persist only when both the system flag and the user's own preference
+		// allow it; otherwise ensure nothing lingers in storage.
+		if (isSavedSearchPersistenceAllowed() && this.state.saveSearch) {
 			try {
 				const dataToStore = {
 					searchTerm: this.state.searchTerm,
@@ -301,3 +314,7 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 }
 
 export const casesSearchStore = new CasesSearchStore();
+
+// Restore persisted state if an admin has saved searches enabled; the flag
+// resolves after this singleton is constructed.
+registerSearchStoreReloader(() => casesSearchStore.restorePersistedState());

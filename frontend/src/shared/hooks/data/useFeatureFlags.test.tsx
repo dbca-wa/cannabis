@@ -13,6 +13,7 @@ import {
 	useFeatureFlags,
 	useOcrEnabled,
 	useDefaultBotanistId,
+	useSavedSearchesAllowed,
 } from "./useFeatureFlags";
 import { SystemSettingsService } from "@/shared/services";
 
@@ -33,6 +34,7 @@ describe("useFeatureFlags", () => {
 	it("returns the feature flags from the API", async () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: true,
+			allow_saved_searches: false,
 			default_approved_botanist: 7,
 		});
 
@@ -48,6 +50,7 @@ describe("useFeatureFlags", () => {
 	it("useOcrEnabled reflects the flag, defaulting to false before load", async () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: true,
+			allow_saved_searches: false,
 			default_approved_botanist: null,
 		});
 
@@ -63,6 +66,7 @@ describe("useFeatureFlags", () => {
 	it("useDefaultBotanistId returns the configured botanist, null before load", async () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
+			allow_saved_searches: false,
 			default_approved_botanist: 42,
 		});
 
@@ -77,6 +81,7 @@ describe("useFeatureFlags", () => {
 	it("useDefaultBotanistId stays null when no default is configured", async () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
+			allow_saved_searches: false,
 			default_approved_botanist: null,
 		});
 
@@ -90,5 +95,21 @@ describe("useFeatureFlags", () => {
 			).toHaveBeenCalled()
 		);
 		expect(result.current).toBeNull();
+	});
+
+	it("useSavedSearchesAllowed reflects the flag, defaulting to false before load", async () => {
+		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
+			ocr_enabled: false,
+			allow_saved_searches: true,
+			default_approved_botanist: null,
+		});
+
+		const { result } = renderHook(() => useSavedSearchesAllowed(), {
+			wrapper: createWrapper(),
+		});
+
+		// Off until the query resolves, then reflects the server flag.
+		expect(result.current).toBe(false);
+		await waitFor(() => expect(result.current).toBe(true));
 	});
 });

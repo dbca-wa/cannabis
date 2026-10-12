@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { X } from "lucide-react";
 import { cn } from "@/shared/utils/style.utils";
+import { useSavedSearchesAllowed } from "@/shared/hooks/data/useFeatureFlags";
 
 interface SearchControlsProps {
 	saveSearch: boolean;
@@ -24,23 +25,30 @@ export const SearchControls = ({
 	onClearFilters,
 	className,
 }: SearchControlsProps) => {
+	// The "Remember search" toggle only appears when an admin has enabled saved
+	// searches system-wide; otherwise persistence is off for everyone and the
+	// toggle would do nothing.
+	const savedSearchesAllowed = useSavedSearchesAllowed();
+
 	return (
 		<div className={cn("flex flex-col xs:flex-row gap-2", className)}>
-			{/* Remember search toggle */}
-			<div className="flex items-center space-x-2 px-3 py-1.5 rounded-md bg-muted/50">
-				<Checkbox
-					id="save-search"
-					checked={saveSearch}
-					onCheckedChange={onToggleSaveSearch}
-					className="cursor-pointer"
-				/>
-				<Label
-					htmlFor="save-search"
-					className="text-sm font-normal cursor-pointer whitespace-nowrap"
-				>
-					Remember search
-				</Label>
-			</div>
+			{/* Remember search toggle — only when saved searches are enabled */}
+			{savedSearchesAllowed && (
+				<div className="flex items-center space-x-2 px-3 py-1.5 rounded-md bg-muted/50">
+					<Checkbox
+						id="save-search"
+						checked={saveSearch}
+						onCheckedChange={onToggleSaveSearch}
+						className="cursor-pointer"
+					/>
+					<Label
+						htmlFor="save-search"
+						className="text-sm font-normal cursor-pointer whitespace-nowrap"
+					>
+						Remember search
+					</Label>
+				</div>
+			)}
 
 			{/* Clear search button — only visible when filters are active */}
 			{filterCount > 0 && (
