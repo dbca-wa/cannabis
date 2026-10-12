@@ -12,6 +12,7 @@ import {
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { SearchControls } from "@/shared/components/SearchControls";
 import { staffSearchStore } from "@/app/stores/derived/staff-search.store";
+import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
 const ROLE_OPTIONS = [
@@ -29,6 +30,7 @@ const STATUS_OPTIONS = [
 
 export const StaffFilters = observer(() => {
 	const store = staffSearchStore;
+	useEphemeralSearch(store);
 
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);

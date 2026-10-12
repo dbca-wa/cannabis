@@ -5,10 +5,12 @@ import { Input } from "@/shared/components/ui/input";
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { SearchControls } from "@/shared/components/SearchControls";
 import { stationsSearchStore } from "@/app/stores/derived/stations-search.store";
+import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
 export const StationsFilters = observer(() => {
 	const store = stationsSearchStore;
+	useEphemeralSearch(store);
 
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);
