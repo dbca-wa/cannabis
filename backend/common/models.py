@@ -138,6 +138,14 @@ class SystemSettings(models.Model):
             "creation and processing to optionally prefill case data."
         ),
     )
+    allow_saved_searches = models.BooleanField(
+        default=False,
+        help_text=(
+            "When enabled, list pages may remember a user's search and filters "
+            "between visits. Off by default so a saved search never hides newly "
+            "created records."
+        ),
+    )
 
     # Auto-incrementing counters
     certificate_counter = models.PositiveIntegerField(

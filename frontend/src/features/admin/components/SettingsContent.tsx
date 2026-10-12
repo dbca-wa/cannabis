@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react";
 import { motion } from "motion/react";
 import { PageTransition } from "@/shared/components/PageTransition";
-import { FlaskConical, Package, Percent, Hash } from "lucide-react";
+import { FlaskConical, Package, Percent, Hash, Search } from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
 import { BaseFeeModal } from "@/shared/components/BaseFeeModal";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -198,6 +199,23 @@ const SettingsContent = () => {
 		},
 		[settings, user, clearError, applySettingsChanges]
 	);
+
+	/**
+	 * Toggle whether list pages may remember a user's search. Admin-only and
+	 * needs no confirmation — it only governs client-side search persistence.
+	 */
+	const handleToggleSavedSearches = useCallback(
+		(enabled: boolean) => {
+			if (!settings || !user) return;
+			clearError();
+			void applySettingsChanges({ allow_saved_searches: enabled });
+		},
+		[settings, user, clearError, applySettingsChanges]
+	);
+
+	// The saved-search toggle is only shown to admins; everyone else sees the
+	// pricing/counter cards without it.
+	const isAdmin = !!(user?.is_staff || user?.is_superuser);
 
 	const handleConfirmChanges = useCallback(() => {
 		void applySettingsChanges(pendingChanges as SystemSettingsUpdateRequest);
@@ -393,6 +411,34 @@ const SettingsContent = () => {
 						Setting it to 5 means the next certificate will be R000006.
 					</p>
 				</Card>
+				{/* Saved searches — admin only. Off by default so a remembered
+				    search never hides a record a user has just created. */}
+				{isAdmin && (
+					<Card className="p-6">
+						<div className="flex items-start gap-4">
+							<div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-sm shrink-0">
+								<Search className="w-5 h-5" />
+							</div>
+							<div className="flex-1">
+								<h3 className="text-[14px] font-medium">Remembered searches</h3>
+								<p className="text-[12px] text-muted-foreground mt-1">
+									When on, list pages can remember each user's search and
+									filters between visits. Off by default, because a remembered
+									search can hide records that have just been created until the
+									search is cleared.
+								</p>
+							</div>
+							<Switch
+								aria-label="Allow remembered searches"
+								checked={settings.allow_saved_searches}
+								disabled={isUpdating}
+								onCheckedChange={handleToggleSavedSearches}
+								className="data-[state=checked]:bg-emerald-600"
+							/>
+						</div>
+					</Card>
+				)}
+
 				{/* Default botanist for new cases */}
 				<DefaultBotanistCard
 					value={settings.default_approved_botanist ?? null}

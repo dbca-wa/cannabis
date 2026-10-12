@@ -22,6 +22,16 @@ export const useOcrEnabled = (): boolean => {
 };
 
 /**
+ * Whether list pages may remember a user's search between visits. Off unless an
+ * admin has turned it on system-wide, so a saved search never hides a record a
+ * user has just created.
+ */
+export const useSavedSearchesAllowed = (): boolean => {
+	const { data } = useFeatureFlags();
+	return data?.allow_saved_searches ?? false;
+};
+
+/**
  * The botanist to pre-select on a new case, or null when no default is set or
  * the configured user no longer holds the role.
  */
