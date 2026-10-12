@@ -12,8 +12,9 @@ import { usePracticeSheet } from "@/features/practice/components/practiceSheet.c
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { usePageViewAudit } from "@/shared/hooks/usePageViewAudit";
 import { useSavedSearchGate } from "@/shared/hooks/useSavedSearchGate";
-import { Outlet as RouterOutlet } from "react-router";
+import { Outlet as RouterOutlet, useLocation } from "react-router";
 import { observer } from "mobx-react-lite";
+import { useEffect, useRef } from "react";
 
 /**
  * The scrolling content region. Reserves room on the right for the practice
@@ -27,8 +28,19 @@ const MainContent = () => {
 	// toggled on outside practice mode. Mirrors the sheet's own render gate.
 	const reserveForSheet = isOpen && (isOn || guideEnabled);
 
+	// `main` is the only scroll container (the document itself never scrolls), so
+	// window-based scroll restoration does nothing here. Reset this element to
+	// the top on each navigation so a new page always starts at the top rather
+	// than inheriting the previous page's scroll position.
+	const scrollRef = useRef<HTMLElement>(null);
+	const { pathname } = useLocation();
+	useEffect(() => {
+		scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+	}, [pathname]);
+
 	return (
 		<main
+			ref={scrollRef}
 			className={`flex-1 min-w-0 h-full overflow-y-auto [contain:layout_paint] ${
 				reserveForSheet ? "lg:pr-[360px]" : ""
 			}`}
