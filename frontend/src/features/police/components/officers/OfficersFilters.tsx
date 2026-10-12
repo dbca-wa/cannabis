@@ -13,6 +13,7 @@ import {
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { SearchControls } from "@/shared/components/SearchControls";
 import { officersSearchStore } from "@/app/stores/derived/officers-search.store";
+import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
@@ -41,6 +42,7 @@ const RANK_OPTIONS_SECONDARY = [
 
 export const OfficersFilters = observer(() => {
 	const store = officersSearchStore;
+	useEphemeralSearch(store);
 
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);

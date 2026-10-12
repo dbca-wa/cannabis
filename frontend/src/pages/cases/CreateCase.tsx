@@ -8,6 +8,7 @@ import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
 import { useCases } from "@/features/cases/hooks/useCases";
 import { CaseCreationForm } from "@/features/cases/components/forms/page/CaseCreationForm";
 import { ocrResultStore } from "@/features/cases/stores/ocrResult.store";
+import { casesSearchStore } from "@/app/stores/derived/cases-search.store";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { usePracticeSheet } from "@/features/practice/components/practiceSheet.context";
 import { useOfficerById, useStationById } from "@/features/police/hooks";
@@ -174,6 +175,10 @@ const CreateCaseContent = observer(() => {
 				void formStore.clearDraft();
 				formStore.resetForm();
 				ocrResultStore.clearAll();
+				// Always clear any remembered cases search (regardless of the saved
+				// searches setting) so the just-created case is visible when the
+				// operator next returns to the list, not hidden behind an old filter.
+				casesSearchStore.clearSearchAndFilters();
 			},
 			onError: () => {
 				creationStore.setSubmitting(false);

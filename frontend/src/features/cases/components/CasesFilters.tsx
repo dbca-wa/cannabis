@@ -13,6 +13,7 @@ import {
 import { FilterContainer } from "@/shared/components/FilterContainer";
 import { SearchControls } from "@/shared/components/SearchControls";
 import { casesSearchStore } from "@/app/stores/derived/cases-search.store";
+import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { UserSearchCombobox } from "@/features/user/components/forms/UserSearchCombobox";
 import {
 	OfficerSearchComboBox,
@@ -32,6 +33,10 @@ const PHASE_OPTIONS = [
 export const CasesFilters = observer(() => {
 	const store = casesSearchStore;
 	const [searchParams, setSearchParams] = useSearchParams();
+
+	// When saved searches are off, drop the search as we leave the list so a
+	// return visit (e.g. after creating a case) is never stale.
+	useEphemeralSearch(store);
 
 	// Sync URL ?phase= param to store on mount/URL change
 	useEffect(() => {
