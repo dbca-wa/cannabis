@@ -1,7 +1,21 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from rest_framework_simplejwt.token_blacklist.admin import OutstandingTokenAdmin
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
 from users.models import InviteRecord, PasswordResetCode, User, UserPreferences
+
+
+class ReadOnlyOutstandingTokenAdmin(OutstandingTokenAdmin):
+    """simplejwt's admin grants change permission on GET only, so the page shows
+    Save buttons that answer 403. Make it a genuine view-only page instead."""
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+admin.site.unregister(OutstandingToken)
+admin.site.register(OutstandingToken, ReadOnlyOutstandingTokenAdmin)
 
 
 @admin.register(User)
@@ -54,13 +68,22 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
         (
+            "Invitation",
+            {
+                "fields": ("invited_by", "invitation_accepted_at"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
             "Important dates",
             {
-                "fields": ("last_login", "date_joined"),
+                "fields": ("last_login", "date_joined", "password_last_changed"),
                 "classes": ("collapse",),
             },
         ),
     )
+
+    readonly_fields = ("invitation_accepted_at", "password_last_changed")
 
     # Add fieldsets for user creation
     add_fieldsets = (
@@ -122,6 +145,8 @@ class UserPreferencesAdmin(admin.ModelAdmin):
         "user__given_names",
         "user__last_name",
     )
+    readonly_fields = ("created_at", "updated_at")
+    list_select_related = ("user",)
 
 
 @admin.register(PasswordResetCode)
@@ -184,4 +209,13 @@ class InviteRecordAdmin(admin.ModelAdmin):
     list_filter = ("role", "is_valid", "is_used")
     search_fields = ("email", "invited_by__email")
     ordering = ("-created_at",)
-    readonly_fields = ("token", "created_at", "expires_at")
+    # external_user_data is the IT Assets snapshot taken when the invite was sent.
+    # It may be {} (which a required JSONField rejects on save) and should never
+    # be hand-edited, so it is shown read-only.
+    readonly_fields = ("token", "created_at", "expires_at", "external_user_data")
+    list_select_related = ("invited_by",)
+
+    def has_add_permission(self, request):
+        # Invitations need a generated token, an expiry and an email, which only
+        # the app's invite flow provides. Admin can inspect, revoke or delete them.
+        return False

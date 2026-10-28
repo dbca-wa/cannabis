@@ -15,6 +15,12 @@ from common.logging import describe_user
 from ..models import Defendant
 from ..serializers import DefendantTinySerializer
 
+
+def _audit_user(user):
+    """Return the user to record on audit fields, or None for anonymous callers."""
+    return user if getattr(user, "is_authenticated", False) else None
+
+
 # Valid ordering fields for defendant queries
 VALID_ORDERINGS = {
     "id": "id",
@@ -109,7 +115,8 @@ class DefendantService:
         Returns:
             The created Defendant instance.
         """
-        defendant = Defendant.objects.create(**data)
+        actor = _audit_user(user)
+        defendant = Defendant.objects.create(**data, created_by=actor, updated_by=actor)
         settings.LOGGER.info(
             f"{describe_user(user)} created defendant {defendant} ({defendant.pk})"
         )
@@ -129,6 +136,9 @@ class DefendantService:
         """
         for field, value in data.items():
             setattr(defendant, field, value)
+        actor = _audit_user(user)
+        if actor is not None:
+            defendant.updated_by = actor
         defendant.save()
         settings.LOGGER.info(
             f"{describe_user(user)} updated defendant {defendant} ({defendant.pk})"

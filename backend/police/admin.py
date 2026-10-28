@@ -1,10 +1,13 @@
 from django.contrib import admin
+from django.db.models import Count
+
+from common.admin_mixins import PracticeAwareAdminMixin, PracticeAwareInlineMixin
 
 from .models import PoliceOfficer, PoliceStation
 
 
 @admin.register(PoliceStation)
-class PoliceStationAdmin(admin.ModelAdmin):
+class PoliceStationAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     list_display = ("name", "phone", "officer_count", "created_at")
     list_filter = ("created_at", "updated_at")
     search_fields = ("name", "address", "phone")
@@ -29,19 +32,17 @@ class PoliceStationAdmin(admin.ModelAdmin):
 
     readonly_fields = ("created_at", "updated_at")
 
+    @admin.display(description="Officers", ordering="_officer_count")
     def officer_count(self, obj):
-        """Display number of officers at this station"""
-        return obj.officers.count()
-
-    officer_count.short_description = "Officers"
-    officer_count.admin_order_field = "officers__count"
+        """Number of officers at this station"""
+        return obj._officer_count
 
     def get_queryset(self, request):
-        """Optimize queryset with prefetch for officer count"""
-        return super().get_queryset(request).prefetch_related("officers")
+        # Annotated so the column is one query and sortable
+        return super().get_queryset(request).annotate(_officer_count=Count("officers"))
 
 
-class PoliceStationInline(admin.TabularInline):
+class PoliceStationInline(PracticeAwareInlineMixin, admin.TabularInline):
     """Inline for showing officers at a station"""
 
     model = PoliceOfficer
@@ -55,7 +56,7 @@ class PoliceStationInline(admin.TabularInline):
 
 
 @admin.register(PoliceOfficer)
-class PoliceOfficerAdmin(admin.ModelAdmin):
+class PoliceOfficerAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     list_display = (
         "full_name",
         "badge_number",
@@ -127,7 +128,7 @@ class PoliceOfficerAdmin(admin.ModelAdmin):
 
     def mark_as_unsworn(self, request, queryset):
         """Mark selected officers as unsworn"""
-        updated = queryset.update(rank=PoliceOfficer.SeniorityChoices.UNSWORN)
+        updated = queryset.update(rank=PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER)
         self.message_user(request, f"{updated} officers marked as unsworn")
 
     mark_as_unsworn.short_description = "Mark selected officers as unsworn"
