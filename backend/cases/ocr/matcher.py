@@ -9,6 +9,7 @@ from django.db.models.functions import Concat
 
 from cases.ocr import MatchCandidate, MatchResult
 from defendants.models import Defendant
+from defendants.validators import placeholder_name_q
 from police.models import PoliceOfficer, PoliceStation
 
 logger = logging.getLogger(__name__)
@@ -138,7 +139,8 @@ class EntityMatcher:
             search_name = clean
 
         defendants = (
-            Defendant.objects.annotate(
+            Defendant.objects.exclude(placeholder_name_q())
+            .annotate(
                 full=Concat("given_names", Value(" "), "last_name"),
                 similarity=TrigramSimilarity("full", search_name),
             )

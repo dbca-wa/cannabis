@@ -14,6 +14,7 @@ from common.logging import describe_user
 
 from ..models import Defendant
 from ..serializers import DefendantTinySerializer
+from ..validators import placeholder_name_q
 
 
 def _audit_user(user):
@@ -64,12 +65,15 @@ class DefendantService:
             raise NotFound(f"Defendant with pk {pk} not found.")
 
     @staticmethod
-    def get_queryset(search=None, ordering="last_name"):
+    def get_queryset(search=None, ordering="last_name", selectable_only=False):
         """Build the annotated, filtered, and ordered defendant queryset.
 
         Args:
             search: Optional multi-word search string filtering on names.
             ordering: Field name for ordering (prefix with '-' for descending).
+            selectable_only: Exclude placeholder defendants (e.g. named
+                "Unknown") so they cannot be picked for a case. The Defendants
+                page leaves this off so they can still be found and cleaned up.
 
         Returns:
             An annotated QuerySet of Defendant objects.
@@ -84,6 +88,9 @@ class DefendantService:
             cases_count=Count("cases", filter=_mode),
             case_count=Count("cases", filter=_mode, distinct=True),
         ).order_by("last_name", "given_names")
+
+        if selectable_only:
+            queryset = queryset.exclude(placeholder_name_q())
 
         if search:
             search_terms = search.strip().split()

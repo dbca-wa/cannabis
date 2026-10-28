@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from defendants.models import Defendant
+from defendants.validators import reject_new_placeholder_defendants
 from police.models import PoliceOfficer, PoliceStation
 from users.models import User
 
@@ -52,3 +53,19 @@ class CaseUpdateSerializer(serializers.ModelSerializer):
             "defendants",
         ]
         read_only_fields = ["id"]
+
+    def validate_defendants(self, value):
+        """Reject newly attached placeholder defendants such as "Unknown".
+
+        One already on the case is allowed, so the case can still be edited
+        while it is being cleaned up.
+        """
+        existing = (
+            set(self.instance.defendants.values_list("pk", flat=True))
+            if self.instance
+            else set()
+        )
+        message = reject_new_placeholder_defendants(value, existing_ids=existing)
+        if message:
+            raise serializers.ValidationError(message)
+        return value

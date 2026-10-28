@@ -102,13 +102,14 @@ class CertificateService:
             raise NotFound("Certificate not found for this case.")
 
     @staticmethod
-    def _format_officer_legal(officer, role_label=None):
-        """Format officer as: RoleLabel BadgeNumber SURNAME, FirstName of Organisation.
+    def _format_officer_legal(officer, role_label=None, include_station=True):
+        """Format officer as: RoleLabel BadgeNumber SURNAME, FirstName of Station.
 
         Args:
             officer: The PoliceOfficer instance.
             role_label: Override the rank display with a fixed label
                         (e.g. "Unsworn Officer" or "Sworn Officer").
+            include_station: Append " of <station>" when the officer has one.
         """
         if not officer:
             return "[Pending]"
@@ -130,7 +131,7 @@ class CertificateService:
         result = " ".join(parts)
         if officer.given_names:
             result += f", {officer.given_names}"
-        if hasattr(officer, "station") and officer.station:
+        if include_station and getattr(officer, "station", None):
             result += f" of {officer.station.name}"
         return result.strip() or officer.full_name or "[Pending]"
 
@@ -205,9 +206,12 @@ class CertificateService:
             "defendant": defendant_display,
             # The conveying officer physically delivered the samples and was
             # present at the examination, so they are named in both section (a)
-            # (received from) and section (b) (handed back to).
+            # (received from) and section (b) (handed back to). Their station is
+            # not shown, matching the legacy certificates.
             "conveying_officer": CertificateService._format_officer_legal(
-                case.submitting_officer, role_label="Unsworn Officer"
+                case.submitting_officer,
+                role_label="Unsworn Officer",
+                include_station=False,
             ),
             # The requesting officer is optional and appears only in section (a),
             # as the officer the samples were conveyed on behalf of. None when

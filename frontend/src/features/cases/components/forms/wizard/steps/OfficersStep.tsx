@@ -79,10 +79,9 @@ export const OfficersStep = ({
 		onFieldChange,
 	]);
 
-	// The station appears once there is an officer to derive it from.
+	// The station appears once there is an officer to derive it from. It is
+	// optional, so an officer without a station needs no prompt.
 	const showStation = !!submittingOfficerId;
-	const needsManualStation =
-		showStation && officerDataMatches && !derivedStationId;
 
 	// The same officer cannot be both conveying and requesting. This is a clear
 	// mistake so we surface it immediately (not gated behind isTouched).
@@ -192,7 +191,12 @@ export const OfficersStep = ({
 					{/* Police Station — hidden until submitting officer set */}
 					{showStation && (
 						<div className="space-y-2">
-							<Label htmlFor="station">Police Station</Label>
+							<Label htmlFor="station">
+								Police Station{" "}
+								<span className="font-normal text-muted-foreground">
+									— optional
+								</span>
+							</Label>
 							<StationSearchComboBox
 								value={station}
 								onValueChange={handleStationChange}
@@ -203,13 +207,6 @@ export const OfficersStep = ({
 							{derivedStationId && (
 								<p className="text-xs text-muted-foreground">
 									Automatically set from officer&apos;s station.
-								</p>
-							)}
-							{needsManualStation && (
-								<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-									<Info className="h-3 w-3" />
-									That officer has no station assigned. Please select one
-									manually.
 								</p>
 							)}
 						</div>

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from defendants.models import Defendant
+from defendants.validators import reject_new_placeholder_defendants
 from police.models import PoliceOfficer, PoliceStation
 from users.models import User
 
@@ -52,6 +53,13 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             "approved_botanist",
         ]
         read_only_fields = ["id"]
+
+    def validate_defendants(self, value):
+        """Reject placeholder defendants such as one named "Unknown"."""
+        message = reject_new_placeholder_defendants(value)
+        if message:
+            raise serializers.ValidationError(message)
+        return value
 
     def validate(self, data):
         """

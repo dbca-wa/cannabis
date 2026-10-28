@@ -181,8 +181,9 @@ const Guide = () => {
 						</li>
 					</ol>
 					<Tip>
-						The station fills itself in from the officer you chose. You only
-						need to set it by hand if that officer has no station recorded.
+						The station fills itself in from the officer you chose. It is
+						optional, so you can leave it blank if that officer has no station
+						recorded.
 					</Tip>
 					<br />
 					<img
@@ -364,7 +365,10 @@ const Guide = () => {
 						</li>
 						<li>
 							Click the batch, then <strong>Download Package</strong> to get a
-							ZIP containing every certificate PDF plus the cost summary.
+							ZIP containing every certificate PDF plus the cost summary. To
+							print the whole batch in one go, open{" "}
+							<strong>all_certificates</strong>, which holds every certificate
+							in the batch in certificate-number order.
 						</li>
 					</ol>
 					<Tip>

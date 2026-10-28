@@ -77,7 +77,12 @@ export const mergeDefendants = async (
 	);
 };
 
-/** Search defendants */
+/**
+ * Search defendants for a selection dropdown.
+ *
+ * Sends `selectable=true` so placeholder records (e.g. a defendant named
+ * "Unknown") are left out; the "Defendant is unknown" button covers that case.
+ */
 export const searchDefendants = async (
 	params: DefendantSearchParams
 ): Promise<PaginatedDefendantsResponse> => {
@@ -86,6 +91,7 @@ export const searchDefendants = async (
 		ordering: params.ordering,
 		limit: params.limit,
 		offset: params.offset,
+		selectable: "true",
 	});
 
 	return apiClient.get<PaginatedDefendantsResponse>(ENDPOINTS.DEFENDANTS.LIST, {

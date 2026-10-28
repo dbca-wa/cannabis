@@ -32,7 +32,7 @@ class TestPDFService:
             "tag_numbers": "T107381, T107390",
             "new_tag_numbers": "T119009, T119010",
             "description": "quantity of plant",
-            "conveying_officer": "Unsworn Officer PD9999 NEUTRON, Jimmy of Midland Police Station",
+            "conveying_officer": "Unsworn Officer PD9999 NEUTRON, Jimmy",
             "requesting_officer": "Sworn Officer PD9998 LIGHTYEAR, Buzz of Serious and Organised Crime Divisional Office",
             "receipt_date": "20 March 2026",
             "species_name": "Cannabis sativa",

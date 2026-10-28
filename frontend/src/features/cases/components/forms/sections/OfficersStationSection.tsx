@@ -256,7 +256,12 @@ export const OfficersStationSection = observer(() => {
 				{/* Station — shown once at least the submitting officer is selected */}
 				{showStationSection && (
 					<div className="space-y-2">
-						<Label htmlFor="station">Police Station</Label>
+						<Label htmlFor="station">
+							Police Station{" "}
+							<span className="font-normal text-muted-foreground">
+								— optional
+							</span>
+						</Label>
 						<StationSearchComboBox
 							value={formStore.formData.station_id ?? null}
 							onValueChange={handleStationChange}
@@ -268,13 +273,6 @@ export const OfficersStationSection = observer(() => {
 						{derivedStationId && (
 							<p className="text-xs text-muted-foreground">
 								Automatically set from officer&apos;s station.
-							</p>
-						)}
-						{needsManualStation && (
-							<p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-								<Info className="h-3 w-3" />
-								Neither officer has a station assigned. Please select one
-								manually.
 							</p>
 						)}
 						{getFieldError("station") && (

@@ -299,3 +299,42 @@ def test_defendant_creator_filter_shows_without_creators(client, admin_data):
     titles = [spec.title for spec in response.context["cl"].filter_specs]
     assert "created by" in titles
     assert "By created by" in response.content.decode()
+
+
+def test_defendant_admin_records_creator_and_editor(client, admin_data):
+    """Adding a defendant in the admin records the creator; editing records the
+    editor without changing the creator."""
+    from defendants.models import Defendant
+
+    creator = admin_data["superuser"]
+    client.force_login(creator)
+    response = client.post(
+        "/admin/defendants/defendant/add/",
+        {"given_names": "Jane", "last_name": "Adminadded"},
+    )
+    assert response.status_code == 302, _form_errors(response)
+    defendant = Defendant.all_objects.get(last_name="Adminadded")
+    assert defendant.created_by == creator
+    assert defendant.updated_by == creator
+
+    editor = SuperuserFactory()
+    client.force_login(editor)
+    response = client.post(
+        f"/admin/defendants/defendant/{defendant.pk}/change/",
+        {"given_names": "Janet", "last_name": "Adminadded"},
+    )
+    assert response.status_code == 302, _form_errors(response)
+    defendant.refresh_from_db()
+    assert defendant.created_by == creator
+    assert defendant.updated_by == editor
+
+
+def test_admin_badge_escapes_its_values():
+    """Status badges are built with format_html, so values are escaped."""
+    from cases.admin import _badge
+
+    html = str(_badge("<script>x</script>", "#fff", "red", font_size="11px"))
+    assert "<script>" not in html
+    assert "&lt;script&gt;x&lt;/script&gt;" in html
+    assert "font-size: 11px;" in html
+    assert str(_badge("Ready", "#28a745", "white")).endswith(">Ready</span>")

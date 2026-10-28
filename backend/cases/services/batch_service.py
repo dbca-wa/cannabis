@@ -247,22 +247,41 @@ class BatchService:
 
     @staticmethod
     def build_zip(batch):
-        """Build (or rebuild) the batch ZIP: certificate PDFs + cost summary."""
+        """Build (or rebuild) the batch ZIP.
+
+        The ZIP holds the cost summary, each certificate PDF, and one combined
+        PDF of every certificate (in certificate-number order) so the whole
+        batch can be printed in one go.
+        """
         context = BatchService.build_cost_summary_context(batch)
         summary_html = render_to_string(COST_SUMMARY_TEMPLATE, context)
         summary_pdf = PDFService._html_to_pdf(summary_html)
 
+        certificate_pdfs = []
+        for cert in batch.certificates.order_by("certificate_number"):
+            pdf = cert.pdf_file
+            if not pdf:
+                continue
+            pdf.open("rb")
+            data = pdf.read()
+            pdf.close()
+            certificate_pdfs.append((cert.certificate_number, data))
+
+        combined_pdf = (
+            PDFService.merge_pdfs([data for _, data in certificate_pdfs])
+            if certificate_pdfs
+            else None
+        )
+
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr(f"cost_summary_{batch.batch_number}.pdf", summary_pdf)
-            for cert in batch.certificates.all():
-                pdf = cert.pdf_file
-                if not pdf:
-                    continue
-                pdf.open("rb")
-                data = pdf.read()
-                pdf.close()
-                archive.writestr(f"{cert.certificate_number}.pdf", data)
+            if combined_pdf is not None:
+                archive.writestr(
+                    f"all_certificates_{batch.batch_number}.pdf", combined_pdf
+                )
+            for number, data in certificate_pdfs:
+                archive.writestr(f"{number}.pdf", data)
 
         zip_bytes = buffer.getvalue()
         if batch.zip_file:
@@ -340,9 +359,7 @@ class BatchService:
             form.completed_at = timezone.now()
             form.save(update_fields=["completed_at"])
 
-        cert_desc = ", ".join(
-            f"{c.certificate_number} ({c.pk})" for c in certificates
-        )
+        cert_desc = ", ".join(f"{c.certificate_number} ({c.pk})" for c in certificates)
         settings.LOGGER.info(
             f"{describe_user(user)} recorded invoice {number} on batch "
             f"{batch.batch_number} ({batch.pk}); "
