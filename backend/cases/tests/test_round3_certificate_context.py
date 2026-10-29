@@ -105,6 +105,40 @@ class TestOfficerRoles:
         assert "NEUTRON" in context["conveying_officer"]
         assert "Unsworn Officer" in context["conveying_officer"]
 
+    def test_conveying_officer_station_is_not_shown(self):
+        station = PoliceStationFactory(name="Midland Drug Receival Unit")
+        conveying = PoliceOfficerFactory(
+            badge_number="PD56359",
+            last_name="Rinaldi",
+            given_names="Jade",
+            station=station,
+        )
+        case = CaseFactory(submitting_officer=conveying)
+        certificate = _certificate_with_bags(case=case)
+
+        context = CertificateService.build_certificate_context(certificate)
+
+        assert context["conveying_officer"] == "Unsworn Officer PD56359 RINALDI, Jade"
+
+    def test_requesting_officer_station_is_still_shown(self):
+        station = PoliceStationFactory(name="Mandurah District Office")
+        requesting = PoliceOfficerFactory(
+            badge_number="PD17432",
+            last_name="Barns",
+            given_names="Tahlia",
+            station=station,
+        )
+        case = CaseFactory(
+            submitting_officer=PoliceOfficerFactory(), requesting_officer=requesting
+        )
+        certificate = _certificate_with_bags(case=case)
+
+        context = CertificateService.build_certificate_context(certificate)
+
+        assert context["requesting_officer"] == (
+            "Sworn Officer PD17432 BARNS, Tahlia of Mandurah District Office"
+        )
+
     def test_requesting_officer_is_absent_when_unset(self):
         case = CaseFactory(submitting_officer=PoliceOfficerFactory())
         certificate = _certificate_with_bags(case=case)

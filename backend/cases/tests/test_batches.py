@@ -174,3 +174,120 @@ class TestBatchDeleteAndDownload:
         resp = finance_client.get(reverse("batch_export"))
         assert resp.status_code == 200
         assert "text/csv" in resp["Content-Type"]
+
+
+MERGE = "cases.services.batch_service.PDFService.merge_pdfs"
+
+
+def _with_pdf(cert, content):
+    """Store a PDF on the certificate, as certificate generation does."""
+    from django.core.files.base import ContentFile
+
+    cert.pdf_file.save(
+        f"certificate_{cert.certificate_number}.pdf", ContentFile(content)
+    )
+    return cert
+
+
+def _zip_names(batch):
+    import zipfile
+
+    batch.zip_file.open("rb")
+    try:
+        with zipfile.ZipFile(batch.zip_file) as archive:
+            return {name: archive.read(name) for name in archive.namelist()}
+    finally:
+        batch.zip_file.close()
+
+
+class TestCombinedCertificatesPdf:
+    def _batch(self, finance_client, certs):
+        from cases.models import Batch
+
+        with patch(PDF, return_value=b"%PDF-1.4 summary"):
+            resp = finance_client.post(
+                reverse("batch_list_create"),
+                {"certificate_ids": [c.pk for c in certs]},
+                format="json",
+            )
+        assert resp.status_code == 201, resp.data
+        return Batch.objects.get(pk=resp.data["id"])
+
+    def test_zip_includes_combined_pdf_in_certificate_order(
+        self, finance_client, system_settings
+    ):
+        first = _with_pdf(_eligible_certificate(), b"%PDF first")
+        second = _with_pdf(_eligible_certificate(), b"%PDF second")
+        ordered = sorted([first, second], key=lambda c: c.certificate_number)
+
+        with patch(MERGE, return_value=b"%PDF merged") as merge:
+            batch = self._batch(finance_client, [second, first])
+
+        expected = [b"%PDF first", b"%PDF second"]
+        if ordered[0] is second:
+            expected.reverse()
+        merge.assert_called_once_with(expected)
+
+        files = _zip_names(batch)
+        combined = f"all_certificates_{batch.batch_number}.pdf"
+        assert files[combined] == b"%PDF merged"
+        assert f"cost_summary_{batch.batch_number}.pdf" in files
+        assert f"{first.certificate_number}.pdf" in files
+        assert f"{second.certificate_number}.pdf" in files
+
+    def test_combined_pdf_omitted_without_stored_pdfs(
+        self, finance_client, system_settings
+    ):
+        with patch(MERGE) as merge:
+            batch = self._batch(finance_client, [_eligible_certificate()])
+        merge.assert_not_called()
+        names = _zip_names(batch)
+        assert not any(n.startswith("all_certificates_") for n in names)
+
+    def test_merge_failure_fails_the_package_build(
+        self, finance_client, system_settings
+    ):
+        from rest_framework.exceptions import ValidationError
+
+        cert = _with_pdf(_eligible_certificate(), b"%PDF only")
+        with (
+            patch(PDF, return_value=b"%PDF-1.4 summary"),
+            patch(MERGE, side_effect=ValidationError("Combining failed.")),
+        ):
+            resp = finance_client.post(
+                reverse("batch_list_create"),
+                {"certificate_ids": [cert.pk]},
+                format="json",
+            )
+        assert resp.status_code == 400
+        cert.refresh_from_db()
+        assert cert.batch_id is None
+
+
+class TestRepackageCombinedPdf:
+    def test_repackage_rebuilds_the_combined_pdf(self, finance_client, system_settings):
+        """Re-package regenerates every certificate PDF, then re-merges them."""
+        from cases.models import Batch
+
+        cert = _with_pdf(_eligible_certificate(), b"%PDF original")
+        bid = _create_batch(finance_client, cert).data["id"]
+
+        regenerated = b"%PDF regenerated"
+        with (
+            patch(PDF, return_value=b"%PDF-1.4 summary"),
+            patch(
+                "cases.services.certificate_service.CertificateService._render_pdf",
+                return_value=regenerated,
+            ),
+            patch(MERGE, side_effect=lambda pdfs: b"MERGED:" + b"|".join(pdfs)) as m,
+        ):
+            resp = finance_client.post(reverse("batch_repackage", kwargs={"pk": bid}))
+        assert resp.status_code == 200, resp.data
+        m.assert_called_once_with([regenerated])
+
+        batch = Batch.objects.get(pk=bid)
+        files = _zip_names(batch)
+        assert files[f"all_certificates_{batch.batch_number}.pdf"] == (
+            b"MERGED:" + regenerated
+        )
+        assert files[f"{cert.certificate_number}.pdf"] == regenerated

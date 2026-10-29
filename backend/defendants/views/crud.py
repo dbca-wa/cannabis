@@ -23,7 +23,11 @@ class DefendantListCreateView(ListCreateAPIView):
     def get_queryset(self):
         search = self.request.query_params.get("search")
         ordering = self.request.query_params.get("ordering", "last_name")
-        return DefendantService.get_queryset(search=search, ordering=ordering)
+        # Selection dropdowns pass selectable=true to hide placeholder records
+        selectable = self.request.query_params.get("selectable") == "true"
+        return DefendantService.get_queryset(
+            search=search, ordering=ordering, selectable_only=selectable
+        )
 
     def perform_create(self, serializer):
         serializer.instance = DefendantService.create_defendant(

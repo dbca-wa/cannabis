@@ -3,6 +3,7 @@
 from rest_framework import serializers
 
 from defendants.models import Defendant
+from defendants.validators import PLACEHOLDER_MESSAGE, is_placeholder_name
 
 
 class DefendantSerializer(serializers.ModelSerializer):
@@ -43,13 +44,17 @@ class DefendantSerializer(serializers.ModelSerializer):
         return obj.cases.count()
 
     def validate_last_name(self, value):
-        """Ensure last name is provided"""
+        """Ensure last name is provided and is not a placeholder"""
         if not value or not value.strip():
             raise serializers.ValidationError("Last name is required.")
+        if is_placeholder_name(value):
+            raise serializers.ValidationError(PLACEHOLDER_MESSAGE)
         return value.strip()
 
     def validate_given_names(self, value):
-        """Clean given names if provided"""
+        """Clean given names if provided, rejecting placeholders"""
+        if is_placeholder_name(value):
+            raise serializers.ValidationError(PLACEHOLDER_MESSAGE)
         if value:
             return value.strip()
         return value

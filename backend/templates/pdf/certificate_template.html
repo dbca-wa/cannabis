@@ -6,7 +6,11 @@
     <style>
         @page {
             size: A4;
-            margin: 48px;
+            /* One equal margin on every side. The whitespace lives entirely in
+               the page margin (not body padding) because the bottom-pinned
+               signature block is placed against the page area and ignores body
+               padding; with padding the bottom gap came out smaller than the top. */
+            margin: 73px;
         }
 
         * {
@@ -16,7 +20,7 @@
         body {
             font-family: 'Aptos', 'Calibri', 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 25px; /* Reduced from 30px */
+            padding: 0;
             color: #000;
             line-height: 1.5;
             font-size: 11px;
@@ -212,7 +216,7 @@
             justify-content: space-between;
             align-items: flex-end;
             min-height: 60px; /* Reduced from 70px */
-            margin-bottom: 10px; /* Reduced from 15px */
+            margin-bottom: 0;
         }
 
         .signature-section {

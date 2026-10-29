@@ -78,3 +78,57 @@ class PDFService:
                 os.unlink(html_path)
             if pdf_path and os.path.exists(pdf_path):
                 os.unlink(pdf_path)
+
+    @staticmethod
+    def merge_pdfs(pdfs: list[bytes]) -> bytes:
+        """Concatenate PDFs, in order, into a single PDF via poppler's pdfunite.
+
+        The input documents are copied page for page, so the merged file prints
+        exactly as the individual files do.
+
+        Args:
+            pdfs: PDF documents as raw bytes, in the order they should appear.
+
+        Returns:
+            Raw bytes of the merged PDF.
+
+        Raises:
+            ValidationError: If no PDFs are given, or pdfunite fails, times out
+                or is not installed.
+        """
+        if not pdfs:
+            raise ValidationError("No PDFs to merge.")
+        if len(pdfs) == 1:
+            return pdfs[0]
+
+        with tempfile.TemporaryDirectory() as workdir:
+            inputs = []
+            for index, data in enumerate(pdfs):
+                path = os.path.join(workdir, f"{index:04d}.pdf")
+                with open(path, "wb") as f:
+                    f.write(data)
+                inputs.append(path)
+            output = os.path.join(workdir, "merged.pdf")
+
+            try:
+                result = subprocess.run(
+                    ["pdfunite", *inputs, output],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+            except subprocess.TimeoutExpired:
+                settings.LOGGER.error("pdfunite timed out after 120 seconds")
+                raise ValidationError("Combining the certificate PDFs timed out.")
+            except FileNotFoundError:
+                settings.LOGGER.error("pdfunite binary not found in PATH")
+                raise ValidationError("PDF merging is unavailable.")
+
+            if result.returncode != 0 or not os.path.exists(output):
+                settings.LOGGER.error(f"pdfunite failed: {result.stderr}")
+                raise ValidationError(
+                    "Combining the certificate PDFs failed. Please try again."
+                )
+
+            with open(output, "rb") as f:
+                return f.read()
