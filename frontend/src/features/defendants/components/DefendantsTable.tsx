@@ -51,20 +51,19 @@ export const DefendantsTable = observer(
 		// Build ordering string from local sort state
 		const ordering = sortDirection === "desc" ? `-${sortField}` : sortField;
 
+		// Read store values during render so the observer tracks them and
+		// the memo below recomputes when they change.
+		const { currentPage, searchTerm } = defendantsSearchStore.state;
+
 		// Build search parameters from store state
 		const searchParams = useMemo(
 			() => ({
-				page: defendantsSearchStore.state.currentPage,
+				page: currentPage,
 				limit: pagination.pageSize,
-				search: defendantsSearchStore.state.searchTerm || undefined,
+				search: searchTerm || undefined,
 				ordering,
 			}),
-			[
-				defendantsSearchStore.state.currentPage,
-				defendantsSearchStore.state.searchTerm,
-				pagination.pageSize,
-				ordering,
-			]
+			[currentPage, searchTerm, pagination.pageSize, ordering]
 		);
 
 		// Fetch data

@@ -66,6 +66,25 @@ const server = serve({
 				return new Response(file, { headers });
 			}
 
+			// Missing static assets get a 404 rather than index.html, so a stale
+			// chunk hash after a deployment fails cleanly instead of returning
+			// HTML with a JavaScript MIME expectation.
+			if (
+				filePath.startsWith("/assets/") ||
+				/\.(js|mjs|css|map|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|webp)$/i.test(
+					filePath
+				)
+			) {
+				return new Response("Not found", {
+					status: 404,
+					headers: {
+						"Content-Type": "text/plain",
+						"Cache-Control": "no-store",
+						"X-Content-Type-Options": "nosniff",
+					},
+				});
+			}
+
 			// Fallback to index.html for client-side routing
 			const indexFile = Bun.file("./dist/index.html");
 			return new Response(indexFile, {

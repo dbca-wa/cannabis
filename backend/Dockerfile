@@ -18,6 +18,9 @@ RUN echo "Installing Build Dependencies." && apt-get update && apt-get install -
     gdebi \
     libpq-dev \
     tesseract-ocr tesseract-ocr-eng poppler-utils \
+    libjpeg62-turbo-dev zlib1g-dev libtiff-dev libwebp-dev libavif-dev \
+    libfreetype-dev liblcms2-dev libopenjp2-7-dev libraqm-dev \
+    libharfbuzz-dev libfribidi-dev libxcb1-dev \
     && apt-get upgrade -y
 
 # Set working directory
@@ -46,6 +49,10 @@ WORKDIR /usr/src/app/backend
 
 # Configure Poetry and install dependencies (cached unless pyproject/lock changes)
 RUN poetry config virtualenvs.create false
+# Build Pillow from source against Debian's image libraries. The PyPI wheel
+# bundles its own copies (including libbrotlidec 1.2.0, CVE-2026-111497) that
+# never receive Debian security updates.
+RUN poetry config installer.no-binary pillow
 ENV POETRY_REQUESTS_TIMEOUT=300
 RUN poetry install --only=main --no-root
 
@@ -118,8 +125,11 @@ RUN echo "Installing Runtime Dependencies." && apt-get update && apt-get install
     tesseract-ocr tesseract-ocr-eng poppler-utils \
     fontconfig fonts-dejavu-core \
     libgif7 \
-    libwebp7 libwebpdemux2 \
+    libwebp7 libwebpdemux2 libwebpmux3 \
     libavif16 \
+    libbrotli1 \
+    libjpeg62-turbo zlib1g libtiff6 libfreetype6 liblcms2-2 libopenjp2-7 \
+    libraqm0 libharfbuzz0b libfribidi0 libxcb1 \
     postgresql-client \
     && apt-get upgrade -y
 
@@ -145,9 +155,31 @@ RUN DEB_FILE=prince.deb \
     && rm -rf /var/cache/apt/archives/*
 ENV PATH="${PATH}:/usr/lib/prince/bin"
 
+# Fail the build if the system Brotli library is older than the patched Debian
+# release (CVE-2026-111497, DSA-6582-1). Guards against stale cached layers.
+ARG LIBBROTLI_MIN_VERSION=1.1.0-2+deb13u1
+RUN INSTALLED=$(dpkg-query -W -f='${Version}' libbrotli1) \
+    && echo "libbrotli1 ${INSTALLED} (minimum ${LIBBROTLI_MIN_VERSION})" \
+    && dpkg --compare-versions "${INSTALLED}" ge "${LIBBROTLI_MIN_VERSION}"
+
 # Copy Python packages from builder stage
 COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Fail the build if Pillow was installed from a wheel with bundled libraries,
+# is missing a runtime library, or lost an image format it previously had.
+RUN SITE=/usr/local/lib/python3.14/site-packages \
+    && test ! -d "${SITE}/pillow.libs" \
+    && ! find "${SITE}/PIL" -name '*.so' -exec ldd {} \; | grep "not found" \
+    && python -c "import PIL; from PIL import features; \
+    want = ['jpg', 'jpg_2000', 'zlib', 'libtiff', 'webp', 'avif', 'freetype2', 'littlecms2', 'raqm', 'xcb']; \
+    missing = [f for f in want if not features.check(f)]; \
+    assert not missing, f'Pillow missing features: {missing}'; \
+    print('Pillow', PIL.__version__, 'built against system libraries')"
+
+# pip is not needed at runtime. Removing it keeps a package installer out of
+# the production image and drops its vendored setuptools (CVE-2025-47273).
+RUN python -m pip uninstall -y pip
 
 # ====================== USER & PERMISSIONS ======================
 

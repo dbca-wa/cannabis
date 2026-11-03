@@ -15,6 +15,10 @@ RUN echo "Installing Development Dependencies." && apt-get update && apt-get ins
     libpq-dev \
     vim git \
     tesseract-ocr tesseract-ocr-eng poppler-utils \
+    libbrotli1 \
+    libjpeg62-turbo-dev zlib1g-dev libtiff-dev libwebp-dev libavif-dev \
+    libfreetype-dev liblcms2-dev libopenjp2-7-dev libraqm-dev \
+    libharfbuzz-dev libfribidi-dev libxcb1-dev \
     && apt-get upgrade -y
 
 # Set working directory
@@ -37,8 +41,18 @@ RUN DEB_FILE=prince.deb \
     && yes | gdebi ${DEB_FILE} \
     && rm -f ${DEB_FILE}
 
+# Fail the build if the system Brotli library is older than the patched Debian
+# release (CVE-2026-111497, DSA-6582-1).
+ARG LIBBROTLI_MIN_VERSION=1.1.0-2+deb13u1
+RUN INSTALLED=$(dpkg-query -W -f='${Version}' libbrotli1) \
+    && echo "libbrotli1 ${INSTALLED} (minimum ${LIBBROTLI_MIN_VERSION})" \
+    && dpkg --compare-versions "${INSTALLED}" ge "${LIBBROTLI_MIN_VERSION}"
+
 # Configure Poetry (don't create virtual env since we're in container)
 RUN poetry config virtualenvs.create false
+# Build Pillow from source against Debian's image libraries rather than using
+# the wheel's bundled copies (which include a vulnerable libbrotlidec).
+RUN poetry config installer.no-binary pillow
 
 # Copy project files for dependency installation
 COPY pyproject.toml poetry.lock* ./backend/
