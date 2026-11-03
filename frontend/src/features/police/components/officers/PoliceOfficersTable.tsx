@@ -52,27 +52,22 @@ export const PoliceOfficersTable = observer(
 		// Build ordering string from local sort state
 		const ordering = sortDirection === "desc" ? `-${sortField}` : sortField;
 
+		// Read store values during render so the observer tracks them and
+		// the memo below recomputes when they change.
+		const { currentPage, searchTerm } = officersSearchStore.state;
+		const { station, rank } = officersSearchStore.state.filters;
+
 		// Build search parameters from store state
 		const searchParams = useMemo(
 			() => ({
-				page: officersSearchStore.state.currentPage,
+				page: currentPage,
 				limit: pagination.pageSize,
-				search: officersSearchStore.state.searchTerm || undefined,
-				station: officersSearchStore.state.filters.station ?? undefined,
-				rank:
-					officersSearchStore.state.filters.rank !== "all"
-						? (officersSearchStore.state.filters.rank as OfficerRank)
-						: undefined,
+				search: searchTerm || undefined,
+				station: station ?? undefined,
+				rank: rank !== "all" ? (rank as OfficerRank) : undefined,
 				ordering,
 			}),
-			[
-				officersSearchStore.state.currentPage,
-				officersSearchStore.state.searchTerm,
-				officersSearchStore.state.filters.station,
-				officersSearchStore.state.filters.rank,
-				pagination.pageSize,
-				ordering,
-			]
+			[currentPage, searchTerm, station, rank, pagination.pageSize, ordering]
 		);
 
 		// Fetch data

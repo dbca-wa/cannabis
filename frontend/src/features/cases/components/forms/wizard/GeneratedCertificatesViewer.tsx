@@ -70,9 +70,7 @@ export const GeneratedCertificatesViewer = ({
 		// data while the new PDF loads. Not a cascading render issue.
 		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setPdfData(null);
-		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setPdfError(null);
-		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setNumPages(0);
 
 		apiClient
