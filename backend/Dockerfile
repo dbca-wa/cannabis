@@ -120,6 +120,7 @@ RUN echo "Installing Runtime Dependencies." && apt-get update && apt-get install
     libgif7 \
     libwebp7 libwebpdemux2 \
     libavif16 \
+    libbrotli1 \
     postgresql-client \
     && apt-get upgrade -y
 
@@ -144,6 +145,13 @@ RUN DEB_FILE=prince.deb \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/cache/apt/archives/*
 ENV PATH="${PATH}:/usr/lib/prince/bin"
+
+# Fail the build if the system Brotli library is older than the patched Debian
+# release (CVE-2026-111497, DSA-6582-1). Guards against stale cached layers.
+ARG LIBBROTLI_MIN_VERSION=1.1.0-2+deb13u1
+RUN INSTALLED=$(dpkg-query -W -f='${Version}' libbrotli1) \
+    && echo "libbrotli1 ${INSTALLED} (minimum ${LIBBROTLI_MIN_VERSION})" \
+    && dpkg --compare-versions "${INSTALLED}" ge "${LIBBROTLI_MIN_VERSION}"
 
 # Copy Python packages from builder stage
 COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages

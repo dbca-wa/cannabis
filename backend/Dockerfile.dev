@@ -15,6 +15,7 @@ RUN echo "Installing Development Dependencies." && apt-get update && apt-get ins
     libpq-dev \
     vim git \
     tesseract-ocr tesseract-ocr-eng poppler-utils \
+    libbrotli1 \
     && apt-get upgrade -y
 
 # Set working directory
@@ -36,6 +37,13 @@ RUN DEB_FILE=prince.deb \
     && wget -O ${DEB_FILE} $PRINCE_URL \
     && yes | gdebi ${DEB_FILE} \
     && rm -f ${DEB_FILE}
+
+# Fail the build if the system Brotli library is older than the patched Debian
+# release (CVE-2026-111497, DSA-6582-1).
+ARG LIBBROTLI_MIN_VERSION=1.1.0-2+deb13u1
+RUN INSTALLED=$(dpkg-query -W -f='${Version}' libbrotli1) \
+    && echo "libbrotli1 ${INSTALLED} (minimum ${LIBBROTLI_MIN_VERSION})" \
+    && dpkg --compare-versions "${INSTALLED}" ge "${LIBBROTLI_MIN_VERSION}"
 
 # Configure Poetry (don't create virtual env since we're in container)
 RUN poetry config virtualenvs.create false
