@@ -130,6 +130,22 @@ class SystemSettings(models.Model):
             "start each case with no botanist chosen."
         ),
     )
+    # Certificate defaults, pre-ticked on each new case's print options
+    default_print_conveying_station = models.BooleanField(
+        default=True,
+        help_text="New cases print the conveying officer's station",
+    )
+    default_print_requesting_station = models.BooleanField(
+        default=True,
+        help_text="New cases print the requesting officer's station",
+    )
+    default_print_requesting_rank = models.BooleanField(
+        default=False,
+        help_text=(
+            "New cases print the requesting officer's rank instead of \"Sworn "
+            'Officer"'
+        ),
+    )
     # Feature flags
     ocr_enabled = models.BooleanField(
         default=False,

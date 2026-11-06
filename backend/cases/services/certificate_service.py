@@ -19,6 +19,7 @@ from common.logging import describe_user
 from common.utils import join_with_and
 
 from ..models import Case, Certificate
+from . import certificate_wording as wording
 from .pdf_service import PDFService
 from .workflow_service import WorkflowService
 
@@ -102,38 +103,73 @@ class CertificateService:
             raise NotFound("Certificate not found for this case.")
 
     @staticmethod
-    def _format_officer_legal(officer, role_label=None, include_station=True):
-        """Format officer as: RoleLabel BadgeNumber SURNAME, FirstName of Station.
+    def printed_officers(case):
+        """The officer text a certificate for this case prints now.
 
-        Args:
-            officer: The PoliceOfficer instance.
-            role_label: Override the rank display with a fixed label
-                        (e.g. "Unsworn Officer" or "Sworn Officer").
-            include_station: Append " of <station>" when the officer has one.
+        Returns ``(conveying, requesting)``. The conveying (submitting) officer
+        is named in Sections (a) and (b); the requesting officer is optional and
+        appears only in Section (a), so it is None when the case has none.
         """
-        if not officer:
-            return "[Pending]"
-        parts = []
-        if role_label:
-            parts.append(role_label)
-        else:
-            rank = (
-                officer.get_rank_display()
-                if hasattr(officer, "get_rank_display")
-                else ""
+        conveying = wording.format_officer(
+            wording.officer_facts(case.submitting_officer),
+            role=wording.CONVEYING,
+            print_station=case.print_conveying_station,
+        )
+        requesting = (
+            wording.format_officer(
+                wording.officer_facts(case.requesting_officer),
+                role=wording.REQUESTING,
+                print_station=case.print_requesting_station,
+                print_rank=case.print_requesting_rank,
             )
-            if rank and rank.lower() not in ("unknown", "other"):
-                parts.append(rank)
-        if officer.badge_number:
-            parts.append(officer.badge_number)
-        if officer.last_name:
-            parts.append(officer.last_name.upper())
-        result = " ".join(parts)
-        if officer.given_names:
-            result += f", {officer.given_names}"
-        if include_station and getattr(officer, "station", None):
-            result += f" of {officer.station.name}"
-        return result.strip() or officer.full_name or "[Pending]"
+            if case.requesting_officer
+            else None
+        )
+        return conveying, requesting
+
+    @staticmethod
+    def _ordered_bags(form):
+        """The form's bags in a stable order, with their assessments."""
+        return list(form.bags.select_related("assessment").order_by("pk"))
+
+    @staticmethod
+    def _bag_results(bags):
+        """``(original tag, determination)`` for each bag, None when unassessed."""
+        return [
+            (
+                bag.seal_tag_numbers,
+                (
+                    bag.assessment.determination
+                    if getattr(bag, "assessment", None) is not None
+                    else None
+                ),
+            )
+            for bag in bags
+        ]
+
+    @staticmethod
+    def needs_regeneration_reasons(certificate):
+        """Why a generated, unbatched certificate no longer matches its case.
+
+        Returns a list holding "wording" when it was generated with older
+        certificate wording, and "officers" when the officer text it would
+        print now differs from what it printed. Empty for a batched certificate
+        (frozen) or one with no PDF yet.
+        """
+        if certificate.batch_id is not None or not certificate.pdf_file:
+            return []
+        reasons = []
+        if certificate.wording_version < wording.CERTIFICATE_WORDING_VERSION:
+            reasons.append("wording")
+        conveying, requesting = CertificateService.printed_officers(
+            certificate.form.case
+        )
+        if (conveying, requesting) != (
+            certificate.printed_conveying_officer,
+            certificate.printed_requesting_officer,
+        ):
+            reasons.append("officers")
+        return reasons
 
     @staticmethod
     def build_certificate_context(certificate):
@@ -144,22 +180,21 @@ class CertificateService:
         defendants come from the case.
 
         Raises:
-            ValidationError: If the form has no bags, or none of its bags have a
-                botanical assessment.
+            ValidationError: If the form has no bags, or any bag has a result
+                that cannot be printed (unassessed, pending or legacy).
         """
         case = certificate.form.case
-        bags = list(certificate.form.bags.select_related("assessment").all())
+        bags = CertificateService._ordered_bags(certificate.form)
 
         if not bags:
             raise ValidationError("Cannot generate certificate: no bags associated.")
 
-        bags_with_assessments = [
-            bag for bag in bags if getattr(bag, "assessment", None) is not None
-        ]
-        if not bags_with_assessments:
-            raise ValidationError(
-                "Cannot generate certificate: no bags have botanical assessments."
-            )
+        bag_results = CertificateService._bag_results(bags)
+        CertificateService._raise_if_unprintable(bags)
+        results = wording.summarise(bag_results)
+        conveying_officer, requesting_officer = CertificateService.printed_officers(
+            case
+        )
 
         defendants = case.defendants.all()
 
@@ -172,7 +207,6 @@ class CertificateService:
             dict.fromkeys(bag.get_content_type_display() for bag in bags)
         )
         descriptions = join_with_and(unique_types)
-        primary_assessment = bags_with_assessments[0].assessment
 
         receipt_date = ""
         if case.received:
@@ -206,31 +240,22 @@ class CertificateService:
             "defendant": defendant_display,
             # The conveying officer physically delivered the samples and was
             # present at the examination, so they are named in both section (a)
-            # (received from) and section (b) (handed back to). Their station is
-            # not shown, matching the legacy certificates.
-            "conveying_officer": CertificateService._format_officer_legal(
-                case.submitting_officer,
-                role_label="Unsworn Officer",
-                include_station=False,
-            ),
+            # (received from) and section (b) (handed back to).
+            "conveying_officer": conveying_officer,
             # The requesting officer is optional and appears only in section (a),
             # as the officer the samples were conveyed on behalf of. None when
             # unset, so the template omits the clause rather than printing a
             # placeholder.
-            "requesting_officer": (
-                CertificateService._format_officer_legal(
-                    case.requesting_officer, role_label="Sworn Officer"
-                )
-                if case.requesting_officer
-                else None
-            ),
+            "requesting_officer": requesting_officer,
             "receipt_date": receipt_date,
-            "species_name": (
-                primary_assessment.get_determination_display()
-                if primary_assessment.determination
-                else "Unknown"
-            ),
-            "other_matters": certificate.additional_notes or "None",
+            # Section B's result sentence. Only section_b.italic is italicised.
+            "section_b": results.section_b,
+            # Section C: the automatic per-bag result lines, then the
+            # botanist's own note.
+            "other_matters": wording.compose_section_c(
+                results.bag_lines, certificate.additional_notes
+            )
+            or "None",
             "certification_date": certification_date,
             "logo_path": str(
                 settings.BASE_DIR / "staticfiles" / "images" / "BCSTransparent.png"
@@ -242,6 +267,37 @@ class CertificateService:
                 "zip": "6983",
             },
         }
+
+    @staticmethod
+    def _record_printed(certificate):
+        """Note what the freshly rendered PDF printed, for staleness checks."""
+        conveying, requesting = CertificateService.printed_officers(
+            certificate.form.case
+        )
+        certificate.wording_version = wording.CERTIFICATE_WORDING_VERSION
+        certificate.printed_conveying_officer = conveying
+        certificate.printed_requesting_officer = requesting
+
+    @staticmethod
+    def _raise_if_unprintable(bags):
+        """Refuse a certificate while any bag's result cannot be printed.
+
+        Only the four approved results may print. A bag with no assessment or
+        a pending one has not been assessed yet; a legacy result (kept for
+        historical records) has no approved certificate wording.
+        """
+        for bag in bags:
+            assessment = getattr(bag, "assessment", None)
+            determination = assessment.determination if assessment else None
+            if determination in wording.PRINTABLE_DETERMINATIONS:
+                continue
+            if determination in (None, "", "pending"):
+                raise ValidationError("Every drug bag must be assessed first.")
+            raise ValidationError(
+                f"Bag {bag.seal_tag_numbers} has the result "
+                f"{assessment.get_determination_display()}, which cannot be "
+                "printed. Choose one of the four results first."
+            )
 
     @staticmethod
     def _render_pdf(certificate):
@@ -275,19 +331,14 @@ class CertificateService:
             ValidationError: If the form has no drug bags, exceeds the bag cap,
                 has an unassessed bag, or its certificate is already batched.
         """
-        bags = list(form.bags.select_related("assessment").all())
+        bags = CertificateService._ordered_bags(form)
         if not bags:
             raise ValidationError("This form has no drug bags; add at least one.")
         if len(bags) > MAX_BAGS_PER_CERTIFICATE:
             raise ValidationError(
                 f"A form may cover at most {MAX_BAGS_PER_CERTIFICATE} drug bags."
             )
-        if any(
-            getattr(bag, "assessment", None) is None
-            or bag.assessment.determination in (None, "pending")
-            for bag in bags
-        ):
-            raise ValidationError("Every drug bag must be assessed first.")
+        CertificateService._raise_if_unprintable(bags)
 
         # Never alter a certificate that is already frozen inside a batch.
         existing = getattr(form, "certificate", None)
@@ -321,6 +372,7 @@ class CertificateService:
             certificate.pdf_file.delete(save=False)
         certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
         certificate.pdf_size = len(pdf_bytes)
+        CertificateService._record_printed(certificate)
 
         # Save the form (and advance it) before the certificate so the
         # certificate's updated_at is the most recent timestamp. Staleness is
@@ -363,7 +415,16 @@ class CertificateService:
         filename = f"certificate_{certificate.certificate_number}.pdf"
         certificate.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
         certificate.pdf_size = len(pdf_bytes)
-        certificate.save(update_fields=["pdf_file", "pdf_size"])
+        CertificateService._record_printed(certificate)
+        certificate.save(
+            update_fields=[
+                "pdf_file",
+                "pdf_size",
+                "wording_version",
+                "printed_conveying_officer",
+                "printed_requesting_officer",
+            ]
+        )
 
         settings.LOGGER.info(
             f"{describe_user(user)} regenerated certificate "

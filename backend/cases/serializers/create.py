@@ -1,11 +1,19 @@
 from rest_framework import serializers
 
+from common.models import SystemSettings
 from defendants.models import Defendant
 from defendants.validators import reject_new_placeholder_defendants
 from police.models import PoliceOfficer, PoliceStation
 from users.models import User
 
 from ..models import Case
+
+# Case print option -> the SystemSettings default that pre-ticks it.
+PRINT_OPTION_DEFAULTS = {
+    "print_conveying_station": "default_print_conveying_station",
+    "print_requesting_station": "default_print_requesting_station",
+    "print_requesting_rank": "default_print_requesting_rank",
+}
 
 
 class CaseCreateSerializer(serializers.ModelSerializer):
@@ -51,8 +59,21 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             "station",
             "defendants",
             "approved_botanist",
+            "print_conveying_station",
+            "print_requesting_station",
+            "print_requesting_rank",
         ]
         read_only_fields = ["id"]
+        # Omitted print options take the system defaults (see create).
+        extra_kwargs = {field: {"required": False} for field in PRINT_OPTION_DEFAULTS}
+
+    def create(self, validated_data):
+        """Create the case, filling omitted print options from system settings."""
+        settings_obj = SystemSettings.load()
+        for field, default_field in PRINT_OPTION_DEFAULTS.items():
+            if field not in self.initial_data:
+                validated_data[field] = getattr(settings_obj, default_field)
+        return super().create(validated_data)
 
     def validate_defendants(self, value):
         """Reject placeholder defendants such as one named "Unknown"."""

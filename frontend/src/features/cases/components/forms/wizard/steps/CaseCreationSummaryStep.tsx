@@ -18,7 +18,9 @@ import {
 	getDefendantCasesBadge,
 } from "@/shared/utils/defendant-display.utils";
 import { Plus, X } from "lucide-react";
+import { readPrintOptions } from "@/features/cases/utils/certificateWording";
 import { SectionCard } from "../SectionCard";
+import { OfficerPrintOptions } from "../OfficerPrintOptions";
 import { CasePoliceFormUpload } from "../../ocr/CasePoliceFormUpload";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
 
@@ -64,6 +66,7 @@ export const CaseCreationSummaryStep = ({
 	const station = (caseData?.station_id as number | null) ?? null;
 	const approvedBotanistId =
 		(caseData?.approved_botanist_id as number | null) ?? null;
+	const printOptions = readPrintOptions(caseData);
 
 	// Fetch defendant when selected via combobox
 	const { data: defendantToAdd } = useDefendantById(selectedDefendantId);
@@ -309,6 +312,15 @@ export const CaseCreationSummaryStep = ({
 							<p className="text-xs text-muted-foreground">
 								Officer who delivered/submitted the samples.
 							</p>
+							<OfficerPrintOptions
+								role="conveying"
+								officerId={submittingOfficer}
+								idPrefix="summary-conveying"
+								printStation={printOptions.printConveyingStation}
+								onPrintStationChange={(checked) =>
+									onFieldChange("print_conveying_station", checked)
+								}
+							/>
 						</div>
 
 						<div className="space-y-2">
@@ -330,6 +342,19 @@ export const CaseCreationSummaryStep = ({
 								The sworn officer who requested the identification. Leave blank
 								when the conveying officer submitted the samples themselves.
 							</p>
+							<OfficerPrintOptions
+								role="requesting"
+								officerId={requestingOfficer}
+								idPrefix="summary-requesting"
+								printStation={printOptions.printRequestingStation}
+								onPrintStationChange={(checked) =>
+									onFieldChange("print_requesting_station", checked)
+								}
+								printRank={printOptions.printRequestingRank}
+								onPrintRankChange={(checked) =>
+									onFieldChange("print_requesting_rank", checked)
+								}
+							/>
 						</div>
 
 						<div className="space-y-2 sm:col-span-2">

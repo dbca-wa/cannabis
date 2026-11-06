@@ -309,7 +309,16 @@ class BatchService:
             filename = f"certificate_{cert.certificate_number}.pdf"
             cert.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
             cert.pdf_size = len(pdf_bytes)
-            cert.save(update_fields=["pdf_file", "pdf_size"])
+            CertificateService._record_printed(cert)
+            cert.save(
+                update_fields=[
+                    "pdf_file",
+                    "pdf_size",
+                    "wording_version",
+                    "printed_conveying_officer",
+                    "printed_requesting_officer",
+                ]
+            )
 
         return BatchService.build_zip(batch)
 

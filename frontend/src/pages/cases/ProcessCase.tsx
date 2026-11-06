@@ -30,6 +30,26 @@ import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
+/** The officer fields the certificate preview and print options read. */
+const officerDetails = (details: unknown): Record<string, unknown> => {
+	const officer = (details ?? {}) as Record<string, unknown>;
+	return {
+		rank: officer.rank ?? null,
+		rank_display: officer.rank_display ?? null,
+		badge_number: officer.badge_number ?? null,
+		given_names: officer.given_names ?? null,
+		last_name: officer.last_name ?? null,
+		station_name: officer.station_name ?? null,
+	};
+};
+
+/** The case's certificate print options, defaulting as the backend does. */
+const printOptions = (caseObj: Record<string, unknown>) => ({
+	print_conveying_station: caseObj.print_conveying_station ?? true,
+	print_requesting_station: caseObj.print_requesting_station ?? true,
+	print_requesting_rank: caseObj.print_requesting_rank ?? false,
+});
+
 /**
  * Bridges the TanStack Query case + form objects into the Record<string, unknown>
  * shape that CaseProcessingWizardContainer expects as caseData. Bags, certificate,
@@ -68,40 +88,12 @@ const buildCaseData = (
 			?.full_name ??
 		caseObj.submitting_officer_name ??
 		null,
-	requesting_officer_details: {
-		rank_display:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.rank_display ?? null,
-		badge_number:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.badge_number ?? null,
-		given_names:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.given_names ?? null,
-		last_name:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.last_name ?? null,
-		station_name:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.station_name ?? null,
-	},
-	submitting_officer_details: {
-		rank_display:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.rank_display ?? null,
-		badge_number:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.badge_number ?? null,
-		given_names:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.given_names ?? null,
-		last_name:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.last_name ?? null,
-		station_name:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.station_name ?? null,
-	},
+	requesting_officer_details: officerDetails(
+		caseObj.requesting_officer_details
+	),
+	submitting_officer_details: officerDetails(
+		caseObj.submitting_officer_details
+	),
 	approved_botanist_name:
 		(caseObj.approved_botanist_details as Record<string, unknown>)?.full_name ??
 		caseObj.approved_botanist_name ??
@@ -112,6 +104,7 @@ const buildCaseData = (
 		null,
 	additional_notes: form.additional_notes ?? "",
 	police_form_url: caseObj.police_form_url ?? null,
+	...printOptions(caseObj),
 });
 
 /**
@@ -148,40 +141,12 @@ const buildCaseDataNoForm = (
 			?.full_name ??
 		caseObj.submitting_officer_name ??
 		null,
-	requesting_officer_details: {
-		rank_display:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.rank_display ?? null,
-		badge_number:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.badge_number ?? null,
-		given_names:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.given_names ?? null,
-		last_name:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.last_name ?? null,
-		station_name:
-			(caseObj.requesting_officer_details as Record<string, unknown>)
-				?.station_name ?? null,
-	},
-	submitting_officer_details: {
-		rank_display:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.rank_display ?? null,
-		badge_number:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.badge_number ?? null,
-		given_names:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.given_names ?? null,
-		last_name:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.last_name ?? null,
-		station_name:
-			(caseObj.submitting_officer_details as Record<string, unknown>)
-				?.station_name ?? null,
-	},
+	requesting_officer_details: officerDetails(
+		caseObj.requesting_officer_details
+	),
+	submitting_officer_details: officerDetails(
+		caseObj.submitting_officer_details
+	),
 	approved_botanist_name:
 		(caseObj.approved_botanist_details as Record<string, unknown>)?.full_name ??
 		caseObj.approved_botanist_name ??
@@ -192,6 +157,7 @@ const buildCaseDataNoForm = (
 		null,
 	additional_notes: "",
 	police_form_url: caseObj.police_form_url ?? null,
+	...printOptions(caseObj),
 });
 
 const ProcessCaseContent = observer(() => {

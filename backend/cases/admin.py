@@ -151,7 +151,14 @@ class CaseAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
         (
             "Police Officers",
             {
-                "fields": ("requesting_officer", "submitting_officer", "station"),
+                "fields": (
+                    "requesting_officer",
+                    "submitting_officer",
+                    "station",
+                    "print_conveying_station",
+                    "print_requesting_station",
+                    "print_requesting_rank",
+                ),
                 "classes": ("wide",),
             },
         ),

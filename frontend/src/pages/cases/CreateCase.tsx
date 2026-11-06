@@ -1,7 +1,10 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDefaultBotanistId } from "@/shared/hooks/data";
+import {
+	useCertificatePrintDefaults,
+	useDefaultBotanistId,
+} from "@/shared/hooks/data";
 import { useCaseCreationFormStore } from "@/app/providers/store.provider";
 import { CaseStoresProvider } from "@/features/cases/components/providers/CaseStoresProvider";
 import { useCaseFormStore } from "@/features/cases/hooks/useCaseFormStore";
@@ -40,6 +43,9 @@ const buildCaseData = (
 		formStore.selectedOfficers.submitting?.full_name ?? null,
 	approved_botanist_name: formStore.selectedBotanist?.full_name ?? null,
 	station_name: formStore.selectedStation?.name ?? null,
+	print_conveying_station: formStore.formData.print_conveying_station,
+	print_requesting_station: formStore.formData.print_requesting_station,
+	print_requesting_rank: formStore.formData.print_requesting_rank,
 });
 
 const CreateCaseContent = observer(() => {
@@ -65,6 +71,25 @@ const CreateCaseContent = observer(() => {
 		defaultApplied.current = true;
 		formStore.updateField("approved_botanist_id", defaultBotanistId);
 	}, [defaultBotanistId, formStore]);
+
+	// Pre-tick the certificate print options from the system defaults once they
+	// load. Any option a restored draft already holds is kept.
+	const { defaults: printDefaults, isLoaded: printDefaultsLoaded } =
+		useCertificatePrintDefaults();
+	const printDefaultsApplied = useRef(false);
+	useEffect(() => {
+		if (printDefaultsApplied.current || !printDefaultsLoaded) return;
+		printDefaultsApplied.current = true;
+		for (const field of [
+			"print_conveying_station",
+			"print_requesting_station",
+			"print_requesting_rank",
+		] as const) {
+			if (formStore.formData[field] === undefined) {
+				formStore.updateField(field, printDefaults[field]);
+			}
+		}
+	}, [printDefaults, printDefaultsLoaded, formStore]);
 
 	// Reset the creation presentation store on unmount
 	useEffect(() => {

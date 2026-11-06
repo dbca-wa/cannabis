@@ -51,6 +51,9 @@ class CaseUpdateSerializer(serializers.ModelSerializer):
             "submitting_officer",
             "station",
             "defendants",
+            "print_conveying_station",
+            "print_requesting_station",
+            "print_requesting_rank",
         ]
         read_only_fields = ["id"]
 

@@ -236,6 +236,9 @@ class CaseSerializer(serializers.ModelSerializer):
             "submitting_officer_details",
             "station",
             "station_details",
+            "print_conveying_station",
+            "print_requesting_station",
+            "print_requesting_rank",
             # Defendants
             "defendants",
             "defendants_details",

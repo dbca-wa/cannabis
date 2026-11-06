@@ -24,6 +24,10 @@ import type {
 	DrugBagContentType,
 	BotanicalDetermination,
 } from "@/shared/types/backend-api.types";
+import {
+	DETERMINATION_HELP,
+	DETERMINATION_OPTIONS,
+} from "../../constants/determinations";
 
 interface DrugBagFormItemProps {
 	bag: DrugBagFormData;
@@ -176,16 +180,14 @@ export const DrugBagFormItem: React.FC<DrugBagFormItemProps> = ({
 							<SelectValue placeholder="Select determination" />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="pending">Pending Assessment</SelectItem>
-							<SelectItem value="cannabis_sativa">Cannabis sativa</SelectItem>
-							<SelectItem value="degraded">Degraded</SelectItem>
-							<SelectItem value="inconclusive">Inconclusive</SelectItem>
-							<SelectItem value="not_cannabis">Not Cannabis</SelectItem>
+							{DETERMINATION_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
-					<p className="text-xs text-muted-foreground">
-						Botanical identification result
-					</p>
+					<p className="text-xs text-muted-foreground">{DETERMINATION_HELP}</p>
 				</div>
 
 				{/* OPTIONAL FIELDS - Below divider */}

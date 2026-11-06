@@ -445,7 +445,7 @@
                     with the following result:
                 </div>
                 <div class="section-content green-border">
-                    I identified the items as <em>{{ species_name }}</em>.
+                    {{ section_b.prefix }}{% if section_b.italic %}<em>{{ section_b.italic }}</em>{% endif %}{{ section_b.suffix }}
                     <br>
                     {% if quantity_of_bags == 1 %}
                     The {{ section_b_description }} was sealed in a new drug movement bag, tag number

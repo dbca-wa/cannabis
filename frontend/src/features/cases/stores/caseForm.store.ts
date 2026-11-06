@@ -62,6 +62,12 @@ export interface CaseFormData {
 	approved_botanist_id?: number;
 	finance_officer_id?: number;
 
+	// Certificate print options. Undefined until the system defaults are
+	// applied; the backend fills in any that are still undefined on create.
+	print_conveying_station?: boolean;
+	print_requesting_station?: boolean;
+	print_requesting_rank?: boolean;
+
 	// Defendants (array of IDs)
 	defendant_ids: number[];
 
@@ -887,6 +893,17 @@ export class CaseFormStore {
 			station: this.formData.station_id || null,
 			approved_botanist: this.formData.approved_botanist_id || null,
 			defendants: this.formData.defendant_ids,
+			// Only send the print options that were set; the rest take the
+			// system defaults on the backend.
+			...(this.formData.print_conveying_station !== undefined && {
+				print_conveying_station: this.formData.print_conveying_station,
+			}),
+			...(this.formData.print_requesting_station !== undefined && {
+				print_requesting_station: this.formData.print_requesting_station,
+			}),
+			...(this.formData.print_requesting_rank !== undefined && {
+				print_requesting_rank: this.formData.print_requesting_rank,
+			}),
 		};
 	};
 

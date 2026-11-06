@@ -15,6 +15,10 @@ import { securityService } from "@/features/admin/services/security.service";
 import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
 import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
 import { DefaultBotanistCard } from "@/features/admin/components/settings/DefaultBotanistCard";
+import {
+	CertificateDefaultsCard,
+	type CertificateDefaultField,
+} from "@/features/admin/components/settings/CertificateDefaultsCard";
 import { TemplatesSettingsCard } from "@/features/cases/components/templates/TemplatesSettingsCard";
 import { logger } from "@/shared/services/logger.service";
 
@@ -209,6 +213,19 @@ const SettingsContent = () => {
 			if (!settings || !user) return;
 			clearError();
 			void applySettingsChanges({ allow_saved_searches: enabled });
+		},
+		[settings, user, clearError, applySettingsChanges]
+	);
+
+	/**
+	 * Change one certificate print default. Needs no confirmation — it only
+	 * pre-ticks the options on cases created afterwards.
+	 */
+	const handleCertificateDefaultChange = useCallback(
+		(field: CertificateDefaultField, value: boolean) => {
+			if (!settings || !user) return;
+			clearError();
+			void applySettingsChanges({ [field]: value });
 		},
 		[settings, user, clearError, applySettingsChanges]
 	);
@@ -447,6 +464,19 @@ const SettingsContent = () => {
 					}
 					isSaving={isUpdating}
 					onSave={handleSaveDefaultBotanist}
+				/>
+				{/* Certificate print options pre-ticked on new cases */}
+				<CertificateDefaultsCard
+					values={{
+						default_print_conveying_station:
+							settings.default_print_conveying_station ?? true,
+						default_print_requesting_station:
+							settings.default_print_requesting_station ?? true,
+						default_print_requesting_rank:
+							settings.default_print_requesting_rank ?? false,
+					}}
+					isSaving={isUpdating}
+					onChange={handleCertificateDefaultChange}
 				/>
 				{/* Section C Templates management */}
 				<TemplatesSettingsCard />

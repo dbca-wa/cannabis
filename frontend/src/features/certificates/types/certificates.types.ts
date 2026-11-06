@@ -28,6 +28,14 @@ export interface Certificate {
 	pdf_file: string | null;
 	pdf_url: string | null;
 	pdf_size: number;
+	/**
+	 * True when the PDF no longer matches its case for a reason only the
+	 * backend can see: older certificate wording, or officer text that has
+	 * changed (a different officer, an edited officer record or a changed
+	 * print option). Never true for a batched certificate.
+	 */
+	needs_regeneration?: boolean;
+	regeneration_reasons?: Array<"wording" | "officers">;
 	created_at: string;
 	updated_at: string;
 }

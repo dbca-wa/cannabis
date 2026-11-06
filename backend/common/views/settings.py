@@ -22,6 +22,13 @@ from ..models import SystemSettings
 
 logger = logging.getLogger(__name__)
 
+# System defaults for each new case's certificate print options.
+CERTIFICATE_DEFAULT_FIELDS = (
+    "default_print_conveying_station",
+    "default_print_requesting_station",
+    "default_print_requesting_rank",
+)
+
 
 class SystemFeatureFlagsView(APIView):
     """Read-only feature flags for any app user.
@@ -46,6 +53,10 @@ class SystemFeatureFlagsView(APIView):
                 "ocr_enabled": settings_obj.ocr_enabled,
                 "allow_saved_searches": settings_obj.allow_saved_searches,
                 "default_approved_botanist": default_botanist_id,
+                **{
+                    field_name: getattr(settings_obj, field_name)
+                    for field_name in CERTIFICATE_DEFAULT_FIELDS
+                },
             }
         )
 
@@ -82,6 +93,8 @@ class SystemSettingsView(APIView):
             "allow_saved_searches": settings.allow_saved_searches,
             "environment": environment,
         }
+        for field_name in CERTIFICATE_DEFAULT_FIELDS:
+            response_data[field_name] = getattr(settings, field_name)
 
         # The default botanist is only reported while the chosen user still holds
         # the Approved Botanist role, so a role change behaves as though no
@@ -307,6 +320,25 @@ class SystemSettingsView(APIView):
             old_values["allow_saved_searches"] = settings.allow_saved_searches
             settings.allow_saved_searches = bool_value
             updated_fields.append("allow_saved_searches")
+
+        # Certificate print option defaults (pre-ticked on new cases)
+        for field_name in CERTIFICATE_DEFAULT_FIELDS:
+            if field_name not in request.data:
+                continue
+            input_value = request.data[field_name]
+            if isinstance(input_value, bool):
+                bool_value = input_value
+            elif isinstance(input_value, str) and input_value.lower() in (
+                "true",
+                "false",
+            ):
+                bool_value = input_value.lower() == "true"
+            else:
+                validation_errors[field_name] = "This setting must be true or false"
+                continue
+            old_values[field_name] = getattr(settings, field_name)
+            setattr(settings, field_name, bool_value)
+            updated_fields.append(field_name)
 
         # Validate certificate_counter field
         if "certificate_counter" in request.data:

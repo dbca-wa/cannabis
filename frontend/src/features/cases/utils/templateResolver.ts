@@ -10,6 +10,7 @@ import {
 	joinWithAnd,
 } from "@/shared/utils/certificate-format.utils";
 import type { DrugBag } from "../types/drugBags.types";
+import { isCannabisDetermination } from "../constants/determinations";
 
 export interface TemplateContext {
 	defendant_name: string;
@@ -169,18 +170,25 @@ export const buildTemplateContext = (
 		...new Set(bags.map((b) => b.content_type_display)),
 	]);
 
+	// Female plants only mean anything for cannabis bags. Bags with any other
+	// result are left out of both lists, so a note never claims female plants
+	// in a bag the certificate says was not cannabis, and never repeats the
+	// automatic result line for it.
+	const cannabisBags = bags.filter((b) =>
+		isCannabisDetermination(b.assessment?.determination)
+	);
+	const femaleBags = cannabisBags.filter((b) => b.contains_female_plants);
+	const nonFemaleBags = cannabisBags.filter((b) => !b.contains_female_plants);
+
 	const femalePlantTags = joinWithAnd(
-		bags.filter((b) => b.contains_female_plants).map((b) => b.seal_tag_numbers)
+		femaleBags.map((b) => b.seal_tag_numbers)
 	);
-
 	const nonFemalePlantTags = joinWithAnd(
-		bags.filter((b) => !b.contains_female_plants).map((b) => b.seal_tag_numbers)
+		nonFemaleBags.map((b) => b.seal_tag_numbers)
 	);
 
-	const femalePlantCount = bags.filter((b) => b.contains_female_plants).length;
-	const nonFemalePlantCount = bags.filter(
-		(b) => !b.contains_female_plants
-	).length;
+	const femalePlantCount = femaleBags.length;
+	const nonFemalePlantCount = nonFemaleBags.length;
 
 	// The leading word agrees in number with how many bags held female plants.
 	const femaleBagLabel = femalePlantCount === 1 ? "Bag" : "Bags";

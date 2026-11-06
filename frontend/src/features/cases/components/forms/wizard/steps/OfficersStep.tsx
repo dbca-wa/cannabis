@@ -4,7 +4,9 @@ import { Info } from "lucide-react";
 import { OfficerSearchComboBox } from "@/shared/components/police";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { useOfficerById } from "@/features/police/hooks";
+import { readPrintOptions } from "@/features/cases/utils/certificateWording";
 import { SectionCard } from "../SectionCard";
+import { OfficerPrintOptions } from "../OfficerPrintOptions";
 
 interface OfficersStepProps {
 	/** Server-authoritative case data from TanStack Query */
@@ -34,6 +36,7 @@ export const OfficersStep = ({
 	const submittingOfficerId =
 		(caseData?.submitting_officer_id as number | null) ?? null;
 	const station = (caseData?.station_id as number | null) ?? null;
+	const printOptions = readPrintOptions(caseData);
 
 	// The station follows the requesting officer when there is one, since they
 	// hold the originating station; otherwise it follows the conveying officer.
@@ -149,6 +152,15 @@ export const OfficersStep = ({
 							The unsworn officer who physically delivered the samples to the
 							laboratory.
 						</p>
+						<OfficerPrintOptions
+							role="conveying"
+							officerId={submittingOfficerId}
+							idPrefix="officers-step-conveying"
+							printStation={printOptions.printConveyingStation}
+							onPrintStationChange={(checked) =>
+								onFieldChange("print_conveying_station", checked)
+							}
+						/>
 					</div>
 
 					{/* Requesting Officer (optional) */}
@@ -171,6 +183,19 @@ export const OfficersStep = ({
 							identification. Leave blank when the conveying officer submitted
 							the samples in their own right.
 						</p>
+						<OfficerPrintOptions
+							role="requesting"
+							officerId={requestingOfficerId}
+							idPrefix="officers-step-requesting"
+							printStation={printOptions.printRequestingStation}
+							onPrintStationChange={(checked) =>
+								onFieldChange("print_requesting_station", checked)
+							}
+							printRank={printOptions.printRequestingRank}
+							onPrintRankChange={(checked) =>
+								onFieldChange("print_requesting_rank", checked)
+							}
+						/>
 					</div>
 
 					{/* Same-officer clash — shown immediately, not gated by touch */}
