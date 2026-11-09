@@ -307,9 +307,10 @@ export const UnsignedCertificateStep = ({
 						<p className="text-sm text-orange-800 dark:text-orange-200">
 							{staleForms.length} of {generatedForms.length} certificate
 							{generatedForms.length !== 1 ? "s" : ""}{" "}
-							{staleForms.length === 1 ? "is" : "are"} based on old data. The
-							bags changed after generating — regenerate to update the
-							certificate.
+							{staleForms.length === 1 ? "is" : "are"} based on old data.
+							Something printed on {staleForms.length === 1 ? "it" : "them"}{" "}
+							changed after generating (bags, Section C, officers or their tick
+							boxes, or the certificate wording) — regenerate to update.
 						</p>
 					</div>
 					<div className="flex shrink-0 items-center gap-2">
