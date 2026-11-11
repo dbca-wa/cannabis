@@ -1929,10 +1929,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=2.0.2", markers = "python_version < \"3.14\""},
-    {version = ">=2.3.3", markers = "python_version >= \"3.14\""},
-]
+numpy = {version = ">=2.3.3", markers = "python_version >= \"3.14\""}
 python-dateutil = ">=2.9.0"
 tzdata = {version = "*", markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\""}
 
@@ -2796,5 +2793,5 @@ brotli = ["brotli"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.13,<3.16"
-content-hash = "bb3722e5fed11729b63718adfcc34c16307e1061034438797a3aa2e9d3d37ce4"
+python-versions = ">=3.15,<3.16"
+content-hash = "5f29079b8082bbd0a533e50ddb15c3d2ac6e1721e0df2c32f576e0f42d68967e"

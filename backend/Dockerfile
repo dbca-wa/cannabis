@@ -2,7 +2,7 @@
 # Multi-stage production Dockerfile for Django backend with Prince XML
 
 # ====================== BUILD STAGE ======================
-FROM python:3.14-slim-trixie AS builder
+FROM python:3.15-slim-trixie AS builder
 
 # Build environment variables
 ENV PYTHONUNBUFFERED=1
@@ -107,7 +107,7 @@ RUN echo "Removing development artifacts..." \
     && rm -f entrypoint.sh 2>/dev/null || true
 
 # ====================== PRODUCTION STAGE ======================
-FROM python:3.14-slim-trixie AS production
+FROM python:3.15-slim-trixie AS production
 
 # Production environment variables
 ENV PYTHONUNBUFFERED=1
@@ -168,12 +168,12 @@ RUN INSTALLED=$(dpkg-query -W -f='${Version}' libbrotli1) \
     && dpkg --compare-versions "${INSTALLED}" ge "${LIBBROTLI_MIN_VERSION}"
 
 # Copy Python packages from builder stage
-COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=builder /usr/local/lib/python3.15/site-packages /usr/local/lib/python3.15/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Fail the build if Pillow was installed from a wheel with bundled libraries,
 # is missing a runtime library, or lost an image format it previously had.
-RUN SITE=/usr/local/lib/python3.14/site-packages \
+RUN SITE=/usr/local/lib/python3.15/site-packages \
     && test ! -d "${SITE}/pillow.libs" \
     && ! find "${SITE}/PIL" -name '*.so' -exec ldd {} \; | grep "not found" \
     && python -c "import PIL; from PIL import features; \
