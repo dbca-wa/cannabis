@@ -538,6 +538,46 @@ jobs:
           path: grype-frontend-scan.csv
           retention-days: 90
 
+      - name: Run Trivy scan (Frontend)
+        # Second opinion alongside Grype; never blocks the release.
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db:1
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:stable
+          severity: "HIGH,CRITICAL"
+          format: "json"
+          output: "trivy-frontend.json"
+
+      - name: Trivy summary (Frontend)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -f trivy-frontend.json ]; then
+            TOTAL=$(jq '[.Results[]? | .Vulnerabilities[]?] | length' trivy-frontend.json)
+            CRIT=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-frontend.json)
+            HIGH=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-frontend.json)
+            {
+              echo "## Frontend Trivy Scan"
+              echo "- HIGH/CRITICAL total: ${TOTAL} | Critical: ${CRIT} | High: ${HIGH}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Trivy results (Frontend)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-frontend-${{ steps.version.outputs.VERSION }}
+          path: trivy-frontend.json
+          retention-days: 90
+          if-no-files-found: ignore
+
   scan-backend:
     name: Scan Backend Image (Grype)
     runs-on: ubuntu-latest
@@ -589,3 +629,43 @@ jobs:
           name: grype-backend-${{ steps.version.outputs.VERSION }}
           path: grype-backend-scan.csv
           retention-days: 90
+
+      - name: Run Trivy scan (Backend)
+        # Second opinion alongside Grype; never blocks the release.
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db:1
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: "image"
+          scanners: "vuln"
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:stable
+          severity: "HIGH,CRITICAL"
+          format: "json"
+          output: "trivy-backend.json"
+
+      - name: Trivy summary (Backend)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -f trivy-backend.json ]; then
+            TOTAL=$(jq '[.Results[]? | .Vulnerabilities[]?] | length' trivy-backend.json)
+            CRIT=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-backend.json)
+            HIGH=$(jq '[.Results[]? | .Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-backend.json)
+            {
+              echo "## Backend Trivy Scan"
+              echo "- HIGH/CRITICAL total: ${TOTAL} | Critical: ${CRIT} | High: ${HIGH}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Trivy results (Backend)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-backend-${{ steps.version.outputs.VERSION }}
+          path: trivy-backend.json
+          retention-days: 90
+          if-no-files-found: ignore
