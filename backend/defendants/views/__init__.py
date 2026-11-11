@@ -7,6 +7,7 @@ Re-exports all view classes so that existing imports like
 from .crud import (
     DefendantListCreateView,
     DefendantRetrieveUpdateDestroyView,
+    DefendantUsageView,
 )
 from .export import DefendantExportView
 from .merge import DefendantMergeView
@@ -14,6 +15,7 @@ from .merge import DefendantMergeView
 __all__ = [
     "DefendantListCreateView",
     "DefendantRetrieveUpdateDestroyView",
+    "DefendantUsageView",
     "DefendantExportView",
     "DefendantMergeView",
 ]

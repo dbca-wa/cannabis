@@ -13,12 +13,15 @@ interface CreateStationModalProps {
 	onClose: () => void;
 	/** Optional callback when station is successfully created */
 	onCreate?: (station: PoliceStation) => void;
+	/** Starting name, e.g. what was typed into the search before "Create". */
+	initialName?: string;
 }
 
 export const CreateStationModal = ({
 	isOpen,
 	onClose,
 	onCreate,
+	initialName = "",
 }: CreateStationModalProps) => {
 	const handleSuccess = (station?: PoliceStation) => {
 		// Call onCreate callback if provided and station data is available
@@ -41,7 +44,12 @@ export const CreateStationModal = ({
 						required.
 					</DialogDescription>
 				</DialogHeader>
-				<CreateStationForm onSuccess={handleSuccess} onCancel={onClose} />
+				<CreateStationForm
+					key={isOpen ? initialName : "closed"}
+					onSuccess={handleSuccess}
+					onCancel={onClose}
+					initialName={initialName.trim()}
+				/>
 			</DialogContent>
 		</Dialog>
 	);

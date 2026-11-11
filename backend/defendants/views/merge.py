@@ -16,5 +16,7 @@ class DefendantMergeView(APIView):
     def post(self, request):
         primary_id = request.data.get("primary_id")
         secondary_ids = request.data.get("secondary_ids")
-        result = DefendantService.merge_defendants(primary_id, secondary_ids)
+        result = DefendantService.merge_defendants(
+            primary_id, secondary_ids, request.user
+        )
         return Response(result)

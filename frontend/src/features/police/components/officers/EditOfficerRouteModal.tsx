@@ -10,6 +10,7 @@ import {
 } from "../../hooks/usePoliceOfficers";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
+import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
 import type { PoliceOfficerUpdateRequest } from "@/shared/types/backend-api.types";
 
 export const EditOfficerRouteModal = () => {
@@ -89,6 +90,11 @@ export const EditOfficerRouteModal = () => {
 					onSubmit={handleSubmit}
 					onCancel={handleClose}
 					isLoading={updateOfficerMutation.isPending}
+				/>
+				<DeleteRecordFooter
+					noun="officer"
+					onDelete={() => navigate(`/officers/${officer.id}/delete`)}
+					disabled={updateOfficerMutation.isPending}
 				/>
 			</ResponsiveModalContent>
 		</ResponsiveModal>

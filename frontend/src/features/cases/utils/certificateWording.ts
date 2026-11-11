@@ -8,6 +8,7 @@
  * the expected output for every combination. After changing wording here or
  * in Python, run `poetry run python manage.py build_certificate_wording_fixture`.
  */
+import { joinWithAnd } from "@/shared/utils/certificate-format.utils";
 import {
 	isPrintableDetermination,
 	type PrintableDetermination,
@@ -131,10 +132,54 @@ export const summariseResults = (
 	};
 };
 
+export const FEMALE_PHRASE = "contained female plants";
+export const ALL_FEMALE_LINE = `All bags ${FEMALE_PHRASE}.`;
+
+export interface FemaleBag {
+	tag: string;
+	determination: string | null | undefined;
+	female: boolean | null | undefined;
+}
+
+/**
+ * The Section C female plant sentence for a form, or null. Only Cannabis
+ * sativa bags count. Reads "All bags contained female plants." when every bag
+ * on a form of two or more does; otherwise names them.
+ */
+export const femalePlantLine = (bags: FemaleBag[]): string | null => {
+	const tags = bags
+		.filter((b) => b.female && b.determination === "cannabis_sativa")
+		.map((b) => b.tag);
+	if (tags.length === 0) return null;
+	if (tags.length === bags.length && bags.length > 1) return ALL_FEMALE_LINE;
+	return `${tags.length === 1 ? "Bag" : "Bags"} ${joinWithAnd(tags)} ${FEMALE_PHRASE}.`;
+};
+
 const comparable = (line: string): string => {
 	const text = line.trim().toLowerCase();
 	return text.endsWith(".") ? text.slice(0, -1) : text;
 };
+
+const escapeRegExp = (value: string): string =>
+	value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const SYSTEM_SENTENCE = new RegExp(
+	"^(?:bags? \\S.* (?:" +
+		[...Object.values(BAG_LINE_PHRASES), FEMALE_PHRASE]
+			.map((phrase) => escapeRegExp(phrase.toLowerCase()))
+			.join("|") +
+		")|all bags " +
+		escapeRegExp(FEMALE_PHRASE) +
+		")$"
+);
+
+/**
+ * True for a bag result or female plant sentence the system writes. Such a
+ * sentence in the note is always superseded by the one worked out from the
+ * current bags, so a stale copy can never contradict the certificate.
+ */
+export const isSystemSentence = (line: string): boolean =>
+	SYSTEM_SENTENCE.test(comparable(line));
 
 const trimBlankEnds = (lines: string[]): string[] => {
 	let start = 0;
@@ -147,14 +192,16 @@ const trimBlankEnds = (lines: string[]): string[] => {
 /**
  * Join the automatic lines and the botanist's note for Section C.
  *
- * The automatic lines come first. A note line that repeats an automatic line
- * (ignoring case, surrounding spaces and a trailing full stop) is dropped so it
- * prints once. Returns null when there is nothing to print, which the
- * certificate shows as "None".
+ * Order: the bag result lines, then the botanist's note, then the female plant
+ * sentence. Any note line that is itself a bag result or female plant sentence
+ * (ignoring case, surrounding spaces and a trailing full stop) is dropped,
+ * because the system writes those from the current bags. Returns null when
+ * there is nothing to print, which the certificate shows as "None".
  */
 export const composeSectionC = (
 	bagLines: string[],
-	note: string | null | undefined
+	note: string | null | undefined,
+	femaleLine: string | null = null
 ): string | null => {
 	const noteLines = trimBlankEnds(
 		(note ?? "")
@@ -163,11 +210,10 @@ export const composeSectionC = (
 			.split("\n")
 			.map((line) => line.trim())
 	);
-	const automatic = new Set(bagLines.map(comparable));
 	const kept = trimBlankEnds(
-		noteLines.filter((line) => !automatic.has(comparable(line)))
+		noteLines.filter((line) => !isSystemSentence(line))
 	);
-	const lines = [...bagLines, ...kept];
+	const lines = [...bagLines, ...kept, ...(femaleLine ? [femaleLine] : [])];
 	return lines.length > 0 ? lines.join("\n") : null;
 };
 

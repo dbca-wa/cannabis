@@ -20,6 +20,11 @@ urlpatterns = [
         views.PoliceStationDetailView.as_view(),
         name="station_detail",
     ),
+    path(
+        "stations/<int:pk>/usage",
+        views.PoliceStationUsageView.as_view(),
+        name="station_usage",
+    ),
     # Police Officer endpoints
     path("officers", views.PoliceOfficerListView.as_view(), name="officer_list"),
     path(
@@ -36,5 +41,10 @@ urlpatterns = [
         "officers/<int:pk>",
         views.PoliceOfficerDetailView.as_view(),
         name="officer_detail",
+    ),
+    path(
+        "officers/<int:pk>/usage",
+        views.PoliceOfficerUsageView.as_view(),
+        name="officer_usage",
     ),
 ]

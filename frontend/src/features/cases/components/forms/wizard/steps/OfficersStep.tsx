@@ -130,6 +130,7 @@ export const OfficersStep = ({
 							Submitting Officer (Conveying Officer)
 						</Label>
 						<OfficerSearchComboBox
+							id="submitting_officer"
 							value={submittingOfficerId}
 							onValueChange={handleSubmittingOfficerChange}
 							placeholder="Search for conveying officer..."
@@ -172,6 +173,7 @@ export const OfficersStep = ({
 							</span>
 						</Label>
 						<OfficerSearchComboBox
+							id="requesting_officer"
 							value={requestingOfficerId}
 							onValueChange={handleRequestingOfficerChange}
 							placeholder="Search for requesting officer..."
@@ -223,6 +225,7 @@ export const OfficersStep = ({
 								</span>
 							</Label>
 							<StationSearchComboBox
+								id="station"
 								value={station}
 								onValueChange={handleStationChange}
 								placeholder="Search for police station..."

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { collapseCertRanges } from "@/shared/utils/certificate-range.utils";
+import { formatDate } from "@/shared/utils/date.utils";
 import {
 	useBatches,
 	useDeleteBatch,
@@ -66,6 +67,13 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 
 type SortKey = "certificate_count" | "bag_count";
+
+// Columns shown only when the table has room: counts and botanists go first,
+// then officers, then certificate numbers. Batch, Date, Total, Invoice Raised
+// and the actions always stay.
+const COL_WIDE = "hidden @5xl:table-cell";
+const COL_LARGE = "hidden @3xl:table-cell";
+const COL_MEDIUM = "hidden @2xl:table-cell";
 
 /** Sort direction indicator arrow for table headers. */
 const SortIcon = ({
@@ -184,6 +192,10 @@ const Batches = () => {
 	const repackage = useRepackageBatch();
 
 	const [detailBatch, setDetailBatch] = useState<Batch | null>(null);
+	// Read from the latest list so the notice clears once re-packaged.
+	const detailOutOfDate =
+		(batches.find((b) => b.id === detailBatch?.id) ?? detailBatch)
+			?.out_of_date_certificates ?? [];
 	const [invoiceBatch, setInvoiceBatch] = useState<Batch | null>(null);
 	const [invoiceNumber, setInvoiceNumber] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<Batch | null>(null);
@@ -304,32 +316,38 @@ const Batches = () => {
 
 			{/* Search / filter */}
 			<FilterContainer>
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-					<OfficerSearchComboBox
-						value={officerFilterId}
-						onValueChange={setOfficerFilterId}
-						placeholder="Submitting officer..."
-						allowCreate={false}
-					/>
-					<div className="relative">
-						<Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-						<Input
-							value={certSearch}
-							onChange={(e) => setCertSearch(e.target.value)}
-							placeholder="Certificate number..."
-							className="pl-9"
-							aria-label="Search by certificate number"
+				<div className="@container">
+					<div className="grid grid-cols-1 gap-3 @2xl:grid-cols-3">
+						<label htmlFor="batches-filter-officer" className="sr-only">
+							Filter by submitting officer
+						</label>
+						<OfficerSearchComboBox
+							id="batches-filter-officer"
+							value={officerFilterId}
+							onValueChange={setOfficerFilterId}
+							placeholder="Submitting officer..."
+							allowCreate={false}
 						/>
-					</div>
-					<div className="relative">
-						<Receipt className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-						<Input
-							value={invoiceSearch}
-							onChange={(e) => setInvoiceSearch(e.target.value)}
-							placeholder="Invoice raised number..."
-							className="pl-9"
-							aria-label="Search by invoice-raised number"
-						/>
+						<div className="relative">
+							<Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+							<Input
+								value={certSearch}
+								onChange={(e) => setCertSearch(e.target.value)}
+								placeholder="Certificate number..."
+								className="pl-9"
+								aria-label="Search by certificate number"
+							/>
+						</div>
+						<div className="relative">
+							<Receipt className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+							<Input
+								value={invoiceSearch}
+								onChange={(e) => setInvoiceSearch(e.target.value)}
+								placeholder="Invoice raised number..."
+								className="pl-9"
+								aria-label="Search by invoice-raised number"
+							/>
+						</div>
 					</div>
 				</div>
 				{hasFilters && (
@@ -349,36 +367,45 @@ const Batches = () => {
 				)}
 			</FilterContainer>
 
-			<div className="rounded-lg border">
+			{/* A container, so columns can drop out when the table itself is
+			    narrow (for example with the practice or guide panel open),
+			    keeping the total and the invoice state in view. */}
+			<div className="@container rounded-lg border">
 				<Table>
 					<TableHeader>
 						<TableRow>
 							<TableHead>Batch</TableHead>
 							<TableHead>Date</TableHead>
-							<TableHead>Botanist(s)</TableHead>
-							<TableHead>Submitting Officer(s)</TableHead>
-							<TableHead>Cert Numbers</TableHead>
-							<TableHead
-								className="cursor-pointer select-none text-right"
-								onClick={() => toggleSort("certificate_count")}
-							>
-								Certificates{" "}
-								<SortIcon
-									column="certificate_count"
-									sortKey={sortKey}
-									ordering={ordering}
-								/>
+							<TableHead className={COL_WIDE}>Botanist(s)</TableHead>
+							<TableHead className={COL_LARGE}>Submitting Officer(s)</TableHead>
+							<TableHead className={COL_MEDIUM}>Cert Numbers</TableHead>
+							<TableHead className={`text-right ${COL_WIDE}`}>
+								<button
+									type="button"
+									onClick={() => toggleSort("certificate_count")}
+									className="cursor-pointer select-none"
+								>
+									Certificates{" "}
+									<SortIcon
+										column="certificate_count"
+										sortKey={sortKey}
+										ordering={ordering}
+									/>
+								</button>
 							</TableHead>
-							<TableHead
-								className="cursor-pointer select-none text-right"
-								onClick={() => toggleSort("bag_count")}
-							>
-								Bags{" "}
-								<SortIcon
-									column="bag_count"
-									sortKey={sortKey}
-									ordering={ordering}
-								/>
+							<TableHead className={`text-right ${COL_WIDE}`}>
+								<button
+									type="button"
+									onClick={() => toggleSort("bag_count")}
+									className="cursor-pointer select-none"
+								>
+									Bags{" "}
+									<SortIcon
+										column="bag_count"
+										sortKey={sortKey}
+										ordering={ordering}
+									/>
+								</button>
 							</TableHead>
 							<TableHead className="text-right">Total</TableHead>
 							<TableHead>Invoice Raised</TableHead>
@@ -411,12 +438,36 @@ const Batches = () => {
 									onClick={() => setDetailBatch(batch)}
 								>
 									<TableCell className="font-medium align-top">
-										{batch.batch_number}
+										{/* The whole row opens the batch for mouse users; this
+										    button gives keyboard and screen reader users the
+										    same way in. */}
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												setDetailBatch(batch);
+											}}
+											className="cursor-pointer rounded text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+										>
+											{batch.batch_number}
+										</button>
+										{batch.out_of_date_certificates.length > 0 && (
+											<Badge
+												className="mt-1 flex w-fit border border-orange-300 bg-orange-100 text-orange-900 dark:border-orange-700 dark:bg-orange-900 dark:text-orange-100"
+												title={`Out of date: ${batch.out_of_date_certificates.join(", ")}. Re-package to update.`}
+											>
+												<AlertTriangle
+													className="mr-1 h-3 w-3"
+													aria-hidden="true"
+												/>
+												Needs re-package
+											</Badge>
+										)}
 									</TableCell>
 									<TableCell className="align-top whitespace-nowrap">
-										{new Date(batch.date_batched).toLocaleDateString()}
+										{formatDate(batch.date_batched)}
 									</TableCell>
-									<TableCell className="align-top">
+									<TableCell className={`align-top ${COL_WIDE}`}>
 										{batch.botanists.length > 0 ? (
 											<div className="space-y-0.5">
 												{batch.botanists.map((name, i) => (
@@ -427,7 +478,7 @@ const Batches = () => {
 											"—"
 										)}
 									</TableCell>
-									<TableCell className="align-top">
+									<TableCell className={`align-top ${COL_LARGE}`}>
 										{batch.submitting_officers.length > 0 ? (
 											<div className="space-y-0.5">
 												{batch.submitting_officers.map((name, i) => (
@@ -438,7 +489,7 @@ const Batches = () => {
 											"—"
 										)}
 									</TableCell>
-									<TableCell className="align-top">
+									<TableCell className={`align-top ${COL_MEDIUM}`}>
 										{batch.certificate_numbers.length > 0 ? (
 											<div className="space-y-0.5 tabular-nums">
 												{collapseCertRanges(batch.certificate_numbers).map(
@@ -453,10 +504,14 @@ const Batches = () => {
 											"—"
 										)}
 									</TableCell>
-									<TableCell className="text-right tabular-nums align-top">
+									<TableCell
+										className={`text-right tabular-nums align-top ${COL_WIDE}`}
+									>
 										{batch.certificate_count}
 									</TableCell>
-									<TableCell className="text-right tabular-nums align-top">
+									<TableCell
+										className={`text-right tabular-nums align-top ${COL_WIDE}`}
+									>
 										{batch.bag_count}
 									</TableCell>
 									<TableCell className="text-right tabular-nums align-top whitespace-nowrap">
@@ -500,6 +555,7 @@ const Batches = () => {
 													variant="ghost"
 													size="icon"
 													className="h-8 w-8 cursor-pointer"
+													aria-label={`Actions for ${batch.batch_number}`}
 												>
 													<MoreHorizontal className="h-4 w-4" />
 												</Button>
@@ -567,12 +623,32 @@ const Batches = () => {
 							<DialogHeader>
 								<DialogTitle>{detailBatch.batch_number}</DialogTitle>
 								<DialogDescription>
-									Batched{" "}
-									{new Date(detailBatch.date_batched).toLocaleDateString()} ·{" "}
+									Batched {formatDate(detailBatch.date_batched)} ·{" "}
 									{detailBatch.certificate_count} certificate(s) ·{" "}
 									{detailBatch.bag_count} bag(s)
 								</DialogDescription>
 							</DialogHeader>
+
+							{detailOutOfDate.length > 0 && (
+								<p
+									className="flex items-start gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-900 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-100"
+									role="status"
+								>
+									<AlertTriangle
+										className="mt-0.5 h-4 w-4 shrink-0"
+										aria-hidden="true"
+									/>
+									<span>
+										{detailOutOfDate.length === 1
+											? "Certificate "
+											: "Certificates "}
+										{detailOutOfDate.join(", ")}{" "}
+										{detailOutOfDate.length === 1 ? "has" : "have"} changed
+										since this batch was packaged. Re-package to rebuild the
+										PDFs and the download.
+									</span>
+								</p>
+							)}
 
 							{/* Primary actions for this batch */}
 							<div className="flex flex-wrap items-center gap-2 py-3 border-b">
@@ -670,27 +746,40 @@ const Batches = () => {
 					<DialogHeader>
 						<DialogTitle>Record invoice-raised number</DialogTitle>
 						<DialogDescription>
-							Entering a unique invoice number marks every case in this batch as
-							complete.
+							{invoiceBatch?.batch_number}. Entering a unique invoice number
+							marks every case in this batch as complete.
 						</DialogDescription>
 					</DialogHeader>
-					<Input
-						value={invoiceNumber}
-						onChange={(e) => setInvoiceNumber(e.target.value)}
-						placeholder="e.g. 6062"
-						aria-label="Invoice-raised number"
-					/>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setInvoiceBatch(null)}>
-							Cancel
-						</Button>
-						<Button
-							onClick={handleRecordInvoice}
-							disabled={!invoiceNumber.trim() || recordInvoice.isPending}
-						>
-							{recordInvoice.isPending ? "Saving..." : "Record & complete"}
-						</Button>
-					</DialogFooter>
+					{/* A form so pressing Enter in the box records the number. */}
+					<form
+						className="space-y-4"
+						onSubmit={(e) => {
+							e.preventDefault();
+							if (!recordInvoice.isPending) void handleRecordInvoice();
+						}}
+					>
+						<Input
+							value={invoiceNumber}
+							onChange={(e) => setInvoiceNumber(e.target.value)}
+							placeholder="e.g. 6062"
+							aria-label="Invoice-raised number"
+						/>
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setInvoiceBatch(null)}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="submit"
+								disabled={!invoiceNumber.trim() || recordInvoice.isPending}
+							>
+								{recordInvoice.isPending ? "Saving..." : "Record & complete"}
+							</Button>
+						</DialogFooter>
+					</form>
 				</DialogContent>
 			</Dialog>
 

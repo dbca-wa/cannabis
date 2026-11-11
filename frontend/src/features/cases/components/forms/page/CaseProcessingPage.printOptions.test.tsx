@@ -259,6 +259,14 @@ describe("CaseProcessingPage — certificate print options", () => {
 		expect(text).toContain("Bag T2 was inconclusive.");
 	});
 
+	it("has no accessibility violations across the case details", async () => {
+		const { container } = renderPage(<Harness initial={caseData(1, 3)} />);
+
+		const details = container.querySelector("section#details");
+		expect(details).not.toBeNull();
+		expect(await testAccessibility(details!)).toHaveNoViolations();
+	});
+
 	it.each([
 		["available options", 2],
 		["disabled options", 3],

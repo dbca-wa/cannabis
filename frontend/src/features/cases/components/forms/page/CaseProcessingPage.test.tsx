@@ -54,11 +54,16 @@ const completeCaseData = () => ({
 	phase: "assessment",
 });
 
-const assessedForm = (id: number, certificate: unknown = null) =>
+const assessedForm = (
+	id: number,
+	certificate: unknown = null,
+	markedReady = !!certificate
+) =>
 	({
 		id,
 		bags: [{ id: id * 10, assessment: { determination: "cannabis_sativa" } }],
 		certificate,
+		marked_ready: markedReady,
 	}) as unknown as Priority3Form;
 
 const renderPageWith = (
@@ -213,8 +218,22 @@ describe("CaseProcessingPage", () => {
 			).toBeInTheDocument();
 		});
 
-		it("asks for attention on certificates only once the assessment is done", () => {
+		it("prompts for certificates without an alarm once the assessment is done", () => {
 			renderPageWith({ forms: [assessedForm(10, null)] });
+
+			expect(screen.getByText(/certificates not started/i)).toBeInTheDocument();
+			expect(
+				screen.queryByText(/certificates needs attention/i)
+			).not.toBeInTheDocument();
+
+			const index = screen.getByRole("navigation", { name: /case sections/i });
+			expect(
+				within(index).getByText(/generate a certificate for each form/i)
+			).toBeInTheDocument();
+		});
+
+		it("does not tick certificates until each one is marked ready", () => {
+			renderPageWith({ forms: [assessedForm(10, { id: 5 }, false)] });
 
 			expect(
 				screen.getByText(/certificates needs attention/i)
@@ -222,7 +241,7 @@ describe("CaseProcessingPage", () => {
 
 			const index = screen.getByRole("navigation", { name: /case sections/i });
 			expect(
-				within(index).getByText(/every form needs a generated certificate/i)
+				within(index).getByText(/mark each certificate ready/i)
 			).toBeInTheDocument();
 		});
 
@@ -306,6 +325,50 @@ describe("CaseProcessingPage", () => {
 			expect(
 				screen.getByRole("button", { name: /finalise case/i })
 			).toBeDisabled();
+		});
+
+		it.each([
+			["batching", /ready to batch from the cases page/i],
+			["in_batch", /finalised and is in a batch/i],
+			["complete", /this case is complete/i],
+		])(
+			"says where a finalised case stands instead of offering Finalise (%s)",
+			(phase, message) => {
+				renderPageWith({
+					forms: [
+						{
+							...assessedForm(10, { id: 5 }),
+							phase,
+						} as unknown as Priority3Form,
+					],
+				});
+
+				expect(
+					screen.queryByRole("button", { name: /finalise case/i })
+				).not.toBeInTheDocument();
+				expect(screen.getByTestId("finalised-status")).toHaveTextContent(
+					message
+				);
+			}
+		);
+
+		it("offers Finalise again when a new form is added after finalising", () => {
+			renderPageWith({
+				forms: [
+					{
+						...assessedForm(10, { id: 5 }),
+						phase: "batching",
+					} as unknown as Priority3Form,
+					{
+						...assessedForm(11, null),
+						phase: "assessment",
+					} as unknown as Priority3Form,
+				],
+			});
+
+			expect(
+				screen.getByRole("button", { name: /finalise case/i })
+			).toBeInTheDocument();
 		});
 	});
 

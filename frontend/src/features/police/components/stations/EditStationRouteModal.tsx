@@ -7,6 +7,7 @@ import { EditStationForm } from "./EditStationForm";
 import { useStation } from "../../hooks/usePoliceStations";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
+import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
 export const EditStationRouteModal = () => {
 	const navigate = useNavigate();
 	const { stationId } = useParams();
@@ -70,6 +71,10 @@ export const EditStationRouteModal = () => {
 					station={station}
 					onSuccess={handleClose}
 					onCancel={handleClose}
+				/>
+				<DeleteRecordFooter
+					noun="station"
+					onDelete={() => navigate(`/stations/${station.id}/delete`)}
 				/>
 			</ResponsiveModalContent>
 		</ResponsiveModal>

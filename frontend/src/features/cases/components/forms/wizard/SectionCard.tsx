@@ -63,9 +63,13 @@ export const SectionCard = ({
 				{isInvalid && (
 					<div
 						className="absolute top-4 right-4 animate-in zoom-in-50 fade-in duration-300 flex items-center justify-center h-6 w-6 rounded-full bg-red-100 dark:bg-red-900/40"
+						role="img"
 						aria-label={`${title} section has errors`}
 					>
-						<X className="h-4 w-4 text-red-600 dark:text-red-400" />
+						<X
+							aria-hidden="true"
+							className="h-4 w-4 text-red-600 dark:text-red-400"
+						/>
 					</div>
 				)}
 
@@ -77,9 +81,13 @@ export const SectionCard = ({
 						</span>
 						<span
 							className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50"
+							role="img"
 							aria-label={`${title} section is optional`}
 						>
-							<Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+							<Check
+								aria-hidden="true"
+								className="h-4 w-4 text-blue-600 dark:text-blue-400"
+							/>
 						</span>
 					</div>
 				)}
@@ -88,9 +96,13 @@ export const SectionCard = ({
 				{showGreen && (
 					<div
 						className="absolute top-4 right-4 animate-in zoom-in-50 fade-in duration-300 flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40"
+						role="img"
 						aria-label={completionLabel ?? `${title} section complete`}
 					>
-						<Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+						<Check
+							aria-hidden="true"
+							className="h-4 w-4 text-emerald-600 dark:text-emerald-400"
+						/>
 					</div>
 				)}
 			</CardHeader>

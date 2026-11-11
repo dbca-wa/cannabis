@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.logging import describe_user
+from common.permissions import NotInPracticeMode
 
 from ..permissions import HasAppAccess
 from ..serializers import (
@@ -49,7 +50,7 @@ class UserListView(ListCreateAPIView):
     def get_permissions(self):
         """Different permissions for different actions"""
         if self.request.method == "POST":
-            return [IsAdminUser()]
+            return [IsAdminUser(), NotInPracticeMode()]
         else:
             return [HasAppAccess()]
 
@@ -129,7 +130,8 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
     def get_permissions(self):
         """Different permissions for different actions"""
         if self.request.method in ["PUT", "PATCH", "DELETE"]:
-            return [HasAppAccess()]
+            # Staff accounts are real and have no practice copy.
+            return [HasAppAccess(), NotInPracticeMode()]
         else:
             return [HasAppAccess()]
 
@@ -147,17 +149,56 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
             if not request.user.is_superuser:
                 self.permission_denied(request, "Only administrators can delete users")
 
+    # Fields that decide what a user can do or who they are. Only an
+    # administrator changes them, and never on their own account for the
+    # access flags (matching the promote/demote endpoint).
+    ADMIN_ONLY_FIELDS = (
+        "role",
+        "email",
+        "it_asset_id",
+        "employee_id",
+        "is_staff",
+        "is_superuser",
+        "is_active",
+        "is_legacy",
+    )
+    NOT_ON_SELF_FIELDS = ("is_staff", "is_superuser", "is_active")
+
+    def _check_access_changes(self, serializer):
+        """Refuse any change to a user's access the requester may not make.
+
+        Sending a field with its current value is not a change, so a form that
+        posts every field back still saves.
+        """
+        user = self.request.user
+        target = serializer.instance
+        changed = {
+            field
+            for field in self.ADMIN_ONLY_FIELDS
+            if field in serializer.validated_data
+            and serializer.validated_data[field] != getattr(target, field)
+        }
+        if not changed:
+            return
+        is_admin = user.is_staff or user.is_superuser
+        if not is_admin:
+            self.permission_denied(
+                self.request,
+                "Only an administrator can change a user's role, email or access.",
+            )
+        if user.pk == target.pk and changed & set(self.NOT_ON_SELF_FIELDS):
+            self.permission_denied(
+                self.request,
+                "You cannot change your own admin, superuser or active status.",
+            )
+        if "is_superuser" in changed and not user.is_superuser:
+            self.permission_denied(
+                self.request, "Only a superuser can grant or remove superuser."
+            )
+
     def perform_update(self, serializer):
         """Custom update logic"""
-        # Only users with app access (roled or admin) may change a role. This
-        # blocks a roleless user from escalating their own role via self-update.
-        new_role = serializer.validated_data.get("role")
-        if new_role is not None and new_role != serializer.instance.role:
-            if not self.request.user.has_app_access:
-                self.permission_denied(
-                    self.request,
-                    "You do not have permission to change a user's role.",
-                )
+        self._check_access_changes(serializer)
         settings.LOGGER.info(
             f"{describe_user(self.request.user)} updated user "
             f"{describe_user(serializer.instance)}"
@@ -507,7 +548,7 @@ class AdminSendResetEmailView(APIView):
     so the user can reset their password immediately.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NotInPracticeMode]
 
     def post(self, request, pk):
         from urllib.parse import urlencode
@@ -568,9 +609,14 @@ class AdminSendResetEmailView(APIView):
             context=context,
         )
 
-        logger.info(
-            f"{describe_user(request.user)} triggered password reset email "
-            f"for user {target_user.email}"
+        redirected = (
+            f" (sent to {recipient_list[0]} instead)"
+            if recipient_list != [target_user.email]
+            else ""
+        )
+        settings.LOGGER.info(
+            f"{describe_user(request.user)} sent a password reset code to "
+            f"{describe_user(target_user)}{redirected}"
         )
 
         return Response(
@@ -589,7 +635,7 @@ class UserAdminStatusView(APIView):
     An admin cannot change their own admin status.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NotInPracticeMode]
 
     def patch(self, request, pk):
         # Only admins can promote/demote

@@ -6,6 +6,7 @@ from police.models import PoliceOfficer, PoliceStation
 from users.models import User
 
 from ..models import Case
+from ..validators import same_officer_error
 
 
 class CaseUpdateSerializer(serializers.ModelSerializer):
@@ -72,3 +73,9 @@ class CaseUpdateSerializer(serializers.ModelSerializer):
         if message:
             raise serializers.ValidationError(message)
         return value
+
+    def validate(self, data):
+        message = same_officer_error(data, instance=self.instance)
+        if message:
+            raise serializers.ValidationError({"requesting_officer": message})
+        return data

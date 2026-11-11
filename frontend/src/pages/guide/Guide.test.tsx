@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { renderPage, testAccessibility } from "@/test/page-test-utils";
+import { PHASE_STEPS } from "@/shared/constants/phases.config";
 import Guide from "./Guide";
 
 const text = () => (document.body.textContent ?? "").replace(/\s+/g, " ");
@@ -73,6 +74,9 @@ describe("Guide page", () => {
 			"Bag T1234 did not contain Cannabis.",
 			"Bag T1245 was too degraded and could not be identified.",
 			"Bag T9045 was inconclusive.",
+			"Bags T1001 and T1003 contained female plants.",
+			"All bags contained female plants.",
+			"Bag T1001 contained female plants.",
 		]) {
 			expect(all).toContain(sentence);
 		}
@@ -88,6 +92,36 @@ describe("Guide page", () => {
 			"The system will not let you choose one person for both"
 		);
 		expect(all).toContain("A missing station never stops you");
+	});
+
+	it("explains every case state shown on the Cases list", () => {
+		const { container } = renderPage(<Guide />);
+		const table = within(
+			container.querySelector("section#states") as HTMLElement
+		).getByRole("table");
+		const rows = within(table)
+			.getAllByRole("rowheader")
+			.map((cell) => cell.textContent);
+
+		expect(rows).toEqual(PHASE_STEPS.map((step) => step.label));
+	});
+
+	it("numbers the workflow steps the same way everywhere", () => {
+		renderPage(<Guide />);
+		const chips = within(
+			screen.getByRole("list", { name: "The workflow" })
+		).getAllByRole("listitem");
+
+		expect(chips).toHaveLength(6);
+		expect(
+			screen.getByRole("heading", { level: 2, name: "1. Creating a case" })
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("heading", {
+				level: 2,
+				name: "6. Recording the invoice",
+			})
+		).toBeInTheDocument();
 	});
 
 	it("has no accessibility violations", async () => {

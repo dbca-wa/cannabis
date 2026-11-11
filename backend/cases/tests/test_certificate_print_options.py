@@ -172,10 +172,20 @@ class TestSettingsAndFlags:
         assert response.status_code == 200
         assert [response.data[field] for field in DEFAULTS] == [True, True, False]
 
-    def test_non_admins_cannot_change_the_defaults(
-        self, finance_client, system_settings
-    ):
+    def test_app_roles_can_change_the_defaults(self, finance_client, system_settings):
         response = finance_client.patch(
+            "/api/v1/system/settings",
+            {"default_print_requesting_rank": True},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["default_print_requesting_rank"] is True
+
+    def test_roleless_users_cannot_change_the_defaults(
+        self, roleless_client, system_settings
+    ):
+        response = roleless_client.patch(
             "/api/v1/system/settings",
             {"default_print_requesting_rank": True},
             format="json",

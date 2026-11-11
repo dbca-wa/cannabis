@@ -11,6 +11,7 @@ import {
 } from "@/shared/utils/certificate-format.utils";
 import type { DrugBag } from "../types/drugBags.types";
 import { isCannabisDetermination } from "../constants/determinations";
+import { femalePlantLine } from "./certificateWording";
 
 export interface TemplateContext {
 	defendant_name: string;
@@ -193,16 +194,16 @@ export const buildTemplateContext = (
 	// The leading word agrees in number with how many bags held female plants.
 	const femaleBagLabel = femalePlantCount === 1 ? "Bag" : "Bags";
 
-	// A ready-made sentence so a template can render the whole female-plant
-	// clause with one variable, including the all-female wording that the label
-	// and tag list cannot express on their own.
-	let femalePlantSentence = "";
-	if (femalePlantCount > 0) {
-		femalePlantSentence =
-			bags.length > 0 && femalePlantCount === bags.length
-				? "All bags contained female plants."
-				: `${femaleBagLabel} ${femalePlantTags} contained female plants.`;
-	}
+	// The same sentence the certificate adds to Section C by itself, so a
+	// template that still uses this variable prints it once, not twice.
+	const femalePlantSentence =
+		femalePlantLine(
+			bags.map((b) => ({
+				tag: b.seal_tag_numbers,
+				determination: b.assessment?.determination,
+				female: b.contains_female_plants,
+			}))
+		) ?? "";
 
 	return {
 		defendant_name: defendantName,

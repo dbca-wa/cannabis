@@ -138,25 +138,31 @@ def _lines(count):
 class TestSectionCComposition:
     @pytest.mark.parametrize("count", range(0, 6))
     @pytest.mark.parametrize("note", fixture.NOTE_VARIANTS)
-    def test_every_line_count_with_every_note(self, count, note):
+    @pytest.mark.parametrize("female_line", fixture.FEMALE_LINES)
+    def test_every_line_count_with_every_note(self, count, note, female_line):
         lines = _lines(count)
-        composed = wording.compose_section_c(lines, note)
+        composed = wording.compose_section_c(lines, note, female_line)
 
+        # Note lines the system does not write itself.
         note_lines = [
             line.strip()
             for line in (note or "").replace("\r\n", "\n").split("\n")
-            if line.strip()
+            if line.strip() and not wording.is_system_sentence(line)
         ]
-        if not lines and not note_lines:
+        if not lines and not note_lines and not female_line:
             assert composed is None
             return
         assert composed is not None
         printed = composed.split("\n")
-        # The automatic lines come first, in order.
+        # The bag result lines come first, in order; the female line is last.
         assert printed[: len(lines)] == lines
-        # Every printed line is either automatic or from the note.
-        for line in printed[len(lines) :]:
-            assert line == "" or line in note_lines
+        middle = printed[len(lines) : len(printed) - (1 if female_line else 0)]
+        if female_line:
+            assert printed[-1] == female_line
+        # Everything between is the botanist's own note, in its order, with no
+        # system sentence left in it.
+        assert [line for line in middle if line] == note_lines
+        assert not any(wording.is_system_sentence(line) for line in middle if line)
         # Nothing prints twice, and no line carries stray spaces or "\r".
         non_blank = [line for line in printed if line]
         assert len({line.lower().rstrip(".") for line in non_blank}) == len(non_blank)
@@ -187,6 +193,29 @@ class TestSectionCComposition:
             ["Bag T2 was inconclusive."], f"{typed}\nSME WW1."
         )
         assert composed == "Bag T2 was inconclusive.\nSME WW1."
+
+    def test_stale_template_sentences_are_replaced(self):
+        """A note left over from a template never contradicts the bags."""
+        composed = wording.compose_section_c(
+            ["Bag T2 did not contain Cannabis."],
+            "SME WW1.\nBag T3 was inconclusive.\nAll bags contained female plants.",
+            "Bag T1 contained female plants.",
+        )
+        assert composed == (
+            "Bag T2 did not contain Cannabis.\nSME WW1.\n"
+            "Bag T1 contained female plants."
+        )
+
+    @pytest.mark.parametrize(
+        "kept",
+        [
+            "Bag T1 was inconclusive due to mould on the sample.",
+            "Female plants were noted on arrival.",
+            "Bags arrived damp.",
+        ],
+    )
+    def test_other_bag_notes_are_kept(self, kept):
+        assert wording.compose_section_c([], kept) == kept
 
     def test_interior_blank_lines_in_the_note_are_kept(self):
         composed = wording.compose_section_c([], "One.\n\nTwo.")
@@ -286,6 +315,53 @@ class TestOfficers:
         )
 
 
+FEMALE_STATES = [
+    (determination, female)
+    for determination in wording.PRINTABLE_DETERMINATIONS
+    for female in (False, True)
+]
+
+
+class TestFemalePlantLine:
+    def test_every_result_and_flag_for_one_to_five_bags(self):
+        """37,448 sequences, checked against the rule written out directly."""
+        checked = 0
+        for count in range(1, 6):
+            for sequence in itertools.product(FEMALE_STATES, repeat=count):
+                bags = [(f"T{i + 1}", d, f) for i, (d, f) in enumerate(sequence)]
+                tags = [t for t, d, f in bags if f and d == S]
+                if not tags:
+                    expected = None
+                elif len(tags) == count and count > 1:
+                    expected = "All bags contained female plants."
+                elif len(tags) == 1:
+                    expected = f"Bag {tags[0]} contained female plants."
+                else:
+                    expected = (
+                        f"Bags {', '.join(tags[:-1])} and {tags[-1]} "
+                        "contained female plants."
+                    )
+                assert wording.female_plant_line(bags) == expected, sequence
+                checked += 1
+        assert checked == 37448
+
+    def test_a_single_female_bag_is_named(self):
+        assert (
+            wording.female_plant_line([("T1", S, True)])
+            == "Bag T1 contained female plants."
+        )
+
+    @pytest.mark.parametrize("result", [N, D, I])
+    def test_a_flag_on_a_non_cannabis_bag_is_ignored(self, result):
+        assert (
+            wording.female_plant_line([("T1", S, False), ("T2", result, True)]) is None
+        )
+
+    def test_the_line_is_a_system_sentence(self):
+        assert wording.is_system_sentence("Bags T1 and T2 contained female plants.")
+        assert wording.is_system_sentence("all bags contained female plants")
+
+
 def test_shared_fixture_is_current():
     """The frontend checks its wording against this file, so it must match."""
     expected = fixture.render_fixture(fixture.build_fixture())
@@ -295,8 +371,9 @@ def test_shared_fixture_is_current():
         "`poetry run python manage.py build_certificate_wording_fixture`."
     )
     data = json.loads(actual)
-    assert (len(data["results"]), len(data["section_c"]), len(data["officers"])) == (
-        1364,
-        42,
-        452,
-    )
+    assert (
+        len(data["results"]),
+        len(data["section_c"]),
+        len(data["female"]),
+        len(data["officers"]),
+    ) == (1364, 108, 584, 452)

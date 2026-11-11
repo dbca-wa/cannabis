@@ -15,6 +15,7 @@ import pytest
 from django.template.loader import render_to_string
 from rest_framework.exceptions import ValidationError
 
+from cases.models import DrugBag
 from cases.services import certificate_wording as wording
 from cases.services import pdf_test_service
 from cases.services.certificate_service import CERTIFICATE_TEMPLATE, CertificateService
@@ -138,6 +139,24 @@ class TestContextFromTheDatabase:
         assert context["tag_numbers"] == "T1, T2 and T3"
         assert context["other_matters"] == (
             "Bag T1 did not contain Cannabis.\nBag T3 was inconclusive."
+        )
+
+    def test_female_plants_print_after_the_note(self):
+        form = _form_with((S, I, S), note="SME WW1.\nAll bags contained female plants.")
+        bags = list(DrugBag.objects.filter(form=form).order_by("pk"))
+        for bag in (bags[0], bags[1]):
+            bag.contains_female_plants = True
+            bag.save()
+        certificate = CertificateFactory(
+            form=form, additional_notes="SME WW1.\nAll bags contained female plants."
+        )
+
+        context = CertificateService.build_certificate_context(certificate)
+
+        # T2 is inconclusive, so its flag is ignored; the stale template line
+        # in the note is replaced by the sentence from the current bags.
+        assert context["other_matters"] == (
+            "Bag T2 was inconclusive.\nSME WW1.\nBag T1 contained female plants."
         )
 
     def test_empty_section_c_prints_none(self):

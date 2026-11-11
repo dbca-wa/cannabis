@@ -41,6 +41,7 @@ class BatchListSerializer(serializers.ModelSerializer):
     certificate_numbers = serializers.SerializerMethodField()
     date_batched = serializers.DateTimeField(source="created_at", read_only=True)
     is_invoiced = serializers.ReadOnlyField()
+    out_of_date_certificates = serializers.SerializerMethodField()
 
     class Meta:
         model = Batch
@@ -66,6 +67,7 @@ class BatchListSerializer(serializers.ModelSerializer):
             "botanists",
             "submitting_officers",
             "case_numbers",
+            "out_of_date_certificates",
             "created_at",
         ]
 
@@ -111,6 +113,19 @@ class BatchListSerializer(serializers.ModelSerializer):
 
     def get_case_numbers(self, obj):
         return [case.case_number for case in self._cases(obj)]
+
+    def get_out_of_date_certificates(self, obj):
+        """Numbers of certificates whose case changed since packaging.
+
+        Re-packaging the batch brings them up to date.
+        """
+        from ..services.certificate_service import CertificateService
+
+        return sorted(
+            certificate.certificate_number
+            for certificate in obj.certificates.select_related("form__case")
+            if CertificateService.needs_repackage(certificate)
+        )
 
     def get_certificate_numbers(self, obj):
         numbers = obj.certificates.values_list("certificate_number", flat=True)

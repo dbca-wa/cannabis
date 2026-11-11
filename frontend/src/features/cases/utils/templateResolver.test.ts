@@ -75,6 +75,12 @@ describe("buildTemplateContext — female plant variables", () => {
 		expect(ctx.non_female_plant_tags).toBe("");
 	});
 
+	it("names a single female bag rather than saying all bags", () => {
+		const ctx = buildTemplateContext(caseData, [bag("A", true)]);
+
+		expect(ctx.female_plant_sentence).toBe("Bag A contained female plants.");
+	});
+
 	it("ignores a female flag on an unassessed bag", () => {
 		const ctx = buildTemplateContext(caseData, [bag("A", true, null)]);
 
@@ -130,7 +136,7 @@ describe("female plant variables for every combination", () => {
 			const nonFemale = cannabis.filter((s) => !s.female).map((s) => s.tag);
 
 			let sentence = "";
-			if (female.length === states.length) {
+			if (female.length === states.length && states.length > 1) {
 				sentence = "All bags contained female plants.";
 			} else if (female.length > 0) {
 				sentence = `${female.length === 1 ? "Bag" : "Bags"} ${joinWithAnd(female)} contained female plants.`;

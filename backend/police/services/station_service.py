@@ -101,8 +101,88 @@ class StationService:
         return queryset
 
     @staticmethod
+    def usage(station):
+        """The cases and officers that use this station."""
+        from cases.models import Case
+
+        cases = list(
+            Case.objects.filter(station=station)
+            .prefetch_related("forms")
+            .order_by("case_number")
+        )
+        officers = list(
+            PoliceOfficer.objects.filter(station=station).order_by(
+                "last_name", "given_names"
+            )
+        )
+        return cases, officers
+
+    @staticmethod
     @transaction.atomic
-    def merge_stations(primary_id, secondary_ids):
+    def delete_station(station, user, replacement=None):
+        """Delete a station, first moving any cases and officers that use it.
+
+        Args:
+            station: The station to delete.
+            user: Who is deleting, for the complete-case rule and the log.
+            replacement: The station to use instead. Required when any case or
+                officer uses this station.
+
+        Raises:
+            ValidationError: No replacement for a station in use, or the
+                replacement is the same station.
+            PermissionDenied: A non-administrator would change a complete case.
+        """
+        from django.conf import settings
+
+        from cases.models import Case
+        from cases.services.reassignment import (
+            check_replacement,
+            ensure_cases_changeable,
+            require_replacement,
+        )
+        from common.logging import describe_user
+
+        cases, officers = StationService.usage(station)
+        check_replacement(station, replacement, "station")
+        if officers and replacement is None:
+            users = [f"{len(officers)} officer{'s' if len(officers) != 1 else ''}"]
+            if cases:
+                users.append(f"{len(cases)} case{'s' if len(cases) != 1 else ''}")
+            raise ValidationError(
+                {
+                    "replacement": (
+                        f"{station.name} is used by {' and '.join(users)}. "
+                        "Choose another station to move them to before deleting."
+                    )
+                }
+            )
+        require_replacement(station.name, cases, replacement, "station")
+        ensure_cases_changeable(cases, user)
+
+        if replacement is not None:
+            Case.objects.filter(pk__in=[c.pk for c in cases]).update(
+                station=replacement
+            )
+            PoliceOfficer.objects.filter(pk__in=[o.pk for o in officers]).update(
+                station=replacement
+            )
+
+        name, pk = station.name, station.pk
+        station.delete()
+        moved = (
+            f"; {len(cases)} case(s) and {len(officers)} officer(s) moved to "
+            f"{replacement.name} ({replacement.pk})"
+            if replacement is not None and (cases or officers)
+            else ""
+        )
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted police station {name} ({pk}){moved}"
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def merge_stations(primary_id, secondary_ids, user):
         """Merge secondary stations into a primary station.
 
         Transfers all officers and cases from secondary stations to the
@@ -111,6 +191,7 @@ class StationService:
         Args:
             primary_id: PK of the station to merge into.
             secondary_ids: List of PKs to merge away.
+            user: Who is merging, for the complete-case rule and the log.
 
         Returns:
             dict: Merge result with reassignment counts.
@@ -118,8 +199,13 @@ class StationService:
         Raises:
             ValidationError: If input is invalid.
             NotFound: If any station does not exist.
+            PermissionDenied: A non-administrator would change a complete case.
         """
-        from cases.models import Submission
+        from django.conf import settings
+
+        from cases.models import Case, Submission
+        from cases.services.reassignment import ensure_cases_changeable
+        from common.logging import describe_user
 
         if not primary_id:
             raise ValidationError("primary_id is required.")
@@ -143,6 +229,17 @@ class StationService:
         if missing:
             raise NotFound(f"Station(s) not found: {sorted(missing)}")
 
+        # Merging changes every case at the merged stations, so it follows
+        # the same rule as editing them: complete cases need an administrator.
+        ensure_cases_changeable(
+            list(
+                Case.objects.filter(station_id__in=secondary_ids).prefetch_related(
+                    "forms"
+                )
+            ),
+            user,
+        )
+
         primary = PoliceStation.objects.get(pk=primary_id)
         officers_reassigned = 0
         cases_reassigned = 0
@@ -164,6 +261,11 @@ class StationService:
 
             secondary.delete()
 
+        settings.LOGGER.info(
+            f"{describe_user(user)} merged stations {secondary_ids} into "
+            f"{primary.name} ({primary.pk}); moved {officers_reassigned} "
+            f"officer(s) and {cases_reassigned} case(s)"
+        )
         return {
             "primary_id": primary_id,
             "primary_name": primary.name,

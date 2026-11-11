@@ -7,6 +7,7 @@ from police.models import PoliceOfficer, PoliceStation
 from users.models import User
 
 from ..models import Case
+from ..validators import same_officer_error
 
 # Case print option -> the SystemSettings default that pre-ticks it.
 PRINT_OPTION_DEFAULTS = {
@@ -92,6 +93,10 @@ class CaseCreateSerializer(serializers.ModelSerializer):
             value = data.get(field)
             if not value or (isinstance(value, str) and not value.strip()):
                 raise serializers.ValidationError({field: "This field is required."})
+
+        message = same_officer_error(data)
+        if message:
+            raise serializers.ValidationError({"requesting_officer": message})
 
         return data
 

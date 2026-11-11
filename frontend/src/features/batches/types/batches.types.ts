@@ -29,6 +29,8 @@ export interface Batch {
 	botanists: string[];
 	submitting_officers: string[];
 	case_numbers: string[];
+	/** Certificates whose case changed after packaging; re-package to update. */
+	out_of_date_certificates: string[];
 	created_at: string;
 }
 

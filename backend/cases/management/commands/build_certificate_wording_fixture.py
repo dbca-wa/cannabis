@@ -39,7 +39,19 @@ NOTE_VARIANTS = (
     "Line one.\nLine two.",
     "Line one.\r\nLine two.\r\n",
     "  bag T1 did not contain cannabis  \n\nBags T2 and T3 contained female plants.",
+    # A stale template note: both sentences are superseded by the current bags.
+    "Subsamples placed into Security Movement Envelope WW1.\n"
+    "Bag T9 was inconclusive.\nAll bags contained female plants.",
+    # Similar but not system sentences, so they are kept.
+    "Bag T1 was inconclusive due to mould on the sample.\n"
+    "Female plants were noted on arrival.",
 )
+
+# The automatic female plant sentence, absent or present.
+FEMALE_LINES = (None, "Bag T1 contained female plants.")
+
+# Female plant cases cover every result and flag for one to three bags.
+FEMALE_MAX_BAGS = 3
 
 STATIONS = ("", "Midland Police Station")
 
@@ -77,11 +89,33 @@ def section_c_cases():
             wording.bag_line(f"T{i + 1}", wording.NOT_CANNABIS) for i in range(count)
         ]
         for note in NOTE_VARIANTS:
+            for female_line in FEMALE_LINES:
+                cases.append(
+                    {
+                        "bag_lines": lines,
+                        "note": note,
+                        "female_line": female_line,
+                        "expected": wording.compose_section_c(lines, note, female_line),
+                    }
+                )
+    return cases
+
+
+def female_cases():
+    """Every result and female flag sequence for one to three bags."""
+    states = [
+        (determination, female)
+        for determination in wording.PRINTABLE_DETERMINATIONS
+        for female in (False, True)
+    ]
+    cases = []
+    for count in range(1, FEMALE_MAX_BAGS + 1):
+        for sequence in itertools.product(states, repeat=count):
+            bags = [(f"T{i + 1}", d, f) for i, (d, f) in enumerate(sequence)]
             cases.append(
                 {
-                    "bag_lines": lines,
-                    "note": note,
-                    "expected": wording.compose_section_c(lines, note),
+                    "bags": [[d, f] for d, f in sequence],
+                    "expected": wording.female_plant_line(bags),
                 }
             )
     return cases
@@ -157,6 +191,7 @@ def build_fixture():
         "wording_version": wording.CERTIFICATE_WORDING_VERSION,
         "results": result_cases(),
         "section_c": section_c_cases(),
+        "female": female_cases(),
         "officers": officer_cases(),
     }
 
@@ -164,7 +199,7 @@ def build_fixture():
 def render_fixture(fixture):
     """Serialise with one entry per line so wording changes diff readably."""
     out = ["{", f'"wording_version": {fixture["wording_version"]},']
-    keys = ["results", "section_c", "officers"]
+    keys = ["results", "section_c", "female", "officers"]
     for index, key in enumerate(keys):
         entries = fixture[key]
         out.append(f'"{key}": [')
@@ -186,6 +221,7 @@ class Command(BaseCommand):
         FIXTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
         FIXTURE_PATH.write_text(render_fixture(fixture), encoding="utf-8")
         counts = ", ".join(
-            f"{len(fixture[k])} {k}" for k in ("results", "section_c", "officers")
+            f"{len(fixture[k])} {k}"
+            for k in ("results", "section_c", "female", "officers")
         )
         self.stdout.write(f"Wrote {FIXTURE_PATH} ({counts})")

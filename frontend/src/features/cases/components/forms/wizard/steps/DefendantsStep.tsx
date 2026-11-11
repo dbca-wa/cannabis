@@ -122,8 +122,9 @@ export const DefendantsStep = ({
 					<div className="space-y-2">
 						<Label htmlFor="defendant_search">Add Defendant</Label>
 						<div className="flex items-center gap-2">
-							<div className="flex-1">
+							<div className="min-w-0 flex-1">
 								<DefendantSearchCombobox
+									id="defendant_search"
 									value={selectedDefendantId}
 									onValueChange={setSelectedDefendantId}
 									placeholder="Search for defendant..."
@@ -160,9 +161,8 @@ export const DefendantsStep = ({
 												Defendant marked as unknown
 											</div>
 											<div className="text-xs text-muted-foreground mt-1">
-												The certificate will record the defendant as
-												&quot;Unknown&quot;. Add a defendant above if one
-												becomes known.
+												The certificate will record the defendant as UNKNOWN.
+												Add a defendant above if one becomes known.
 											</div>
 											<Button
 												type="button"
@@ -203,8 +203,7 @@ export const DefendantsStep = ({
 											<p>
 												Use this when the defendant&apos;s identity isn&apos;t
 												known. The certificate will record the defendant as
-												&quot;Unknown&quot; and you can continue without adding
-												one.
+												UNKNOWN and you can continue without adding one.
 											</p>
 										</TooltipContent>
 									</Tooltip>

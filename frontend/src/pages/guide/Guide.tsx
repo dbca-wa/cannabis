@@ -3,11 +3,14 @@ import { CheckCircle2, Info, Scale } from "lucide-react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
 import {
+	ALL_FEMALE_LINE,
 	BAG_LINE_PHRASES,
+	FEMALE_PHRASE,
 	SECTION_B_WORDING,
 	type SectionBKey,
 } from "@/features/cases/utils/certificateWording";
 import { DETERMINATION_LABELS } from "@/features/cases/constants/determinations";
+import { PHASE_DISPLAY_NAMES } from "@/shared/constants/phases.config";
 
 /**
  * Step-by-step how-to guide for the Cannabis Identification System.
@@ -30,41 +33,51 @@ interface Stage {
 
 /** Stages in the order a case moves through them, then reference sections. */
 const STAGES: Stage[] = [
-	{ id: "signing-in", title: "1. Signing in", summary: "Get into the system" },
+	{ id: "signing-in", title: "Signing in", summary: "Get into the system" },
 	{
 		id: "creating-a-case",
-		title: "2. Creating a case",
+		title: "1. Creating a case",
 		summary: "Police reference, defendant, officers",
 	},
 	{
 		id: "recording-samples",
-		title: "3. Recording the samples",
+		title: "2. Recording the samples",
 		summary: "Priority 3 forms, drug bags, results, Section C",
 	},
 	{
 		id: "generating-certificates",
-		title: "4. Generating certificates",
+		title: "3. Generating certificates",
 		summary: "Make, check and mark each certificate ready",
 	},
 	{
 		id: "finalising",
-		title: "5. Finalising the case",
+		title: "4. Finalising the case",
 		summary: "Hand the case over for invoicing",
 	},
 	{
 		id: "batching",
-		title: "6. Batching for invoicing",
+		title: "5. Batching for invoicing",
 		summary: "Group certificates and download the package",
 	},
 	{
 		id: "invoicing",
-		title: "7. Recording the invoice",
+		title: "6. Recording the invoice",
 		summary: "Enter the invoice number to complete the work",
+	},
+	{
+		id: "states",
+		title: "Case states and the dashboard",
+		summary: "What each state means and which step comes next",
 	},
 	{
 		id: "certificate-rules",
 		title: "Certificate wording rules",
 		summary: "What prints on the certificate, and why",
+	},
+	{
+		id: "records",
+		title: "Officers, stations and defendants",
+		summary: "Correct, merge or delete them",
 	},
 	{
 		id: "practice",
@@ -236,6 +249,49 @@ const FlowChips = () => (
 	</ol>
 );
 
+/**
+ * Each case state as it is named on screen, what it means, and the step that
+ * comes next. The names come from the same config as the State column.
+ */
+const CASE_STATES: [string, string, ReactNode][] = [
+	[
+		PHASE_DISPLAY_NAMES.assessment,
+		"The samples are being recorded and assessed. Every new case starts here, and so does a form added to a case later.",
+		<>
+			<a href="#recording-samples">2. Record the samples</a>, then{" "}
+			<a href="#generating-certificates">3. generate the certificates</a>.
+		</>,
+	],
+	[
+		PHASE_DISPLAY_NAMES.unsigned_generation,
+		"At least one certificate has been generated and is being checked. The botanist signs the printed copy by hand; nothing is signed in the system.",
+		<>
+			Check each certificate and mark it ready (
+			<a href="#generating-certificates">step 3</a>), then{" "}
+			<a href="#finalising">4. finalise the case</a>.
+		</>,
+	],
+	[
+		PHASE_DISPLAY_NAMES.batching,
+		"Finalised. Every certificate is ready, and the case is waiting to go into a batch.",
+		<>
+			<a href="#batching">5. Batch it</a> from the Cases list.
+		</>,
+	],
+	[
+		PHASE_DISPLAY_NAMES.in_batch,
+		"In a batch, waiting for the invoice number.",
+		<>
+			<a href="#invoicing">6. Record the invoice</a> on Batches.
+		</>,
+	],
+	[
+		PHASE_DISPLAY_NAMES.complete,
+		"The invoice number is recorded. The case is read-only, and only an administrator can change it.",
+		"Nothing. The work is done.",
+	],
+];
+
 /** Glossary terms and their meanings, in alphabetical order. */
 const GLOSSARY: [string, string][] = [
 	[
@@ -283,12 +339,16 @@ const GLOSSARY: [string, string][] = [
 		"A botanist from older records, hidden from the selection list while their past cases stay intact.",
 	],
 	[
+		"Needs re-package",
+		"Shown on a batch whose certificates have changed since it was packaged. Re-package it to rebuild them.",
+	],
+	[
 		"Out of date",
-		"A generated certificate that no longer matches the case because something it prints has changed. Regenerate it.",
+		"A generated certificate that no longer matches the case because something it prints has changed. Regenerate it, or re-package its batch if it is already in one.",
 	],
 	[
 		"Practice mode",
-		"A personal mode for rehearsing the workflow on the real screens with a fake case. Only you see it, and it clears when you leave or after a day.",
+		"A personal mode for rehearsing the workflow on the real screens with a fake case. Only you see it. Your practice work is kept until you click Reset practice data.",
 	],
 	[
 		"Print options",
@@ -304,7 +364,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Re-package",
-		"Rebuilds a batch's download with the latest data, remaking its certificate PDFs. Use it after changing a certificate that is already in a batch.",
+		"Rebuilds a batch's download from its cases as they are now, remaking its certificate PDFs. Use it after changing a case whose certificates are already in a batch.",
 	],
 	[
 		"Requesting Officer",
@@ -320,11 +380,15 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Section C",
-		'The "other matters" part of the certificate, separate for each form. It lists any bag Section B does not describe, then your notes. It reads "None" when there is nothing to add.',
+		'The "other matters" part of the certificate, separate for each form. It lists any bag Section B does not describe, then your notes, then which bags held female plants. It reads "None" when there is nothing to add.',
 	],
 	[
 		"Security Movement Envelope (SME)",
 		"The envelope number recorded per form when subsamples are placed into a security movement envelope. Templates can fill it in.",
+	],
+	[
+		"State",
+		"Where a case is in the workflow: Assessment, Certificates, Batching, In Batch or Complete. See Case states and the dashboard.",
 	],
 	[
 		"Template",
@@ -418,8 +482,31 @@ const Guide = () => {
 						<ContentsGrid />
 						<hr className="@4xl:hidden" />
 
-						{/* 1. Signing in */}
+						{/* Signing in */}
 						<Section id="signing-in">
+							<p>
+								<strong>The first time</strong>, you sign in from your
+								invitation email:
+							</p>
+							<ol>
+								<li>
+									Click <Ui>Accept Invitation</Ui> in the email. The page shows
+									your name, email and role, and when the invitation expires.
+									Opening it does not use the invitation up, so you can come
+									back to it.
+								</li>
+								<li>
+									Click <Ui>Set Up Password Now</Ui>. This creates your account.
+								</li>
+								<li>Choose your password. You land on the Dashboard.</li>
+							</ol>
+							<p>
+								An invitation expires after 24 hours and can only be accepted
+								once. If yours has expired, ask an administrator for a new one.
+							</p>
+							<p>
+								<strong>After that</strong>:
+							</p>
 							<ol>
 								<li>Open the system and enter your email and password.</li>
 								<li>
@@ -432,7 +519,8 @@ const Guide = () => {
 							<p>
 								What you see depends on your role. Approved botanists and
 								finance officers see the whole workflow. Anyone without a role
-								sees only the Dashboard until an administrator gives them one.
+								sees only the Dashboard and a read-only <Ui>Settings</Ui> page
+								until an administrator gives them one.
 							</p>
 							<Outcome>
 								You are on the Dashboard, with <Ui>Cases</Ui> and{" "}
@@ -442,7 +530,7 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 2. Creating a case */}
+						{/* 1. Creating a case */}
 						<Section id="creating-a-case">
 							<p>
 								A case is one police submission. You create the case first, then
@@ -454,9 +542,10 @@ const Guide = () => {
 									Go to <Ui>Cases</Ui> and click <Ui>New Case</Ui> (top right).
 								</li>
 								<li>
-									Enter the <Ui>Police Reference Number</Ui>. If a case with
-									that number already exists, the form tells you and links to
-									it. Use that case instead of making a second one.
+									Enter the <Ui>Police Reference No.</Ui> If a case with that
+									number already exists, the form tells you and offers{" "}
+									<Ui>Add a form to this case</Ui>. Use that case instead of
+									making a second one.
 								</li>
 								<li>
 									Check the <Ui>Received Date</Ui>. It starts as today; change
@@ -489,7 +578,10 @@ const Guide = () => {
 									Only if the samples were brought in on someone else&apos;s
 									behalf, choose the <Ui>Requesting Officer (On Behalf Of)</Ui>{" "}
 									too. Otherwise leave it blank. The two must be different
-									people.
+									people. (A few older cases brought over from the previous
+									system name the same officer twice; they can still be opened
+									and edited, but not changed to a different officer in both
+									places.)
 								</li>
 								<li>
 									If an officer is not in the list, click <Ui>Add</Ui> next to
@@ -520,9 +612,9 @@ const Guide = () => {
 									nothing stops you carrying on.
 								</li>
 								<li>
-									The boxes start ticked the way an administrator has set in{" "}
-									<Ui>Settings</Ui>. Normally both stations are ticked and rank
-									is not.
+									The boxes start ticked the way they are set under{" "}
+									<Ui>Certificate defaults</Ui> in <Ui>Settings</Ui>. Normally
+									both stations are ticked and rank is not.
 								</li>
 							</ul>
 							<Tip>
@@ -549,15 +641,17 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 3. Recording the samples */}
+						{/* 2. Recording the samples */}
 						<Section id="recording-samples">
 							<p>
 								Everything for a case is on one page, in three sections one
 								below the other: <Ui>Case Details</Ui>,{" "}
 								<Ui>Priority Form Assessment</Ui> and <Ui>Certificates</Ui>.
 								Scroll, or click a section in the bar at the top of the page to
-								jump to it. Nothing is locked, so you can correct any part at
-								any time.
+								jump to it. You can correct any part at any time until the
+								invoice is recorded. After that the case is{" "}
+								<strong>Complete</strong> and read-only, and only an
+								administrator can change it.
 							</p>
 							<p>
 								Each section shows a tick once it has everything it needs. A
@@ -596,7 +690,8 @@ const Guide = () => {
 								</li>
 								<li>
 									Tick <Ui>Contains female plants</Ui> where that applies. The
-									box only appears for cannabis plant material.
+									box only appears for cannabis plant material. The certificate
+									then says which bags held female plants by itself.
 								</li>
 								<li>
 									Click <Ui>Confirm</Ui> on a bag, or <Ui>Add All</Ui> to save
@@ -632,6 +727,11 @@ const Guide = () => {
 								used elsewhere, the problem shows under that bag. Fix it and
 								save again.
 							</Tip>
+							<img
+								src="/assets/guide/create-drug.png"
+								alt="The Priority Form Assessment section, showing three saved drug bags with their tags, content type, result and a Female badge"
+								className="rounded-lg border shadow-sm"
+							/>
 
 							<h3>Write the Section C notes</h3>
 							<p>
@@ -640,17 +740,17 @@ const Guide = () => {
 							</p>
 							<ol>
 								<li>
-									If the bags on the form have different results, the system
-									adds a line for each bag that needs one. These lines appear in
-									a grey box headed{" "}
+									The system adds two kinds of line by itself: one for each bag
+									with a different result, and one saying which bags held female
+									plants. They appear in a grey box headed{" "}
 									<Ui>Added automatically from the bag results</Ui>. You do not
 									need to type them.
 								</li>
 								<li>
-									For anything else, such as the security movement envelope or
-									female plants, choose one under <Ui>Use Template</Ui> if one
-									fits. It fills in this form&apos;s tag numbers, envelope
-									number and counts for you.
+									For anything else, such as the security movement envelope,
+									choose one under <Ui>Use Template</Ui> if one fits. It fills
+									in this form&apos;s tag numbers, envelope number and counts
+									for you.
 								</li>
 								<li>
 									Or type the note yourself in{" "}
@@ -664,8 +764,15 @@ const Guide = () => {
 							</ol>
 							<Tip>
 								Click <Ui>Preview</Ui> at the top of the section to see the
-								certificate as it will print, then <Ui>Form</Ui> to go back.
+								certificate as it will print, then <Ui>Form</Ui> to go back. On
+								a very wide screen the preview sits beside the form instead, so
+								there is no switch.
 							</Tip>
+							<img
+								src="/assets/guide/section-c.png"
+								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bag results, and the botanist's own note"
+								className="rounded-lg border shadow-sm"
+							/>
 							<Outcome>
 								Every form has at least one bag, every bag has a result, and{" "}
 								<Ui>Priority Form Assessment</Ui> shows a tick.
@@ -674,7 +781,7 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 4. Generating certificates */}
+						{/* 3. Generating certificates */}
 						<Section id="generating-certificates">
 							<p>
 								The <Ui>Certificates</Ui> section lists every form on the case.
@@ -706,9 +813,18 @@ const Guide = () => {
 								A certificate is marked <Ui>Out of date</Ui> when something it
 								prints has changed since it was generated: a bag or its result,
 								the Section C notes, an officer, an officer&apos;s tick boxes,
-								or the certificate wording itself. Its <Ui>Ready</Ui> mark is
-								taken off. Click <Ui>Regenerate</Ui> (or <Ui>Regenerate All</Ui>
-								), check it again, and mark it ready again.
+								the defendant, the police reference, the botanist, or the
+								certificate wording itself. Its <Ui>Ready</Ui> mark is taken
+								off. Click <Ui>Regenerate</Ui> (or <Ui>Regenerate All</Ui>),
+								check it again, and mark it ready again.
+							</p>
+							<p>
+								A certificate that is already in a batch is not regenerated
+								here. If its case changes, the certificate shows{" "}
+								<strong>Out of date</strong> with the batch it belongs to, and
+								that batch shows <Ui>Needs re-package</Ui> on the{" "}
+								<Ui>Batches</Ui> page (see{" "}
+								<a href="#batching">Batching for invoicing</a>).
 							</p>
 							<Tip>
 								A certificate cannot be generated while any bag is still{" "}
@@ -720,6 +836,11 @@ const Guide = () => {
 								The botanist signs the printed copy by hand. There is no digital
 								signature.
 							</Tip>
+							<img
+								src="/assets/guide/generate-cert.png"
+								alt="The Certificates section, showing a generated certificate marked Ready with its PDF open below"
+								className="rounded-lg border shadow-sm"
+							/>
 							<Outcome>
 								Every form has a certificate and every certificate reads{" "}
 								<Ui>Ready</Ui>.
@@ -728,7 +849,7 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 5. Finalising */}
+						{/* 4. Finalising */}
 						<Section id="finalising">
 							<p>
 								Finalising hands the case over for invoicing. Do it once every
@@ -755,7 +876,7 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 6. Batching */}
+						{/* 5. Batching */}
 						<Section id="batching">
 							<p>
 								A batch groups finished certificates together, works out the
@@ -796,7 +917,12 @@ const Guide = () => {
 							<Tip>
 								Need to change a certificate after batching? Correct the case,
 								then use <Ui>Re-package</Ui> on the batch. That rebuilds the
-								PDFs and the ZIP without taking anything out of the batch.
+								PDFs and the ZIP from the case as it is now, without taking
+								anything out of the batch. A batch whose cases have changed
+								since it was packaged shows <Ui>Needs re-package</Ui> under its
+								number, and opening it names the certificates that changed.
+								Batches made before this check was added are never flagged, so
+								re-package those yourself after a correction.
 							</Tip>
 							<img
 								src="/assets/guide/batches-1.png"
@@ -816,7 +942,7 @@ const Guide = () => {
 
 						<hr />
 
-						{/* 7. Invoicing */}
+						{/* 6. Invoicing */}
 						<Section id="invoicing">
 							<p>
 								The invoice itself is raised outside this system. Recording its
@@ -830,12 +956,14 @@ const Guide = () => {
 									<Ui>Batches</Ui> in the sidebar.
 								</li>
 								<li>
-									Click <Ui>Awaiting invoice</Ui> on the batch, or the{" "}
-									<Ui>Record invoice for …</Ui> button in the banner.
+									Click <Ui>Awaiting invoice</Ui> on the batch, the{" "}
+									<Ui>Record invoice for …</Ui> button in the banner, or{" "}
+									<Ui>Set Invoice Number</Ui> in the opened batch.
 								</li>
 								<li>
-									Enter the invoice number and save. Each number can only be
-									used once.
+									Enter the invoice number and click{" "}
+									<Ui>Record &amp; complete</Ui> (or press Enter). Each number
+									can only be used once.
 								</li>
 							</ol>
 							<Tip>
@@ -846,6 +974,87 @@ const Guide = () => {
 								The batch shows its invoice number with a tick, its cases read{" "}
 								<strong>Complete</strong>, and the sidebar count goes away.
 							</Outcome>
+						</Section>
+
+						<hr />
+
+						{/* Case states and the dashboard */}
+						<Section id="states">
+							<p>
+								Every case shows a <Ui>State</Ui> on the <Ui>Cases</Ui> list.
+								The same names are used by the <Ui>All States</Ui> filter and
+								the cards at the top of the Dashboard. The state moves on by
+								itself as you work; you never set it by hand.
+							</p>
+							<div className="not-prose my-4 overflow-x-auto">
+								<table className="w-full border-collapse text-sm">
+									<caption className="sr-only">
+										What each case state means and what to do next
+									</caption>
+									<thead>
+										<tr className="border-b text-left">
+											<th scope="col" className="py-2 pr-4 font-semibold">
+												State
+											</th>
+											<th scope="col" className="py-2 pr-4 font-semibold">
+												What it means
+											</th>
+											<th scope="col" className="py-2 font-semibold">
+												What to do next
+											</th>
+										</tr>
+									</thead>
+									<tbody className="align-top">
+										{CASE_STATES.map(([state, meaning, next]) => (
+											<tr key={state} className="border-b">
+												<th scope="row" className="py-2 pr-4 font-medium">
+													{state}
+												</th>
+												<td className="py-2 pr-4 text-muted-foreground">
+													{meaning}
+												</td>
+												<td className="py-2">{next}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+							<h3>Cases with more than one form</h3>
+							<p>
+								Each Priority 3 form moves through these states on its own. The
+								case&apos;s <Ui>State</Ui> is the earliest one among its forms
+								that are not yet complete, and it reads{" "}
+								<strong>Complete</strong> only once every form is. So adding a
+								form to a case that is already in a batch shows the case as{" "}
+								<strong>Assessment</strong> again until the new form catches up.
+							</p>
+							<p>
+								The <Ui>All States</Ui> filter and the Dashboard cards count a
+								case under every state one of its forms is in. A case with forms
+								at two stages appears under both, while its <Ui>State</Ui>{" "}
+								column shows the earlier one.
+							</p>
+							<h3>The Dashboard</h3>
+							<ul>
+								<li>
+									The four cards count the cases waiting at{" "}
+									<strong>Assessment</strong>, <strong>Certificates</strong>,{" "}
+									<strong>Batching</strong> and <strong>In Batch</strong>, and
+									how many forms those cases hold. Each card names the step in
+									this guide that comes next. Click a card to open the{" "}
+									<Ui>Cases</Ui> list filtered to that state.
+								</li>
+								<li>
+									<strong>Monthly Throughput</strong> shows, for each month of
+									the financial year, the cases received, the certificates first
+									generated, the bags on the cases received, and the revenue
+									from invoices recorded.
+								</li>
+								<li>
+									<strong>Financial Year Revenue</strong> totals the batches
+									whose invoice number was recorded this financial year.
+								</li>
+							</ul>
 						</Section>
 
 						<hr />
@@ -1012,18 +1221,27 @@ const Guide = () => {
 									<BagLineExample tag="T9045" result="inconclusive" />
 								</li>
 							</ul>
+							<p>
+								Section C also says which <em>Cannabis sativa</em> bags held
+								female plants, from the <Ui>Contains female plants</Ui> tick
+								box, for example <q>Bags T1001 and T1003 {FEMALE_PHRASE}.</q> or{" "}
+								<q>{ALL_FEMALE_LINE}</q> when every bag on the form did.
+							</p>
 							<ul>
 								<li>
-									They use each bag&apos;s original tag number and follow the
-									order the bags were added.
+									The lines use each bag&apos;s original tag number and follow
+									the order the bags were added.
 								</li>
 								<li>
-									They print first, followed by your own Section C notes (for
-									example the envelope number or female plants).
+									The order is always: the bag result lines, then your own notes
+									(for example the envelope number), then the female plants
+									line.
 								</li>
 								<li>
-									If you type one of these lines yourself as well, it still
-									prints only once.
+									These lines always come from the current bags. If your notes
+									contain one, including one left by a template, it is replaced
+									by the up-to-date line, so it never prints twice or goes out
+									of date.
 								</li>
 								<li>
 									When there are no added lines and no notes, Section C reads
@@ -1033,8 +1251,9 @@ const Guide = () => {
 
 							<h3>A worked example</h3>
 							<p>
-								A form holds three bags: T1001 is <em>Cannabis sativa</em>,
-								T1002 is {DETERMINATION_LABELS.not_cannabis} and T1003 is{" "}
+								A form holds three bags: T1001 is <em>Cannabis sativa</em> and
+								holds female plants, T1002 is{" "}
+								{DETERMINATION_LABELS.not_cannabis} and T1003 is{" "}
 								{DETERMINATION_LABELS.inconclusive}. The botanist&apos;s note
 								says where the subsamples went. The certificate reads:
 							</p>
@@ -1056,9 +1275,67 @@ const Guide = () => {
 											Subsamples placed into Security Movement Envelope
 											WW00564835.
 										</q>
+										<br />
+										<q>Bag T1001 {FEMALE_PHRASE}.</q>
 									</p>
 								</div>
 							</div>
+						</Section>
+
+						<hr />
+
+						{/* Officers, stations and defendants */}
+						<Section id="records">
+							<p>
+								<Ui>Officers</Ui>, <Ui>Stations</Ui> and <Ui>Defendants</Ui> in
+								the sidebar list the records that cases choose from. Each case
+								points at the record, so a correction made here shows on every
+								case that uses it.
+							</p>
+							<h3>Correcting a record</h3>
+							<p>
+								Click the row to open it, change the details, and click{" "}
+								<Ui>Update Officer</Ui>, <Ui>Update Station</Ui> or{" "}
+								<Ui>Update Defendant</Ui>. Certificates that print the changed
+								details show <Ui>Out of date</Ui> until they are regenerated, or
+								their batch re-packaged.
+							</p>
+							<h3>Merging duplicates</h3>
+							<p>
+								If the same officer, station or defendant has been entered
+								twice, click <Ui>Merge</Ui> at the top of the page. The cases
+								(and, for stations, the officers based there) move to the record
+								you keep, and the duplicate is removed. Two officers cannot be
+								merged while they are the conveying and requesting officers on
+								the same case, because that would name one person twice. Merging
+								changes the cases that use the duplicate, so if any of them is
+								complete, only an administrator can merge it.
+							</p>
+							<h3>Deleting a record</h3>
+							<ol>
+								<li>
+									Open the record and click <Ui>Delete officer</Ui>,{" "}
+									<Ui>Delete station</Ui> or <Ui>Delete defendant</Ui> under the
+									form.
+								</li>
+								<li>
+									If no case uses it, confirm and it is deleted. Otherwise the
+									dialog lists every case that uses it (and, for a station, the
+									officers based there), with links to open each case.
+								</li>
+								<li>
+									Choose a replacement under <Ui>Replace with</Ui>, then click{" "}
+									<Ui>Move … and delete</Ui>. The cases move to the replacement
+									first, so no case is left without an officer, station or
+									defendant.
+								</li>
+							</ol>
+							<Tip>
+								Only an administrator can delete or merge away a record used by
+								a complete case, because that changes the case. An officer
+								cannot be replaced by someone who is already the other officer
+								on one of the same cases.
+							</Tip>
 						</Section>
 
 						<hr />
@@ -1088,18 +1365,35 @@ const Guide = () => {
 									too.
 								</li>
 								<li>
+									To run the same example again, click{" "}
+									<Ui>Restart this practice case</Ui> at the bottom of the
+									practice panel. To try a different example, restart the case,
+									then use the arrows beside <Ui>Your Priority 3 brief</Ui>.
+								</li>
+								<li>
 									When you are done, click <Ui>Leave practice mode</Ui> in the
 									banner, or switch it off in the same menu.
 								</li>
 							</ol>
 							<p>
 								Nothing you do in practice mode is real. Practice cases,
-								certificates, invoices and officers are kept apart from live
-								work: nobody else sees them, they never change the dashboard
-								figures, and they never use a real certificate or invoice
-								number. They are cleared when you leave practice mode, and
-								automatically after a day.
+								certificates, batches, invoices, officers, stations and
+								defendants are kept apart from live work: nobody else sees them,
+								they never change the real dashboard figures, and they never use
+								a real certificate or invoice number.
 							</p>
+							<p>
+								Your practice work is kept when you leave, so you can pick up
+								where you stopped next time. To clear it all and start again,
+								click <Ui>Reset practice data</Ui> in the banner.
+							</p>
+							<Tip>
+								<Ui>Settings</Ui>, <Ui>Staff</Ui> and <Ui>Invitations</Ui> have
+								no practice copy, so they show real data even in practice mode.
+								You can look at them, but changes are refused until you leave
+								practice mode. Section C templates are the same: you can use
+								them on a practice case, but not add, edit or delete them.
+							</Tip>
 							<Outcome>
 								You have taken a fake case all the way to a recorded invoice,
 								and know what each step looks like before doing it for real.
@@ -1121,8 +1415,8 @@ const Guide = () => {
 									<Ui>Guide</Ui>.
 								</li>
 								<li>
-									A panel opens on the right with the workflow steps. The page
-									makes room for it, so nothing is covered.
+									A panel opens on the right with the same six numbered steps as
+									this page. The page makes room for it, so nothing is covered.
 								</li>
 								<li>
 									Click any step to read it. You can move between steps freely;
@@ -1155,9 +1449,9 @@ const Guide = () => {
 									<strong>Pricing configuration</strong>: the{" "}
 									<Ui>Certificate Cost</Ui> charged per certificate, the{" "}
 									<Ui>Bag Identification</Ui> cost charged per bag, and the{" "}
-									<Ui>Tax Percentage</Ui> (GST) added to batch totals. New rates
-									apply straight away; batches already made keep the rates they
-									were costed at.
+									<Ui>Tax Percentage</Ui> (GST) added to batch totals. Click a
+									rate to change it. New rates apply straight away; batches
+									already made keep the rates they were costed at.
 								</li>
 								<li>
 									<strong>Certificate Numbering</strong>: the number the next
@@ -1187,6 +1481,14 @@ const Guide = () => {
 								Changing a default never changes cases that already exist. Each
 								case keeps its own choices, which you can still change on the
 								case.
+							</p>
+							<p>
+								Finance officers, botanists and administrators can change the
+								rates, numbering and defaults, and manage the Section C
+								templates. Only an administrator can change remembered searches.
+								Anyone without a role can view the page but not change it. In
+								practice mode it is read-only for everyone, because settings are
+								shared; a note at the top says why.
 							</p>
 							<img
 								src="/assets/guide/settings.png"

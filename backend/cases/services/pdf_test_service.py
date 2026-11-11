@@ -50,6 +50,12 @@ class TestPDFService:
             "other_matters": wording.compose_section_c(
                 results.bag_lines,
                 "Subsamples placed into Security Movement Envelope WW00999999.",
+                wording.female_plant_line(
+                    [
+                        ("T107381", wording.CANNABIS, True),
+                        ("T107390", wording.CANNABIS, False),
+                    ]
+                ),
             ),
             "certification_date": "28 March 2026",
             "logo_path": f"file://{logo_path}",

@@ -36,6 +36,8 @@ interface CertificateDefaultsCardProps {
 	values: Record<CertificateDefaultField, boolean>;
 	isSaving: boolean;
 	onChange: (field: CertificateDefaultField, value: boolean) => void;
+	/** Show the defaults without letting them be changed. */
+	readOnly?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export const CertificateDefaultsCard = ({
 	values,
 	isSaving,
 	onChange,
+	readOnly = false,
 }: CertificateDefaultsCardProps) => (
 	<Card className="p-6">
 		<div className="mb-5 flex items-start gap-3">
@@ -79,7 +82,7 @@ export const CertificateDefaultsCard = ({
 					<Switch
 						id={option.field}
 						checked={values[option.field]}
-						disabled={isSaving}
+						disabled={isSaving || readOnly}
 						onCheckedChange={(checked) => onChange(option.field, checked)}
 						className="data-[state=checked]:bg-emerald-600"
 					/>

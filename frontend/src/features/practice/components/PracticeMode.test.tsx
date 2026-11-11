@@ -124,7 +124,7 @@ describe("Practice mode UI", () => {
 				{ initialEntries: ["/batches"] }
 			);
 			expect(
-				await screen.findByText(/Step 5 — Batch and complete the case/i)
+				await screen.findByText(/Step 5 — Batch the case/i)
 			).toBeInTheDocument();
 		});
 
@@ -191,10 +191,10 @@ describe("Practice mode UI", () => {
 			await screen.findByLabelText("Case guide");
 
 			await user.click(
-				screen.getByRole("button", { name: /Batch and complete/i })
+				screen.getByRole("button", { name: /Record the invoice/i })
 			);
 			expect(
-				screen.getByText(/Step 5 — Batch and complete the case/i)
+				screen.getByText(/Step 6 — Record the invoice/i)
 			).toBeInTheDocument();
 		});
 	});

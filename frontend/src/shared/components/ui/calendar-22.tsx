@@ -20,6 +20,10 @@ interface Calendar22Props {
 	disabled?: boolean;
 	className?: string;
 	error?: boolean;
+	/** Id for the trigger, so a field label can point at it. */
+	id?: string;
+	"aria-invalid"?: boolean;
+	"aria-describedby"?: string;
 }
 
 export default function Calendar22({
@@ -29,6 +33,9 @@ export default function Calendar22({
 	disabled = false,
 	className,
 	error = false,
+	id,
+	"aria-invalid": ariaInvalid,
+	"aria-describedby": ariaDescribedBy,
 }: Calendar22Props) {
 	const [open, setOpen] = React.useState(false);
 	const selectedDate = value ? new Date(value) : undefined;
@@ -46,6 +53,7 @@ export default function Calendar22({
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
 				<Button
+					id={id}
 					variant="outline"
 					className={cn(
 						"w-full justify-between font-normal",
@@ -54,8 +62,11 @@ export default function Calendar22({
 						className
 					)}
 					disabled={disabled}
+					aria-invalid={ariaInvalid}
+					aria-describedby={ariaDescribedBy}
 				>
-					{selectedDate ? format(selectedDate, "PPP") : placeholder}
+					{/* Day first, as dates are written in Australia: 10 November 2026 */}
+					{selectedDate ? format(selectedDate, "d MMMM yyyy") : placeholder}
 					<ChevronDownIcon className="opacity-50" />
 				</Button>
 			</PopoverTrigger>

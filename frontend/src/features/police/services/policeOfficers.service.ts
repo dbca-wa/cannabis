@@ -1,4 +1,6 @@
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
+import { withReplacement } from "@/shared/utils/record-usage.utils";
+import type { RecordUsage } from "@/shared/types/record-usage.types";
 import type {
 	PoliceOfficer,
 	PoliceOfficerCreateRequest,
@@ -72,8 +74,19 @@ export const policeOfficersService = {
 	/**
 	 * Delete a police officer
 	 */
-	async deleteOfficer(id: number): Promise<void> {
-		return apiClient.delete<void>(ENDPOINTS.POLICE.OFFICERS.DELETE(id));
+	async deleteOfficer(
+		id: number,
+		replacementId?: number | null
+	): Promise<void> {
+		// Cases naming the officer move to the replacement before deletion.
+		return apiClient.delete<void>(
+			withReplacement(ENDPOINTS.POLICE.OFFICERS.DELETE(id), replacementId)
+		);
+	},
+
+	/** The cases that name an officer, shown before deleting them. */
+	async getOfficerUsage(id: number): Promise<RecordUsage> {
+		return apiClient.get<RecordUsage>(ENDPOINTS.POLICE.OFFICERS.USAGE(id));
 	},
 
 	/**

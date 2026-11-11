@@ -151,6 +151,7 @@ export const CaseDetailsStep = ({
 							Received Date
 						</Label>
 						<Calendar22
+							id="received"
 							value={received}
 							onChange={(date) => onFieldChange("received", date)}
 							placeholder="Select received date"
@@ -180,6 +181,7 @@ export const CaseDetailsStep = ({
 							Approved Botanist
 						</Label>
 						<UserSearchCombobox
+							id="approved_botanist"
 							value={(caseData?.approved_botanist_id as number | null) ?? null}
 							onValueChange={(id) => onFieldChange("approved_botanist_id", id)}
 							placeholder="Select approved botanist..."

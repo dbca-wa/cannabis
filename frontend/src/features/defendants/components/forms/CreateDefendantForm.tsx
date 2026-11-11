@@ -21,18 +21,21 @@ interface CreateDefendantFormProps {
 	onSubmit: (data: CreateDefendantFormData) => Promise<void>;
 	onCancel: () => void;
 	isSubmitting?: boolean;
+	/** Starting name, e.g. what was typed into the search before "Create". */
+	initialName?: { last_name: string; given_names: string };
 }
 
 export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 	onSubmit,
 	onCancel,
 	isSubmitting = false,
+	initialName,
 }) => {
 	const form = useForm<CreateDefendantFormData>({
 		resolver: zodResolver(createDefendantSchema),
 		defaultValues: {
-			given_names: "",
-			last_name: "",
+			given_names: initialName?.given_names ?? "",
+			last_name: initialName?.last_name ?? "",
 		},
 	});
 

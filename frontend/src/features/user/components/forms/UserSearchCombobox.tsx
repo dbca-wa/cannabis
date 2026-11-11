@@ -35,6 +35,8 @@ import type { IUser } from "../../types/users.types";
 // ===================================== COMPONENT =====================================
 
 interface UserSearchComboboxProps {
+	/** Id for the trigger, so a field label can point at it. */
+	id?: string;
 	value?: number | null;
 	onValueChange: (userId: number | null) => void;
 	placeholder?: string;
@@ -62,6 +64,7 @@ export const UserSearchCombobox = React.forwardRef<
 >(
 	(
 		{
+			id,
 			value,
 			onValueChange,
 			placeholder = "Search users...",
@@ -249,6 +252,7 @@ export const UserSearchCombobox = React.forwardRef<
 				<PopoverTrigger asChild>
 					<Button
 						ref={ref}
+						id={id}
 						variant="outline"
 						role="combobox"
 						aria-expanded={open}
@@ -377,7 +381,7 @@ export const UserSearchCombobox = React.forwardRef<
 			<>
 				{showExternalInviteButton ? (
 					<div className="flex items-center gap-2">
-						<div className="flex-1">{comboboxElement}</div>
+						<div className="min-w-0 flex-1">{comboboxElement}</div>
 						<Button
 							onClick={handleExternalInviteUser}
 							disabled={disabled}

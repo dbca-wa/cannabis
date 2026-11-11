@@ -15,4 +15,9 @@ urlpatterns = [
         views.DefendantRetrieveUpdateDestroyView.as_view(),
         name="defendant_detail",
     ),
+    path(
+        "<int:pk>/usage",
+        views.DefendantUsageView.as_view(),
+        name="defendant_usage",
+    ),
 ]

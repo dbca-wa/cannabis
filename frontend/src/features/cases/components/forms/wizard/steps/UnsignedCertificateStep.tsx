@@ -9,8 +9,10 @@ import {
 	AlertTriangle,
 	Check,
 	Circle,
+	Info,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -490,7 +492,13 @@ export const UnsignedCertificateStep = ({
 									>
 										{bagCount} bag{bagCount !== 1 ? "s" : ""}
 									</Badge>
-									{hasGenerated && !stale && (
+									{hasGenerated && cert?.needs_repackage && (
+										<span className="inline-flex items-center gap-1 rounded-full bg-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-900 dark:bg-orange-800 dark:text-orange-100">
+											<AlertTriangle className="h-3 w-3" aria-hidden="true" />
+											Needs re-package
+										</span>
+									)}
+									{hasGenerated && !stale && !cert?.needs_repackage && (
 										<Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-[10px]">
 											<CheckCircle2 className="mr-1 h-3 w-3" />
 											Generated
@@ -541,7 +549,7 @@ export const UnsignedCertificateStep = ({
 										</TooltipTrigger>
 										<TooltipContent>
 											{cert?.batch_id
-												? "This certificate is batched. Use Repackage on the Batches page to regenerate."
+												? "This certificate is in a batch. Use Re-package on the batch in Batches to rebuild it."
 												: lockActions
 													? lockMessage
 													: hasGenerated
@@ -601,6 +609,46 @@ export const UnsignedCertificateStep = ({
 									<p className="text-xs text-muted-foreground mb-2">
 										Certificate: {cert.certificate_number}
 									</p>
+									{/* A batched certificate is not regenerated here. When the
+									    case has changed since it was packaged, say which batch
+									    to re-package; otherwise say how it would be updated. */}
+									{cert.batch_id != null && cert.needs_repackage && (
+										<p
+											className="mb-2 flex items-start gap-1.5 rounded-md border border-orange-300 bg-orange-50 px-2.5 py-2 text-xs text-orange-900 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-100"
+											role="status"
+										>
+											<AlertTriangle
+												className="mt-0.5 h-3.5 w-3.5 shrink-0"
+												aria-hidden="true"
+											/>
+											<span>
+												<strong>Out of date.</strong> Something this certificate
+												prints has changed since batch{" "}
+												{cert.batch_number ?? "its batch"} was packaged. Use{" "}
+												<Link
+													to="/batches"
+													className="font-medium underline underline-offset-2"
+												>
+													Re-package on that batch in Batches
+												</Link>{" "}
+												to rebuild it.
+											</span>
+										</p>
+									)}
+									{cert.batch_id != null && !cert.needs_repackage && (
+										<p className="mb-2 flex items-start gap-1.5 text-xs text-sky-800 dark:text-sky-200">
+											<Info
+												className="mt-0.5 h-3.5 w-3.5 shrink-0"
+												aria-hidden="true"
+											/>
+											<span>
+												This certificate is in batch{" "}
+												{cert.batch_number ?? "a batch"}. If you change anything
+												it prints, use Re-package on that batch in Batches to
+												rebuild its PDFs.
+											</span>
+										</p>
+									)}
 									<GeneratedCertificatesViewer
 										caseId={caseId}
 										certificates={[cert]}

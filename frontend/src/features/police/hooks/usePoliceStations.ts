@@ -8,6 +8,7 @@ import {
 
 import { cacheConfig } from "@/shared/hooks/core/queryKeys";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 import type {
 	PoliceStationCreateRequest,
 	PoliceStationUpdateRequest,
@@ -116,29 +117,38 @@ export function useDeleteStation() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => policeStationsService.deleteStation(id),
-		onSuccess: async (_, deletedId) => {
+		mutationFn: ({
+			id,
+			replacementId,
+		}: {
+			id: number;
+			replacementId?: number | null;
+		}) => policeStationsService.deleteStation(id, replacementId),
+		onSuccess: async (_, { id }) => {
 			// Remove the station from the cache
 			queryClient.removeQueries({
-				queryKey: stationsQueryKeys.detail(deletedId),
+				queryKey: stationsQueryKeys.detail(id),
 			});
 
+			// Moved cases and officers are refreshed too.
 			await invalidateRelatedQueries(queryClient, "policeStations");
 
-			toast.success("Police station deleted successfully!");
+			toast.success("Police station deleted");
 		},
 		onError: (error: unknown) => {
 			logger.error("Failed to delete police station", { error });
-
-			// Handle specific error for stations with assigned officers
-			const errorMessage = (error as Error)?.message || "";
-			const errorStatus = (error as { status?: number })?.status;
-
-			if (errorMessage.includes("officers") || errorStatus === 400) {
-				toast.error("Cannot delete station: Station has assigned officers");
-			} else {
-				toast.error(errorMessage || "Failed to delete police station");
-			}
+			// The server says why, e.g. which cases need a replacement.
+			toast.error(getErrorMessage(error) || "Failed to delete police station");
 		},
+	});
+}
+
+/** The cases and officers that use a station, shown before deleting it. */
+export function useStationUsage(id: number | null) {
+	return useQuery({
+		queryKey: [...stationsQueryKeys.detail(id ?? 0), "usage"],
+		queryFn: () => policeStationsService.getStationUsage(id!),
+		enabled: !!id,
+		staleTime: 0,
 	});
 }

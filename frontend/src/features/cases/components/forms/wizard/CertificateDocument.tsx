@@ -13,6 +13,7 @@ import {
 } from "@/shared/utils/certificate-format.utils";
 import {
 	composeSectionC,
+	femalePlantLine,
 	formatOfficer,
 	readPrintOptions,
 	summariseResults,
@@ -24,6 +25,7 @@ export interface CaseDataBag {
 	seal_tag_numbers?: string;
 	new_seal_tag_numbers?: string | null;
 	content_type_display?: string;
+	contains_female_plants?: boolean;
 	assessment?: {
 		determination?: string | null;
 		determination_display?: string;
@@ -122,8 +124,15 @@ export const CertificateDocument = ({
 	);
 	const note =
 		notes != null ? notes : ((caseData.additional_notes as string) ?? "");
+	const femaleLine = femalePlantLine(
+		bags.map((b) => ({
+			tag: b.seal_tag_numbers ?? "",
+			determination: b.assessment?.determination,
+			female: b.contains_female_plants,
+		}))
+	);
 	const sectionCLines = (
-		composeSectionC(results?.bagLines ?? [], note) ?? "None"
+		composeSectionC(results?.bagLines ?? [], note, femaleLine) ?? "None"
 	).split("\n");
 	const policeReferenceNumber = (caseData.case_number as string) ?? null;
 	const approvedBotanist = (caseData.approved_botanist_name as string) ?? null;

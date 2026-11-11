@@ -212,7 +212,7 @@ class OfficerService:
 
     @staticmethod
     @transaction.atomic
-    def merge_officers(source_id, target_id):
+    def merge_officers(source_id, target_id, user):
         """Merge source officer into target officer.
 
         Reassigns all cases from source to target, then deletes source.
@@ -220,15 +220,19 @@ class OfficerService:
         Args:
             source_id: PK of the officer to merge away.
             target_id: PK of the officer to merge into.
+            user: Who is merging, for the complete-case rule.
 
         Returns:
             dict: Merge result with target info and reassignment count.
 
         Raises:
-            ValidationError: If IDs are missing or identical.
+            ValidationError: If IDs are missing or identical, or merging would
+                make one officer both conveying and requesting on a case.
             NotFound: If either officer does not exist.
+            PermissionDenied: A non-administrator would change a complete case.
         """
         from cases.models import Case as CaseModel
+        from cases.services.reassignment import ensure_cases_changeable
 
         if not source_id or not target_id:
             raise ValidationError(
@@ -247,6 +251,38 @@ class OfficerService:
             target = PoliceOfficer.objects.get(pk=target_id)
         except PoliceOfficer.DoesNotExist:
             raise NotFound(f"Target officer with pk {target_id} not found")
+
+        # Refuse to make one officer both conveying and requesting on a case.
+        # A case that already names the source in both roles keeps that
+        # (older cases may), now under the target.
+        clashes = list(
+            CaseModel.objects.filter(
+                Q(submitting_officer=source, requesting_officer=target)
+                | Q(submitting_officer=target, requesting_officer=source)
+            ).order_by("case_number")
+        )
+        if clashes:
+            from cases.services.reassignment import case_references
+
+            raise ValidationError(
+                f"{source.full_name} and {target.full_name} are the conveying "
+                f"and requesting officers on {case_references(clashes)}, so "
+                "merging them would make one officer both. Change those cases "
+                "first."
+            )
+
+        # Merging changes every case naming the source, so it follows the same
+        # rule as editing them: complete cases need an administrator.
+        ensure_cases_changeable(
+            list(
+                CaseModel.objects.filter(
+                    Q(submitting_officer=source) | Q(requesting_officer=source)
+                )
+                .distinct()
+                .prefetch_related("forms")
+            ),
+            user,
+        )
 
         # Reassign cases where source is submitting officer
         sub_count = CaseModel.objects.filter(submitting_officer=source).update(
@@ -267,6 +303,100 @@ class OfficerService:
             "source_name": source_name,
             "cases_reassigned": sub_count + req_count,
         }
+
+    @staticmethod
+    def case_usage(officer):
+        """The cases that name this officer, with the role(s) they fill."""
+        from cases.models import Case as CaseModel
+
+        cases = (
+            CaseModel.objects.filter(
+                Q(submitting_officer=officer) | Q(requesting_officer=officer)
+            )
+            .prefetch_related("forms")
+            .order_by("case_number")
+        )
+        rows = []
+        for case in cases:
+            roles = []
+            if case.submitting_officer_id == officer.pk:
+                roles.append("conveying")
+            if case.requesting_officer_id == officer.pk:
+                roles.append("requesting")
+            rows.append((case, roles))
+        return rows
+
+    @staticmethod
+    @transaction.atomic
+    def delete_officer(officer, user, replacement=None):
+        """Delete an officer, first moving any cases that name them.
+
+        Args:
+            officer: The officer to delete.
+            user: Who is deleting, for the complete-case rule and the log.
+            replacement: The officer to name on those cases instead. Required
+                when any case names this officer.
+
+        Raises:
+            ValidationError: No replacement for an officer in use, the
+                replacement is the same officer, or moving would make one
+                officer both conveying and requesting on a case.
+            PermissionDenied: A non-administrator would change a complete case.
+        """
+        from django.conf import settings
+
+        from cases.services.reassignment import (
+            case_references,
+            check_replacement,
+            ensure_cases_changeable,
+            require_replacement,
+        )
+        from common.logging import describe_user
+
+        usage = OfficerService.case_usage(officer)
+        cases = [case for case, _ in usage]
+        check_replacement(officer, replacement, "officer")
+        require_replacement(officer.full_name, cases, replacement, "officer")
+        ensure_cases_changeable(cases, user)
+
+        if replacement is not None:
+            clashes = [
+                case
+                for case in cases
+                if replacement.pk
+                in (case.submitting_officer_id, case.requesting_officer_id)
+            ]
+            if clashes:
+                raise ValidationError(
+                    {
+                        "replacement": (
+                            f"{replacement.full_name} is already the other officer "
+                            f"on {case_references(clashes)}, so they would be "
+                            "both conveying and requesting officer there. Choose "
+                            "someone else, or change those cases first."
+                        )
+                    }
+                )
+            from cases.models import Case as CaseModel
+
+            case_ids = [case.pk for case in cases]
+            CaseModel.objects.filter(
+                pk__in=case_ids, submitting_officer=officer
+            ).update(submitting_officer=replacement)
+            CaseModel.objects.filter(
+                pk__in=case_ids, requesting_officer=officer
+            ).update(requesting_officer=replacement)
+
+        name, pk = str(officer), officer.pk
+        officer.delete()
+        moved = (
+            f"; {len(cases)} case(s) moved to {replacement} ({replacement.pk})"
+            if replacement is not None and cases
+            else ""
+        )
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted police officer {name} ({pk}){moved}"
+        )
 
     @staticmethod
     def _apply_ordering(queryset, params):

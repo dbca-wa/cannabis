@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { renderPage, testAccessibility } from "@/test/page-test-utils";
 
 const authState = {
@@ -55,6 +55,24 @@ describe("Dashboard (Home) Page", () => {
 		).toBeInTheDocument();
 		expect(screen.getByText(/monthly throughput/i)).toBeInTheDocument();
 		expect(screen.getByText(/financial year revenue/i)).toBeInTheDocument();
+	});
+
+	it("names the guide step that comes next on each state card", () => {
+		renderPage(<Home />);
+
+		const batching = screen.getByRole("link", { name: /Batching/ });
+		expect(batching).toHaveAttribute("href", "/cases?phase=batching");
+		expect(within(batching).getByText("Next: Step 5")).toBeInTheDocument();
+		expect(
+			within(screen.getByRole("link", { name: /In Batch/ })).getByText(
+				"Next: Step 6"
+			)
+		).toBeInTheDocument();
+		expect(
+			within(screen.getByRole("link", { name: /Certificates/ })).getByText(
+				"Next: Steps 3–4"
+			)
+		).toBeInTheDocument();
 	});
 
 	it("shows the awaiting-role notice for users without app access", () => {

@@ -153,32 +153,57 @@ class DefendantService:
         return defendant
 
     @staticmethod
-    def delete_defendant(defendant, user):
-        """Delete a defendant if they have no associated cases.
-
-        Args:
-            defendant: The Defendant instance to delete.
-            user: The user performing the deletion (for logging).
-
-        Raises:
-            ValidationError: If the defendant is linked to one or more cases.
-        """
-        cases_count = defendant.cases.count()
-        if cases_count > 0:
-            raise ValidationError(
-                f"Cannot delete defendant {defendant.full_name}. "
-                f"They are associated with {cases_count} case(s). "
-                f"Please remove them from all cases before deletion."
-            )
-
-        settings.LOGGER.info(
-            f"{describe_user(user)} deleted defendant {defendant} ({defendant.pk})"
+    def case_usage(defendant):
+        """The cases that name this defendant."""
+        return list(
+            defendant.cases.all().prefetch_related("forms").order_by("case_number")
         )
-        defendant.delete()
 
     @staticmethod
     @transaction.atomic
-    def merge_defendants(primary_id, secondary_ids):
+    def delete_defendant(defendant, user, replacement=None):
+        """Delete a defendant, first moving any cases that name them.
+
+        Args:
+            defendant: The Defendant instance to delete.
+            user: Who is deleting, for the complete-case rule and the log.
+            replacement: The defendant to name on those cases instead. Required
+                when any case names this defendant.
+
+        Raises:
+            ValidationError: No replacement for a defendant in use, or the
+                replacement is the same defendant.
+            PermissionDenied: A non-administrator would change a complete case.
+        """
+        from cases.services.reassignment import (
+            check_replacement,
+            ensure_cases_changeable,
+            require_replacement,
+        )
+
+        cases = DefendantService.case_usage(defendant)
+        check_replacement(defendant, replacement, "defendant")
+        require_replacement(defendant.full_name, cases, replacement, "defendant")
+        ensure_cases_changeable(cases, user)
+
+        for case in cases:
+            case.defendants.add(replacement)
+            case.defendants.remove(defendant)
+
+        name, pk = str(defendant), defendant.pk
+        defendant.delete()
+        moved = (
+            f"; {len(cases)} case(s) moved to {replacement} ({replacement.pk})"
+            if cases
+            else ""
+        )
+        settings.LOGGER.info(
+            f"{describe_user(user)} deleted defendant {name} ({pk}){moved}"
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def merge_defendants(primary_id, secondary_ids, user):
         """Merge secondary defendants into a primary defendant.
 
         Reassigns all cases from each secondary defendant to the primary,
@@ -187,14 +212,20 @@ class DefendantService:
         Args:
             primary_id: PK of the defendant to keep.
             secondary_ids: List of PKs of defendants to merge into primary.
+            user: Who is merging, for the complete-case rule and the log.
 
         Returns:
             A dict with merge results including cases_reassigned count.
 
         Raises:
             ValidationError: If input is invalid or defendants do not exist.
+            PermissionDenied: A non-administrator would change a complete case.
         """
-        from cases.models import Submission
+        from django.conf import settings
+
+        from cases.models import Case, Submission
+        from cases.services.reassignment import ensure_cases_changeable
+        from common.logging import describe_user
 
         if not primary_id:
             raise ValidationError({"primary_id": "primary_id is required."})
@@ -224,6 +255,18 @@ class DefendantService:
                 {"defendants": f"Defendant(s) not found: {sorted(missing)}"}
             )
 
+        # Merging changes every case naming the merged defendants, so it
+        # follows the same rule as editing them: complete cases need an
+        # administrator.
+        ensure_cases_changeable(
+            list(
+                Case.objects.filter(defendants__pk__in=secondary_ids)
+                .distinct()
+                .prefetch_related("forms")
+            ),
+            user,
+        )
+
         primary = Defendant.objects.get(pk=primary_id)
         cases_reassigned = 0
 
@@ -238,6 +281,10 @@ class DefendantService:
 
             secondary.delete()
 
+        settings.LOGGER.info(
+            f"{describe_user(user)} merged defendants {secondary_ids} into "
+            f"{primary.full_name} ({primary.pk}); moved {cases_reassigned} case(s)"
+        )
         return {
             "message": "Merge completed successfully.",
             "primary_id": primary_id,

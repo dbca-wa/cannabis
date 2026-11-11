@@ -48,16 +48,19 @@ describe("derivePracticeStep", () => {
 		).toBe(4);
 	});
 
-	it("is step 5 for all finalised states (batching, in_batch, complete)", () => {
+	it("is step 5 once finalised and waiting for a batch", () => {
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "batching" })
 		).toBe(5);
+	});
+
+	it("is step 6 once in a batch, and stays there when complete", () => {
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "in_batch" })
-		).toBe(5);
+		).toBe(6);
 		expect(
 			derivePracticeStep({ caseExists: true, derivedStatus: "complete" })
-		).toBe(5);
+		).toBe(6);
 	});
 });
 
@@ -75,10 +78,21 @@ describe("getPracticeGuidance", () => {
 		expect(g.currentStep).toBe(5);
 	});
 
-	it("has five steps and a merged batch-and-complete final step", () => {
-		const g = getPracticeGuidance("/batches", 5);
-		expect(g.steps.length).toBe(5);
-		expect(g.heading).toMatch(/Batch and complete/i);
+	it("has the same six steps as the How To page", () => {
+		const g = getPracticeGuidance("/batches", 6);
+		expect(g.steps.map((s) => s.title)).toEqual([
+			"Create the case",
+			"Record the samples",
+			"Generate certificates",
+			"Finalise the case",
+			"Batch the case",
+			"Record the invoice",
+		]);
+		expect(g.heading).toMatch(/Step 6 — Record the invoice/);
+	});
+
+	it("keeps the invoice step on the batches page", () => {
+		expect(getPracticeGuidance("/batches", 6).currentStep).toBe(6);
 	});
 
 	it("tells the user to click New Case when not yet on the create form", () => {
@@ -100,7 +114,7 @@ describe("getPracticeGuidance", () => {
 
 describe("getPracticeGuidance — reference mode (practice = false)", () => {
 	it("drops the practice-only phrasing from the instructions", () => {
-		for (let step = 1; step <= 5; step++) {
+		for (let step = 1; step <= 6; step++) {
 			const g = getPracticeGuidance("/cases", step, false);
 			const all = `${g.heading} ${g.instructions.join(" ")}`;
 			expect(all).not.toMatch(/brief below/i);

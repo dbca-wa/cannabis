@@ -7,6 +7,7 @@
 import fixtureText from "../../../../../backend/cases/tests/fixtures/certificate_wording.json?raw";
 import {
 	composeSectionC,
+	femalePlantLine,
 	formatOfficer,
 	sectionBText,
 	summariseResults,
@@ -28,6 +29,12 @@ interface ResultCase {
 interface SectionCCase {
 	bag_lines: string[];
 	note: string | null;
+	female_line: string | null;
+	expected: string | null;
+}
+
+interface FemaleCase {
+	bags: [string, boolean][];
 	expected: string | null;
 }
 
@@ -45,6 +52,7 @@ const fixture = JSON.parse(fixtureText) as {
 	wording_version: number;
 	results: ResultCase[];
 	section_c: SectionCCase[];
+	female: FemaleCase[];
 	officers: OfficerCase[];
 };
 
@@ -53,7 +61,8 @@ const describeBags = (bags: string[]) => bags.join(", ");
 describe("certificate wording parity with the PDF", () => {
 	it("covers every combination", () => {
 		expect(fixture.results).toHaveLength(1364);
-		expect(fixture.section_c).toHaveLength(42);
+		expect(fixture.section_c).toHaveLength(108);
+		expect(fixture.female).toHaveLength(584);
 		expect(fixture.officers).toHaveLength(452);
 	});
 
@@ -72,7 +81,24 @@ describe("certificate wording parity with the PDF", () => {
 	it.each(fixture.section_c.map((c, i) => [i, c] as const))(
 		"Section C case %i",
 		(_i, c) => {
-			expect(composeSectionC(c.bag_lines, c.note)).toBe(c.expected);
+			expect(composeSectionC(c.bag_lines, c.note, c.female_line)).toBe(
+				c.expected
+			);
+		}
+	);
+
+	it.each(fixture.female.map((c, i) => [i, c] as const))(
+		"female plant case %i",
+		(_i, c) => {
+			expect(
+				femalePlantLine(
+					c.bags.map(([determination, female], i) => ({
+						tag: `T${i + 1}`,
+						determination,
+						female,
+					}))
+				)
+			).toBe(c.expected);
 		}
 	);
 

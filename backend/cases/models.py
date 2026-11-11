@@ -111,7 +111,7 @@ class Case(AuditModel):
     # Priority3Form.phase and CasePhaseHistory.
     class PhaseChoices(models.TextChoices):
         ASSESSMENT = "assessment", "Assessment"
-        UNSIGNED_GENERATION = "unsigned_generation", "Unsigned Certificate"
+        UNSIGNED_GENERATION = "unsigned_generation", "Certificates"
         BATCHING = "batching", "Batching"
         IN_BATCH = "in_batch", "In Batch"
         COMPLETE = "complete", "Complete"
@@ -643,6 +643,14 @@ class Certificate(AuditModel):
         blank=True,
         null=True,
         help_text="Requesting officer text as printed on the PDF",
+    )
+    # A hash of everything the PDF printed. Empty for certificates made before
+    # it was recorded (including migrated ones), which are never flagged.
+    printed_fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="Hash of the printed content, to spot later changes",
     )
 
     pdf_generating = models.BooleanField(

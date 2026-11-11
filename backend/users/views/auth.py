@@ -277,13 +277,8 @@ class ForgotPasswordView(APIView):
 
             if system_settings.send_emails_to_self:
                 recipient_list = [system_settings.forward_certificate_emails_to]
-                logger.info(
-                    f"Sending password reset code to admin "
-                    f"({system_settings.forward_certificate_emails_to}) instead of {email}"
-                )
             else:
                 recipient_list = [email]
-                logger.info(f"Sending password reset code to actual recipient: {email}")
 
             # Send via the centralised email service (renders the shared
             # emails/ template, attaches the inline logo, applies test mode).
@@ -294,11 +289,21 @@ class ForgotPasswordView(APIView):
                 context=context,
             )
 
-            # Log the password reset request
-            SecurityEventLogger.log_password_reset_requested(email, exists=True)
+            redirected = (
+                f" (sent to {recipient_list[0]} instead)"
+                if recipient_list != [email]
+                else ""
+            )
+            settings.LOGGER.info(
+                f"{describe_user(user)} asked for a password reset code" f"{redirected}"
+            )
 
         except User.DoesNotExist:
-            SecurityEventLogger.log_password_reset_requested(email, exists=False)
+            # The response is the same either way, so nobody can tell which
+            # emails have accounts; the log records the attempt.
+            settings.LOGGER.info(
+                f"A password reset code was asked for {email}, which has no account"
+            )
 
         except Exception as e:
             logger.error(f"Failed to send password reset code to {email}: {str(e)}")
@@ -403,12 +408,7 @@ class VerifyResetCodeView(APIView):
                     email, client_ip, attempt_count
                 )
 
-                # Log the failed attempt
-                SecurityEventLogger.log_password_reset_failed(
-                    email=email,
-                    reason="invalid_code",
-                    token_prefix=f"code_{code}",
-                )
+                # The code service has already logged why the code failed.
 
                 # Provide specific error messages based on the failure reason
                 if "expired" in message.lower():
@@ -438,8 +438,9 @@ class VerifyResetCodeView(APIView):
             # Clear failed attempts after successful verification
             BruteForceProtectionThrottle.clear_failed_attempts(email, client_ip)
 
-            # Log successful verification
-            SecurityEventLogger.log_password_reset_success(email)
+            settings.LOGGER.info(
+                f"{describe_user(user)} signed in with a password reset code"
+            )
 
             # Return authentication tokens and user data
             from ..serializers import UserJWTObjectSerializer
@@ -549,6 +550,10 @@ class PasswordUpdateView(APIView):
             return ErrorResponseBuilder.build_validation_error_response(field_errors)
 
         try:
+            # Resets also skip the current password, so whether this is the
+            # account's first password is read from the account itself.
+            first_password = user.password_last_changed is None
+
             # Update password
             user.set_password(new_password)
             user.password_last_changed = timezone.now()
@@ -561,11 +566,18 @@ class PasswordUpdateView(APIView):
                 email=user.email, is_valid=True, is_used=False
             ).update(is_valid=False)
 
-            # Log the password change
-            SecurityEventLogger.log_password_update_success(user.email, is_first_time)
+            # Log the password change (one line, naming the user)
             settings.LOGGER.info(
                 f"{describe_user(user)} "
-                f"{'set their initial password' if is_first_time else 'changed their password'}"
+                + (
+                    "set their initial password"
+                    if first_password
+                    else (
+                        "set a new password after a reset"
+                        if is_first_time
+                        else "changed their password"
+                    )
+                )
             )
 
             # Return success response

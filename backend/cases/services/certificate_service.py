@@ -8,6 +8,10 @@ the PDF. Generation never touches any other certificate on the case, and a
 certificate that already belongs to a batch is frozen and cannot be altered.
 """
 
+import dataclasses
+import hashlib
+import json
+
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -25,6 +29,18 @@ from .workflow_service import WorkflowService
 
 CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
 MAX_BAGS_PER_CERTIFICATE = 5
+
+# Context keys left out of the content fingerprint: the certification date
+# changes on every regeneration and the rest are fixed page furniture.
+_UNFINGERPRINTED_KEYS = frozenset({"certification_date", "logo_path", "dbca_org_data"})
+
+# Stands in for "use the certificate's own Section C note".
+_OWN_NOTE = object()
+
+# Stored for an older certificate that already differed from its case when
+# fingerprints were first recorded. Never equal to a real fingerprint, so the
+# certificate shows as out of date until it is regenerated or re-packaged.
+UNVERIFIED_PRINT = "unverified"
 
 
 class CertificateService:
@@ -148,13 +164,27 @@ class CertificateService:
         ]
 
     @staticmethod
+    def _female_flags(bags):
+        """``(original tag, determination, female)`` for each assessed bag."""
+        return [
+            (
+                bag.seal_tag_numbers,
+                bag.assessment.determination if bag.assessment else None,
+                bool(bag.contains_female_plants),
+            )
+            for bag in bags
+        ]
+
+    @staticmethod
     def needs_regeneration_reasons(certificate):
         """Why a generated, unbatched certificate no longer matches its case.
 
         Returns a list holding "wording" when it was generated with older
-        certificate wording, and "officers" when the officer text it would
-        print now differs from what it printed. Empty for a batched certificate
-        (frozen) or one with no PDF yet.
+        certificate wording, "officers" when the officer text it would print
+        now differs from what it printed, and "details" when anything else it
+        prints has changed (for example the defendant or the police
+        reference). Empty for a batched certificate (see needs_repackage) or
+        one with no PDF yet.
         """
         if certificate.batch_id is not None or not certificate.pdf_file:
             return []
@@ -169,15 +199,22 @@ class CertificateService:
             certificate.printed_requesting_officer,
         ):
             reasons.append("officers")
+        if not reasons and CertificateService._content_changed(certificate):
+            reasons.append("details")
         return reasons
 
     @staticmethod
-    def build_certificate_context(certificate):
+    def build_certificate_context(certificate, note=_OWN_NOTE):
         """Build the PDF template context for a certificate.
 
         The certificate's covered bags and owning case are reached through its
         form: the police reference is the case number, and the officers and
         defendants come from the case.
+
+        Args:
+            certificate: The certificate to build for.
+            note: The Section C note to print. Defaults to the note stored on
+                the certificate.
 
         Raises:
             ValidationError: If the form has no bags, or any bag has a result
@@ -250,10 +287,12 @@ class CertificateService:
             "receipt_date": receipt_date,
             # Section B's result sentence. Only section_b.italic is italicised.
             "section_b": results.section_b,
-            # Section C: the automatic per-bag result lines, then the
-            # botanist's own note.
+            # Section C: the automatic per-bag result lines, the botanist's
+            # own note, then the automatic female plant sentence.
             "other_matters": wording.compose_section_c(
-                results.bag_lines, certificate.additional_notes
+                results.bag_lines,
+                certificate.additional_notes if note is _OWN_NOTE else note,
+                wording.female_plant_line(CertificateService._female_flags(bags)),
             )
             or "None",
             "certification_date": certification_date,
@@ -277,6 +316,119 @@ class CertificateService:
         certificate.wording_version = wording.CERTIFICATE_WORDING_VERSION
         certificate.printed_conveying_officer = conveying
         certificate.printed_requesting_officer = requesting
+        certificate.printed_fingerprint = CertificateService.content_fingerprint(
+            certificate
+        )
+
+    @staticmethod
+    def form_note(form):
+        """The form's Section C note as a certificate stores it."""
+        return (form.additional_notes or "").strip() or None
+
+    @staticmethod
+    def content_fingerprint(certificate, note=_OWN_NOTE):
+        """A hash of everything the certificate prints, bar the date.
+
+        Returns None when the certificate cannot be printed as things stand
+        (for example a bag has lost its result), which never matches a stored
+        fingerprint.
+        """
+        try:
+            context = CertificateService.build_certificate_context(certificate, note)
+        except ValidationError:
+            return None
+        printed = {
+            key: value
+            for key, value in context.items()
+            if key not in _UNFINGERPRINTED_KEYS
+        }
+        printed["section_b"] = dataclasses.asdict(printed["section_b"])
+        encoded = json.dumps(printed, sort_keys=True, default=str)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _content_changed(certificate):
+        """Whether the certificate would print differently now.
+
+        Uses the form's current Section C note, as regenerating or
+        re-packaging would. Never true for a certificate with no stored
+        fingerprint: those were made before fingerprints were recorded,
+        including every migrated certificate.
+        """
+        if not certificate.printed_fingerprint or not certificate.pdf_file:
+            return False
+        current = CertificateService.content_fingerprint(
+            certificate, CertificateService.form_note(certificate.form)
+        )
+        return current != certificate.printed_fingerprint
+
+    @staticmethod
+    def _matched_print_when_recorded(certificate):
+        """Whether an older certificate still matched its case by every check
+        the app had before fingerprints: wording version, officer text, the
+        Section C note, and no bag or result changed after it was made.
+        """
+        if certificate.wording_version != wording.CERTIFICATE_WORDING_VERSION:
+            return False
+        if CertificateService.printed_officers(certificate.form.case) != (
+            certificate.printed_conveying_officer,
+            certificate.printed_requesting_officer,
+        ):
+            return False
+        own_note = (certificate.additional_notes or "").strip() or None
+        if CertificateService.form_note(certificate.form) != own_note:
+            return False
+        made = certificate.updated_at
+        for bag in certificate.form.bags.select_related("assessment"):
+            assessment = getattr(bag, "assessment", None)
+            if bag.updated_at > made or (assessment and assessment.updated_at > made):
+                return False
+        return True
+
+    @staticmethod
+    def record_existing_fingerprints():
+        """Give certificates made before fingerprints were recorded a starting
+        point, so later changes to their case are caught.
+
+        A certificate that still matches its case gets the fingerprint of what
+        it prints now. One that already differs gets a marker that never
+        matches, so it shows as out of date (or its batch as needing a
+        re-package). Finished, invoiced work is the exception: its current
+        state is taken as the starting point rather than flagged, and only
+        later changes are caught. Returns ``(matched, out_of_date)`` counts.
+        """
+        matched = out_of_date = 0
+        pending = (
+            Certificate.objects.filter(printed_fingerprint__isnull=True)
+            .exclude(pdf_file="")
+            .exclude(pdf_file__isnull=True)
+            .select_related("form__case")
+        )
+        for certificate in pending.iterator():
+            current = CertificateService.content_fingerprint(certificate)
+            finished = certificate.form.phase == Case.PhaseChoices.COMPLETE
+            if current and (
+                finished or CertificateService._matched_print_when_recorded(certificate)
+            ):
+                fingerprint = current
+                matched += 1
+            else:
+                fingerprint = UNVERIFIED_PRINT
+                out_of_date += 1
+            Certificate.objects.filter(pk=certificate.pk).update(
+                printed_fingerprint=fingerprint
+            )
+        return matched, out_of_date
+
+    @staticmethod
+    def needs_repackage(certificate):
+        """Whether a batched certificate no longer matches its case.
+
+        Re-packaging the batch rebuilds the certificate from the case.
+        """
+        if certificate.batch_id is None:
+            return False
+        return CertificateService._content_changed(certificate)
 
     @staticmethod
     def _raise_if_unprintable(bags):
@@ -423,6 +575,7 @@ class CertificateService:
                 "wording_version",
                 "printed_conveying_officer",
                 "printed_requesting_officer",
+                "printed_fingerprint",
             ]
         )
 

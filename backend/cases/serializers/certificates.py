@@ -23,6 +23,7 @@ class CertificateSerializer(serializers.ModelSerializer):
     is_batch_eligible = serializers.ReadOnlyField()
     regeneration_reasons = serializers.SerializerMethodField()
     needs_regeneration = serializers.SerializerMethodField()
+    needs_repackage = serializers.SerializerMethodField()
 
     class Meta:
         model = Certificate
@@ -45,16 +46,18 @@ class CertificateSerializer(serializers.ModelSerializer):
             "pdf_size",
             "needs_regeneration",
             "regeneration_reasons",
+            "needs_repackage",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "certificate_number", "created_at", "updated_at"]
 
     def get_regeneration_reasons(self, obj):
-        """Why the PDF no longer matches its case: "wording" and/or "officers".
+        """Why the PDF no longer matches its case: "wording", "officers" or
+        "details".
 
-        Bag and Section C note changes are detected by the frontend from
-        timestamps and the stored note; these two need the backend.
+        Bag and Section C note changes are also detected by the frontend from
+        timestamps and the stored note.
         """
         # Imported here to keep serializers free of service imports at load.
         from ..services.certificate_service import CertificateService
@@ -66,6 +69,12 @@ class CertificateSerializer(serializers.ModelSerializer):
 
     def get_needs_regeneration(self, obj):
         return bool(self.get_regeneration_reasons(obj))
+
+    def get_needs_repackage(self, obj):
+        """A batched certificate whose case changed since it was packaged."""
+        from ..services.certificate_service import CertificateService
+
+        return CertificateService.needs_repackage(obj)
 
     def get_pdf_url(self, obj):
         """Get full URL for the certificate PDF."""

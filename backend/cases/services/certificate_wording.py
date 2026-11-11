@@ -12,8 +12,11 @@ every combination, and both test suites check their code against it, so the
 two cannot drift apart unnoticed.
 """
 
+import re
 from dataclasses import dataclass
 from typing import Optional, Sequence
+
+from common.utils import join_with_and
 
 # Bump whenever printed wording changes. Certificates generated with an older
 # version are flagged as needing regeneration.
@@ -35,6 +38,22 @@ BAG_LINE_PHRASES = {
     DEGRADED: "was too degraded and could not be identified",
     INCONCLUSIVE: "was inconclusive",
 }
+
+FEMALE_PHRASE = "contained female plants"
+ALL_FEMALE_LINE = f"All bags {FEMALE_PHRASE}."
+
+# Sentences the system writes into Section C, compared lower-case without a
+# trailing full stop. A note line matching one is superseded (see
+# compose_section_c).
+SYSTEM_SENTENCE = re.compile(
+    r"^(?:bags? \S.* (?:"
+    + "|".join(re.escape(phrase.lower()) for phrase in BAG_LINE_PHRASES.values())
+    + "|"
+    + re.escape(FEMALE_PHRASE)
+    + r")|all bags "
+    + re.escape(FEMALE_PHRASE)
+    + r")$"
+)
 
 MIXED_NOT_CANNABIS = "mixed_not_cannabis"
 
@@ -150,18 +169,57 @@ def summarise(bags: Sequence[tuple[str, str]]) -> Results:
     )
 
 
+def female_plant_line(bags: Sequence[tuple[str, str, bool]]) -> Optional[str]:
+    """The Section C female plant sentence for a form, or None.
+
+    Args:
+        bags: ``(original tag, determination, contains female plants)`` for
+            each bag, in form order. Only Cannabis sativa bags count.
+
+    Reads "All bags contained female plants." when every bag on a form of two
+    or more does; otherwise names them, e.g. "Bags T1 and T3 contained female
+    plants." or "Bag T2 contained female plants.".
+    """
+    tags = [
+        tag
+        for tag, determination, female in bags
+        if female and determination == CANNABIS
+    ]
+    if not tags:
+        return None
+    if len(tags) == len(bags) and len(bags) > 1:
+        return ALL_FEMALE_LINE
+    label = "Bag" if len(tags) == 1 else "Bags"
+    return f"{label} {join_with_and(tags)} {FEMALE_PHRASE}."
+
+
 def _comparable(line: str) -> str:
     text = line.strip().lower()
     return text[:-1] if text.endswith(".") else text
 
 
-def compose_section_c(bag_lines: Sequence[str], note: Optional[str]) -> Optional[str]:
+def is_system_sentence(line: str) -> bool:
+    """True for a bag result or female plant sentence the system writes.
+
+    Such a sentence typed into the note, or left there by a template, is
+    always superseded by the one worked out from the current bags, so a stale
+    copy can never contradict the certificate.
+    """
+    return bool(SYSTEM_SENTENCE.match(_comparable(line)))
+
+
+def compose_section_c(
+    bag_lines: Sequence[str],
+    note: Optional[str],
+    female_line: Optional[str] = None,
+) -> Optional[str]:
     """Join the automatic lines and the botanist's note for Section C.
 
-    The automatic lines come first. A note line that repeats an automatic line
-    (ignoring case, surrounding spaces and a trailing full stop) is dropped so
-    it prints once. Returns None when there is nothing to print, which the
-    template shows as "None".
+    Order: the bag result lines, then the botanist's note, then the female
+    plant sentence. Any note line that is itself a bag result or female plant
+    sentence (ignoring case, surrounding spaces and a trailing full stop) is
+    dropped, because the system writes those from the current bags. Returns
+    None when there is nothing to print, which the template shows as "None".
     """
     note_lines = [
         line.strip()
@@ -172,14 +230,13 @@ def compose_section_c(bag_lines: Sequence[str], note: Optional[str]) -> Optional
     while note_lines and not note_lines[-1]:
         note_lines.pop()
 
-    automatic = {_comparable(line) for line in bag_lines}
-    kept = [line for line in note_lines if _comparable(line) not in automatic]
+    kept = [line for line in note_lines if not is_system_sentence(line)]
     while kept and not kept[0]:
         kept.pop(0)
     while kept and not kept[-1]:
         kept.pop()
 
-    lines = list(bag_lines) + kept
+    lines = list(bag_lines) + kept + ([female_line] if female_line else [])
     return "\n".join(lines) if lines else None
 
 

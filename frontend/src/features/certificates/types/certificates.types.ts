@@ -30,12 +30,19 @@ export interface Certificate {
 	pdf_size: number;
 	/**
 	 * True when the PDF no longer matches its case for a reason only the
-	 * backend can see: older certificate wording, or officer text that has
+	 * backend can see: older certificate wording, officer text that has
 	 * changed (a different officer, an edited officer record or a changed
-	 * print option). Never true for a batched certificate.
+	 * print option), or other printed details such as the defendant or police
+	 * reference. Never true for a batched certificate (see needs_repackage).
 	 */
 	needs_regeneration?: boolean;
-	regeneration_reasons?: Array<"wording" | "officers">;
+	regeneration_reasons?: Array<"wording" | "officers" | "details">;
+	/**
+	 * True when a batched certificate's case changed after it was packaged.
+	 * Re-packaging the batch brings it up to date. Never true for
+	 * certificates packaged before this was tracked.
+	 */
+	needs_repackage?: boolean;
 	created_at: string;
 	updated_at: string;
 }
