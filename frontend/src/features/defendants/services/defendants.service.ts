@@ -1,4 +1,6 @@
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
+import { withReplacement } from "@/shared/utils/record-usage.utils";
+import type { RecordUsage } from "@/shared/types/record-usage.types";
 import type {
 	Defendant,
 	DefendantCreateRequest,
@@ -63,9 +65,19 @@ export const updateDefendant = async (
 };
 
 /** Delete a defendant */
-export const deleteDefendant = async (id: number): Promise<void> => {
-	await apiClient.delete(ENDPOINTS.DEFENDANTS.DELETE(id));
+export const deleteDefendant = async (
+	id: number,
+	replacementId?: number | null
+): Promise<void> => {
+	// Cases naming the defendant move to the replacement before deletion.
+	await apiClient.delete(
+		withReplacement(ENDPOINTS.DEFENDANTS.DELETE(id), replacementId)
+	);
 };
+
+/** The cases that name a defendant, shown before deleting them. */
+export const getDefendantUsage = async (id: number): Promise<RecordUsage> =>
+	apiClient.get<RecordUsage>(ENDPOINTS.DEFENDANTS.USAGE(id));
 
 /** Merge secondary defendants into a primary defendant */
 export const mergeDefendants = async (

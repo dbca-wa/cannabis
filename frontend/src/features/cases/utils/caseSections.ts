@@ -46,11 +46,24 @@ export interface CaseSectionFlags extends CaseSectionValidity {
 	allBagsAssessed: boolean;
 	/** At least one form exists and every form has a generated certificate. */
 	allFormsHaveCerts: boolean;
+	/** The same officer is chosen as both conveying and requesting officer. */
+	sameOfficerTwice: boolean;
+	/** At least one form has a generated certificate. */
+	anyFormHasCert: boolean;
+	/** At least one form exists and every form is marked ready. */
+	allFormsReady: boolean;
 	/** A generated certificate no longer matches its bag data. */
 	certificatesStale: boolean;
 	/** At least one form exists. */
 	hasForms: boolean;
 }
+
+/** Phases a form is in once its case has been finalised. */
+export const FINALISED_PHASES: readonly string[] = [
+	"batching",
+	"in_batch",
+	"complete",
+];
 
 type BagWithAssessment = {
 	assessment?: { determination?: string | null } | null;
@@ -74,13 +87,28 @@ export const deriveCaseSectionFlags = (
 	caseData: Record<string, unknown> | null,
 	forms: readonly Priority3Form[] | undefined
 ): CaseSectionFlags => {
-	const details = !!(
-		caseData &&
-		(caseData.case_number as string)?.trim() &&
-		(caseData.received as string)?.trim() &&
-		caseData.submitting_officer_id &&
-		caseData.approved_botanist_id
-	);
+	// One person cannot be both the conveying and the requesting officer. Older
+	// cases that were finalised with one officer in both roles are left alone:
+	// the rule applies going forward, and their certificates are already done.
+	const allFinalised =
+		!!forms &&
+		forms.length > 0 &&
+		forms.every((form) => FINALISED_PHASES.includes(form.phase as string));
+	const sameOfficerTwice =
+		!allFinalised &&
+		!!(
+			caseData?.submitting_officer_id &&
+			caseData.submitting_officer_id === caseData.requesting_officer_id
+		);
+
+	const details =
+		!!(
+			caseData &&
+			(caseData.case_number as string)?.trim() &&
+			(caseData.received as string)?.trim() &&
+			caseData.submitting_officer_id &&
+			caseData.approved_botanist_id
+		) && !sameOfficerTwice;
 
 	const hasForms = !!forms && forms.length > 0;
 
@@ -100,6 +128,8 @@ export const deriveCaseSectionFlags = (
 
 	const allFormsHaveCerts =
 		hasForms && forms!.every((form) => !!form.certificate);
+	const anyFormHasCert = hasForms && forms!.some((form) => !!form.certificate);
+	const allFormsReady = hasForms && forms!.every((form) => !!form.marked_ready);
 
 	// A certificate whose bag data changed after it was generated is out of date
 	// and must be regenerated before the case can be finalised.
@@ -107,13 +137,18 @@ export const deriveCaseSectionFlags = (
 
 	return {
 		details,
+		sameOfficerTwice,
 		// Section C notes are not required — they default to "None".
 		assessment: allFormsHaveBags && allBagsAssessed,
-		// A stale certificate is not a finished certificate.
-		certificates: allFormsHaveCerts && !certificatesStale,
+		// The section is done when every certificate has been generated, is up
+		// to date and has been checked and marked ready, which is exactly what
+		// finalising needs. A stale certificate is not a finished certificate.
+		certificates: allFormsHaveCerts && !certificatesStale && allFormsReady,
 		allFormsHaveBags,
 		allBagsAssessed,
 		allFormsHaveCerts,
+		anyFormHasCert,
+		allFormsReady,
 		certificatesStale,
 		hasForms,
 	};
@@ -154,14 +189,16 @@ export const deriveCaseSectionStates = (
 			? "attention"
 			: "notStarted",
 
-	// Certificates cannot be generated until the assessment is finished, so
-	// they only ask for attention once it is. A generated-but-stale certificate
-	// is its own state: not incomplete, but out of date and needing regeneration.
+	// Certificates are the next step once the assessment is finished, not a
+	// mistake, so they stay neutral until the first one is generated. After
+	// that, a missing or unchecked certificate asks for attention. A
+	// generated-but-stale certificate is its own state: out of date and needing
+	// regeneration.
 	certificates: flags.certificates
 		? "complete"
 		: flags.certificatesStale
 			? "outOfDate"
-			: flags.assessment
+			: flags.assessment && flags.anyFormHasCert
 				? "attention"
 				: "notStarted",
 });
@@ -172,7 +209,10 @@ export const describeSectionState = (
 	flags: CaseSectionFlags
 ): string | null => {
 	if (sectionId === "details") {
-		return flags.details ? null : "Some required case details are missing";
+		if (flags.details) return null;
+		return flags.sameOfficerTwice
+			? "The conveying and requesting officers must be different people"
+			: "Some required case details are missing";
 	}
 
 	if (sectionId === "assessment") {
@@ -187,5 +227,8 @@ export const describeSectionState = (
 		return "A certificate is out of date — regenerate it";
 	if (!flags.hasForms) return "Add a Priority 3 form to begin";
 	if (!flags.assessment) return "Finish the assessment first";
-	return "Every form needs a generated certificate";
+	if (!flags.anyFormHasCert) return "Generate a certificate for each form";
+	if (!flags.allFormsHaveCerts)
+		return "Every form needs a generated certificate";
+	return "Mark each certificate ready once you have checked it";
 };

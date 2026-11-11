@@ -4,7 +4,6 @@ import json
 import logging
 
 from django.conf import settings
-from django.db import transaction
 from django.db.models import Case as CaseExpr
 from django.db.models import Count, IntegerField, Q, When
 from django.http import HttpResponse, StreamingHttpResponse
@@ -23,7 +22,10 @@ from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
 
-from cases.models import Case  # noqa: E402
+from cases.services.reassignment import (  # noqa: E402
+    describe_case,
+    replacement_from_request,
+)
 
 from ..models import PoliceOfficer  # noqa: E402
 from ..serializers import (  # noqa: E402
@@ -31,6 +33,7 @@ from ..serializers import (  # noqa: E402
     PoliceOfficerSerializer,
     PoliceOfficerTinySerializer,
 )
+from ..services import OfficerService  # noqa: E402
 
 # ============================================================================
 # region POLICE OFFICER VIEWS
@@ -254,11 +257,29 @@ class PoliceOfficerDetailView(RetrieveUpdateDestroyAPIView):
         serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted police officer "
-            f"{instance} ({instance.pk})"
+        # Cases naming this officer are moved to ?replacement=<id> first, so
+        # no case is left without its officer.
+        replacement = replacement_from_request(
+            self.request, PoliceOfficer.objects.all(), "officer"
         )
-        super().perform_destroy(instance)
+        OfficerService.delete_officer(instance, self.request.user, replacement)
+
+
+class PoliceOfficerUsageView(APIView):
+    """GET: the cases that name an officer, shown before deleting them."""
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request, pk):
+        officer = get_object_or_404(PoliceOfficer, pk=pk)
+        return Response(
+            {
+                "cases": [
+                    describe_case(case, roles)
+                    for case, roles in OfficerService.case_usage(officer)
+                ]
+            }
+        )
 
 
 class PoliceOfficerExportView(APIView):
@@ -642,44 +663,20 @@ class OfficerMergeView(APIView):
         source_id = request.data.get("source_officer_id")
         target_id = request.data.get("target_officer_id")
 
-        # Validation
-        if not source_id or not target_id:
-            raise ValidationError(
-                "Both source_officer_id and target_officer_id are required."
-            )
-
-        if int(source_id) == int(target_id):
-            raise ValidationError("Cannot merge an officer into itself.")
-
-        source = get_object_or_404(PoliceOfficer, pk=source_id)
-        target = get_object_or_404(PoliceOfficer, pk=target_id)
-
-        with transaction.atomic():
-            # Reassign cases where source is submitting officer
-            sub_count = Case.objects.filter(submitting_officer=source).update(
-                submitting_officer=target
-            )
-
-            # Reassign cases where source is requesting officer
-            req_count = Case.objects.filter(requesting_officer=source).update(
-                requesting_officer=target
-            )
-
-            # Delete the source officer
-            source_name = source.full_name
-            source.delete()
+        result = OfficerService.merge_officers(source_id, target_id, request.user)
 
         settings.LOGGER.info(
-            f"{describe_user(request.user)} merged officer '{source_name}' "
-            f"(id={source_id}) into '{target.full_name}' (id={target_id}). "
-            f"Reassigned {sub_count + req_count} cases."
+            f"{describe_user(request.user)} merged officer "
+            f"'{result['source_name']}' ({source_id}) into "
+            f"'{result['target_name']}' ({result['merged_into']}). "
+            f"Reassigned {result['cases_reassigned']} cases."
         )
 
         return Response(
             {
-                "merged_into": target.id,
-                "target_name": target.full_name,
-                "cases_reassigned": sub_count + req_count,
+                "merged_into": result["merged_into"],
+                "target_name": result["target_name"],
+                "cases_reassigned": result["cases_reassigned"],
             },
             status=HTTP_200_OK,
         )

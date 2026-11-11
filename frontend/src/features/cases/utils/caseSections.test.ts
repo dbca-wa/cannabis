@@ -20,7 +20,8 @@ const completeCaseData = () => ({
 const form = (
 	id: number,
 	bags: Array<{ determination: string | null }>,
-	certificate: unknown = null
+	certificate: unknown = null,
+	markedReady = !!certificate
 ) =>
 	({
 		id,
@@ -31,6 +32,7 @@ const form = (
 				: null,
 		})),
 		certificate,
+		marked_ready: markedReady,
 	}) as unknown as Priority3Form;
 
 /**
@@ -189,12 +191,25 @@ describe("deriveCaseSectionFlags — certificates", () => {
 		expect(flags.certificates).toBe(false);
 	});
 
-	it("is complete when every form has a certificate", () => {
+	it("is complete when every form has a certificate marked ready", () => {
 		const flags = deriveCaseSectionFlags(completeCaseData(), [
 			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }),
 			form(2, [{ determination: "cannabis_sativa" }], { id: 10 }),
 		]);
+		expect(flags.allFormsReady).toBe(true);
 		expect(flags.certificates).toBe(true);
+	});
+
+	// Finalising needs every certificate checked, so the section must not show
+	// a tick before then.
+	it("is incomplete while a generated certificate is not marked ready", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }),
+			form(2, [{ determination: "cannabis_sativa" }], { id: 10 }, false),
+		]);
+		expect(flags.allFormsHaveCerts).toBe(true);
+		expect(flags.allFormsReady).toBe(false);
+		expect(flags.certificates).toBe(false);
 	});
 });
 
@@ -290,9 +305,52 @@ describe("deriveCaseSectionStates", () => {
 		expect(deriveCaseSectionStates(flags).certificates).toBe("notStarted");
 	});
 
-	it("asks for attention on certificates once the assessment is done", () => {
+	// Generating is the next step, not a mistake, so it is not shown in red.
+	it("keeps certificates neutral after the assessment until one is generated", () => {
 		const flags = deriveCaseSectionFlags(completeCaseData(), [
 			form(1, [{ determination: "cannabis_sativa" }]),
+		]);
+
+		expect(deriveCaseSectionStates(flags).certificates).toBe("notStarted");
+	});
+
+	it("asks for attention when a form still lacks a certificate", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }),
+			form(2, [{ determination: "cannabis_sativa" }]),
+		]);
+
+		expect(deriveCaseSectionStates(flags).certificates).toBe("attention");
+	});
+
+	it("flags one officer in both roles on a case still being worked on", () => {
+		const flags = deriveCaseSectionFlags(
+			{ ...completeCaseData(), requesting_officer_id: 1 },
+			[form(1, [{ determination: "cannabis_sativa" }])]
+		);
+
+		expect(flags.sameOfficerTwice).toBe(true);
+		expect(flags.details).toBe(false);
+		expect(describeSectionState("details", flags)).toMatch(/different people/i);
+	});
+
+	it("leaves an older finalised case with one officer in both roles alone", () => {
+		const finalised = {
+			...form(1, [{ determination: "cannabis_sativa" }], { id: 9 }),
+			phase: "complete",
+		} as unknown as Priority3Form;
+		const flags = deriveCaseSectionFlags(
+			{ ...completeCaseData(), requesting_officer_id: 1 },
+			[finalised]
+		);
+
+		expect(flags.sameOfficerTwice).toBe(false);
+		expect(flags.details).toBe(true);
+	});
+
+	it("asks for attention when a certificate is not marked ready", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }, false),
 		]);
 
 		expect(deriveCaseSectionStates(flags).certificates).toBe("attention");
@@ -370,7 +428,28 @@ describe("describeSectionState", () => {
 		]);
 
 		expect(describeSectionState("certificates", flags)).toMatch(
-			/generated certificate/i
+			/generate a certificate for each form/i
+		);
+	});
+
+	it("names the form still missing a certificate", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }),
+			form(2, [{ determination: "cannabis_sativa" }]),
+		]);
+
+		expect(describeSectionState("certificates", flags)).toMatch(
+			/every form needs a generated certificate/i
+		);
+	});
+
+	it("asks for the ready mark once every certificate is generated", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			form(1, [{ determination: "cannabis_sativa" }], { id: 9 }, false),
+		]);
+
+		expect(describeSectionState("certificates", flags)).toMatch(
+			/mark each certificate ready/i
 		);
 	});
 

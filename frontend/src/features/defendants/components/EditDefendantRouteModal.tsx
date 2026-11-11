@@ -6,6 +6,7 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/shared/components/ui/dialog";
+import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
 import { EditDefendantForm } from "./forms";
 import { useDefendantById, useUpdateDefendant } from "../hooks/useDefendants";
 import type { EditDefendantFormData } from "../schemas/defendantSchemas";
@@ -100,6 +101,11 @@ export const EditDefendantRouteModal = () => {
 					onSubmit={handleSubmit}
 					onCancel={handleClose}
 					isSubmitting={updateDefendant.isPending}
+				/>
+				<DeleteRecordFooter
+					noun="defendant"
+					onDelete={() => navigate(`/defendants/${defendant.id}/delete`)}
+					disabled={updateDefendant.isPending}
 				/>
 			</DialogContent>
 		</Dialog>

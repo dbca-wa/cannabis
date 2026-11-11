@@ -21,6 +21,11 @@ import { BagCard } from "../BagCard";
 import { BulkAddBagsModal } from "../BulkAddBagsModal";
 import { useDrugBags } from "../../../../hooks/useDrugBags";
 import { TemplatePicker } from "../../../templates/TemplatePicker";
+import {
+	femalePlantLine,
+	sectionBText,
+	summariseResults,
+} from "../../../../utils/certificateWording";
 import { addBagsToForm } from "../../../../services/forms.service";
 import {
 	createAssessment,
@@ -276,6 +281,32 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const serverBags: DrugBag[] = Array.isArray(caseData?.bags)
 		? (caseData.bags as DrugBag[])
 		: [];
+
+	// What Section B and the automatic Section C lines will print, in the order
+	// the certificate lists the bags. Null until every bag has a result.
+	const orderedBags = [...serverBags].sort((a, b) => a.id - b.id);
+	const certificateResults = summariseResults(
+		orderedBags.map((b) => ({
+			tag: b.seal_tag_numbers,
+			determination: b.assessment?.determination,
+		}))
+	);
+	const femaleLine = femalePlantLine(
+		orderedBags.map((b) => ({
+			tag: b.seal_tag_numbers,
+			determination: b.assessment?.determination,
+			female: b.contains_female_plants,
+		}))
+	);
+	// Bag result lines print before the note and the female plant sentence
+	// after it; the box lists them in that order.
+	const automaticLines = [
+		...(certificateResults?.bagLines ?? []),
+		...(femaleLine ? [femaleLine] : []),
+	];
+	const resultsDiffer =
+		!!certificateResults &&
+		new Set(serverBags.map((b) => b.assessment?.determination)).size > 1;
 
 	const totalBags = serverBags.length + wrangler.state.bags.length;
 	const capReached = totalBags >= MAX_BAGS;
@@ -660,7 +691,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 			{/* Section C Notes (other matters for the certificate) */}
 			<SectionCard
 				title="Section C Notes"
-				isComplete={localNotes.trim().length > 0}
+				isComplete={localNotes.trim().length > 0 || automaticLines.length > 0}
 				isInvalid={false}
 				optional
 				completionLabel="Section C notes written"
@@ -679,6 +710,38 @@ export const AssessmentStep = observer(function AssessmentStep({
 							onFieldChange("additional_notes", resolved);
 						}}
 					/>
+					{/* The per-bag result lines the certificate adds by itself, shown
+					    so the botanist does not type them again. */}
+					{resultsDiffer && certificateResults && (
+						<p className="text-sm text-muted-foreground">
+							The bags have different results, so Section B will read &quot;
+							{sectionBText(certificateResults.sectionB)}&quot; and Section C
+							will list each bag below.
+						</p>
+					)}
+					{automaticLines.length > 0 && (
+						<section
+							aria-labelledby="automatic-lines-heading"
+							className="rounded-md border bg-muted/40 p-3"
+						>
+							<p
+								id="automatic-lines-heading"
+								className="mb-1 text-sm font-medium"
+							>
+								Added automatically from the bag results
+							</p>
+							<p className="mb-1.5 text-xs text-muted-foreground">
+								No need to type these. Result lines print before your note and
+								the female plants line after it. If your note has one of these
+								lines, the up-to-date one prints instead.
+							</p>
+							<ul className="space-y-0.5 text-sm">
+								{automaticLines.map((line) => (
+									<li key={line}>{line}</li>
+								))}
+							</ul>
+						</section>
+					)}
 					<div className="space-y-2">
 						<Label htmlFor="additional_notes">Other Matters (Section C)</Label>
 						<Textarea
@@ -710,8 +773,9 @@ export const AssessmentStep = observer(function AssessmentStep({
 								id="additional-notes-hint"
 								className="text-xs text-muted-foreground"
 							>
-								Shown on the certificate under &quot;Other Matters&quot;.
-								Defaults to &quot;None&quot; if left empty.
+								Shown on the certificate under &quot;Other Matters&quot;. Prints
+								&quot;None&quot; when this is empty and nothing is added
+								automatically.
 							</p>
 						</div>
 					</div>

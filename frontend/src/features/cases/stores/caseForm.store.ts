@@ -27,12 +27,6 @@ import { z } from "zod";
 // Schema for validating bag fields during form editing (excludes case ID since it's assigned on submission)
 const bagFieldsValidationSchema = createDrugBagSchema.omit({ case: true });
 
-// View mode types
-export type ViewMode = "data-entry" | "dual-view" | "preview-only";
-
-// Form section types for navigation
-export type FormSection = "case-details" | "officers-station" | "drug-bags";
-
 // Drug bag form data interface
 export interface DrugBagFormData {
 	id?: number; // For existing bags
@@ -62,6 +56,12 @@ export interface CaseFormData {
 	approved_botanist_id?: number;
 	finance_officer_id?: number;
 
+	// Certificate print options. Undefined until the system defaults are
+	// applied; the backend fills in any that are still undefined on create.
+	print_conveying_station?: boolean;
+	print_requesting_station?: boolean;
+	print_requesting_rank?: boolean;
+
 	// Defendants (array of IDs)
 	defendant_ids: number[];
 
@@ -70,20 +70,6 @@ export interface CaseFormData {
 
 	// Drug bags
 	bags: DrugBagFormData[];
-}
-
-// Certificate data interface for preview
-export interface CertificateData {
-	case_number: string;
-	received_date: string;
-	requesting_officer?: PoliceOfficerTiny;
-	submitting_officer?: PoliceOfficerTiny;
-	station?: PoliceStationTiny;
-	defendants: DefendantTiny[];
-	bags: DrugBagFormData[];
-	total_bags: number;
-	cannabis_present: boolean;
-	approved_botanist?: UserTiny;
 }
 
 // Validation error interface
@@ -108,8 +94,6 @@ export class CaseFormStore {
 	};
 
 	// UI state
-	currentView: ViewMode = "data-entry";
-	activeSection: FormSection = "case-details";
 	isSubmitting: boolean = false;
 	isDirty: boolean = false;
 	lastSaved: Date | null = null;
@@ -138,8 +122,6 @@ export class CaseFormStore {
 		makeObservable(this, {
 			// Observable state
 			formData: observable,
-			currentView: observable,
-			activeSection: observable,
 			isSubmitting: observable,
 			isDirty: observable,
 			lastSaved: observable,
@@ -154,8 +136,6 @@ export class CaseFormStore {
 
 			// Actions
 			updateField: action,
-			setView: action,
-			setActiveSection: action,
 			setSubmitting: action,
 			addDrugBag: action,
 			removeDrugBag: action,
@@ -178,7 +158,6 @@ export class CaseFormStore {
 			isValid: computed,
 			totalBags: computed,
 			hasAssessments: computed,
-			certificateData: computed,
 			canSubmit: computed,
 			formProgress: computed,
 			requiredFieldsCompleted: computed,
@@ -195,7 +174,6 @@ export class CaseFormStore {
 
 		logger.info("CaseFormStore initialised", {
 			autoSaveEnabled: this.autoSaveEnabled,
-			currentView: this.currentView,
 		});
 	}
 
@@ -378,26 +356,6 @@ export class CaseFormStore {
 	};
 
 	// ============================================================================
-	// VIEW AND NAVIGATION MANAGEMENT
-	// ============================================================================
-
-	setView = (view: ViewMode) => {
-		runInAction(() => {
-			this.currentView = view;
-		});
-
-		logger.debug("View mode changed", { view });
-	};
-
-	setActiveSection = (section: FormSection) => {
-		runInAction(() => {
-			this.activeSection = section;
-		});
-
-		logger.debug("Active section changed", { section });
-	};
-
-	// ============================================================================
 	// VALIDATION MANAGEMENT
 	// ============================================================================
 
@@ -547,8 +505,6 @@ export class CaseFormStore {
 			selectedBotanist: this.selectedBotanist,
 			selectedFinanceOfficer: this.selectedFinanceOfficer,
 			selectedDefendants: this.selectedDefendants,
-			currentView: this.currentView,
-			activeSection: this.activeSection,
 			timestamp: new Date().toISOString(),
 		};
 
@@ -588,9 +544,6 @@ export class CaseFormStore {
 						UserTiny | undefined;
 					this.selectedDefendants =
 						(draft.selectedDefendants as DefendantTiny[]) || [];
-					this.currentView = (draft.currentView as ViewMode) || "data-entry";
-					this.activeSection =
-						(draft.activeSection as FormSection) || "case-details";
 					this.isDirty = false;
 				});
 
@@ -700,8 +653,6 @@ export class CaseFormStore {
 			this.selectedFinanceOfficer = undefined;
 			this.selectedDefendants = [];
 
-			this.currentView = "data-entry";
-			this.activeSection = "case-details";
 			this.isSubmitting = false;
 			this.isDirty = false;
 			this.lastSaved = null;
@@ -854,26 +805,6 @@ export class CaseFormStore {
 		);
 	}
 
-	get certificateData(): CertificateData {
-		return {
-			case_number: this.formData.case_number,
-			received_date: this.formData.received,
-			requesting_officer: this.selectedOfficers.requesting,
-			submitting_officer: this.selectedOfficers.submitting,
-			station: this.selectedStation,
-			defendants: this.selectedDefendants,
-			bags: this.formData.bags,
-			total_bags: this.totalBags,
-			cannabis_present: this.formData.bags.some(
-				(bag) =>
-					bag.determination === "cannabis_sativa" ||
-					bag.determination === "cannabis_indica" ||
-					bag.determination === "cannabis_hybrid"
-			),
-			approved_botanist: this.selectedBotanist,
-		};
-	}
-
 	// ============================================================================
 	// API PREPARATION METHODS
 	// ============================================================================
@@ -887,6 +818,17 @@ export class CaseFormStore {
 			station: this.formData.station_id || null,
 			approved_botanist: this.formData.approved_botanist_id || null,
 			defendants: this.formData.defendant_ids,
+			// Only send the print options that were set; the rest take the
+			// system defaults on the backend.
+			...(this.formData.print_conveying_station !== undefined && {
+				print_conveying_station: this.formData.print_conveying_station,
+			}),
+			...(this.formData.print_requesting_station !== undefined && {
+				print_requesting_station: this.formData.print_requesting_station,
+			}),
+			...(this.formData.print_requesting_rank !== undefined && {
+				print_requesting_rank: this.formData.print_requesting_rank,
+			}),
 		};
 	};
 

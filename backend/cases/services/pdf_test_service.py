@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.template.loader import render_to_string
 
+from . import certificate_wording as wording
 from .pdf_service import PDFService
 
 CERTIFICATE_TEMPLATE = "pdf/certificate_template.html"
@@ -22,6 +23,9 @@ class TestPDFService:
     def _build_certificate_context() -> dict:
         """Build a complete mock context for the certificate template."""
         logo_path = settings.BASE_DIR / "staticfiles" / "images" / "BCSTransparent.png"
+        results = wording.summarise(
+            [("T107381", wording.CANNABIS), ("T107390", wording.CANNABIS)]
+        )
         return {
             "certificate_number": "5555",
             "police_reference_number": "POL-2026-SOC-001",
@@ -29,14 +33,30 @@ class TestPDFService:
             "defendant": "UNKNOWN",
             "quantity_of_bags": 2,
             "quantity_of_bags_words": "two",
-            "tag_numbers": "T107381, T107390",
-            "new_tag_numbers": "T119009, T119010",
-            "description": "quantity of plant",
-            "conveying_officer": "Unsworn Officer PD9999 NEUTRON, Jimmy",
-            "requesting_officer": "Sworn Officer PD9998 LIGHTYEAR, Buzz of Serious and Organised Crime Divisional Office",
+            "tag_numbers": "T107381 and T107390",
+            "new_tag_numbers": "T119009 and T119010",
+            # The template supplies "a quantity of" before the content types.
+            "description": "Plant",
+            "section_b_description": "items",
+            "conveying_officer": (
+                "Unsworn Officer PD9999 NEUTRON, Jimmy of Midland Police Station"
+            ),
+            "requesting_officer": (
+                "Sworn Officer PD9998 LIGHTYEAR, Buzz of Serious and Organised "
+                "Crime Divisional Office"
+            ),
             "receipt_date": "20 March 2026",
-            "species_name": "Cannabis sativa",
-            "other_matters": "Subsamples placed into Security Movement Envelope WW00999999",
+            "section_b": results.section_b,
+            "other_matters": wording.compose_section_c(
+                results.bag_lines,
+                "Subsamples placed into Security Movement Envelope WW00999999.",
+                wording.female_plant_line(
+                    [
+                        ("T107381", wording.CANNABIS, True),
+                        ("T107390", wording.CANNABIS, False),
+                    ]
+                ),
+            ),
             "certification_date": "28 March 2026",
             "logo_path": f"file://{logo_path}",
             "dbca_org_data": {

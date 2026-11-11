@@ -15,11 +15,14 @@ import type { PoliceStation } from "@/shared/types/backend-api.types";
 interface CreateStationFormProps {
 	onSuccess?: (station?: PoliceStation) => void;
 	onCancel?: () => void;
+	/** Starting name, e.g. what was typed into the search before "Create". */
+	initialName?: string;
 }
 
 export const CreateStationForm = ({
 	onSuccess,
 	onCancel,
+	initialName = "",
 }: CreateStationFormProps) => {
 	const createStationMutation = useCreateStation();
 
@@ -33,7 +36,7 @@ export const CreateStationForm = ({
 	} = useForm<CreateStationFormData>({
 		resolver: zodResolver(createStationSchema),
 		defaultValues: {
-			name: "",
+			name: initialName,
 			address: "",
 			phone: "",
 		},

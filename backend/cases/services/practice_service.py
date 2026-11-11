@@ -1,6 +1,7 @@
 """Practice mode service.
 
-Practice mode is a per-user, self-expiring mode layered over the real workflow.
+Practice mode is a per-user mode layered over the real workflow. It has no
+expiry: a user's practice data is kept until they reset it.
 This service owns turning the mode on and off, generating the fake brief the user
 works to, allocating per-user PRACTICE- numbers, and purging a user's practice
 data. The real workflow screens do the actual work; this service never
@@ -8,6 +9,8 @@ re-implements them.
 """
 
 from __future__ import annotations
+
+import re
 
 from django.conf import settings
 from django.db import transaction
@@ -99,26 +102,42 @@ class PracticeService:
         )
 
     # ----- numbering -----------------------------------------------------
+    # Practice numbers carry the owner's id, because certificate and batch
+    # numbers are unique across every user, and continue from that user's
+    # highest number rather than a row count, because restarting a practice
+    # case deletes rows and a count would then hand out a number again.
+    @staticmethod
+    def _next_number(queryset, field, prefix, width):
+        pattern = re.compile(rf"^{re.escape(prefix)}(\d+)$")
+        used = [
+            int(match.group(1))
+            for value in queryset.filter(
+                **{f"{field}__startswith": prefix}
+            ).values_list(field, flat=True)
+            if (match := pattern.match(value))
+        ]
+        return f"{prefix}{max(used, default=0) + 1:0{width}d}"
+
     @staticmethod
     def next_certificate_number(user):
-        """Allocate the user's next PRACTICE- certificate number."""
+        """Allocate the user's next number, e.g. PRACTICE-13-R000001."""
         from ..models import Certificate
 
-        n = (
-            Certificate.all_objects.filter(
-                is_practice=True, practice_owner=user
-            ).count()
-            + 1
+        return PracticeService._next_number(
+            Certificate.all_objects.all(),
+            "certificate_number",
+            f"PRACTICE-{user.pk}-R",
+            6,
         )
-        return f"PRACTICE-R{n:06d}"
 
     @staticmethod
     def next_batch_number(user):
-        """Allocate the user's next PRACTICE- batch number."""
+        """Allocate the user's next number, e.g. PRACTICE-13-BATCH001."""
         from ..models import Batch
 
-        n = Batch.all_objects.filter(is_practice=True, practice_owner=user).count() + 1
-        return f"PRACTICE-BATCH{n:03d}"
+        return PracticeService._next_number(
+            Batch.all_objects.all(), "batch_number", f"PRACTICE-{user.pk}-BATCH", 3
+        )
 
     # ----- purging -------------------------------------------------------
     @staticmethod

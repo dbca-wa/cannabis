@@ -15,14 +15,18 @@ export const PageHeader = ({
 	titleClassName,
 }: PageHeaderProps) => {
 	return (
-		<div className="flex items-center justify-between gap-4 mb-6">
-			<div>
+		// On a phone the actions drop below the title instead of running off the
+		// right edge of the screen.
+		<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div className="min-w-0">
 				<h1 className={titleClassName || "tracking-tight"}>{title}</h1>
 				{subtitle && (
 					<p className="text-muted-foreground text-[14px] mt-1">{subtitle}</p>
 				)}
 			</div>
-			{actions && <div className="flex items-center gap-2">{actions}</div>}
+			{actions && (
+				<div className="flex flex-wrap items-center gap-2">{actions}</div>
+			)}
 		</div>
 	);
 };

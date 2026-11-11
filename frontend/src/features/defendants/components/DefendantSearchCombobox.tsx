@@ -28,6 +28,8 @@ import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loadi
 import { CreateDefendantModal } from "./CreateDefendantModal";
 
 interface DefendantSearchComboboxProps {
+	/** Id for the trigger, so a field label can point at it. */
+	id?: string;
 	value?: number | null;
 	onValueChange: (defendantId: number | null) => void;
 	placeholder?: string;
@@ -45,6 +47,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 >(
 	(
 		{
+			id,
 			value,
 			onValueChange,
 			placeholder = "Search defendants...",
@@ -59,6 +62,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showCreateModal, setShowCreateModal] = useState(false);
+		const [createFromSearch, setCreateFromSearch] = useState("");
 
 		// Enhanced search with initial data loading and error handling
 		const {
@@ -98,6 +102,8 @@ export const DefendantSearchCombobox = React.forwardRef<
 		};
 
 		const handleCreateDefendant = () => {
+			// Keep what was typed: closing the list clears the search.
+			setCreateFromSearch(searchQuery);
 			setOpen(false);
 			setShowCreateModal(true);
 		};
@@ -117,6 +123,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 					<PopoverTrigger asChild>
 						<Button
 							ref={ref}
+							id={id}
 							variant="outline"
 							role="combobox"
 							aria-expanded={open}
@@ -323,6 +330,7 @@ export const DefendantSearchCombobox = React.forwardRef<
 					onOpenChange={setShowCreateModal}
 					onCreate={handleDefendantCreated}
 					isRouteModal={false}
+					initialSearch={createFromSearch}
 				/>
 			</>
 		);

@@ -24,6 +24,7 @@ import { useDebounce } from "@/shared/hooks/core/useDebounce";
 import { apiClient } from "@/shared/services/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 import { toast } from "sonner";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
 
@@ -49,8 +50,8 @@ export const OfficerMergePage = () => {
 				`Merge complete. ${response.cases_reassigned} case(s) reassigned.`
 			);
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Merge failed. Please try again.");
+		onError: (error: unknown) => {
+			toast.error(getErrorMessage(error) || "Merge failed. Please try again.");
 		},
 	});
 

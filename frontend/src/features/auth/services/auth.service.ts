@@ -4,6 +4,7 @@ import type {
 	AuthResponse,
 	User,
 	InviteActivationResponse,
+	InviteDetails,
 	PasswordValidationResponse,
 	PasswordUpdateRequest,
 	PasswordUpdateResponse,
@@ -154,12 +155,20 @@ export const register = async (data: RegisterData): Promise<void> => {
 };
 
 /**
- * Activate a user invitation by token. Stores tokens and caches user.
+ * Look up an invitation by token without accepting it. Opening the link
+ * never uses the invitation up.
+ */
+export const getInvitation = async (token: string): Promise<InviteDetails> =>
+	apiClient.get<InviteDetails>(ENDPOINTS.AUTH.ACTIVATE_INVITE(token));
+
+/**
+ * Accept a user invitation by token. Creates the account, stores the tokens
+ * and caches the user.
  */
 export const activateInvitation = async (
 	token: string
 ): Promise<InviteActivationResponse> => {
-	const response = await apiClient.get<InviteActivationResponse>(
+	const response = await apiClient.post<InviteActivationResponse>(
 		ENDPOINTS.AUTH.ACTIVATE_INVITE(token)
 	);
 

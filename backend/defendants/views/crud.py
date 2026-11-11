@@ -1,9 +1,14 @@
 """Defendant CRUD views — list, create, retrieve, update, delete."""
 
+from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from cases.services.reassignment import describe_case, replacement_from_request
 from users.permissions import HasAppAccess
 
+from ..models import Defendant
 from ..serializers import DefendantSerializer, DefendantTinySerializer
 from ..services import DefendantService
 
@@ -50,4 +55,26 @@ class DefendantRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
         )
 
     def perform_destroy(self, instance):
-        DefendantService.delete_defendant(instance, self.request.user)
+        # Cases naming this defendant are moved to ?replacement=<id> first, so
+        # no case loses its defendant.
+        replacement = replacement_from_request(
+            self.request, Defendant.objects.all(), "defendant"
+        )
+        DefendantService.delete_defendant(instance, self.request.user, replacement)
+
+
+class DefendantUsageView(APIView):
+    """GET: the cases that name a defendant, shown before deleting them."""
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request, pk):
+        defendant = get_object_or_404(Defendant, pk=pk)
+        return Response(
+            {
+                "cases": [
+                    describe_case(case, ["defendant"])
+                    for case in DefendantService.case_usage(defendant)
+                ]
+            }
+        )

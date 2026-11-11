@@ -267,6 +267,17 @@ export interface InviteUserRequest {
 }
 
 // Invite activation response (matches backend InviteActivationView)
+/** What an invitation link offers, shown before the person accepts it. */
+export interface InviteDetails {
+	email: string;
+	given_names: string;
+	last_name: string;
+	role: UserRole;
+	role_display: string;
+	invited_by: string | null;
+	expires_at: string;
+}
+
 export interface InviteActivationResponse extends AuthResponse {
 	temporary_password: string;
 	requires_password_change: boolean;
@@ -697,6 +708,10 @@ export interface SystemSettings {
 	environment: string;
 	send_emails_to_self_editable: boolean;
 	certificate_counter?: number;
+	/** Certificate print options pre-ticked on each new case. */
+	default_print_conveying_station?: boolean;
+	default_print_requesting_station?: boolean;
+	default_print_requesting_rank?: boolean;
 	/** Pre-selected botanist for new cases. Null when unset or no longer eligible. */
 	default_approved_botanist?: number | null;
 	default_approved_botanist_details?: {
@@ -722,6 +737,10 @@ export interface FeatureFlags {
 	allow_saved_searches: boolean;
 	/** Botanist to pre-select on new cases. Null when unset or no longer eligible. */
 	default_approved_botanist: number | null;
+	/** Certificate print options pre-ticked on each new case. */
+	default_print_conveying_station: boolean;
+	default_print_requesting_station: boolean;
+	default_print_requesting_rank: boolean;
 }
 // ============================================================================
 // DASHBOARD TYPES (for dashboard-specific API responses)

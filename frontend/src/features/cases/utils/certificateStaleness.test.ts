@@ -12,6 +12,7 @@ const form = (overrides: {
 		pdf_url?: string | null;
 		pdf_file?: string | null;
 		additional_notes?: string | null;
+		needs_regeneration?: boolean;
 	} | null;
 	bags?: Array<{ updated_at: string; assessmentUpdatedAt?: string }>;
 	/** When the form itself (phase, marked ready, etc.) last changed. */
@@ -202,6 +203,61 @@ describe("isFormStale", () => {
 					},
 					bags: [{ updated_at: T0 }],
 					formNotes: "Newly added note",
+				})
+			)
+		).toBe(true);
+	});
+
+	// Older wording, or changed officer text / print options, is reported by
+	// the backend as needs_regeneration.
+	it("is true when the backend reports the certificate needs regenerating", () => {
+		expect(
+			isFormStale(
+				form({
+					cert: { updated_at: T1, pdf_url: "c.pdf", needs_regeneration: true },
+					bags: [{ updated_at: T0 }],
+				})
+			)
+		).toBe(true);
+	});
+
+	it("is false when the backend reports nothing and nothing else changed", () => {
+		expect(
+			isFormStale(
+				form({
+					cert: {
+						updated_at: T1,
+						pdf_url: "c.pdf",
+						needs_regeneration: false,
+					},
+					bags: [{ updated_at: T0 }],
+				})
+			)
+		).toBe(false);
+	});
+
+	it("never flags a batched certificate, even if the backend says so", () => {
+		expect(
+			isFormStale(
+				form({
+					cert: {
+						updated_at: T0,
+						batch_id: 5,
+						pdf_url: "c.pdf",
+						needs_regeneration: true,
+					},
+					bags: [{ updated_at: T1 }],
+				})
+			)
+		).toBe(false);
+	});
+
+	it("is true when the backend flag and a bag change both apply", () => {
+		expect(
+			isFormStale(
+				form({
+					cert: { updated_at: T0, pdf_url: "c.pdf", needs_regeneration: true },
+					bags: [{ updated_at: T1 }],
 				})
 			)
 		).toBe(true);

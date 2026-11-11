@@ -2,10 +2,10 @@
  * Practice mode hook.
  *
  * Practice mode is server-owned per-user state surfaced on the authenticated
- * user (`practice_mode`, `practice_mode_expires_at`). Toggling it refetches the
- * user and, because turning it off purges the user's practice data and flips
- * what every list returns, performs a full reload so the app comes back cleanly
- * in the other mode.
+ * user (`practice_mode`, `practice_mode_started_at`), both on sign-in and on
+ * whoami. Toggling it flips what every list returns, so it performs a full
+ * reload and the app comes back cleanly in the other mode. Leaving keeps the
+ * user's practice data; only a reset clears it.
  */
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";

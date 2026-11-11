@@ -1,7 +1,15 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { PageTransition } from "@/shared/components/PageTransition";
-import { FlaskConical, Package, Percent, Hash, Search } from "lucide-react";
+import {
+	FlaskConical,
+	Package,
+	Percent,
+	Hash,
+	Search,
+	Pencil,
+	Lock,
+} from "lucide-react";
 import { Card } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -12,9 +20,14 @@ import { BaseFeeModal } from "@/shared/components/BaseFeeModal";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSystemSettings } from "@/features/admin/hooks/useSystemSettings";
 import { securityService } from "@/features/admin/services/security.service";
+import { getSettingsAccess } from "@/features/admin/utils/settingsAccess";
 import { settingsNotificationService } from "@/features/admin/services/settingsNotification.service";
 import ConfirmationDialog from "@/features/admin/components/settings/ConfirmationDialog";
 import { DefaultBotanistCard } from "@/features/admin/components/settings/DefaultBotanistCard";
+import {
+	CertificateDefaultsCard,
+	type CertificateDefaultField,
+} from "@/features/admin/components/settings/CertificateDefaultsCard";
 import { TemplatesSettingsCard } from "@/features/cases/components/templates/TemplatesSettingsCard";
 import { logger } from "@/shared/services/logger.service";
 
@@ -63,6 +76,34 @@ const RATE_TYPES: RateType[] = [
 		color: "from-cyan-500 to-sky-500",
 	},
 ];
+
+const RATE_CARD_CLASS =
+	"block w-full text-left p-4 rounded-xl border border-border/70 shadow-sm group relative overflow-hidden";
+
+/** A rate card: a button that opens the editor, or plain text when read-only. */
+const RateCardShell = ({
+	editable,
+	onClick,
+	label,
+	children,
+}: {
+	editable: boolean;
+	onClick: () => void;
+	label: string;
+	children: ReactNode;
+}) =>
+	editable ? (
+		<button
+			type="button"
+			onClick={onClick}
+			aria-label={label}
+			className={`${RATE_CARD_CLASS} hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600`}
+		>
+			{children}
+		</button>
+	) : (
+		<div className={RATE_CARD_CLASS}>{children}</div>
+	);
 
 const SettingsContent = () => {
 	const { user } = useAuth();
@@ -144,10 +185,10 @@ const SettingsContent = () => {
 			if (!settings || !user) return;
 			clearError();
 
-			const accessCheck = securityService.checkAdminAccess(user);
-			if (!accessCheck.allowed) {
+			const accessCheck = getSettingsAccess(user);
+			if (!accessCheck.canEdit) {
 				settingsNotificationService.showUpdateError(
-					accessCheck.reason || "Access denied",
+					accessCheck.reason,
 					[field],
 					settings.environment
 				);
@@ -213,8 +254,23 @@ const SettingsContent = () => {
 		[settings, user, clearError, applySettingsChanges]
 	);
 
-	// The saved-search toggle is only shown to admins; everyone else sees the
-	// pricing/counter cards without it.
+	/**
+	 * Change one certificate print default. Needs no confirmation — it only
+	 * pre-ticks the options on cases created afterwards.
+	 */
+	const handleCertificateDefaultChange = useCallback(
+		(field: CertificateDefaultField, value: boolean) => {
+			if (!settings || !user) return;
+			clearError();
+			void applySettingsChanges({ [field]: value });
+		},
+		[settings, user, clearError, applySettingsChanges]
+	);
+
+	// Finance officers, botanists and admins can change settings; the saved
+	// search toggle is a system flag, shown to admins only.
+	const access = getSettingsAccess(user);
+	const canEdit = access.canEdit;
 	const isAdmin = !!(user?.is_staff || user?.is_superuser);
 
 	const handleConfirmChanges = useCallback(() => {
@@ -284,6 +340,15 @@ const SettingsContent = () => {
 	return (
 		<PageTransition>
 			<div className="space-y-4">
+				{!access.canEdit && (
+					<p
+						className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100"
+						role="status"
+					>
+						<Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+						{access.reason}
+					</p>
+				)}
 				{/* Pricing configuration */}
 				<Card className="p-6">
 					<div className="flex items-center justify-between mb-5">
@@ -291,6 +356,7 @@ const SettingsContent = () => {
 							<h3>Pricing configuration</h3>
 							<p className="text-[13px] text-muted-foreground">
 								Rates applied when generating invoices and certificates.
+								{canEdit && " Click a rate to change it."}
 							</p>
 						</div>
 					</div>
@@ -311,10 +377,20 @@ const SettingsContent = () => {
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ delay: i * 0.03 }}
 								>
-									<div
+									{/* A button, so the rate can be changed from the keyboard
+									    and its purpose is announced. Read-only, it is plain
+									    text. */}
+									<RateCardShell
+										editable={canEdit}
 										onClick={() => openEdit(i)}
-										className="p-4 rounded-xl border border-border/70 shadow-sm hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-800 hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer group relative overflow-hidden"
+										label={`Change ${rate.label} (currently ${rate.prefix}${displayValue}${rate.suffix || ""})`}
 									>
+										{canEdit && (
+											<Pencil
+												className="absolute right-3 top-3 h-3.5 w-3.5 text-muted-foreground opacity-60 group-hover:opacity-100"
+												aria-hidden="true"
+											/>
+										)}
 										<div
 											className={`absolute -right-8 -top-8 w-24 h-24 rounded-full bg-gradient-to-br ${rate.color} opacity-[0.08] blur-xl group-hover:opacity-[0.15] transition-opacity`}
 										/>
@@ -336,7 +412,7 @@ const SettingsContent = () => {
 												</div>
 											</div>
 										</div>
-									</div>
+									</RateCardShell>
 								</motion.div>
 							);
 						})}
@@ -388,23 +464,26 @@ const SettingsContent = () => {
 								max={999999}
 								value={counterValue}
 								onChange={(e) => setCounterValue(e.target.value)}
+								readOnly={!canEdit}
 								className="font-mono"
 							/>
 						</div>
-						<Button
-							size="sm"
-							onClick={handleSaveCounter}
-							disabled={
-								isUpdating ||
-								counterValue ===
-									String(
-										(settings as unknown as Record<string, unknown>)
-											?.certificate_counter ?? "0"
-									)
-							}
-						>
-							Save
-						</Button>
+						{canEdit && (
+							<Button
+								size="sm"
+								onClick={handleSaveCounter}
+								disabled={
+									isUpdating ||
+									counterValue ===
+										String(
+											(settings as unknown as Record<string, unknown>)
+												?.certificate_counter ?? "0"
+										)
+								}
+							>
+								Save
+							</Button>
+						)}
 					</div>
 					<p className="text-xs text-muted-foreground mt-3">
 						The counter is incremented before each certificate is generated.
@@ -431,7 +510,7 @@ const SettingsContent = () => {
 							<Switch
 								aria-label="Allow remembered searches"
 								checked={settings.allow_saved_searches}
-								disabled={isUpdating}
+								disabled={isUpdating || !access.canEditSystemFlags}
 								onCheckedChange={handleToggleSavedSearches}
 								className="data-[state=checked]:bg-emerald-600"
 							/>
@@ -447,9 +526,35 @@ const SettingsContent = () => {
 					}
 					isSaving={isUpdating}
 					onSave={handleSaveDefaultBotanist}
+					readOnly={!canEdit}
 				/>
-				{/* Section C Templates management */}
-				<TemplatesSettingsCard />
+				{/* Certificate print options pre-ticked on new cases */}
+				<CertificateDefaultsCard
+					values={{
+						default_print_conveying_station:
+							settings.default_print_conveying_station ?? true,
+						default_print_requesting_station:
+							settings.default_print_requesting_station ?? true,
+						default_print_requesting_rank:
+							settings.default_print_requesting_rank ?? false,
+					}}
+					isSaving={isUpdating}
+					onChange={handleCertificateDefaultChange}
+					readOnly={!canEdit}
+				/>
+				{/* Section C Templates management — needs an app role, since the
+				    templates are only used on cases. */}
+				{access.hasRole ? (
+					<TemplatesSettingsCard />
+				) : (
+					<Card className="p-6">
+						<h3>Section C Templates</h3>
+						<p className="text-[13px] text-muted-foreground">
+							Templates are available to finance officers, botanists and
+							administrators.
+						</p>
+					</Card>
+				)}
 			</div>
 
 			{/* Edit pricing modal (shared component) */}

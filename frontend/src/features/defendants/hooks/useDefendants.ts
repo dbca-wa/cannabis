@@ -6,11 +6,13 @@ import {
 	createDefendant,
 	updateDefendant,
 	deleteDefendant,
+	getDefendantUsage,
 	type DefendantsQueryParams,
 } from "../services/defendants.service";
 
 import { cacheConfig } from "@/shared/hooks/core/queryKeys";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 import type {
 	DefendantCreateRequest,
 	DefendantUpdateRequest,
@@ -97,25 +99,33 @@ export const useDeleteDefendant = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => deleteDefendant(id),
-		onSuccess: async (_, deletedId) => {
+		mutationFn: ({
+			id,
+			replacementId,
+		}: {
+			id: number;
+			replacementId?: number | null;
+		}) => deleteDefendant(id, replacementId),
+		onSuccess: async (_, { id }) => {
 			queryClient.removeQueries({
-				queryKey: defendantsQueryKeys.detail(deletedId),
+				queryKey: defendantsQueryKeys.detail(id),
 			});
+			// Moved cases are refreshed too.
 			await invalidateRelatedQueries(queryClient, "defendants");
-			toast.success("Defendant deleted successfully!");
+			toast.success("Defendant deleted");
 		},
 		onError: (error: unknown) => {
-			console.error("Failed to delete defendant:", error);
-
-			const errorMessage = (error as Error)?.message || "";
-			const errorStatus = (error as { status?: number })?.status;
-
-			if (errorMessage.includes("cases") || errorStatus === 400) {
-				toast.error("Cannot delete defendant: Defendant has associated cases");
-			} else {
-				toast.error(errorMessage || "Failed to delete defendant");
-			}
+			// The server says why, e.g. which cases need a replacement.
+			toast.error(getErrorMessage(error) || "Failed to delete defendant");
 		},
 	});
 };
+
+/** The cases that name a defendant, shown before deleting them. */
+export const useDefendantUsage = (id: number | null) =>
+	useQuery({
+		queryKey: [...defendantsQueryKeys.detail(id ?? 0), "usage"],
+		queryFn: () => getDefendantUsage(id!),
+		enabled: !!id,
+		staleTime: 0,
+	});

@@ -31,14 +31,16 @@ export const PoliceButton = ({
 
 	return (
 		<Link to={to} className={cn("relative inline-flex group", className)}>
-			{/* Twin emergency-light auras behind the button — only when siren is enabled */}
+			{/* Twin emergency-light auras behind the button — only when siren is
+			    enabled. The glows stay inside the aura box (the blur still spreads
+			    past it) so they never widen the page and cause a sideways scroll. */}
 			{siren && (
 				<motion.span
 					aria-hidden
 					className="pointer-events-none absolute -inset-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
 				>
 					<motion.span
-						className="absolute left-[-10%] top-1/2 -translate-y-1/2 w-[70%] h-[180%] rounded-full blur-2xl"
+						className="absolute left-0 top-1/2 -translate-y-1/2 w-[70%] h-[180%] rounded-full blur-2xl"
 						style={{
 							background:
 								"radial-gradient(closest-side, rgba(239,68,68,0.9), rgba(239,68,68,0) 70%)",
@@ -47,7 +49,7 @@ export const PoliceButton = ({
 						transition={{ duration: 0.93, repeat: Infinity, ease: "easeInOut" }}
 					/>
 					<motion.span
-						className="absolute right-[-10%] top-1/2 -translate-y-1/2 w-[70%] h-[180%] rounded-full blur-2xl"
+						className="absolute right-0 top-1/2 -translate-y-1/2 w-[70%] h-[180%] rounded-full blur-2xl"
 						style={{
 							background:
 								"radial-gradient(closest-side, rgba(59,130,246,0.9), rgba(59,130,246,0) 70%)",

@@ -8,6 +8,14 @@ from police.models import PoliceOfficer
 from .station_serializer import PoliceStationTinySerializer
 
 
+def duplicate_officer_message(given_names, last_name, station):
+    """The error shown when an officer with this name already exists here."""
+    full_name = f"{given_names} {last_name}".strip() if given_names else last_name
+    if station:
+        return f"An officer named '{full_name}' already exists at {station.name}."
+    return f"An officer named '{full_name}' with no station already exists."
+
+
 class PoliceOfficerSerializer(serializers.ModelSerializer):
     """Complete serializer for Police Officer"""
 
@@ -117,13 +125,11 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
             qs = qs.exclude(pk=self.instance.pk)
 
         if qs.exists():
-            station_name = station.name if station else "no station"
-            full_name = (
-                f"{given_names} {last_name}".strip() if given_names else last_name
-            )
             raise serializers.ValidationError(
                 {
-                    "last_name": f"An officer named '{full_name}' already exists at {station_name}."
+                    "last_name": duplicate_officer_message(
+                        given_names, last_name, station
+                    )
                 }
             )
         return attrs
@@ -197,13 +203,11 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
                 qs = qs.filter(station__isnull=True)
 
             if qs.exists():
-                station_name = station.name if station else "no station"
-                full_name = (
-                    f"{given_names} {last_name}".strip() if given_names else last_name
-                )
                 raise serializers.ValidationError(
                     {
-                        "last_name": f"An officer named '{full_name}' already exists at {station_name}."
+                        "last_name": duplicate_officer_message(
+                            given_names, last_name, station
+                        )
                     }
                 )
         return attrs

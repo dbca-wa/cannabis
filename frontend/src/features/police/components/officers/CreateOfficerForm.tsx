@@ -30,20 +30,23 @@ interface CreateOfficerFormProps {
 	onSubmit: (data: unknown) => Promise<void>;
 	onCancel: () => void;
 	isLoading?: boolean;
+	/** Starting name, e.g. what was typed into the search before "Create". */
+	initialName?: { last_name: string; given_names: string };
 }
 
 export const CreateOfficerForm = ({
 	onSubmit,
 	onCancel,
 	isLoading = false,
+	initialName,
 }: CreateOfficerFormProps) => {
 	// Form setup
 	const form = useForm<CreateOfficerFormData>({
 		resolver: zodResolver(createOfficerSchema),
 		defaultValues: {
 			badge_number: "",
-			given_names: "",
-			last_name: "",
+			given_names: initialName?.given_names ?? "",
+			last_name: initialName?.last_name ?? "",
 			rank: "constable",
 			station: "none",
 		},

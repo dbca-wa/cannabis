@@ -10,6 +10,7 @@ import { CreateDefendantForm } from "./forms";
 import { useCreateDefendant } from "../hooks/useDefendants";
 import type { CreateDefendantFormData } from "../schemas/defendantSchemas";
 import type { DefendantTiny } from "@/shared/types/backend-api.types";
+import { nameFromSearch } from "@/shared/utils/name-search.utils";
 
 interface CreateDefendantModalProps {
 	open: boolean;
@@ -18,6 +19,8 @@ interface CreateDefendantModalProps {
 	onCreate?: (defendant: DefendantTiny) => void;
 	/** If true, will navigate to /defendants on close (for route-based modals) */
 	isRouteModal?: boolean;
+	/** What was typed into the search, used to fill in the name. */
+	initialSearch?: string;
 }
 
 export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
@@ -25,6 +28,7 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 	onOpenChange,
 	onCreate,
 	isRouteModal = false,
+	initialSearch = "",
 }) => {
 	const navigate = useNavigate();
 	const createDefendant = useCreateDefendant();
@@ -76,10 +80,13 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 						stored in uppercase.
 					</DialogDescription>
 				</DialogHeader>
+				{/* Keyed on the search so each opening starts from what was typed. */}
 				<CreateDefendantForm
+					key={open ? initialSearch : "closed"}
 					onSubmit={handleSubmit}
 					onCancel={handleClose}
 					isSubmitting={createDefendant.isPending}
+					initialName={nameFromSearch(initialSearch)}
 				/>
 			</DialogContent>
 		</Dialog>

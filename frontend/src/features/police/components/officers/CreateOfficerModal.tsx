@@ -11,18 +11,22 @@ import type {
 	PoliceOfficerCreateRequest,
 	PoliceOfficerTiny,
 } from "@/shared/types/backend-api.types";
+import { nameFromSearch } from "@/shared/utils/name-search.utils";
 
 interface CreateOfficerModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	/** Optional callback when officer is successfully created */
 	onCreate?: (officer: PoliceOfficerTiny) => void;
+	/** What was typed into the search, used to fill in the name. */
+	initialSearch?: string;
 }
 
 export const CreateOfficerModal = ({
 	open,
 	onOpenChange,
 	onCreate,
+	initialSearch = "",
 }: CreateOfficerModalProps) => {
 	const createOfficerMutation = useCreatePoliceOfficer();
 
@@ -70,10 +74,13 @@ export const CreateOfficerModal = ({
 					</DialogDescription>
 				</DialogHeader>
 
+				{/* Keyed on the search so each opening starts from what was typed. */}
 				<CreateOfficerForm
+					key={open ? initialSearch : "closed"}
 					onSubmit={handleSubmit}
 					onCancel={handleCancel}
 					isLoading={createOfficerMutation.isPending}
+					initialName={nameFromSearch(initialSearch)}
 				/>
 			</DialogContent>
 		</Dialog>

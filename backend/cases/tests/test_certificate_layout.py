@@ -49,7 +49,7 @@ def _rendered_html(case):
 
 @pytest.mark.django_db
 class TestOfficerWording:
-    def test_conveying_station_is_absent_from_both_sections(self):
+    def test_conveying_station_appears_in_both_sections(self):
         conveying = PoliceOfficerFactory(
             badge_number="PD56359",
             last_name="Rinaldi",
@@ -58,8 +58,26 @@ class TestOfficerWording:
         )
         html = _rendered_html(CaseFactory(submitting_officer=conveying))
 
-        assert "Midland Drug Receival Unit" not in html
         # Named in section (a) as received from, and in (b) as handed back to
+        assert (
+            html.count(
+                "Unsworn Officer PD56359 RINALDI, Jade of Midland Drug Receival Unit"
+            )
+            == 2
+        )
+
+    def test_conveying_station_is_absent_from_both_sections_when_unticked(self):
+        conveying = PoliceOfficerFactory(
+            badge_number="PD56359",
+            last_name="Rinaldi",
+            given_names="Jade",
+            station=PoliceStationFactory(name="Midland Drug Receival Unit"),
+        )
+        html = _rendered_html(
+            CaseFactory(submitting_officer=conveying, print_conveying_station=False)
+        )
+
+        assert "Midland Drug Receival Unit" not in html
         assert html.count("Unsworn Officer PD56359 RINALDI, Jade") == 2
 
     def test_requesting_station_still_appears(self):

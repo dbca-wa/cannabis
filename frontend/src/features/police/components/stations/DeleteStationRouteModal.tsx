@@ -3,37 +3,37 @@ import {
 	ResponsiveModalContent,
 } from "@/shared/components/layout/ResponsiveModal";
 import { useNavigate, useParams } from "react-router";
-import { useDeleteStation, useStation } from "../../hooks/usePoliceStations";
+import {
+	useDeleteStation,
+	useStation,
+	useStationUsage,
+} from "../../hooks/usePoliceStations";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
-import { Button } from "@/shared/components/ui/button";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { ReplaceAndDeleteDialog } from "@/shared/components/ReplaceAndDeleteDialog";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { StationSearchComboBox } from "./StationSearchComboBox";
 
 export const DeleteStationRouteModal = () => {
 	const navigate = useNavigate();
 	const { stationId } = useParams();
+	const id = stationId ? parseInt(stationId, 10) : 0;
+	const { isAdmin } = useAuth();
 	const deleteStationMutation = useDeleteStation();
-
-	// Fetch station data
-	const {
-		data: station,
-		isLoading,
-		error,
-	} = useStation(stationId ? parseInt(stationId) : 0);
+	const { data: station, isLoading, error } = useStation(id);
+	const usage = useStationUsage(id || null);
 
 	const handleClose = () => {
 		navigate("/stations");
 	};
 
-	const handleDelete = async () => {
-		if (!stationId) return;
-
+	const handleDelete = async (replacementId: number | null) => {
+		if (!id) return;
 		try {
-			await deleteStationMutation.mutateAsync(parseInt(stationId));
+			await deleteStationMutation.mutateAsync({ id, replacementId });
 			handleClose();
-		} catch (error) {
-			// Error is handled by the mutation
-			console.error("Delete station error:", error);
+		} catch {
+			// The mutation shows the error.
 		}
 	};
 
@@ -68,59 +68,27 @@ export const DeleteStationRouteModal = () => {
 	}
 
 	return (
-		<ResponsiveModal
-			open={true}
-			onOpenChange={(open: boolean) => {
-				if (!open) handleClose();
-			}}
-		>
-			<ResponsiveModalContent
-				side="bottom"
-				title="Delete Police Station"
-				description="This action cannot be undone"
-			>
-				<div className="space-y-4">
-					<div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-						<AlertTriangle className="h-5 w-5 text-red-600" />
-						<div>
-							<p className="font-medium text-red-900">
-								Are you sure you want to delete this station?
-							</p>
-							<p className="text-sm text-red-700 mt-1">
-								Station: {station.name}
-								{station.officer_count > 0 && (
-									<span className="block text-red-800 font-medium">
-										Warning: This station has {station.officer_count} assigned
-										officer(s)
-									</span>
-								)}
-							</p>
-						</div>
-					</div>
-
-					<div className="flex gap-3 justify-end">
-						<Button
-							variant="outline"
-							onClick={handleClose}
-							disabled={deleteStationMutation.isPending}
-						>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							onClick={handleDelete}
-							disabled={deleteStationMutation.isPending}
-						>
-							{deleteStationMutation.isPending && (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							)}
-							{deleteStationMutation.isPending
-								? "Deleting..."
-								: "Delete Station"}
-						</Button>
-					</div>
-				</div>
-			</ResponsiveModalContent>
-		</ResponsiveModal>
+		<ReplaceAndDeleteDialog
+			title="Delete police station"
+			name={station.name}
+			noun="station"
+			recordId={station.id}
+			usage={usage.data}
+			isLoadingUsage={usage.isLoading}
+			usageError={usage.error}
+			isAdmin={isAdmin}
+			isDeleting={deleteStationMutation.isPending}
+			renderPicker={(picker) => (
+				<StationSearchComboBox
+					id={picker.id}
+					value={picker.value}
+					onValueChange={picker.onValueChange}
+					error={picker.error}
+					placeholder="Search for a station..."
+				/>
+			)}
+			onConfirm={handleDelete}
+			onClose={handleClose}
+		/>
 	);
 };

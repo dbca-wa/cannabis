@@ -23,6 +23,8 @@ import type { PoliceStation } from "@/shared/types/backend-api.types";
 import { SmoothLoadingOverlay } from "@/shared/components/ui/custom/smooth-loading-overlay";
 
 interface StationSearchComboBoxProps {
+	/** Id for the trigger, so a field label can point at it. */
+	id?: string;
 	value?: number | null;
 	onValueChange: (stationId: number | null) => void;
 	placeholder?: string;
@@ -40,6 +42,7 @@ export const StationSearchComboBox = React.forwardRef<
 >(
 	(
 		{
+			id,
 			value,
 			onValueChange,
 			placeholder = "Search stations...",
@@ -54,6 +57,7 @@ export const StationSearchComboBox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showCreateModal, setShowCreateModal] = useState(false);
+		const [createFromSearch, setCreateFromSearch] = useState("");
 		const [showExternalCreateModal, setShowExternalCreateModal] =
 			useState(false);
 
@@ -94,6 +98,8 @@ export const StationSearchComboBox = React.forwardRef<
 		};
 
 		const handleCreateStation = () => {
+			// Keep what was typed: closing the list clears the search.
+			setCreateFromSearch(searchQuery);
 			setOpen(false);
 			setShowCreateModal(true);
 		};
@@ -120,6 +126,7 @@ export const StationSearchComboBox = React.forwardRef<
 				<PopoverTrigger asChild>
 					<Button
 						ref={ref}
+						id={id}
 						variant="outline"
 						role="combobox"
 						aria-expanded={open}
@@ -292,7 +299,7 @@ export const StationSearchComboBox = React.forwardRef<
 			<>
 				{showExternalAddButton ? (
 					<div className="flex items-center gap-2">
-						<div className="flex-1">{comboboxElement}</div>
+						<div className="min-w-0 flex-1">{comboboxElement}</div>
 						<Button
 							onClick={handleExternalCreateStation}
 							disabled={disabled}
@@ -311,6 +318,7 @@ export const StationSearchComboBox = React.forwardRef<
 					isOpen={showCreateModal}
 					onClose={() => setShowCreateModal(false)}
 					onCreate={handleStationCreated}
+					initialName={createFromSearch}
 				/>
 
 				{/* External Create Station Modal */}

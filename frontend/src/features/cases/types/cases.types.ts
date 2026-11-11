@@ -61,6 +61,12 @@ export interface Case {
 	submitting_officer_details: PoliceOfficerTiny | null;
 	station_details: PoliceStationTiny | null;
 
+	// Certificate print options (missing on older payloads; the backend
+	// defaults are true, true and false)
+	print_conveying_station?: boolean;
+	print_requesting_station?: boolean;
+	print_requesting_rank?: boolean;
+
 	// Defendants (many-to-many)
 	defendants: number[];
 	defendants_details: DefendantTiny[];
@@ -185,6 +191,10 @@ export interface CaseCreateRequest {
 	station?: number | null;
 	approved_botanist?: number | null;
 	defendants?: number[];
+	/** Omitted options take the system defaults on the backend. */
+	print_conveying_station?: boolean;
+	print_requesting_station?: boolean;
+	print_requesting_rank?: boolean;
 }
 
 // Case draft (matches CaseDraftSerializer — separate from cases)
@@ -206,6 +216,9 @@ export interface CaseUpdateRequest {
 	submitting_officer?: number | null;
 	station?: number | null;
 	defendants?: number[];
+	print_conveying_station?: boolean;
+	print_requesting_station?: boolean;
+	print_requesting_rank?: boolean;
 }
 
 // Paginated cases response

@@ -5,6 +5,7 @@ import {
 	type StationMergeRequest,
 } from "../services/policeStations.service";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { getErrorMessage } from "@/shared/utils/error.utils";
 
 /**
  * Hook to merge secondary stations into a primary station.
@@ -23,8 +24,8 @@ export function useStationMerge() {
 				`Merge complete. ${response.officers_reassigned} officer(s) and ${response.cases_reassigned} case(s) reassigned.`
 			);
 		},
-		onError: (error: Error) => {
-			toast.error(error.message || "Merge failed. Please try again.");
+		onError: (error: unknown) => {
+			toast.error(getErrorMessage(error) || "Merge failed. Please try again.");
 		},
 	});
 }

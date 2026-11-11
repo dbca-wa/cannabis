@@ -29,6 +29,7 @@ import {
 } from "@/shared/components/ui/tooltip";
 
 import type { SystemSettings } from "@/shared/types/backend-api.types";
+import { formatDateTime } from "@/shared/utils/date.utils";
 
 interface SystemInfoCardProps {
 	settings: SystemSettings;
@@ -192,7 +193,7 @@ export const SystemInfoCard: React.FC<SystemInfoCardProps> = ({ settings }) => {
 
 		return {
 			timeAgo,
-			fullDate: date.toLocaleString(),
+			fullDate: formatDateTime(date),
 			userDisplay,
 		};
 	};

@@ -19,6 +19,8 @@ import { CreateTemplateModal } from "./CreateTemplateModal";
 import { EditTemplateModal } from "./EditTemplateModal";
 import type { DrugBag } from "../../types/drugBags.types";
 import type { ISectionCTemplate } from "../../types/templates.types";
+import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
+import { TEMPLATES_LOCKED_IN_PRACTICE } from "../../constants/templates";
 
 // Sentinel value for the "no template / free typing" state, so the Select stays
 // controlled (a bare undefined value flips it between controlled and
@@ -52,6 +54,9 @@ export const TemplatePicker = ({
 		useState<ISectionCTemplate | null>(null);
 	const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 	const { data: templates, isLoading } = useSectionCTemplates();
+	// Templates are shared and real, so they can be used but not changed in
+	// practice mode.
+	const { isOn: isPractice } = usePracticeMode();
 
 	// The exact text this picker last emitted, so the re-resolve effect can tell
 	// its own output apart from a manual edit and never clobber the latter.
@@ -164,13 +169,22 @@ export const TemplatePicker = ({
 	return (
 		<>
 			<div className="space-y-1.5">
-				<Label className="text-xs text-muted-foreground">Use Template</Label>
+				<Label
+					htmlFor="section-c-template"
+					className="text-xs text-muted-foreground"
+				>
+					Use Template
+				</Label>
 				<div className="flex items-center gap-2">
 					<Select
 						value={selectedId ?? (freeTyping ? FREE_VALUE : undefined)}
 						onValueChange={handleTemplateSelect}
 					>
-						<SelectTrigger className="flex-1" disabled={isLoading}>
+						<SelectTrigger
+							id="section-c-template"
+							className="flex-1"
+							disabled={isLoading}
+						>
 							<SelectValue
 								placeholder={
 									isLoading
@@ -213,9 +227,13 @@ export const TemplatePicker = ({
 						variant="outline"
 						size="icon"
 						onClick={handleEditClick}
-						title="Edit selected template"
+						title={
+							isPractice
+								? TEMPLATES_LOCKED_IN_PRACTICE
+								: "Edit selected template"
+						}
 						aria-label="Edit selected template"
-						disabled={!selectedId}
+						disabled={!selectedId || isPractice}
 					>
 						<Pencil className="h-4 w-4" />
 					</Button>
@@ -224,8 +242,11 @@ export const TemplatePicker = ({
 						variant="outline"
 						size="icon"
 						onClick={() => setCreateModalOpen(true)}
-						title="Create new template"
+						title={
+							isPractice ? TEMPLATES_LOCKED_IN_PRACTICE : "Create new template"
+						}
 						aria-label="Create new template"
+						disabled={isPractice}
 					>
 						<Plus className="h-4 w-4" />
 					</Button>

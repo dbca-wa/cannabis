@@ -229,16 +229,15 @@ def send_email_with_embedded_image(
         is_console = "console" in backend
 
         if is_console:
-            settings.LOGGER.info(
-                f"[CONSOLE MODE] Would send email: Subject='{subject}', "
-                f"To={msg_root['To']}"
-            )
-            # Print the HTML body so activation links are visible in dev
+            # Local development only: one line, with the links, so invite and
+            # reset links can be followed without a mail server.
             import re
 
             links = re.findall(r'href="([^"]*)"', html_content)
-            if links:
-                settings.LOGGER.info(f"[CONSOLE MODE] Links in email: {links[:5]}")
+            settings.LOGGER.info(
+                f"[CONSOLE] Email not sent: '{subject}' to {msg_root['To']}"
+                + (f"; links: {sorted(set(links))[:5]}" if links else "")
+            )
         else:
             email_host = getattr(settings, "EMAIL_HOST", "mail-relay.lan.fyi")
             email_port = getattr(settings, "EMAIL_PORT", 587)
@@ -249,34 +248,23 @@ def send_email_with_embedded_image(
         settings.LOGGER.error(f"Failed to send email via SMTP: {e}", exc_info=True)
         raise
 
-    # Summary log
-    backend = getattr(settings, "EMAIL_BACKEND", "")
-    is_console = "console" in backend
-    recipients_str = (
-        ", ".join(recipient_email)
-        if isinstance(recipient_email, list)
-        else recipient_email
-    )
-
-    if is_console and is_test_mode:
-        settings.LOGGER.info(
-            f"[CONSOLE + TEST MODE] Email rendered to terminal (not sent). "
-            f"Subject: '{subject}' | "
-            f"Original recipient: {', '.join(original_recipients) if isinstance(original_recipients, list) else original_recipients} | "
-            f"Redirected to test user: {test_mode_user}"
+    # Delivery detail at DEBUG: the action that sent the email (an invitation,
+    # a reset code) already has its one INFO line, and a failure above is
+    # logged as an ERROR.
+    if is_test_mode:
+        original = (
+            ", ".join(original_recipients)
+            if isinstance(original_recipients, list)
+            else original_recipients
         )
-    elif is_console:
-        settings.LOGGER.info(
-            f"[CONSOLE] Email rendered to terminal (not sent). "
-            f"Subject: '{subject}' | Recipient: {recipients_str}"
+        settings.LOGGER.debug(
+            f"Email '{subject}' redirected to test user {test_mode_user} "
+            f"(was for {original})"
         )
-    elif is_test_mode:
-        settings.LOGGER.info(
-            f"[TEST MODE] Email SENT to test user {test_mode_user} "
-            f"(original recipient: {', '.join(original_recipients) if isinstance(original_recipients, list) else original_recipients}). "
-            f"Subject: '{subject}'"
+    elif not is_console:
+        recipients_str = (
+            ", ".join(recipient_email)
+            if isinstance(recipient_email, list)
+            else recipient_email
         )
-    else:
-        settings.LOGGER.info(
-            f"[LIVE] Email sent. Subject: '{subject}' | Recipient: {recipients_str}"
-        )
+        settings.LOGGER.debug(f"Email '{subject}' sent to {recipients_str}")

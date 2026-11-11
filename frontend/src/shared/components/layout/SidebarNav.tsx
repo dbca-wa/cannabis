@@ -110,8 +110,9 @@ export const SidebarNav = ({
 			{navGroups.map((group, groupIdx) => {
 				const visibleItems = group.items.filter(
 					(item) =>
-						// Roleless, non-admin users only ever see the Dashboard
-						(hasAppAccess || item.to === "/") &&
+						// Roleless, non-admin users see the Dashboard and a
+						// read-only Settings page only
+						(hasAppAccess || item.to === "/" || item.to === "/settings") &&
 						(!item.adminOnly || user?.is_superuser) &&
 						(!item.devOnly || SHOW_DEV_PAGES)
 				);

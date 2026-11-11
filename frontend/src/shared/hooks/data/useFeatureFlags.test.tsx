@@ -14,8 +14,15 @@ import {
 	useOcrEnabled,
 	useDefaultBotanistId,
 	useSavedSearchesAllowed,
+	useCertificatePrintDefaults,
 } from "./useFeatureFlags";
 import { SystemSettingsService } from "@/shared/services";
+
+const PRINT_DEFAULTS = {
+	default_print_conveying_station: true,
+	default_print_requesting_station: true,
+	default_print_requesting_rank: false,
+};
 
 const createWrapper = () => {
 	const queryClient = new QueryClient({
@@ -36,6 +43,7 @@ describe("useFeatureFlags", () => {
 			ocr_enabled: true,
 			allow_saved_searches: false,
 			default_approved_botanist: 7,
+			...PRINT_DEFAULTS,
 		});
 
 		const { result } = renderHook(() => useFeatureFlags(), {
@@ -52,6 +60,7 @@ describe("useFeatureFlags", () => {
 			ocr_enabled: true,
 			allow_saved_searches: false,
 			default_approved_botanist: null,
+			...PRINT_DEFAULTS,
 		});
 
 		const { result } = renderHook(() => useOcrEnabled(), {
@@ -68,6 +77,7 @@ describe("useFeatureFlags", () => {
 			ocr_enabled: false,
 			allow_saved_searches: false,
 			default_approved_botanist: 42,
+			...PRINT_DEFAULTS,
 		});
 
 		const { result } = renderHook(() => useDefaultBotanistId(), {
@@ -83,6 +93,7 @@ describe("useFeatureFlags", () => {
 			ocr_enabled: false,
 			allow_saved_searches: false,
 			default_approved_botanist: null,
+			...PRINT_DEFAULTS,
 		});
 
 		const { result } = renderHook(() => useDefaultBotanistId(), {
@@ -97,11 +108,41 @@ describe("useFeatureFlags", () => {
 		expect(result.current).toBeNull();
 	});
 
+	it("useCertificatePrintDefaults reports the system defaults once loaded", async () => {
+		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
+			ocr_enabled: false,
+			allow_saved_searches: false,
+			default_approved_botanist: null,
+			default_print_conveying_station: false,
+			default_print_requesting_station: true,
+			default_print_requesting_rank: true,
+		});
+
+		const { result } = renderHook(() => useCertificatePrintDefaults(), {
+			wrapper: createWrapper(),
+		});
+
+		// The backend's initial defaults stand in until the flags load.
+		expect(result.current.isLoaded).toBe(false);
+		expect(result.current.defaults).toEqual({
+			print_conveying_station: true,
+			print_requesting_station: true,
+			print_requesting_rank: false,
+		});
+		await waitFor(() => expect(result.current.isLoaded).toBe(true));
+		expect(result.current.defaults).toEqual({
+			print_conveying_station: false,
+			print_requesting_station: true,
+			print_requesting_rank: true,
+		});
+	});
+
 	it("useSavedSearchesAllowed reflects the flag, defaulting to false before load", async () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
 			allow_saved_searches: true,
 			default_approved_botanist: null,
+			...PRINT_DEFAULTS,
 		});
 
 		const { result } = renderHook(() => useSavedSearchesAllowed(), {

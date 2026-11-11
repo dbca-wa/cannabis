@@ -34,29 +34,20 @@ class PasswordResetCodeService:
         from django.db import transaction
 
         with transaction.atomic():
-            expired_count = PasswordResetCode.objects.filter(
+            PasswordResetCode.objects.filter(
                 user=user, expires_at__lt=timezone.now()
-            ).delete()[0]
+            ).delete()
 
-            used_count = PasswordResetCode.objects.filter(
-                user=user, is_used=True
-            ).delete()[0]
-
-            if expired_count > 0 or used_count > 0:
-                logger.info(
-                    f"Cleaned up {expired_count} expired and {used_count} "
-                    f"used reset codes for user {user.email}"
-                )
+            # Clear out this user's old codes; housekeeping, so not logged.
+            PasswordResetCode.objects.filter(user=user, is_used=True).delete()
 
             existing_code = PasswordResetCode.objects.filter(
                 user=user, is_used=False, expires_at__gt=timezone.now()
             ).first()
 
             if existing_code:
-                logger.warning(
-                    f"User {user.email} already has an active reset code "
-                    f"(created: {existing_code.created_at}, expires: {existing_code.expires_at})"
-                )
+                # Not a failure: the caller tells the person to use the code
+                # already sent.
                 raise ValueError("User already has an active reset code")
 
             code = PasswordResetCodeService._generate_secure_code()
@@ -70,15 +61,8 @@ class PasswordResetCodeService:
 
             reset_code._plain_code = code
 
-            SecurityEventLogger.log_reset_code_generated(
-                email=user.email, code_prefix=code[:2] + "**"
-            )
-
-            logger.info(
-                f"Generated new reset code for user {user.email} "
-                f"(expires: {reset_code.expires_at})"
-            )
-
+            # The caller logs the action (a reset requested or sent), so a
+            # new code adds no line of its own.
             return reset_code
 
     @staticmethod
@@ -141,15 +125,7 @@ class PasswordResetCodeService:
                 reset_code.used_at = timezone.now()
                 reset_code.save(update_fields=["is_used", "used_at"])
 
-                logger.info(f"Reset code for {user.email} marked as used successfully")
-
-            SecurityEventLogger.log_reset_code_verification_attempt(
-                email=user.email,
-                code_prefix=code_prefix,
-                success=True,
-                attempt_count=reset_code.attempts,
-            )
-
+            # Success is logged once by the caller, naming the user.
             return True, reset_code, "Code verified successfully"
         else:
             from django.db import transaction
@@ -159,11 +135,7 @@ class PasswordResetCodeService:
                 reset_code.attempts += 1
                 reset_code.save(update_fields=["attempts"])
 
-                logger.info(
-                    f"Incremented attempt count for {user.email} "
-                    f"to {reset_code.attempts}/{reset_code.max_attempts}"
-                )
-
+            # One warning with the attempt count; the view adds no second line.
             SecurityEventLogger.log_reset_code_verification_attempt(
                 email=user.email,
                 code_prefix=code_prefix,

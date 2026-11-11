@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
+	canHaveFemalePlants,
 	resizeEntries,
 	isPlantContent,
 	type BulkBagEntry,
 } from "./bulkAddBags.utils";
+import { DETERMINATION_LABELS } from "../../../constants/determinations";
+import type {
+	BotanicalDetermination,
+	DrugBagContentType,
+} from "../../../types/drugBags.types";
 
 const makeId = (i: number) => `id-${i}`;
 const defaults = {
@@ -80,5 +86,64 @@ describe("isPlantContent", () => {
 	it("is false for non-plant content types", () => {
 		expect(isPlantContent("seed")).toBe(false);
 		expect(isPlantContent("unknown")).toBe(false);
+	});
+});
+
+// Every stored content type and every determination, including legacy values.
+const CONTENT_TYPES: DrugBagContentType[] = [
+	"plant",
+	"plant_material",
+	"cutting",
+	"stalk",
+	"stem",
+	"seed",
+	"seed_material",
+	"unknown_seed",
+	"seedling",
+	"head",
+	"rootball",
+	"poppy",
+	"poppy_plant",
+	"poppy_capsule",
+	"poppy_head",
+	"poppy_seed",
+	"mushroom",
+	"tablet",
+	"unknown",
+	"unsure",
+];
+const DETERMINATIONS = [
+	null,
+	undefined,
+	...(Object.keys(DETERMINATION_LABELS) as BotanicalDetermination[]),
+];
+
+describe("canHaveFemalePlants", () => {
+	it.each(
+		CONTENT_TYPES.flatMap((content) =>
+			DETERMINATIONS.map((determination) => [content, determination] as const)
+		)
+	)("%s with %s", (content, determination) => {
+		const plant = content === "plant" || content === "plant_material";
+		const cannabisOrUnassessed =
+			!determination ||
+			determination === "pending" ||
+			[
+				"cannabis_sativa",
+				"cannabis_indica",
+				"cannabis_hybrid",
+				"mixed",
+			].includes(determination);
+		expect(canHaveFemalePlants(content, determination)).toBe(
+			plant && cannabisOrUnassessed
+		);
+	});
+
+	it("is offered for cannabis plant material and hidden for the other results", () => {
+		expect(canHaveFemalePlants("plant", "cannabis_sativa")).toBe(true);
+		expect(canHaveFemalePlants("plant", "not_cannabis")).toBe(false);
+		expect(canHaveFemalePlants("plant_material", "degraded")).toBe(false);
+		expect(canHaveFemalePlants("plant", "inconclusive")).toBe(false);
+		expect(canHaveFemalePlants("seed", "cannabis_sativa")).toBe(false);
 	});
 });

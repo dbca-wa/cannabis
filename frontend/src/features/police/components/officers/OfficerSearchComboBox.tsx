@@ -59,6 +59,8 @@ const formatOfficerLegalName = (officer: {
 };
 
 interface OfficerSearchComboBoxProps {
+	/** Id for the trigger, so a field label can point at it. */
+	id?: string;
 	value?: number | null;
 	onValueChange: (officerId: number | null) => void;
 	placeholder?: string;
@@ -79,6 +81,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 >(
 	(
 		{
+			id,
 			value,
 			onValueChange,
 			placeholder = "Search officers...",
@@ -96,6 +99,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 		const [open, setOpen] = useState(false);
 		const [searchQuery, setSearchQuery] = useState("");
 		const [showCreateModal, setShowCreateModal] = useState(false);
+		const [createFromSearch, setCreateFromSearch] = useState("");
 		const [showExternalCreateModal, setShowExternalCreateModal] =
 			useState(false);
 
@@ -146,6 +150,8 @@ export const OfficerSearchComboBox = React.forwardRef<
 		};
 
 		const handleCreateOfficer = () => {
+			// Keep what was typed: closing the list clears the search.
+			setCreateFromSearch(searchQuery);
 			setOpen(false);
 			setShowCreateModal(true);
 		};
@@ -174,6 +180,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 				<PopoverTrigger asChild>
 					<Button
 						ref={ref}
+						id={id}
 						variant="outline"
 						role="combobox"
 						aria-expanded={open}
@@ -368,7 +375,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 			<>
 				{showExternalAddButton ? (
 					<div className="flex items-center gap-2">
-						<div className="flex-1">{comboboxElement}</div>
+						<div className="min-w-0 flex-1">{comboboxElement}</div>
 						<Button
 							onClick={handleExternalCreateOfficer}
 							disabled={disabled}
@@ -387,6 +394,7 @@ export const OfficerSearchComboBox = React.forwardRef<
 					open={showCreateModal}
 					onOpenChange={setShowCreateModal}
 					onCreate={handleOfficerCreated}
+					initialSearch={createFromSearch}
 				/>
 
 				{/* External Create Officer Modal */}

@@ -4,8 +4,8 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 
 /**
  * Shown on the dashboard to authenticated users who have not yet been assigned
- * a role. They cannot access any other part of the app until an existing
- * botanist, finance officer, or administrator gives them a role.
+ * a role. Apart from a read-only Settings page, they cannot use the app until
+ * an existing botanist, finance officer, or administrator gives them a role.
  */
 export const AwaitingRoleNotice = () => {
 	const { user } = useAuth();
@@ -23,7 +23,8 @@ export const AwaitingRoleNotice = () => {
 				<p className="mt-3 text-sm text-muted-foreground">
 					Your account is active but does not have a role yet. Access to cases,
 					certificates, batches, and the rest of the app is granted once an
-					administrator or an existing team member assigns you a role.
+					administrator or an existing team member assigns you a role. Until
+					then you can view Settings, but not change them.
 				</p>
 				<div className="mt-6 inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm">
 					<Mail className="h-4 w-4 text-muted-foreground" />

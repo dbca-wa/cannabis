@@ -16,6 +16,12 @@ import type {
 	BotanicalDetermination,
 	DrugBagContentType,
 } from "../../../types/drugBags.types";
+import {
+	DETERMINATION_HELP,
+	DETERMINATION_OPTIONS,
+	getDeterminationLabel,
+} from "../../../constants/determinations";
+import { canHaveFemalePlants } from "./bulkAddBags.utils";
 
 // Full label maps — used only to resolve human-readable labels for display of
 // legacy/imported values. The backend's *_display fields take precedence.
@@ -42,19 +48,6 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
 	unsure: "Unsure",
 };
 
-const DETERMINATION_LABELS: Record<string, string> = {
-	pending: "Pending Assessment",
-	cannabis_sativa: "Cannabis sativa",
-	cannabis_indica: "Cannabis indica",
-	cannabis_hybrid: "Cannabis hybrid",
-	mixed: "Mixed",
-	papaver_somniferum: "Papaver somniferum",
-	degraded: "Degraded",
-	not_cannabis: "Not Cannabis",
-	unidentifiable: "Unidentifiable",
-	inconclusive: "Inconclusive",
-};
-
 // Simplified options shown when adding/editing a bag. The backend keeps the full
 // set of choices, so legacy values remain valid.
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
@@ -64,24 +57,10 @@ const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "unknown", label: "Other" },
 ];
 
-const DETERMINATION_OPTIONS: {
-	value: BotanicalDetermination;
-	label: string;
-}[] = [
-	{ value: "pending", label: "Pending Assessment" },
-	{ value: "cannabis_sativa", label: "Cannabis sativa" },
-	{ value: "degraded", label: "Degraded" },
-	{ value: "inconclusive", label: "Inconclusive" },
-	{ value: "not_cannabis", label: "Not Cannabis" },
-];
-
 const TAG_PATTERN = /^[a-zA-Z0-9\s-]*$/;
 
 const getContentTypeLabel = (value: string): string =>
 	CONTENT_TYPE_LABELS[value] ?? value;
-
-const getDeterminationLabel = (value: string): string =>
-	DETERMINATION_LABELS[value] ?? value;
 
 /** Build select options, appending the current value if it's a legacy one not
  * in the simplified list, so editing never silently drops it. */
@@ -188,6 +167,11 @@ export const BagCard = ({
 		validateTagUniqueness(originalTag);
 	};
 
+	// Female plants only apply to cannabis plant content, so the flag is
+	// cleared on save when the content type or result rules it out.
+	const femalePlantsApply = canHaveFemalePlants(contentType, determination);
+	const femalePlantsToSave = femalePlantsApply && femalePlants;
+
 	const handleConfirm = () => {
 		if (!validateTagUniqueness(originalTag)) return;
 
@@ -197,7 +181,7 @@ export const BagCard = ({
 				new_seal_tag_numbers: newTag,
 				content_type: contentType,
 				determination: determination,
-				contains_female_plants: femalePlants,
+				contains_female_plants: femalePlantsToSave,
 			});
 			return;
 		}
@@ -209,8 +193,8 @@ export const BagCard = ({
 		if (newTag !== (bag.new_seal_tag_numbers ?? ""))
 			updates.new_seal_tag_numbers = newTag || null;
 		if (contentType !== bag.content_type) updates.content_type = contentType;
-		if (femalePlants !== (bag.contains_female_plants ?? false))
-			updates.contains_female_plants = femalePlants;
+		if (femalePlantsToSave !== (bag.contains_female_plants ?? false))
+			updates.contains_female_plants = femalePlantsToSave;
 
 		if (Object.keys(updates).length > 0) {
 			onUpdateBag(bag.id, updates);
@@ -448,10 +432,11 @@ export const BagCard = ({
 						is not allowed
 					</p>
 				)}
+				<p className="text-xs text-muted-foreground">{DETERMINATION_HELP}</p>
 			</div>
 
-			{/* Female Plants Toggle — only for plant content types */}
-			{(contentType === "plant" || contentType === "plant_material") && (
+			{/* Female Plants Toggle — only for cannabis plant content */}
+			{femalePlantsApply && (
 				<div className="flex items-center gap-2 pt-1">
 					<input
 						type="checkbox"
