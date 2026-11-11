@@ -37,7 +37,10 @@ FROM oven/bun:1.4.4-slim AS production_image
 
 WORKDIR /client
 
-# Upgrade system packages to pick up security patches (OpenSSL, etc.)
+# Upgrade system packages to pick up security patches (OpenSSL, etc.).
+# Changing the date forces this layer to rebuild when the build cache holds
+# old packages.
+ARG OS_PACKAGES_REFRESHED=2026-11-11
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 # Copy built files from build stage
