@@ -5,6 +5,8 @@ copy, so changing them while in practice mode is refused with a message that
 says how to proceed. Reading them is still allowed.
 """
 
+import secrets
+
 import pytest
 from django.urls import reverse
 
@@ -106,12 +108,14 @@ class TestStaffAndInvitations:
         _refused(resp)
 
     def test_creating_a_user_is_refused(self, practising_admin):
+        # Generated at runtime so no password literal sits in source control.
+        password = secrets.token_urlsafe(16)
         resp = practising_admin.post(
             reverse("user_list"),
             {
                 "email": "new.person@dbca.wa.gov.au",
-                "password": "Str0ngPass!word",
-                "password_confirm": "Str0ngPass!word",
+                "password": password,
+                "password_confirm": password,
             },
             format="json",
         )
