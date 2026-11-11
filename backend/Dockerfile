@@ -115,6 +115,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONPATH=/usr/src/app/backend
 ENV TZ="Australia/Perth"
 
+# Changing this date forces the runtime package layer below (and the rest of
+# the stage) to rebuild, so `apt-get upgrade` picks up new Debian security
+# patches instead of reusing a cached layer.
+ARG OS_PACKAGES_REFRESHED=2026-11-11
+
 # Install only runtime dependencies including OCR, PDF conversion, and font/image libs.
 # Prince is installed from its .deb with dpkg + apt's dependency resolver, so we
 # avoid gdebi — gdebi is a GTK application that would drag ~100 MB of GTK, icon
@@ -179,7 +184,13 @@ RUN SITE=/usr/local/lib/python3.14/site-packages \
 
 # pip is not needed at runtime. Removing it keeps a package installer out of
 # the production image and drops its vendored setuptools (CVE-2025-47273).
-RUN python -m pip uninstall -y pip
+# Two copies exist (the base image's and the builder's upgraded one copied
+# over it), so the files are removed explicitly and the build fails if any
+# remain importable.
+RUN python -m pip uninstall -y pip \
+    && SITE="$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
+    && rm -rf "${SITE}"/pip "${SITE}"/pip-*.dist-info /usr/local/bin/pip /usr/local/bin/pip3* \
+    && ! python -c "import pip" 2>/dev/null
 
 # ====================== USER & PERMISSIONS ======================
 
