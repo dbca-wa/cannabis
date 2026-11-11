@@ -19,6 +19,10 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
     role_display = serializers.SerializerMethodField()
     is_authenticated = serializers.SerializerMethodField()
     requires_password_change = serializers.SerializerMethodField()
+    # Reported here as well as on whoami, so the app shows practice mode as soon
+    # as the user signs in rather than only after a reload.
+    practice_mode = serializers.SerializerMethodField()
+    practice_mode_started_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -41,6 +45,8 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "last_login",
             "is_authenticated",
             "requires_password_change",
+            "practice_mode",
+            "practice_mode_started_at",
             "preferences",
         ]
         read_only_fields = [
@@ -79,6 +85,16 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
     def get_role_display(self, obj):
         """Get human-readable role name"""
         return obj.get_role_display()
+
+    def get_practice_mode(self, obj):
+        from common.practice import is_in_practice_mode
+
+        return is_in_practice_mode(obj)
+
+    def get_practice_mode_started_at(self, obj):
+        from common.practice import practice_started_at
+
+        return practice_started_at(obj)
 
     def get_is_authenticated(self, obj):
         """Always true for this serializer (user is authenticated if we're serializing them)"""

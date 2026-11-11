@@ -12,6 +12,8 @@ interface DefaultBotanistCardProps {
 	valueName: string | null;
 	isSaving: boolean;
 	onSave: (botanistId: number | null) => void;
+	/** Show the saved default without letting it be changed. */
+	readOnly?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export const DefaultBotanistCard = ({
 	valueName,
 	isSaving,
 	onSave,
+	readOnly = false,
 }: DefaultBotanistCardProps) => {
 	// Holds only an unsaved choice. `undefined` means the user has not picked
 	// anything yet, so the saved value shows through — which also means a
@@ -52,38 +55,60 @@ export const DefaultBotanistCard = ({
 
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-end">
 				<div className="flex-1 max-w-md">
-					<Label
-						htmlFor="default_approved_botanist"
-						className="mb-1.5 block text-sm"
-					>
-						Approved Botanist
-					</Label>
-					<UserSearchCombobox
-						value={selected}
-						onValueChange={setPending}
-						placeholder="Select a default botanist..."
-						roleFilter="botanist"
-					/>
-				</div>
-				<div className="flex items-center gap-2">
-					<Button
-						size="sm"
-						onClick={() => onSave(selected)}
-						disabled={isSaving || !hasChanged}
-					>
-						Save
-					</Button>
-					{value !== null && (
-						<Button
-							size="sm"
-							variant="outline"
-							onClick={() => onSave(null)}
-							disabled={isSaving}
-						>
-							Clear
-						</Button>
+					{readOnly ? (
+						<>
+							<p
+								id="default_approved_botanist_label"
+								className="mb-1.5 block text-sm font-medium"
+							>
+								Approved Botanist
+							</p>
+							<p
+								aria-labelledby="default_approved_botanist_label"
+								className="rounded-md border bg-muted/30 px-3 py-2 text-sm"
+							>
+								{valueName ?? "No default set"}
+							</p>
+						</>
+					) : (
+						<>
+							<Label
+								htmlFor="default_approved_botanist"
+								className="mb-1.5 block text-sm"
+							>
+								Approved Botanist
+							</Label>
+							<UserSearchCombobox
+								id="default_approved_botanist"
+								value={selected}
+								onValueChange={setPending}
+								placeholder="Select a default botanist..."
+								roleFilter="botanist"
+							/>
+						</>
 					)}
 				</div>
+				{!readOnly && (
+					<div className="flex items-center gap-2">
+						<Button
+							size="sm"
+							onClick={() => onSave(selected)}
+							disabled={isSaving || !hasChanged}
+						>
+							Save
+						</Button>
+						{value !== null && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => onSave(null)}
+								disabled={isSaving}
+							>
+								Clear
+							</Button>
+						)}
+					</div>
+				)}
 			</div>
 
 			<p className="mt-3 text-xs text-muted-foreground">

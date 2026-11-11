@@ -8,6 +8,7 @@ import type {
 	BotanicalDetermination,
 	DrugBagContentType,
 } from "../../../types/drugBags.types";
+import { isCannabisDetermination } from "../../../constants/determinations";
 
 export interface BulkBagEntry {
 	id: string;
@@ -21,6 +22,20 @@ export interface BulkBagEntry {
 /** Female plants only apply to plant content types, matching single-bag entry. */
 export const isPlantContent = (t: DrugBagContentType): boolean =>
 	t === "plant" || t === "plant_material";
+
+/**
+ * Whether the "Contains female plants" control applies to a bag: plant content
+ * that is cannabis, or not yet assessed. A bag with any other result cannot
+ * hold female cannabis plants, so the flag is hidden and saved as false.
+ */
+export const canHaveFemalePlants = (
+	contentType: DrugBagContentType,
+	determination: string | null | undefined
+): boolean =>
+	isPlantContent(contentType) &&
+	(!determination ||
+		determination === "pending" ||
+		isCannabisDetermination(determination));
 
 /**
  * Grow or shrink the list of bag entries to `newCount` while keeping the data

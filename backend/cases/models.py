@@ -68,6 +68,24 @@ class Case(AuditModel):
         help_text="The station this case is for",
     )
 
+    # Certificate print options. New cases take their values from the system
+    # defaults (SystemSettings); these model defaults match the initial ones.
+    print_conveying_station = models.BooleanField(
+        default=True,
+        help_text="Print the conveying officer's station on the certificate",
+    )
+    print_requesting_station = models.BooleanField(
+        default=True,
+        help_text="Print the requesting officer's station on the certificate",
+    )
+    print_requesting_rank = models.BooleanField(
+        default=False,
+        help_text=(
+            "Print the requesting officer's recorded rank instead of "
+            '"Sworn Officer" on the certificate'
+        ),
+    )
+
     # Case details
     case_number = models.CharField(
         max_length=50,
@@ -93,7 +111,7 @@ class Case(AuditModel):
     # Priority3Form.phase and CasePhaseHistory.
     class PhaseChoices(models.TextChoices):
         ASSESSMENT = "assessment", "Assessment"
-        UNSIGNED_GENERATION = "unsigned_generation", "Unsigned Certificate"
+        UNSIGNED_GENERATION = "unsigned_generation", "Certificates"
         BATCHING = "batching", "Batching"
         IN_BATCH = "in_batch", "In Batch"
         COMPLETE = "complete", "Complete"
@@ -501,7 +519,7 @@ class BotanicalAssessment(AuditModel):
         # Non-cannabis botanical identifications
         PAPAVER_SOMNIFERUM = "papaver_somniferum", "Papaver somniferum"  # Opium poppy
         # Assessment outcomes
-        DEGRADED = "degraded", "Degraded"
+        DEGRADED = "degraded", "Too degraded and could not be identified"
         NOT_CANNABIS = "not_cannabis", "Not Cannabis"
         UNIDENTIFIABLE = (
             "unidentifiable",
@@ -608,6 +626,31 @@ class Certificate(AuditModel):
         blank=True,
         null=True,
         help_text="Section C 'other matters' notes shown on this certificate",
+    )
+
+    # What the PDF printed when it was generated, so a later change to the
+    # wording, an officer or a print option can flag it as out of date.
+    wording_version = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Version of the certificate wording the PDF was generated with",
+    )
+    printed_conveying_officer = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Conveying officer text as printed on the PDF",
+    )
+    printed_requesting_officer = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Requesting officer text as printed on the PDF",
+    )
+    # A hash of everything the PDF printed. Empty for certificates made before
+    # it was recorded (including migrated ones), which are never flagged.
+    printed_fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="Hash of the printed content, to spot later changes",
     )
 
     pdf_generating = models.BooleanField(

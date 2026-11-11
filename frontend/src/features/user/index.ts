@@ -15,7 +15,6 @@ export * from "./hooks/useUserPreferences";
 // User components
 export { default as AddUserForm } from "./components/forms/AddUserForm";
 export { default as EditUserForm } from "./components/forms/EditUserForm";
-export { default as AllUsersTable } from "./components/tables/AllUsersTable";
 
 // User modals
 export { AddUserModal } from "./components/modals/AddUserModal";

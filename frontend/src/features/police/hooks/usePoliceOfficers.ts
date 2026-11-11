@@ -82,14 +82,11 @@ export const useCreatePoliceOfficer = () => {
 				newOfficer
 			);
 
+			// Refetches every officer query in use, including an open combobox
+			// search, and marks the rest stale so they refetch when next shown.
+			// Inactive queries are not refetched now: the detail entry seeded
+			// above has no query function, so forcing it to refetch fails.
 			await invalidateRelatedQueries(queryClient, "policeOfficers");
-
-			// Force all active officer queries (including open combobox searches)
-			// to refetch immediately so the new officer appears without re-opening.
-			await queryClient.invalidateQueries({
-				queryKey: ["police-officers"],
-				refetchType: "all",
-			});
 
 			toast.success("Officer created successfully!");
 		},
@@ -139,20 +136,36 @@ export const useDeletePoliceOfficer = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => policeOfficersService.deleteOfficer(id),
-		onSuccess: async (_, deletedId) => {
+		mutationFn: ({
+			id,
+			replacementId,
+		}: {
+			id: number;
+			replacementId?: number | null;
+		}) => policeOfficersService.deleteOfficer(id, replacementId),
+		onSuccess: async (_, { id }) => {
 			// Remove the officer from the cache
 			queryClient.removeQueries({
-				queryKey: policeOfficersQueryKeys.detail(deletedId),
+				queryKey: policeOfficersQueryKeys.detail(id),
 			});
 
+			// Moved cases are refreshed too.
 			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
-			toast.success("Officer deleted successfully!");
+			toast.success("Officer deleted");
 		},
 		onError: (error: unknown) => {
-			console.error("Failed to delete officer:", error);
+			// The server says why, e.g. which cases need a replacement.
 			toast.error(getErrorMessage(error) || "Failed to delete officer");
 		},
 	});
 };
+
+/** The cases that name an officer, shown before deleting them. */
+export const useOfficerUsage = (id: number | null) =>
+	useQuery({
+		queryKey: [...policeOfficersQueryKeys.detail(id ?? 0), "usage"],
+		queryFn: () => policeOfficersService.getOfficerUsage(id!),
+		enabled: !!id,
+		staleTime: 0,
+	});

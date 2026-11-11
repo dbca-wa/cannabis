@@ -22,6 +22,10 @@ export interface SystemSettingsUpdateRequest {
 	default_approved_botanist?: number | null;
 	/** Allow list pages to remember a user's search between visits. */
 	allow_saved_searches?: boolean;
+	/** Certificate print options pre-ticked on each new case. */
+	default_print_conveying_station?: boolean;
+	default_print_requesting_station?: boolean;
+	default_print_requesting_rank?: boolean;
 }
 
 // Settings validation error response

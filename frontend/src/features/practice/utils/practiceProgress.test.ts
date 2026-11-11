@@ -202,7 +202,9 @@ describe("buildCertificateChecklists", () => {
 	it("ticks generate then mark-ready as the certificate progresses", () => {
 		// No certificate yet.
 		let groups = buildCertificateChecklists(brief, [{ bags: [] }]);
-		let done = Object.fromEntries(groups[0].items.map((i) => [i.label, i.done]));
+		let done = Object.fromEntries(
+			groups[0].items.map((i) => [i.label, i.done])
+		);
 		expect(done["Generate the certificate"]).toBe(false);
 		expect(done["Review and mark it ready"]).toBe(false);
 

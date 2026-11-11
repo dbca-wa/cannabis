@@ -45,6 +45,7 @@ export const ENDPOINTS = {
 			DETAIL: (id: string | number) => `/police/stations/${id}`,
 			UPDATE: (id: string | number) => `/police/stations/${id}`,
 			DELETE: (id: string | number) => `/police/stations/${id}`,
+			USAGE: (id: string | number) => `/police/stations/${id}/usage`,
 		},
 		// Police Officer endpoints
 		OFFICERS: {
@@ -54,6 +55,7 @@ export const ENDPOINTS = {
 			DETAIL: (id: string | number) => `/police/officers/${id}`,
 			UPDATE: (id: string | number) => `/police/officers/${id}`,
 			DELETE: (id: string | number) => `/police/officers/${id}`,
+			USAGE: (id: string | number) => `/police/officers/${id}/usage`,
 		},
 	},
 
@@ -66,6 +68,7 @@ export const ENDPOINTS = {
 		DETAIL: (id: string | number) => `/defendants/${id}`,
 		UPDATE: (id: string | number) => `/defendants/${id}`,
 		DELETE: (id: string | number) => `/defendants/${id}`,
+		USAGE: (id: string | number) => `/defendants/${id}/usage`,
 	},
 
 	// Cases endpoints

@@ -4,15 +4,14 @@ import json
 import logging
 
 from django.conf import settings
-from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse, StreamingHttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.status import (
     HTTP_200_OK,
-    HTTP_400_BAD_REQUEST,
     HTTP_413_REQUEST_ENTITY_TOO_LARGE,
 )
 from rest_framework.views import APIView
@@ -22,13 +21,17 @@ from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
 
-from cases.models import Submission  # noqa: E402
+from cases.services.reassignment import (  # noqa: E402
+    describe_case,
+    replacement_from_request,
+)
 
-from ..models import PoliceOfficer, PoliceStation  # noqa: E402
+from ..models import PoliceStation  # noqa: E402
 from ..serializers import (  # noqa: E402
     PoliceStationSerializer,
     PoliceStationTinySerializer,
 )
+from ..services import StationService  # noqa: E402
 
 # ============================================================================
 # region POLICE STATION VIEWS
@@ -147,11 +150,31 @@ class PoliceStationDetailView(RetrieveUpdateDestroyAPIView):
         serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted police station "
-            f"{instance} ({instance.pk})"
+        # Cases and officers using this station are moved to
+        # ?replacement=<id> first, so none is left without its station.
+        replacement = replacement_from_request(
+            self.request, PoliceStation.objects.all(), "station"
         )
-        super().perform_destroy(instance)
+        StationService.delete_station(instance, self.request.user, replacement)
+
+
+class PoliceStationUsageView(APIView):
+    """GET: the cases and officers that use a station, shown before deleting it."""
+
+    permission_classes = [HasAppAccess]
+
+    def get(self, request, pk):
+        station = get_object_or_404(PoliceStation, pk=pk)
+        cases, officers = StationService.usage(station)
+        return Response(
+            {
+                "cases": [describe_case(case, ["station"]) for case in cases],
+                "officers": [
+                    {"id": officer.pk, "full_name": officer.full_name}
+                    for officer in officers
+                ],
+            }
+        )
 
 
 class PoliceStationExportView(APIView):
@@ -399,80 +422,13 @@ class StationMergeView(APIView):
     permission_classes = [HasAppAccess]
 
     def post(self, request):
-        primary_id = request.data.get("primary_id")
-        secondary_ids = request.data.get("secondary_ids")
-
-        # Validation
-        if not primary_id:
-            return Response(
-                {"error": "primary_id is required."},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        if (
-            not secondary_ids
-            or not isinstance(secondary_ids, list)
-            or len(secondary_ids) == 0
-        ):
-            return Response(
-                {"error": "At least one secondary_id is required."},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        if primary_id in secondary_ids:
-            return Response(
-                {"error": "primary_id cannot appear in secondary_ids."},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        # Verify all stations exist
-        all_ids = [primary_id] + secondary_ids
-        existing = PoliceStation.objects.filter(pk__in=all_ids).values_list(
-            "pk", flat=True
+        result = StationService.merge_stations(
+            request.data.get("primary_id"),
+            request.data.get("secondary_ids"),
+            request.user,
         )
-        missing = set(all_ids) - set(existing)
-        if missing:
-            return Response(
-                {"error": f"Station(s) not found: {sorted(missing)}"},
-                status=HTTP_400_BAD_REQUEST,
-            )
-
-        # Perform atomic merge
-        officers_reassigned = 0
-        cases_reassigned = 0
-        with transaction.atomic():
-            primary = PoliceStation.objects.get(pk=primary_id)
-
-            for secondary_id in secondary_ids:
-                secondary = PoliceStation.objects.get(pk=secondary_id)
-
-                # Transfer officers to the primary station
-                officer_count = PoliceOfficer.objects.filter(station=secondary).update(
-                    station=primary
-                )
-                officers_reassigned += officer_count
-
-                # Transfer cases (submissions) to the primary station
-                case_count = Submission.objects.filter(station=secondary).update(
-                    station=primary
-                )
-                cases_reassigned += case_count
-
-                secondary.delete()
-
-        settings.LOGGER.info(
-            f"{describe_user(request.user)} merged stations {secondary_ids} into "
-            f"'{primary.name}' (id={primary_id}). "
-            f"Reassigned {officers_reassigned} officers and {cases_reassigned} cases."
-        )
-
         return Response(
-            {
-                "message": "Merge completed successfully.",
-                "primary_id": primary_id,
-                "officers_reassigned": officers_reassigned,
-                "cases_reassigned": cases_reassigned,
-            },
+            {"message": "Merge completed successfully.", **result},
             status=HTTP_200_OK,
         )
 

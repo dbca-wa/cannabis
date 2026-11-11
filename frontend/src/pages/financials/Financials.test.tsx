@@ -27,14 +27,14 @@ describe("Settings Page", () => {
 		expect(screen.getByTestId("settings-content")).toBeInTheDocument();
 	});
 
-	it("redirects non-staff users away from the page", () => {
+	it("opens for users without a role too (read-only is decided inside)", () => {
 		authState.user = { id: 2, is_staff: false, is_superuser: false };
 		renderPage(<Settings />);
 
 		expect(
-			screen.queryByRole("heading", { name: /settings/i })
-		).not.toBeInTheDocument();
-		expect(screen.queryByTestId("settings-content")).not.toBeInTheDocument();
+			screen.getByRole("heading", { name: /settings/i, level: 1 })
+		).toBeInTheDocument();
+		expect(screen.getByTestId("settings-content")).toBeInTheDocument();
 	});
 
 	it("has no accessibility violations", async () => {

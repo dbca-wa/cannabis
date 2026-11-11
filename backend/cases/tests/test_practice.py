@@ -39,8 +39,10 @@ def _real_mode():
     practice.clear_context()
 
 
-def _make_practice_case(user, botanist=None):
-    case = Case.objects.create(received=timezone.now(), approved_botanist=botanist)
+def _make_practice_case(user, botanist=None, case_number=""):
+    case = Case.objects.create(
+        received=timezone.now(), approved_botanist=botanist, case_number=case_number
+    )
     form = Priority3Form.objects.create(case=case)
     DrugBag.objects.create(form=form, seal_tag_numbers="T001")
     return case, form
@@ -95,8 +97,62 @@ class TestNumbering:
         case, form = _make_practice_case(botanist_user)
         cert = Certificate.objects.create(form=form)
         batch = Batch.objects.create()
-        assert cert.certificate_number.startswith("PRACTICE-R")
-        assert batch.batch_number.startswith("PRACTICE-BATCH")
+        assert cert.certificate_number == f"PRACTICE-{botanist_user.pk}-R000001"
+        assert batch.batch_number == f"PRACTICE-{botanist_user.pk}-BATCH001"
+        _real_mode()
+
+    def test_two_users_can_each_have_a_first_certificate_and_batch(
+        self, botanist_user, finance_user
+    ):
+        """Numbers are unique across all users, so they must not clash."""
+        numbers = []
+        for user in (botanist_user, finance_user):
+            _in_practice(user)
+            _, form = _make_practice_case(user, case_number=f"NUM-{user.pk}")
+            cert = Certificate.objects.create(form=form)
+            batch = Batch.objects.create()
+            numbers += [cert.certificate_number, batch.batch_number]
+            _real_mode()
+
+        assert len(set(numbers)) == 4
+        assert numbers[0].endswith("-R000001") and numbers[2].endswith("-R000001")
+        assert numbers[1].endswith("-BATCH001") and numbers[3].endswith("-BATCH001")
+
+    def test_numbers_continue_after_a_record_is_deleted(self, botanist_user):
+        """A row count would hand out a number that is still in use."""
+        _in_practice(botanist_user)
+        _, first = _make_practice_case(botanist_user, case_number="NUM-1")
+        _, second = _make_practice_case(botanist_user, case_number="NUM-2")
+        Certificate.objects.create(form=first)
+        kept = Certificate.objects.create(form=second)
+        Batch.objects.create()
+        kept_batch = Batch.objects.create()
+        first.case.delete()
+        Batch.objects.exclude(pk=kept_batch.pk).delete()
+
+        _, third = _make_practice_case(botanist_user, case_number="NUM-3")
+        cert = Certificate.objects.create(form=third)
+        batch = Batch.objects.create()
+
+        prefix = f"PRACTICE-{botanist_user.pk}-"
+        assert kept.certificate_number == f"{prefix}R000002"
+        assert cert.certificate_number == f"{prefix}R000003"
+        assert kept_batch.batch_number == f"{prefix}BATCH002"
+        assert batch.batch_number == f"{prefix}BATCH003"
+        _real_mode()
+
+    def test_numbers_from_the_old_format_do_not_interfere(self, botanist_user):
+        _in_practice(botanist_user)
+        _, old = _make_practice_case(botanist_user, case_number="OLD-1")
+        Certificate.objects.create(form=old, certificate_number="PRACTICE-R000007")
+        Batch.objects.create(batch_number="PRACTICE-BATCH007")
+        _, new = _make_practice_case(botanist_user, case_number="NEW-1")
+
+        cert = Certificate.objects.create(form=new)
+        batch = Batch.objects.create()
+
+        assert cert.certificate_number == f"PRACTICE-{botanist_user.pk}-R000001"
+        assert batch.batch_number == f"PRACTICE-{botanist_user.pk}-BATCH001"
         _real_mode()
 
     def test_practice_does_not_advance_live_counters(
@@ -279,9 +335,7 @@ class TestModeEndpoints:
         assert off.status_code == 200
         assert off.data["practice_mode"] is False
 
-    def test_reset_endpoint_clears_data_and_stays_in_practice(
-        self, botanist_user
-    ):
+    def test_reset_endpoint_clears_data_and_stays_in_practice(self, botanist_user):
         from rest_framework.test import APIClient
         from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -336,9 +390,7 @@ class TestModeEndpoints:
         assert not Case.all_objects.filter(pk=a_id).exists()
         assert Case.all_objects.filter(pk=b_id).exists()
 
-    def test_restart_case_rejects_another_users_case(
-        self, botanist_user, finance_user
-    ):
+    def test_restart_case_rejects_another_users_case(self, botanist_user, finance_user):
         # A case owned by someone else must not be removable.
         _in_practice(finance_user)
         other, _ = _make_practice_case(finance_user)

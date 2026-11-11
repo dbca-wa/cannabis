@@ -10,28 +10,47 @@ from rest_framework.exceptions import (
     PermissionDenied,
 )
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
+from cases.permissions import is_admin
 from common.logging import describe_user
+from common.permissions import NotInPracticeMode
 from users.permissions import HasAppAccess
 
 from ..models import SystemSettings
 
 logger = logging.getLogger(__name__)
 
+# System defaults for each new case's certificate print options.
+CERTIFICATE_DEFAULT_FIELDS = (
+    "default_print_conveying_station",
+    "default_print_requesting_station",
+    "default_print_requesting_rank",
+)
+
+# Settings only an administrator may change, with how a refusal names them.
+ADMIN_ONLY_FIELDS = {
+    "ocr_enabled": "OCR",
+    "allow_saved_searches": "remembered searches",
+    "forward_certificate_emails_to": "the admin email address",
+    "send_emails_to_self": "email routing",
+    "email_testing_mode": "email testing mode",
+    "email_test_user": "the email test user",
+}
+
 
 class SystemFeatureFlagsView(APIView):
     """Read-only feature flags for any app user.
 
-    Unlike full system settings (admin-only), feature flags are needed by
-    botanists and finance officers — e.g. whether the OCR upload should appear
-    on case creation. Returns only non-sensitive flags.
+    Feature flags are needed by every page (the layout reads whether searches
+    may be remembered), including for people who have no role yet, so any
+    signed-in user can read them. Returns only non-sensitive flags.
     """
 
-    permission_classes = [HasAppAccess]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         settings_obj = SystemSettings.load()
@@ -46,6 +65,10 @@ class SystemFeatureFlagsView(APIView):
                 "ocr_enabled": settings_obj.ocr_enabled,
                 "allow_saved_searches": settings_obj.allow_saved_searches,
                 "default_approved_botanist": default_botanist_id,
+                **{
+                    field_name: getattr(settings_obj, field_name)
+                    for field_name in CERTIFICATE_DEFAULT_FIELDS
+                },
             }
         )
 
@@ -60,16 +83,22 @@ class SystemSettingsRateThrottle(UserRateThrottle):
 class SystemSettingsView(APIView):
     """
     GET: Retrieve system-wide settings (pricing, etc.)
-    PATCH: Update system settings (admin only)
+    PATCH: Update system settings. Finance officers, botanists and
+        administrators can change rates, numbering and case defaults; the
+        system flags and email settings are for administrators only.
     """
 
-    permission_classes = [IsAuthenticated]
     throttle_classes = [SystemSettingsRateThrottle]
 
+    def get_permissions(self):
+        # Anyone signed in may view the settings (people without a role see
+        # them read-only). Changing them needs an app role, and is refused in
+        # practice mode because settings are real and shared.
+        if self.request.method in SAFE_METHODS:
+            return [IsAuthenticated()]
+        return [HasAppAccess(), NotInPracticeMode()]
+
     def get(self, request):
-        # Any user with an app role can view settings (pricing info is needed
-        # on the financials page). Roleless users are already blocked by
-        # HasAppAccess on the permission_classes.
         settings = SystemSettings.load()
         environment = getattr(django_settings, "ENVIRONMENT", "local").lower()
 
@@ -82,6 +111,8 @@ class SystemSettingsView(APIView):
             "allow_saved_searches": settings.allow_saved_searches,
             "environment": environment,
         }
+        for field_name in CERTIFICATE_DEFAULT_FIELDS:
+            response_data[field_name] = getattr(settings, field_name)
 
         # The default botanist is only reported while the chosen user still holds
         # the Approved Botanist role, so a role change behaves as though no
@@ -119,16 +150,19 @@ class SystemSettingsView(APIView):
         return Response(response_data)
 
     def patch(self, request):
-        """Update system settings (staff or admin only)"""
-        # Staff or superuser can modify settings
-        if not (request.user.is_staff or request.user.is_superuser):
-            logger.warning(
-                f"{describe_user(request.user)} (non-staff) attempted to modify "
-                f"system settings"
-            )
-            raise PermissionDenied(
-                "Only staff or admin users can modify system settings."
-            )
+        """Update system settings.
+
+        Any app role may change rates, numbering and case defaults. The
+        system flags and email settings change how the app behaves for
+        everyone, so only an administrator may change those.
+        """
+        if not is_admin(request.user):
+            restricted = [field for field in ADMIN_ONLY_FIELDS if field in request.data]
+            if restricted:
+                raise PermissionDenied(
+                    "Only an administrator can change "
+                    f"{', '.join(ADMIN_ONLY_FIELDS[f] for f in restricted)}."
+                )
 
         settings = SystemSettings.load()
 
@@ -307,6 +341,25 @@ class SystemSettingsView(APIView):
             old_values["allow_saved_searches"] = settings.allow_saved_searches
             settings.allow_saved_searches = bool_value
             updated_fields.append("allow_saved_searches")
+
+        # Certificate print option defaults (pre-ticked on new cases)
+        for field_name in CERTIFICATE_DEFAULT_FIELDS:
+            if field_name not in request.data:
+                continue
+            input_value = request.data[field_name]
+            if isinstance(input_value, bool):
+                bool_value = input_value
+            elif isinstance(input_value, str) and input_value.lower() in (
+                "true",
+                "false",
+            ):
+                bool_value = input_value.lower() == "true"
+            else:
+                validation_errors[field_name] = "This setting must be true or false"
+                continue
+            old_values[field_name] = getattr(settings, field_name)
+            setattr(settings, field_name, bool_value)
+            updated_fields.append(field_name)
 
         # Validate certificate_counter field
         if "certificate_counter" in request.data:

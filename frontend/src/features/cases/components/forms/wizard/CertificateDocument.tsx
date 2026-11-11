@@ -8,22 +8,34 @@
 import {
 	formatCertificateDate,
 	numberToWords,
-	formatOfficerLegal,
 	formatContentDescription,
 	joinWithAnd,
 } from "@/shared/utils/certificate-format.utils";
-import type { OfficerDetails } from "@/shared/utils/certificate-format.utils";
+import {
+	composeSectionC,
+	femalePlantLine,
+	formatOfficer,
+	readPrintOptions,
+	summariseResults,
+	type OfficerFacts,
+} from "@/features/cases/utils/certificateWording";
 
 export interface CaseDataBag {
 	id?: unknown;
 	seal_tag_numbers?: string;
 	new_seal_tag_numbers?: string | null;
 	content_type_display?: string;
+	contains_female_plants?: boolean;
 	assessment?: {
+		determination?: string | null;
 		determination_display?: string;
 		assessment_date?: string | null;
 	} | null;
 }
+
+/** Bags in the order the PDF prints them: the order they were added. */
+const inPrintOrder = (bags: CaseDataBag[]): CaseDataBag[] =>
+	[...bags].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
 
 interface DefendantDetail {
 	last_name?: string;
@@ -45,12 +57,13 @@ interface CertificateDocumentProps {
 
 export const CertificateDocument = ({
 	caseData,
-	bags,
+	bags: unorderedBags,
 	fonts,
 	certificateNumber = null,
 	certifiedDate = null,
 	notes = null,
 }: CertificateDocumentProps) => {
+	const bags = inPrintOrder(unorderedBags);
 	const bagCount = bags.length;
 	const bagCountWord = numberToWords(bagCount);
 
@@ -61,11 +74,14 @@ export const CertificateDocument = ({
 
 	const description = formatContentDescription(bags);
 
-	const itemReference = bagCount === 1 ? "the item" : "the items";
-
-	const speciesName =
-		bags.find((b) => b.assessment?.determination_display)?.assessment
-			?.determination_display ?? null;
+	// Section B and the automatic Section C lines, worked out exactly as the PDF
+	// does. Null until every bag has one of the four printable results.
+	const results = summariseResults(
+		bags.map((b) => ({
+			tag: b.seal_tag_numbers ?? "",
+			determination: b.assessment?.determination,
+		}))
+	);
 
 	const defendantsDetails =
 		(caseData.defendants_details as DefendantDetail[]) ?? [];
@@ -81,29 +97,43 @@ export const CertificateDocument = ({
 			: "UNKNOWN";
 
 	// The conveying officer delivered the samples and was present at the
-	// examination, so they are named in both section (a) and section (b). On the
-	// certificate they are always the unsworn officer, so the preview must use
-	// the same "Unsworn Officer" label rather than the officer's rank.
-	const conveyingOfficer = formatOfficerLegal(
-		caseData.submitting_officer_details as OfficerDetails | null | undefined,
-		"Unsworn Officer"
+	// examination, so they are named in both section (a) and section (b). The
+	// requesting officer is optional and appears only in section (a), as the
+	// officer the samples were conveyed on behalf of. Stations and the
+	// requesting officer's rank follow the case's print options.
+	const options = readPrintOptions(caseData);
+	const conveyingOfficer = formatOfficer(
+		caseData.submitting_officer_id
+			? (caseData.submitting_officer_details as OfficerFacts | null | undefined)
+			: null,
+		{ role: "conveying", printStation: options.printConveyingStation }
 	);
-	// The requesting officer is optional and appears only in section (a), as the
-	// sworn officer the samples were conveyed on behalf of.
-	const requestingOfficerDetails = caseData.requesting_officer_id
-		? (caseData.requesting_officer_details as OfficerDetails | null | undefined)
-		: null;
-	const requestingOfficer = requestingOfficerDetails
-		? formatOfficerLegal(requestingOfficerDetails, "Sworn Officer")
+	const requestingOfficer = caseData.requesting_officer_id
+		? formatOfficer(
+				caseData.requesting_officer_details as OfficerFacts | null | undefined,
+				{
+					role: "requesting",
+					printStation: options.printRequestingStation,
+					printRank: options.printRequestingRank,
+				}
+			)
 		: null;
 
 	const receiptDate = formatCertificateDate(
 		caseData.received as string | null | undefined
 	);
-	const additionalNotes =
-		notes != null
-			? notes.trim() || "None"
-			: (caseData.additional_notes as string) || "None";
+	const note =
+		notes != null ? notes : ((caseData.additional_notes as string) ?? "");
+	const femaleLine = femalePlantLine(
+		bags.map((b) => ({
+			tag: b.seal_tag_numbers ?? "",
+			determination: b.assessment?.determination,
+			female: b.contains_female_plants,
+		}))
+	);
+	const sectionCLines = (
+		composeSectionC(results?.bagLines ?? [], note, femaleLine) ?? "None"
+	).split("\n");
 	const policeReferenceNumber = (caseData.case_number as string) ?? null;
 	const approvedBotanist = (caseData.approved_botanist_name as string) ?? null;
 
@@ -283,7 +313,7 @@ export const CertificateDocument = ({
 						<>
 							<p style={{ margin: 0 }}>
 								I received for examination {bagCountWord} sealed drug movement{" "}
-								{bagWord}, tag {tagWord} {tagNumbers} containing {description}
+								{bagWord}, tag {tagWord} {tagNumbers} containing a {description}
 							</p>
 							{/* "marked ..." begins on its own line with a blank line above,
 							    matching the generated certificate. */}
@@ -336,13 +366,19 @@ export const CertificateDocument = ({
 					{bagCount > 0 ? (
 						<>
 							<p>
-								I identified {itemReference} as{" "}
-								<em>
-									{speciesName || (
-										<span style={{ color: "#888" }}>[Pending]</span>
-									)}
-								</em>
-								.
+								{results ? (
+									<>
+										{results.sectionB.prefix}
+										{results.sectionB.italic && (
+											<em>{results.sectionB.italic}</em>
+										)}
+										{results.sectionB.suffix}
+									</>
+								) : (
+									<span style={{ color: "#888", fontStyle: "italic" }}>
+										[Pending — every bag needs one of the four results]
+									</span>
+								)}
 							</p>
 							<p style={{ marginTop: "8px" }}>
 								{sealedPhrase} {newTagNumbers}. {handoverPhrase} handed over to{" "}
@@ -385,7 +421,15 @@ export const CertificateDocument = ({
 						marginLeft: "20px",
 					}}
 				>
-					<p>{additionalNotes}</p>
+					{/* One line per row, matching the PDF's line breaks. */}
+					<p>
+						{sectionCLines.map((line, index) => (
+							<span key={index}>
+								{line}
+								{index < sectionCLines.length - 1 && <br />}
+							</span>
+						))}
+					</p>
 				</div>
 			</section>
 

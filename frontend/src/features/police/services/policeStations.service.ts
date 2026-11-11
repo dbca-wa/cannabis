@@ -1,5 +1,7 @@
 import { apiClient, ENDPOINTS } from "@/shared/services/api";
 import { logger } from "@/shared/services/logger.service";
+import { withReplacement } from "@/shared/utils/record-usage.utils";
+import type { RecordUsage } from "@/shared/types/record-usage.types";
 import type {
 	PoliceStation,
 	PoliceStationCreateRequest,
@@ -72,8 +74,19 @@ export const policeStationsService = {
 	/**
 	 * Delete a police station
 	 */
-	async deleteStation(id: number): Promise<void> {
-		return apiClient.delete(ENDPOINTS.POLICE.STATIONS.DELETE(id));
+	async deleteStation(
+		id: number,
+		replacementId?: number | null
+	): Promise<void> {
+		// Cases and officers using the station move to the replacement first.
+		return apiClient.delete(
+			withReplacement(ENDPOINTS.POLICE.STATIONS.DELETE(id), replacementId)
+		);
+	},
+
+	/** The cases and officers that use a station, shown before deleting it. */
+	async getStationUsage(id: number): Promise<RecordUsage> {
+		return apiClient.get<RecordUsage>(ENDPOINTS.POLICE.STATIONS.USAGE(id));
 	},
 
 	/**

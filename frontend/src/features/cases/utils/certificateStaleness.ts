@@ -7,7 +7,9 @@
  *  - a bag, or its botanical assessment, was updated after the PDF was built
  *    (the "the bags changed after generating" case); or
  *  - the form's Section C "other matters" note no longer matches the note
- *    snapshotted onto the certificate at generation.
+ *    snapshotted onto the certificate at generation; or
+ *  - the backend reports `needs_regeneration` (older certificate wording, or
+ *    officer text that no longer matches what was printed).
  *
  * Section C is compared by content, not by timestamp. The form's row timestamp
  * is deliberately NOT used: it is bumped by actions that do not change the
@@ -40,6 +42,11 @@ export const isFormStale = (form: Priority3Form): boolean => {
 	) {
 		return true;
 	}
+
+	// The backend flags what only it can see: the PDF was made with older
+	// certificate wording, or the officer text it printed has changed (a
+	// different officer, an edited officer record or a changed print option).
+	if (cert.needs_regeneration) return true;
 
 	const certTime = new Date(cert.updated_at).getTime();
 

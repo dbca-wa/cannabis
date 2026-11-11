@@ -233,6 +233,7 @@ export const GeneratedCertificatesViewer = ({
 						<div className="flex flex-col items-center">
 							<Document
 								file={file}
+								suspense={false}
 								onLoadSuccess={({ numPages: n }) => setNumPages(n)}
 								onLoadError={() =>
 									setPdfError("Failed to load certificate PDF")

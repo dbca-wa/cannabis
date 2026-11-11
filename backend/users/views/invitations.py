@@ -3,9 +3,13 @@ Invitation views: external user search, invite user, and invitation activation.
 """
 
 import logging
+import secrets
+import string
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import (
@@ -14,6 +18,9 @@ from rest_framework.status import (
     HTTP_400_BAD_REQUEST,
 )
 from rest_framework.views import APIView
+
+from common.logging import describe_user
+from common.permissions import NotInPracticeMode
 
 from ..error_handlers import (
     ErrorCodes,
@@ -150,7 +157,7 @@ class InviteUserView(APIView):
     Creates invitation record and sends invitation email with activation link
     """
 
-    permission_classes = [HasAppAccess]
+    permission_classes = [HasAppAccess, NotInPracticeMode]
 
     @handle_network_errors
     def post(self, request):
@@ -266,13 +273,8 @@ class InviteUserView(APIView):
 
             if system_settings.send_emails_to_self:
                 recipient_list = [system_settings.forward_certificate_emails_to]
-                logger.info(
-                    f"Sending invitation email to admin "
-                    f"({system_settings.forward_certificate_emails_to}) instead of {email}"
-                )
             else:
                 recipient_list = [email]
-                logger.info(f"Sending invitation email to actual recipient: {email}")
 
             # Send via the centralised email service (shared emails/ template,
             # inline logo, test-mode redirection).
@@ -283,12 +285,14 @@ class InviteUserView(APIView):
                 context=context,
             )
 
-            # Log the invitation
-            SecurityEventLogger.log_invitation_sent(
-                inviter_email=request.user.email,
-                invited_email=email,
-                role=role,
-                token_prefix=token[:8] + "...",
+            redirected = (
+                f" (sent to {recipient_list[0]} instead)"
+                if recipient_list != [email]
+                else ""
+            )
+            settings.LOGGER.info(
+                f"{describe_user(request.user)} invited {email} as {role} "
+                f"(invitation {invite_record.pk}){redirected}"
             )
 
             # Return invitation record data
@@ -324,7 +328,7 @@ class TestInviteEmailView(APIView):
     Sends directly to the provided address so the tester controls the recipient.
     """
 
-    permission_classes = [HasAppAccess]
+    permission_classes = [HasAppAccess, NotInPracticeMode]
 
     def post(self, request):
         import secrets
@@ -378,9 +382,9 @@ class TestInviteEmailView(APIView):
             context=context,
         )
 
-        logger.info(
-            f"Test invitation email sent to {email} (role={role}) by "
-            f"{request.user.email}"
+        settings.LOGGER.info(
+            f"{describe_user(request.user)} sent a test invitation email to "
+            f"{email} (role {role})"
         )
 
         return Response(
@@ -394,154 +398,93 @@ class TestInviteEmailView(APIView):
 
 class InviteActivationView(APIView):
     """
-    GET: Handle invitation activation links
-    Validates token, creates user account, and auto-logs in the user
+    GET: Check an invitation link and describe the invitation. It changes
+        nothing, so opening the link (or a mail scanner opening it) never uses
+        the invitation up.
+    POST: Accept the invitation: create the account and sign the person in.
+        Sent when the person clicks to set up their password.
     """
 
     permission_classes = [AllowAny]
 
+    @staticmethod
+    def _refusal(invite_record, token_prefix):
+        """Why this invitation cannot be accepted, as a response, or None."""
+        if not invite_record.is_active:
+            if invite_record.is_used:
+                reason = "already_used"
+            elif invite_record.is_expired:
+                reason = "expired"
+            else:
+                reason = "invalid"
+            return InvitationErrorHandler.handle_invalid_token(token_prefix, reason)
+
+        # An account already exists for this email (active users only).
+        if User.objects.filter(email=invite_record.email, is_active=True).exists():
+            SecurityEventLogger.log_invitation_activation_failed(
+                email=invite_record.email,
+                reason="user_already_exists",
+                token_prefix=token_prefix,
+            )
+            return InvitationErrorHandler.handle_user_already_exists(
+                invite_record.email
+            )
+        return None
+
     def get(self, request, token):
-        """Activate invitation and create user account"""
-        import secrets
-        import string
-
-        from django.utils import timezone
-        from rest_framework_simplejwt.tokens import RefreshToken
-
+        """Describe a usable invitation without accepting it."""
         from ..models import InviteRecord
-        from ..services import PasswordValidator
+
+        token_prefix = token[:8] + "..." if len(token) > 8 else token
+        try:
+            invite_record = InviteRecord.objects.select_related("invited_by").get(
+                token=token
+            )
+        except InviteRecord.DoesNotExist:
+            return InvitationErrorHandler.handle_invalid_token(
+                token_prefix, "not_found"
+            )
+
+        refusal = self._refusal(invite_record, token_prefix)
+        if refusal is not None:
+            return refusal
+
+        external_data = invite_record.external_user_data or {}
+        return Response(
+            {
+                "email": invite_record.email,
+                "given_names": external_data.get("given_name", ""),
+                "last_name": external_data.get("surname", ""),
+                "role": invite_record.role,
+                "role_display": invite_record.get_role_display(),
+                "invited_by": (
+                    invite_record.invited_by.full_name
+                    if invite_record.invited_by
+                    else None
+                ),
+                "expires_at": invite_record.expires_at.isoformat(),
+            },
+            status=HTTP_200_OK,
+        )
+
+    def post(self, request, token):
+        """Accept the invitation and create the user account."""
+        from ..models import InviteRecord
 
         token_prefix = token[:8] + "..." if len(token) > 8 else token
 
         try:
-            # Find and validate invitation record
-            invite_record = InviteRecord.objects.get(token=token)
-
-            # Check if invitation is still valid
-            if not invite_record.is_active:
-                if invite_record.is_used:
-                    return InvitationErrorHandler.handle_invalid_token(
-                        token_prefix, "already_used"
-                    )
-                elif invite_record.is_expired:
-                    return InvitationErrorHandler.handle_invalid_token(
-                        token_prefix, "expired"
-                    )
-                else:
-                    return InvitationErrorHandler.handle_invalid_token(
-                        token_prefix, "invalid"
-                    )
-
-            # Check if user already exists (safety check - active users only)
-            if User.objects.filter(email=invite_record.email, is_active=True).exists():
-                SecurityEventLogger.log_invitation_activation_failed(
-                    email=invite_record.email,
-                    reason="user_already_exists",
-                    token_prefix=token_prefix,
+            with transaction.atomic():
+                # Lock the invitation so two clicks cannot both accept it.
+                invite_record = (
+                    InviteRecord.objects.select_for_update()
+                    .select_related("invited_by")
+                    .get(token=token)
                 )
-                return InvitationErrorHandler.handle_user_already_exists(
-                    invite_record.email
-                )
-
-            # Generate a temporary password guaranteed to satisfy the password
-            # policy (>=1 letter, >=1 digit, >=1 special, length >= MIN_LENGTH).
-            # Building from each required class avoids a rare random password
-            # that lacks a digit/special and would otherwise fail validation.
-            specials = "!@#$%^&*"
-            required = [
-                secrets.choice(string.ascii_letters),
-                secrets.choice(string.digits),
-                secrets.choice(specials),
-            ]
-            pool = string.ascii_letters + string.digits + specials
-            remaining = [secrets.choice(pool) for _ in range(11)]  # total length 14
-            password_chars = required + remaining
-            secrets.SystemRandom().shuffle(password_chars)
-            temp_password = "".join(password_chars)
-
-            # Validate the generated password meets requirements
-            is_valid, errors = PasswordValidator.validate_password(temp_password)
-            if not is_valid:
-                logger.error(f"Generated password failed validation: {errors}")
-                SecurityEventLogger.log_invitation_activation_failed(
-                    email=invite_record.email,
-                    reason="password_generation_failed",
-                    token_prefix=token_prefix,
-                )
-                return ErrorResponseBuilder.build_internal_error_response()
-
-            # Create user account from stored external data (or reactivate
-            # a previously soft-deleted user with the same email).
-            external_data = invite_record.external_user_data
-            existing_deleted = User.objects.filter(
-                email=invite_record.email, is_active=False
-            ).first()
-
-            if existing_deleted:
-                # Reactivate deactivated user
-                user = existing_deleted
-                user.is_active = True
-                user.given_names = external_data.get("given_name", "")
-                user.last_name = external_data.get("surname", "")
-                user.role = invite_record.role
-                user.is_staff = invite_record.is_staff
-                user.set_password(temp_password)
-                user.employee_id = external_data.get("employee_id")
-                user.it_asset_id = external_data.get("id")
-                user.invited_by = invite_record.invited_by
-                user.password_last_changed = None
-                user.save()
-            else:
-                user = User.objects.create_user(
-                    email=invite_record.email,
-                    given_names=external_data.get("given_name", ""),
-                    last_name=external_data.get("surname", ""),
-                    role=invite_record.role,
-                    is_staff=invite_record.is_staff,
-                    password=temp_password,
-                    employee_id=external_data.get("employee_id"),
-                    it_asset_id=external_data.get("id"),
-                    invited_by=invite_record.invited_by,
-                    invitation_accepted_at=timezone.now(),
-                )
-
-            # Mark invitation as used
-            invite_record.is_used = True
-            invite_record.used_at = timezone.now()
-            invite_record.save()
-
-            # Generate JWT tokens for auto-login
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-
-            # Log successful activation
-            SecurityEventLogger.log_invitation_activation_success(
-                email=user.email,
-                inviter_email=invite_record.invited_by.email,
-            )
-
-            # Return authentication tokens and user data
-            from ..serializers import UserJWTObjectSerializer
-
-            user_serializer = UserJWTObjectSerializer(user)
-
-            return Response(
-                {
-                    "success": True,
-                    "message": "Invitation activated successfully",
-                    "user": user_serializer.data,
-                    "access": str(access_token),
-                    "refresh": str(refresh),
-                    "token_type": "Bearer",
-                    "expires_in": settings.SIMPLE_JWT.get(
-                        "ACCESS_TOKEN_LIFETIME"
-                    ).total_seconds(),
-                    "temporary_password": temp_password,
-                    "requires_password_change": True,
-                },
-                status=HTTP_200_OK,
-            )
-
+                refusal = self._refusal(invite_record, token_prefix)
+                if refusal is not None:
+                    return refusal
+                return self._accept(invite_record, token_prefix)
         except InviteRecord.DoesNotExist:
             return InvitationErrorHandler.handle_invalid_token(
                 token_prefix, "not_found"
@@ -554,6 +497,98 @@ class InviteActivationView(APIView):
                 token_prefix=token_prefix,
             )
             return ErrorResponseBuilder.build_internal_error_response()
+
+    @staticmethod
+    def _temporary_password():
+        """A random password that always satisfies the password policy.
+
+        Built from each required character class (letter, digit, special) so
+        it never fails validation; the person replaces it straight away.
+        """
+        specials = "!@#$%^&*"
+        required = [
+            secrets.choice(string.ascii_letters),
+            secrets.choice(string.digits),
+            secrets.choice(specials),
+        ]
+        pool = string.ascii_letters + string.digits + specials
+        chars = required + [secrets.choice(pool) for _ in range(11)]
+        secrets.SystemRandom().shuffle(chars)
+        return "".join(chars)
+
+    def _accept(self, invite_record, token_prefix):
+        """Create (or reactivate) the account and return sign-in tokens."""
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        from ..serializers import UserJWTObjectSerializer
+        from ..services import PasswordValidator
+
+        temp_password = self._temporary_password()
+        is_valid, errors = PasswordValidator.validate_password(temp_password)
+        if not is_valid:
+            logger.error(f"Generated password failed validation: {errors}")
+            SecurityEventLogger.log_invitation_activation_failed(
+                email=invite_record.email,
+                reason="password_generation_failed",
+                token_prefix=token_prefix,
+            )
+            return ErrorResponseBuilder.build_internal_error_response()
+
+        # Create the account from the stored directory details, or reactivate
+        # a previously deactivated user with the same email.
+        external_data = invite_record.external_user_data or {}
+        user = User.objects.filter(email=invite_record.email, is_active=False).first()
+        if user:
+            user.is_active = True
+            user.given_names = external_data.get("given_name", "")
+            user.last_name = external_data.get("surname", "")
+            user.role = invite_record.role
+            user.is_staff = invite_record.is_staff
+            user.set_password(temp_password)
+            user.employee_id = external_data.get("employee_id")
+            user.it_asset_id = external_data.get("id")
+            user.invited_by = invite_record.invited_by
+            user.password_last_changed = None
+            user.save()
+        else:
+            user = User.objects.create_user(
+                email=invite_record.email,
+                given_names=external_data.get("given_name", ""),
+                last_name=external_data.get("surname", ""),
+                role=invite_record.role,
+                is_staff=invite_record.is_staff,
+                password=temp_password,
+                employee_id=external_data.get("employee_id"),
+                it_asset_id=external_data.get("id"),
+                invited_by=invite_record.invited_by,
+                invitation_accepted_at=timezone.now(),
+            )
+
+        invite_record.is_used = True
+        invite_record.used_at = timezone.now()
+        invite_record.save(update_fields=["is_used", "used_at"])
+
+        refresh = RefreshToken.for_user(user)
+        settings.LOGGER.info(
+            f"{describe_user(user)} accepted their invitation "
+            f"({invite_record.pk}) from {describe_user(invite_record.invited_by)}"
+        )
+        return Response(
+            {
+                "success": True,
+                "message": "Invitation activated successfully",
+                "user": UserJWTObjectSerializer(user).data,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "token_type": "Bearer",
+                "expires_in": settings.SIMPLE_JWT.get(
+                    "ACCESS_TOKEN_LIFETIME"
+                ).total_seconds(),
+                "temporary_password": temp_password,
+                "requires_password_change": True,
+            },
+            status=HTTP_200_OK,
+        )
 
 
 # endregion
@@ -617,7 +652,7 @@ class InviteRevokeView(APIView):
     Sets is_valid=False so the token can no longer be used.
     """
 
-    permission_classes = [HasAppAccess]
+    permission_classes = [HasAppAccess, NotInPracticeMode]
 
     def post(self, request, pk):
         from rest_framework.exceptions import NotFound, PermissionDenied
@@ -639,9 +674,9 @@ class InviteRevokeView(APIView):
         invite.is_valid = False
         invite.save(update_fields=["is_valid"])
 
-        logger.info(
-            f"Invitation {invite.id} for {invite.email} revoked by "
-            f"{request.user.email}"
+        settings.LOGGER.info(
+            f"{describe_user(request.user)} revoked the invitation for "
+            f"{invite.email} ({invite.pk})"
         )
 
         return Response(

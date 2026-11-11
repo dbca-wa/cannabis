@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
@@ -56,6 +57,22 @@ export default defineConfig({
 	server: {
 		host: "127.0.0.1",
 		port: 3000,
+		// Tests read the backend's certificate wording fixture so the preview
+		// and the PDF are checked against the same expected text. Only that
+		// folder is opened, and only under Vitest.
+		...(process.env.VITEST
+			? {
+					fs: {
+						allow: [
+							searchForWorkspaceRoot(process.cwd()),
+							path.resolve(
+								import.meta.dirname,
+								"../backend/cases/tests/fixtures"
+							),
+						],
+					},
+				}
+			: {}),
 	},
 	preview: {
 		host: true,

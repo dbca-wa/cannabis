@@ -2,7 +2,7 @@
  * Progress- and route-aware guidance for practice mode.
  *
  * The practice guide walks an unhurried user through the whole six-step journey
- * — create, record, generate, finalise, batch, invoice — and tracks where they
+ * (create, record, generate, finalise, batch, invoice) and tracks where they
  * are from beginning to end. The current step is derived from the live case and
  * its forms (their workflow phase, certificate generation and ready flags) so it
  * advances as the user works, rather than resetting with each page change.
@@ -30,13 +30,19 @@ export interface PracticeGuidance {
 	currentStep: number;
 }
 
+// The same six steps, in the same order, as the How To page and the
+// Dashboard cards.
 const STEP_TITLES = [
 	"Create the case",
 	"Record the samples",
 	"Generate certificates",
 	"Finalise the case",
-	"Batch and complete",
+	"Batch the case",
+	"Record the invoice",
 ];
+
+/** The first step that happens on the Batches side of the workflow. */
+export const BATCH_STEP = 5;
 
 export const PRACTICE_STEP_COUNT = STEP_TITLES.length;
 
@@ -73,18 +79,16 @@ export interface PracticeProgressInput {
  * - Case in assessment, all samples recorded .......... 3 (generate certs)
  * - Certificates generated, not all marked ready ...... 3 (generate/review)
  * - All forms generated and marked ready .............. 4 (finalise)
- * - Finalised (batching / in a batch / complete) ...... 5 (batch and complete)
+ * - Finalised, waiting for a batch (batching) ......... 5 (batch)
+ * - In a batch, or complete ........................... 6 (record the invoice)
  */
 export const derivePracticeStep = (p: PracticeProgressInput): number => {
 	if (!p.caseExists) return 1;
 	const status = p.derivedStatus ?? "assessment";
 	const forms = p.forms ?? [];
 
-	// Finalised and beyond — batching, in a batch, or complete — are all the
-	// single "batch and complete" step now.
-	if (status === "complete" || status === "in_batch" || status === "batching") {
-		return 5;
-	}
+	if (status === "complete" || status === "in_batch") return 6;
+	if (status === "batching") return 5;
 
 	if (status === "unsigned_generation") {
 		// Certificates exist. If every form is reviewed and marked ready, the
@@ -107,10 +111,10 @@ const INSTRUCTIONS: Record<
 		heading: "Step 1 — Create the case",
 		instructions: [
 			"From the Dashboard or Cases page, click 'New Case' on the top right.",
-			"Type the police reference from your brief below into Police Reference Number. In real work this comes from an official Priority 3 form.",
+			"Type the police reference from your brief below into Police Reference No. In real work this comes from an official Priority 3 form.",
 			"Leave the Received Date — it defaults to the date you create the case.",
 			"Add the defendant, submitting officer and station from your brief below.",
-			"If an officer or station is not found, use Add New to create it.",
+			"If an officer or station is not found, click Add next to the search box to create it.",
 			"The Approved Botanist is the default one, already selected for you — leave it as is.",
 			"Create Case stays disabled until every field matches your brief below.",
 		],
@@ -121,7 +125,7 @@ const INSTRUCTIONS: Record<
 			"In the Assessment section, add a Priority 3 form.",
 			"Add each drug bag from your brief below: the original and new seal tag numbers, content type and determination.",
 			"Mark whether a bag holds female plants where your brief says so.",
-			"Add the Section C note or template if your brief lists a security movement envelope or female plants.",
+			"Add the Section C note or template if your brief lists a security movement envelope. Female plants and bags with a different result are added to Section C automatically.",
 			"Each item in the 'On the form' checklist ticks off as you record it.",
 		],
 	},
@@ -131,7 +135,7 @@ const INSTRUCTIONS: Record<
 			"The samples are all recorded — now produce the certificates.",
 			"In the Certificates section, click Generate for each form.",
 			"Review the generated certificate against your brief below.",
-			"Click Mark Ready on each certificate once it looks right.",
+			"Click Mark ready on each certificate once it looks right.",
 			"When every certificate is generated and marked ready, click Finalise Case.",
 		],
 	},
@@ -143,13 +147,19 @@ const INSTRUCTIONS: Record<
 		],
 	},
 	5: {
-		heading: "Step 5 — Batch and complete the case",
+		heading: "Step 5 — Batch the case",
 		instructions: [
 			"On the Cases page, tick the checkbox to the left of your finalised case.",
 			"The purple Create Batch button (top right) becomes active — click it.",
 			"You are taken to the Batches page, where your new batch is waiting.",
-			"Open the batch and click Download package to get the certificates — do this before recording the invoice.",
-			"Record the invoice number via the row's three-dots menu, or the green Record invoice number button when it is the only batch waiting.",
+			"Open the batch and click Download Package to get the certificates — do this before recording the invoice.",
+		],
+	},
+	6: {
+		heading: "Step 6 — Record the invoice",
+		instructions: [
+			"On the Batches page, click Awaiting invoice on the batch's row, or the Record invoice for … button in the banner at the top.",
+			"Enter an invoice number and click Record & complete. Your case is now Complete.",
 			"Finally, open the Dashboard to see the chart update with your completed batch.",
 		],
 	},
@@ -168,10 +178,11 @@ const INSTRUCTIONS_REAL: Record<
 		heading: "Step 1 — Create the case",
 		instructions: [
 			"From the Dashboard or Cases page, click 'New Case' on the top right.",
-			"Type the police reference from the Priority 3 form into Police Reference Number.",
+			"Type the police reference from the Priority 3 form into Police Reference No.",
 			"Set the Received Date (it defaults to today).",
-			"Add the defendant, submitting officer and station.",
-			"If an officer or station is not found, use Add New to create it.",
+			"Add the defendant and submitting officer. The station fills itself in from the officer.",
+			"If an officer is not found, click Add next to the search box to create it.",
+			"Check the tick boxes under each officer: they decide whether each station, and the requesting officer's rank, print on the certificate.",
 			"Choose the Approved Botanist who will assess the samples.",
 			"Click Create Case once the details are complete.",
 		],
@@ -180,9 +191,9 @@ const INSTRUCTIONS_REAL: Record<
 		heading: "Step 2 — Record the samples",
 		instructions: [
 			"In the Assessment section, add a Priority 3 form.",
-			"Add each drug bag: the original and new seal tag numbers, content type and determination.",
+			"Add each drug bag: the original and new seal tag numbers, content type and result (Cannabis sativa, Not Cannabis, Too degraded and could not be identified, or Inconclusive).",
 			"Mark whether a bag holds female plants.",
-			"Add the Section C note or template where a security movement envelope or female plants apply.",
+			"Add the Section C note or template where a security movement envelope applies. Female plants and bags with a different result are added to Section C automatically.",
 		],
 	},
 	3: {
@@ -191,7 +202,7 @@ const INSTRUCTIONS_REAL: Record<
 			"Once the samples are recorded, produce the certificates.",
 			"In the Certificates section, click Generate for each form.",
 			"Review each generated certificate.",
-			"Click Mark Ready on each certificate once it is correct.",
+			"Click Mark ready on each certificate once it is correct.",
 			"When every certificate is generated and marked ready, click Finalise Case.",
 		],
 	},
@@ -203,14 +214,21 @@ const INSTRUCTIONS_REAL: Record<
 		],
 	},
 	5: {
-		heading: "Step 5 — Batch and complete the case",
+		heading: "Step 5 — Batch the case",
 		instructions: [
 			"On the Cases page, tick the checkbox to the left of the finalised case.",
 			"The purple Create Batch button (top right) becomes active — click it.",
 			"You are taken to the Batches page, where the new batch is waiting.",
-			"Open the batch and click Download package to get the certificates — do this before recording the invoice.",
-			"Record the invoice number via the row's three-dots menu, or the green Record invoice number button when it is the only batch waiting.",
-			"The Dashboard chart updates with the completed batch.",
+			"Open the batch and click Download Package to get the certificates — do this before recording the invoice.",
+		],
+	},
+	6: {
+		heading: "Step 6 — Record the invoice",
+		instructions: [
+			"Raise the invoice as usual, using the cost summary in the package.",
+			"On the Batches page, click Awaiting invoice on the batch's row, or the Record invoice for … button in the banner at the top.",
+			"Enter the invoice number and click Record & complete. The batch's cases are now Complete.",
+			"The Dashboard revenue and chart include the batch once its invoice is recorded.",
 		],
 	},
 };
@@ -242,8 +260,8 @@ export const getPracticeGuidance = (
 
 	// Practice mode follows the user to the batching half on the batches page.
 	// Outside practice mode the user is browsing, so leave their chosen step be.
-	if (practice && pathname.startsWith("/batches") && n < 5) {
-		n = 5;
+	if (practice && pathname.startsWith("/batches") && n < BATCH_STEP) {
+		n = BATCH_STEP;
 	}
 
 	const source = practice ? INSTRUCTIONS : INSTRUCTIONS_REAL;

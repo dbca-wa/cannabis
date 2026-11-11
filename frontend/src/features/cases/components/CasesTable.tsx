@@ -37,6 +37,13 @@ import { formatDate } from "@/shared/utils/date.utils";
 import type { Certificate } from "@/features/certificates/types/certificates.types";
 import type { CaseTiny, CasePhase } from "@/shared/types/backend-api.types";
 
+// Columns shown only when the table has room. Created, Bags and Certificates
+// go first, then Defendants, then Officers. Reference, Received and State
+// always stay, so the case's state is never pushed out of view.
+const WIDE_ONLY = "hidden @4xl:table-cell";
+const LARGE_UP = "hidden @3xl:table-cell";
+const MEDIUM_UP = "hidden @2xl:table-cell";
+
 /** Return the IDs of all batch-eligible certificates across a case's forms. */
 export const getEligibleCertIds = (c: CaseTiny): number[] =>
 	c.forms
@@ -198,7 +205,10 @@ export const CasesTable = observer(
 		return (
 			<div className="space-y-4">
 				{/* Table */}
-				<div className="rounded-xl border border-border shadow-md overflow-hidden">
+				{/* A container, so columns can drop out when the table itself is
+				    narrow (for example with the practice or guide panel open),
+				    keeping Reference and State in view. */}
+				<div className="@container rounded-xl border border-border shadow-md overflow-hidden">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -234,7 +244,10 @@ export const CasesTable = observer(
 								</TableHead>
 
 								{/* Created Date Column — the default sort */}
-								<TableHead title="Date the case was entered into the system">
+								<TableHead
+									className={WIDE_ONLY}
+									title="Date the case was entered into the system"
+								>
 									<button
 										type="button"
 										onClick={() => handleSort("created_at")}
@@ -259,7 +272,10 @@ export const CasesTable = observer(
 
 								{/* Defendants Column - hide on mobile */}
 								{!isMobile && (
-									<TableHead title="Defendants linked to this case">
+									<TableHead
+										className={LARGE_UP}
+										title="Defendants linked to this case"
+									>
 										<button
 											type="button"
 											onClick={() => handleSort("defendants__last_name")}
@@ -273,7 +289,10 @@ export const CasesTable = observer(
 
 								{/* Officers Column (combined) - hide on mobile */}
 								{!isMobile && (
-									<TableHead title="Submitting and requesting police officers">
+									<TableHead
+										className={MEDIUM_UP}
+										title="Submitting and requesting police officers"
+									>
 										<button
 											type="button"
 											onClick={() =>
@@ -290,7 +309,7 @@ export const CasesTable = observer(
 								{/* Bags Column - hide on mobile */}
 								{!isMobile && (
 									<TableHead
-										className="text-center"
+										className={`text-center ${WIDE_ONLY}`}
 										title="Number of exhibit bags in this case"
 									>
 										<button
@@ -307,7 +326,7 @@ export const CasesTable = observer(
 								{/* Certificates Column - hide on mobile */}
 								{!isMobile && (
 									<TableHead
-										className="text-center"
+										className={`text-center ${WIDE_ONLY}`}
 										title="Number of certificates generated for this case"
 									>
 										<button
@@ -354,19 +373,19 @@ export const CasesTable = observer(
 												<Skeleton className="h-3 w-12" />
 											</div>
 										</TableCell>
-										<TableCell>
+										<TableCell className={WIDE_ONLY}>
 											<Skeleton className="h-4 w-20" />
 										</TableCell>
 										<TableCell>
 											<Skeleton className="h-4 w-20" />
 										</TableCell>
 										{!isMobile && (
-											<TableCell>
+											<TableCell className={LARGE_UP}>
 												<Skeleton className="h-4 w-28" />
 											</TableCell>
 										)}
 										{!isMobile && (
-											<TableCell>
+											<TableCell className={MEDIUM_UP}>
 												<div className="flex items-center gap-2.5">
 													<Skeleton className="h-8 w-8 rounded-full" />
 													<div className="space-y-1">
@@ -377,12 +396,12 @@ export const CasesTable = observer(
 											</TableCell>
 										)}
 										{!isMobile && (
-											<TableCell>
+											<TableCell className={WIDE_ONLY}>
 												<Skeleton className="h-6 w-8 rounded-full mx-auto" />
 											</TableCell>
 										)}
 										{!isMobile && (
-											<TableCell>
+											<TableCell className={WIDE_ONLY}>
 												<Skeleton className="h-6 w-8 rounded-full mx-auto" />
 											</TableCell>
 										)}
@@ -523,7 +542,9 @@ export const CasesTable = observer(
 											</TableCell>
 
 											{/* Created Date */}
-											<TableCell className="text-[14px] text-muted-foreground">
+											<TableCell
+												className={`text-[14px] text-muted-foreground ${WIDE_ONLY}`}
+											>
 												{formatDate(caseObj.created_at)}
 											</TableCell>
 
@@ -534,7 +555,7 @@ export const CasesTable = observer(
 
 											{/* Defendants */}
 											{!isMobile && (
-												<TableCell className="text-[14px]">
+												<TableCell className={`text-[14px] ${LARGE_UP}`}>
 													{(() => {
 														const names = (
 															caseObj as unknown as Record<string, unknown>
@@ -560,7 +581,7 @@ export const CasesTable = observer(
 
 											{/* Officers — avatar + name + rank·station (reference design) */}
 											{!isMobile && (
-												<TableCell>
+												<TableCell className={MEDIUM_UP}>
 													{(() => {
 														const sub = submittingOfficerName;
 														const req = caseObj.requesting_officer_name;
@@ -633,7 +654,7 @@ export const CasesTable = observer(
 
 											{/* Bags */}
 											{!isMobile && (
-												<TableCell className="text-center">
+												<TableCell className={`text-center ${WIDE_ONLY}`}>
 													<span className="inline-flex items-center justify-center w-8 h-6 text-xs bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 rounded-full tabular-nums">
 														{caseObj.bags_count}
 													</span>
@@ -642,7 +663,7 @@ export const CasesTable = observer(
 
 											{/* Certificates */}
 											{!isMobile && (
-												<TableCell className="text-center">
+												<TableCell className={`text-center ${WIDE_ONLY}`}>
 													<span className="inline-flex items-center justify-center w-8 h-6 text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 rounded-full tabular-nums">
 														{caseObj.certificates_count}
 													</span>

@@ -7,6 +7,7 @@ from django.db.models import Q
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from common.logging import describe_user
+from common.permissions import NotInPracticeMode
 from users.permissions import HasAppAccess
 
 from ..models import SectionCTemplate
@@ -25,7 +26,8 @@ class SectionCTemplateListView(ListCreateAPIView):
     """
 
     queryset = SectionCTemplate.objects.all()
-    permission_classes = [HasAppAccess]
+    # Templates are shared by everyone and have no practice copy.
+    permission_classes = [HasAppAccess, NotInPracticeMode]
     pagination_class = None
 
     def get_serializer_class(self):
@@ -46,7 +48,7 @@ class SectionCTemplateListView(ListCreateAPIView):
         template = serializer.save()
         settings.LOGGER.info(
             f"{describe_user(self.request.user)} created Section C template "
-            f"{template.name}"
+            f"{template.name} ({template.pk})"
         )
 
 
@@ -58,7 +60,7 @@ class SectionCTemplateDetailView(RetrieveUpdateDestroyAPIView):
     """
 
     queryset = SectionCTemplate.objects.all()
-    permission_classes = [HasAppAccess]
+    permission_classes = [HasAppAccess, NotInPracticeMode]
 
     def get_serializer_class(self):
         if self.request.method in ("PUT", "PATCH"):
@@ -69,12 +71,13 @@ class SectionCTemplateDetailView(RetrieveUpdateDestroyAPIView):
         template = serializer.save()
         settings.LOGGER.info(
             f"{describe_user(self.request.user)} updated Section C template "
-            f"{template.name}"
+            f"{template.name} ({template.pk})"
         )
 
     def perform_destroy(self, instance):
-        name = instance.name
+        name, pk = instance.name, instance.pk
         instance.delete()
         settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted Section C template {name}"
+            f"{describe_user(self.request.user)} deleted Section C template "
+            f"{name} ({pk})"
         )

@@ -215,9 +215,7 @@ export const buildCertificateChecklists = (
 		const ready = !!live?.marked_ready;
 		return {
 			title:
-				brief.forms.length > 1
-					? `Certificate — form ${i + 1}`
-					: "Certificate",
+				brief.forms.length > 1 ? `Certificate — form ${i + 1}` : "Certificate",
 			items: [
 				{ label: "Generate the certificate", done: generated },
 				{ label: "Review and mark it ready", done: generated && ready },

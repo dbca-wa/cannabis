@@ -44,9 +44,7 @@ describe("phases.config", () => {
 	describe("derived maps", () => {
 		it("maps each phase key to its display label", () => {
 			expect(PHASE_DISPLAY_NAMES.assessment).toBe("Assessment");
-			expect(PHASE_DISPLAY_NAMES.unsigned_generation).toBe(
-				"Unsigned Certificate"
-			);
+			expect(PHASE_DISPLAY_NAMES.unsigned_generation).toBe("Certificates");
 			expect(PHASE_DISPLAY_NAMES.complete).toBe("Complete");
 			expect(Object.keys(PHASE_DISPLAY_NAMES).sort()).toEqual(
 				[...ORDERED_PHASES].sort()

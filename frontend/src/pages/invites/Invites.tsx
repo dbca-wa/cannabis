@@ -114,14 +114,17 @@ const Invites = () => {
 							Manage user invitations to the system.
 						</p>
 					</div>
-					<Button className="cursor-pointer" onClick={() => navigate("/staff")}>
+					<Button
+						className="cursor-pointer"
+						onClick={() => navigate("/staff/add")}
+					>
 						<Mail className="h-4 w-4 mr-2" />
 						Invite User
 					</Button>
 				</div>
 
-				{/* Filter tabs */}
-				<div className="flex gap-2">
+				{/* Filter tabs — wrap on narrow screens rather than running off */}
+				<div className="flex flex-wrap gap-2">
 					{(["all", "pending", "used", "expired", "revoked"] as const).map(
 						(f) => (
 							<Button

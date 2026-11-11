@@ -302,14 +302,27 @@ class BatchService:
 
         for cert in batch.certificates.select_related("form__case").all():
             # Regenerate the PDF in-place (bypasses the batch check since we
-            # are explicitly rebuilding the batch).
+            # are explicitly rebuilding the batch). The form's current
+            # Section C note is used, so a corrected note reaches the package.
+            cert.additional_notes = CertificateService.form_note(cert.form)
             pdf_bytes = CertificateService._render_pdf(cert)
             if cert.pdf_file:
                 cert.pdf_file.delete(save=False)
             filename = f"certificate_{cert.certificate_number}.pdf"
             cert.pdf_file.save(filename, ContentFile(pdf_bytes), save=False)
             cert.pdf_size = len(pdf_bytes)
-            cert.save(update_fields=["pdf_file", "pdf_size"])
+            CertificateService._record_printed(cert)
+            cert.save(
+                update_fields=[
+                    "additional_notes",
+                    "pdf_file",
+                    "pdf_size",
+                    "wording_version",
+                    "printed_conveying_officer",
+                    "printed_requesting_officer",
+                    "printed_fingerprint",
+                ]
+            )
 
         return BatchService.build_zip(batch)
 

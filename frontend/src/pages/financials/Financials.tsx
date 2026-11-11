@@ -1,22 +1,14 @@
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { Navigate } from "react-router";
 import SettingsContent from "@/features/admin/components/SettingsContent";
 
+/**
+ * The Settings page. Anyone signed in can open it; who may change what is
+ * decided by SettingsContent (read-only for people without a role, and in
+ * practice mode).
+ */
 const Settings = () => {
-	const { user } = useAuth();
 	useDocumentTitle("Settings");
-
-	const hasAccess = !!(
-		user?.is_staff ||
-		user?.is_superuser ||
-		user?.role === "botanist" ||
-		user?.role === "finance"
-	);
-	if (!hasAccess) {
-		return <Navigate to="/" replace />;
-	}
 
 	return (
 		<>

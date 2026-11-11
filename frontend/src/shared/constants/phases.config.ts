@@ -41,8 +41,8 @@ export const PHASE_STEPS: PhaseStepConfig[] = [
 	},
 	{
 		key: "unsigned_generation",
-		label: "Unsigned Certificate",
-		shortLabel: "Certificate",
+		label: "Certificates",
+		shortLabel: "Certificates",
 		icon: FileText,
 		description: "Generate the certificate PDF(s)",
 		badgeColour:

@@ -1,3 +1,5 @@
+import { isCannabisDetermination } from "../constants/determinations";
+
 /**
  * Get determination colour class for UI display.
  */
@@ -47,15 +49,8 @@ export const getDeterminationBadgeClass = (determination: string): string => {
 /**
  * Check if determination indicates cannabis.
  */
-export const isCannabis = (determination: string): boolean => {
-	const cannabisTypes = [
-		"cannabis_sativa",
-		"cannabis_indica",
-		"cannabis_hybrid",
-		"mixed",
-	];
-	return cannabisTypes.includes(determination);
-};
+export const isCannabis = (determination: string): boolean =>
+	isCannabisDetermination(determination);
 
 /**
  * Check if determination indicates a controlled substance.

@@ -256,8 +256,8 @@ class UserPreferences(models.Model):
         help_text="Show the reference guide outside practice mode",
     )
 
-    # Practice mode — a per-user, self-expiring mode for rehearsing the workflow
-    # against isolated practice data. See common.practice.
+    # Practice mode — a per-user mode for rehearsing the workflow against
+    # isolated practice data, kept until the user resets it. See common.practice.
     practice_mode = models.BooleanField(
         default=False,
         help_text="Whether the user is currently in practice mode",
@@ -265,7 +265,7 @@ class UserPreferences(models.Model):
     practice_mode_started_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="When the current practice session began; it expires after a day",
+        help_text="When the current practice session began",
     )
 
     # Created/Updated timestamps

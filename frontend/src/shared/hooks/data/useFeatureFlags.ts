@@ -39,3 +39,42 @@ export const useDefaultBotanistId = (): number | null => {
 	const { data } = useFeatureFlags();
 	return data?.default_approved_botanist ?? null;
 };
+
+/** Certificate print options to pre-tick on a new case. */
+export interface CertificatePrintDefaults {
+	print_conveying_station: boolean;
+	print_requesting_station: boolean;
+	print_requesting_rank: boolean;
+}
+
+/** The backend's initial defaults, used until the flags have loaded. */
+export const INITIAL_PRINT_DEFAULTS: CertificatePrintDefaults = {
+	print_conveying_station: true,
+	print_requesting_station: true,
+	print_requesting_rank: false,
+};
+
+/**
+ * The system defaults for a new case's certificate print options, plus whether
+ * they have loaded, so a new case is not seeded from the fallback values.
+ */
+export const useCertificatePrintDefaults = (): {
+	defaults: CertificatePrintDefaults;
+	isLoaded: boolean;
+} => {
+	const { data, isSuccess } = useFeatureFlags();
+	return {
+		defaults: {
+			print_conveying_station:
+				data?.default_print_conveying_station ??
+				INITIAL_PRINT_DEFAULTS.print_conveying_station,
+			print_requesting_station:
+				data?.default_print_requesting_station ??
+				INITIAL_PRINT_DEFAULTS.print_requesting_station,
+			print_requesting_rank:
+				data?.default_print_requesting_rank ??
+				INITIAL_PRINT_DEFAULTS.print_requesting_rank,
+		},
+		isLoaded: isSuccess,
+	};
+};

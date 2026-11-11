@@ -176,14 +176,15 @@ const rootAuthGuard = async ({ request }: LoaderFunctionArgs) => {
 		return redirect("/auth/password-update?fromReset=true");
 	}
 
-	// Users without an app role (and not admin) may only access the dashboard.
+	// Users without an app role (and not admin) may only open the dashboard
+	// and a read-only Settings page.
 	const hasAppAccess = !!(
 		user?.is_superuser ||
 		user?.is_staff ||
 		user?.role === "botanist" ||
 		user?.role === "finance"
 	);
-	if (!hasAppAccess && pathname !== "/") {
+	if (!hasAppAccess && pathname !== "/" && pathname !== "/settings") {
 		logger.warn(
 			"[RootAuthGuard] Roleless user blocked from non-dashboard route",
 			{ userId: user?.id, pathname }

@@ -96,36 +96,6 @@ class SecurityEventLogger:
     """Centralized security event logging"""
 
     @staticmethod
-    def log_invitation_sent(
-        inviter_email: str, invited_email: str, role: str, token_prefix: str
-    ):
-        """Log successful invitation sending"""
-        logger.info(
-            "SECURITY_EVENT: Invitation sent",
-            extra={
-                "event_type": "invitation_sent",
-                "inviter_email": inviter_email,
-                "invited_email": invited_email,
-                "role": role,
-                "token_prefix": token_prefix,
-                "severity": "info",
-            },
-        )
-
-    @staticmethod
-    def log_invitation_activation_success(email: str, inviter_email: str):
-        """Log successful invitation activation"""
-        logger.info(
-            "SECURITY_EVENT: Invitation activated successfully",
-            extra={
-                "event_type": "invitation_activated",
-                "email": email,
-                "inviter_email": inviter_email,
-                "severity": "info",
-            },
-        )
-
-    @staticmethod
     def log_invitation_activation_failed(email: str, reason: str, token_prefix: str):
         """Log failed invitation activation attempts"""
         logger.warning(
@@ -136,19 +106,6 @@ class SecurityEventLogger:
                 "reason": reason,
                 "token_prefix": token_prefix,
                 "severity": "warning",
-            },
-        )
-
-    @staticmethod
-    def log_password_reset_requested(email: str, exists: bool):
-        """Log password reset requests"""
-        logger.info(
-            "SECURITY_EVENT: Password reset requested",
-            extra={
-                "event_type": "password_reset_requested",
-                "email": email,
-                "user_exists": exists,
-                "severity": "info",
             },
         )
 
@@ -167,19 +124,6 @@ class SecurityEventLogger:
         )
 
     @staticmethod
-    def log_password_update_success(email: str, is_first_time: bool):
-        """Log successful password updates"""
-        logger.info(
-            "SECURITY_EVENT: Password updated successfully",
-            extra={
-                "event_type": "password_updated",
-                "email": email,
-                "is_first_time": is_first_time,
-                "severity": "info",
-            },
-        )
-
-    @staticmethod
     def log_password_update_failed(email: str, reason: str):
         """Log failed password update attempts"""
         logger.warning(
@@ -189,19 +133,6 @@ class SecurityEventLogger:
                 "email": email,
                 "reason": reason,
                 "severity": "warning",
-            },
-        )
-
-    @staticmethod
-    def log_reset_code_generated(email: str, code_prefix: str):
-        """Log reset code generation"""
-        logger.info(
-            "SECURITY_EVENT: Password reset code generated",
-            extra={
-                "event_type": "reset_code_generated",
-                "email": email,
-                "code_prefix": code_prefix,
-                "severity": "info",
             },
         )
 
@@ -278,18 +209,6 @@ class SecurityEventLogger:
                 "email": email,
                 "code_prefix": code_prefix,
                 "reason": reason,
-                "severity": "info",
-            },
-        )
-
-    @staticmethod
-    def log_password_reset_success(email: str):
-        """Log successful password reset code verification"""
-        logger.info(
-            "SECURITY_EVENT: Password reset code verified successfully",
-            extra={
-                "event_type": "password_reset_success",
-                "email": email,
                 "severity": "info",
             },
         )

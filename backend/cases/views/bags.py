@@ -13,6 +13,7 @@ from common.logging import describe_user
 from users.permissions import HasAppAccess
 
 from ..models import BotanicalAssessment, DrugBag, Priority3Form
+from ..permissions import ensure_form_editable
 from ..serializers import (
     BotanicalAssessmentSerializer,
     DrugBagBatchCreateSerializer,
@@ -44,10 +45,14 @@ class DrugBagListView(ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
+        form = serializer.validated_data.get("form")
+        if form is not None:
+            ensure_form_editable(form, self.request.user)
         bag = serializer.save()
         settings.LOGGER.info(
             f"{describe_user(self.request.user)} created drug bag "
-            f"{bag.seal_tag_numbers} for case {bag.form.case.case_number}"
+            f"{bag.seal_tag_numbers} ({bag.pk}) for case "
+            f"{bag.form.case.case_number} ({bag.form.case_id})"
         )
 
 
@@ -70,18 +75,21 @@ class DrugBagDetailView(RetrieveUpdateDestroyAPIView):
         )
 
     def perform_update(self, serializer):
+        # A completed form's bags are read-only for non-admins, as the form is.
+        ensure_form_editable(serializer.instance.form, self.request.user)
+        serializer.save()
         settings.LOGGER.info(
             f"{describe_user(self.request.user)} updated drug bag "
-            f"{serializer.instance.seal_tag_numbers}"
+            f"{serializer.instance.seal_tag_numbers} ({serializer.instance.pk})"
         )
-        serializer.save()
 
     def perform_destroy(self, instance):
-        settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted drug bag "
-            f"{instance.seal_tag_numbers}"
-        )
+        ensure_form_editable(instance.form, self.request.user)
+        tag, pk = instance.seal_tag_numbers, instance.pk
         super().perform_destroy(instance)
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted drug bag {tag} ({pk})"
+        )
 
 
 class BotanicalAssessmentCreateView(APIView):
@@ -96,6 +104,8 @@ class BotanicalAssessmentCreateView(APIView):
             drug_bag = DrugBag.objects.get(pk=drug_bag_id)
         except DrugBag.DoesNotExist:
             raise NotFound("Drug bag not found.")
+
+        ensure_form_editable(drug_bag.form, request.user)
 
         # Check if assessment already exists
         if BotanicalAssessment.objects.filter(drug_bag=drug_bag).exists():
@@ -135,7 +145,16 @@ class BotanicalAssessmentDetailView(RetrieveUpdateDestroyAPIView):
         super().check_object_permissions(request, obj)
         # Any authenticated user can update assessments during case processing
 
+    def perform_destroy(self, instance):
+        ensure_form_editable(instance.drug_bag.form, self.request.user)
+        pk = instance.pk
+        super().perform_destroy(instance)
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted assessment ({pk})"
+        )
+
     def perform_update(self, serializer):
+        ensure_form_editable(serializer.instance.drug_bag.form, self.request.user)
         # Auto-set assessment date if determination is being set
         if (
             serializer.validated_data.get("determination")
@@ -161,6 +180,7 @@ class DrugBagBatchCreateView(APIView):
             form = Priority3Form.objects.select_related("case").get(pk=pk)
         except Priority3Form.DoesNotExist:
             raise NotFound("Priority 3 form not found.")
+        ensure_form_editable(form, request.user)
 
         serializer = DrugBagBatchCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

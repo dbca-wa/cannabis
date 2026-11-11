@@ -87,19 +87,14 @@ describe("SidebarNav", () => {
 		).toBeInTheDocument();
 	});
 
-	it("shows only the dashboard to a user without app access", () => {
+	it("shows only the dashboard and Settings to a user without app access", () => {
 		authState.hasAppAccess = false;
 		renderPage(<SidebarNav />);
 
-		expect(
-			screen.getByRole("link", { name: /dashboard/i })
-		).toBeInTheDocument();
-		expect(
-			screen.queryByRole("link", { name: /cases/i })
-		).not.toBeInTheDocument();
-		expect(
-			screen.queryByRole("link", { name: /settings/i })
-		).not.toBeInTheDocument();
+		const hrefs = screen
+			.getAllByRole("link")
+			.map((link) => link.getAttribute("href"));
+		expect(hrefs).toEqual(["/", "/settings"]);
 	});
 
 	describe("awaiting invoice count", () => {

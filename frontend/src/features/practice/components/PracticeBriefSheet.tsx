@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ClipboardList,
 	X,
@@ -22,8 +22,10 @@ import type {
 } from "@/features/cases/types/cases.types";
 import { usePracticeMode } from "../hooks/usePracticeMode";
 import { usePracticeBrief } from "../hooks/usePracticeBrief";
+import { PRACTICE_BRIEFS } from "../data/practiceBriefs";
 import { usePracticeSheet } from "./practiceSheet.context";
 import {
+	BATCH_STEP,
 	getPracticeGuidance,
 	derivePracticeStep,
 	type PracticeFormProgress,
@@ -44,6 +46,43 @@ const caseIdFromPath = (pathname: string): number | null => {
 	const m = pathname.match(/^\/cases\/(\d+)/);
 	return m ? Number(m[1]) : null;
 };
+
+type ProgressForm = {
+	phase: CasePhase;
+	marked_ready: boolean;
+	certificate?: { id: number } | null;
+};
+
+const toFormProgress = (
+	forms: ProgressForm[] | undefined
+): PracticeFormProgress[] =>
+	(forms ?? []).map((f) => ({
+		phase: f.phase,
+		marked_ready: f.marked_ready,
+		certificate: f.certificate ? { id: f.certificate.id } : null,
+	}));
+
+interface ListedPracticeCase {
+	id: number;
+	case_number: string;
+	derived_status?: CasePhase | null;
+	forms?: unknown;
+}
+
+const caseStep = (c: ListedPracticeCase) =>
+	derivePracticeStep({
+		caseExists: true,
+		derivedStatus: c.derived_status,
+		forms: toFormProgress(c.forms as Priority3FormTiny[]),
+	});
+
+/** The user's most-advanced practice case, taken as the one in play. */
+const mostAdvancedCase = (
+	results: ListedPracticeCase[]
+): ListedPracticeCase | null =>
+	results.length
+		? results.reduce((a, b) => (caseStep(b) >= caseStep(a) ? b : a))
+		: null;
 
 interface StepTrackerProps {
 	steps: {
@@ -260,7 +299,14 @@ const GuideReferenceSheet = ({
 export const PracticeBriefSheet = () => {
 	const { isOn, restartCase, isToggling } = usePracticeMode();
 	const { isOpen, close, liveCreateData, guideEnabled } = usePracticeSheet();
-	const { data: brief, index, total, next, previous } = usePracticeBrief(isOn);
+	const {
+		data: brief,
+		index,
+		total,
+		next,
+		previous,
+		select,
+	} = usePracticeBrief(isOn);
 	const { pathname } = useLocation();
 
 	// Guide-only mode: the user turned the reference guide on while NOT in
@@ -297,13 +343,42 @@ export const PracticeBriefSheet = () => {
 		staleTime: 10_000,
 	});
 
-	// The user's practice batches drive the step-5 (batch and complete) ticks.
+	// The user's practice batches drive the batch and invoice ticks.
 	const { data: practiceBatches } = useQuery({
 		queryKey: ["batches", "practice-progress"],
 		queryFn: () => getBatches(),
 		enabled: isOn && isOpen,
 		staleTime: 10_000,
 	});
+
+	// The active practice case: the one on the page, or the most-advanced one
+	// otherwise. It drives the batch checklist and the restart control.
+	const activeCase: { id: number; case_number: string } | null =
+		caseId != null
+			? liveCase
+				? { id: liveCase.id, case_number: liveCase.case_number }
+				: null
+			: mostAdvancedCase(
+					(practiceCases?.results ?? []) as ListedPracticeCase[]
+				);
+
+	// Once a practice case exists for one of the examples, the guide follows
+	// that case's brief rather than the session's pick, so the checklist always
+	// describes the case being worked on (even in a new tab, where the session
+	// pick may differ). Paging is offered again once the case is restarted.
+	const activeBriefIndex = activeCase
+		? PRACTICE_BRIEFS.findIndex(
+				(b) =>
+					b.case_number.toLowerCase() ===
+					activeCase.case_number.trim().toLowerCase()
+			)
+		: -1;
+	// The new-case form is where a different example can be started, so the
+	// brief stays free to page there.
+	const briefLocked = activeBriefIndex >= 0 && pathname !== "/cases/add";
+	useEffect(() => {
+		if (briefLocked && activeBriefIndex !== index) select(activeBriefIndex);
+	}, [briefLocked, activeBriefIndex, index, select]);
 
 	// Show the sheet in practice mode (always) or when the guide is toggled on
 	// outside practice mode. Hide it when closed, or when neither applies.
@@ -338,21 +413,6 @@ export const PracticeBriefSheet = () => {
 
 	// Derive the current step from live progress so the tracker follows the case
 	// from creation through to invoicing, rather than resetting per page.
-	const toFormProgress = (
-		forms:
-			| Array<{
-					phase: CasePhase;
-					marked_ready: boolean;
-					certificate?: { id: number } | null;
-			  }>
-			| undefined
-	): PracticeFormProgress[] =>
-		(forms ?? []).map((f) => ({
-			phase: f.phase,
-			marked_ready: f.marked_ready,
-			certificate: f.certificate ? { id: f.certificate.id } : null,
-		}));
-
 	let step: number;
 	if (caseId != null && liveCase) {
 		const formsForProgress = Array.isArray(liveForms)
@@ -371,14 +431,9 @@ export const PracticeBriefSheet = () => {
 		});
 	} else if (caseId == null && practiceCases?.results?.length) {
 		// Pick the most-advanced practice case as the one in play.
-		const steps = practiceCases.results.map((c) =>
-			derivePracticeStep({
-				caseExists: true,
-				derivedStatus: c.derived_status,
-				forms: toFormProgress(c.forms as Priority3FormTiny[]),
-			})
+		step = Math.max(
+			...(practiceCases.results as ListedPracticeCase[]).map(caseStep)
 		);
-		step = Math.max(...steps);
 	} else if (liveCreateData) {
 		// On the create form, filling fields in — still step 1.
 		step = 1;
@@ -387,31 +442,6 @@ export const PracticeBriefSheet = () => {
 	}
 
 	const guidance = getPracticeGuidance(pathname, step);
-
-	// Identify the active practice case (for the batch checklist and the restart
-	// control): the one on the page, or the most-advanced one otherwise.
-	const activeCase =
-		caseId != null && liveCase
-			? { id: liveCase.id, case_number: liveCase.case_number }
-			: (() => {
-					const results = practiceCases?.results ?? [];
-					if (!results.length) return null;
-					const best = results.reduce((a, b) =>
-						derivePracticeStep({
-							caseExists: true,
-							derivedStatus: b.derived_status,
-							forms: toFormProgress(b.forms as Priority3FormTiny[]),
-						}) >=
-						derivePracticeStep({
-							caseExists: true,
-							derivedStatus: a.derived_status,
-							forms: toFormProgress(a.forms as Priority3FormTiny[]),
-						})
-							? b
-							: a
-					);
-					return { id: best.id, case_number: best.case_number };
-				})();
 
 	const batchChecklist = buildBatchChecklist(
 		activeCase?.case_number ?? null,
@@ -489,9 +519,9 @@ export const PracticeBriefSheet = () => {
 				</section>
 
 				{/* Live checklist of the brief, ticking off as data is entered.
-				    Hidden once the case is finalised (step 5) — data entry is done,
-				    so only the batch-and-complete instructions and checklist remain. */}
-				{guidance.currentStep < 5 && (
+				    Hidden once the case is finalised (the batch steps), when data
+				    entry is done and only the batch and invoice checklist remains. */}
+				{guidance.currentStep < BATCH_STEP && (
 					<section className="space-y-4 border-t border-amber-300 pt-4 dark:border-amber-800">
 						<div className="flex items-center justify-between gap-2">
 							<div className="flex items-center gap-2">
@@ -500,7 +530,7 @@ export const PracticeBriefSheet = () => {
 								</h3>
 								<Badge variant="secondary">Fake data</Badge>
 							</div>
-							{total > 1 && (
+							{total > 1 && !briefLocked && (
 								<div className="flex items-center gap-1">
 									<Button
 										size="icon"
@@ -530,8 +560,12 @@ export const PracticeBriefSheet = () => {
 							This is practice data. In real work it would come from an official
 							Priority 3 form. Items tick off as you enter them from your brief
 							below. The approved botanist is the default one, already selected
-							for you — leave it as is. Use the arrows to try a different
-							example.
+							for you — leave it as is.{" "}
+							{briefLocked
+								? "To try a different example, restart this practice case below."
+								: total > 1
+									? "Use the arrows to try a different example."
+									: null}
 						</p>
 
 						<Checklist group={caseChecklist} />
@@ -547,11 +581,22 @@ export const PracticeBriefSheet = () => {
 					</section>
 				)}
 
-				{/* Step 5 — batch and complete. Interactive checklist ticking as the
-				    user batches, downloads and invoices this case. */}
-				{guidance.currentStep >= 5 && (
+				{/* Steps 5 and 6 — batch and record the invoice. Interactive
+				    checklist ticking as the user batches, downloads and invoices
+				    this case. */}
+				{guidance.currentStep >= BATCH_STEP && (
 					<section className="space-y-3 border-t border-amber-300 pt-4 dark:border-amber-800">
 						<Checklist group={batchChecklist} />
+						{batchChecklist.items.every((item) => item.done) && (
+							<p
+								role="status"
+								className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100"
+							>
+								<strong className="font-semibold">Practice complete.</strong>{" "}
+								You have taken a case from creation to a recorded invoice.
+								Restart the case below to go again, or leave practice mode.
+							</p>
+						)}
 					</section>
 				)}
 

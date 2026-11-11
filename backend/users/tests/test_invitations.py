@@ -114,9 +114,28 @@ class TestInviteActivation:
         defaults.update(overrides)
         return InviteRecord.objects.create(**defaults)
 
-    def test_activate_creates_user_and_returns_tokens(self, api_client, admin_user):
+    def test_opening_the_link_describes_the_invitation_and_changes_nothing(
+        self, api_client, admin_user
+    ):
         invite = self._make_invite(admin_user)
-        resp = api_client.get(
+        url = reverse("activate_invite", kwargs={"token": invite.token})
+
+        # Opened twice, as a reload or a mail scanner would.
+        api_client.get(url)
+        resp = api_client.get(url)
+
+        assert resp.status_code == 200
+        assert resp.data["email"] == "newuser@example.com"
+        assert resp.data["given_names"] == "New"
+        assert resp.data["role"] == "botanist"
+        assert "access" not in resp.data
+        assert not User.objects.filter(email="newuser@example.com").exists()
+        invite.refresh_from_db()
+        assert invite.is_used is False
+
+    def test_accepting_creates_user_and_returns_tokens(self, api_client, admin_user):
+        invite = self._make_invite(admin_user)
+        resp = api_client.post(
             reverse("activate_invite", kwargs={"token": invite.token})
         )
         assert resp.status_code == 200
@@ -125,11 +144,21 @@ class TestInviteActivation:
         invite.refresh_from_db()
         assert invite.is_used is True
 
+    def test_an_accepted_invitation_cannot_be_accepted_again(
+        self, api_client, admin_user
+    ):
+        invite = self._make_invite(admin_user)
+        url = reverse("activate_invite", kwargs={"token": invite.token})
+        api_client.post(url)
+
+        assert api_client.post(url).status_code == 400
+        assert api_client.get(url).status_code == 400
+        assert User.objects.filter(email="newuser@example.com").count() == 1
+
     def test_invalid_token(self, api_client):
-        resp = api_client.get(
-            reverse("activate_invite", kwargs={"token": "does-not-exist"})
-        )
-        assert resp.status_code in (400, 404)
+        url = reverse("activate_invite", kwargs={"token": "does-not-exist"})
+        assert api_client.get(url).status_code in (400, 404)
+        assert api_client.post(url).status_code in (400, 404)
 
     def test_expired_token_rejected(self, api_client, admin_user):
         invite = self._make_invite(
@@ -138,10 +167,9 @@ class TestInviteActivation:
             token="tok-expired",
             expires_at=timezone.now() - timedelta(hours=1),
         )
-        resp = api_client.get(
-            reverse("activate_invite", kwargs={"token": invite.token})
-        )
-        assert resp.status_code in (400, 404, 410)
+        url = reverse("activate_invite", kwargs={"token": invite.token})
+        assert api_client.get(url).status_code in (400, 404, 410)
+        assert api_client.post(url).status_code in (400, 404, 410)
         assert not User.objects.filter(email="expired@example.com").exists()
 
 

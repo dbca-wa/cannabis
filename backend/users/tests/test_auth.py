@@ -35,6 +35,23 @@ class TestLogin:
         assert "refresh" in resp.data
         assert resp.data["user"]["email"] == "login@example.com"
 
+    @pytest.mark.parametrize("practising", [True, False])
+    def test_reports_practice_mode(self, api_client, practising):
+        """The app shows practice mode straight after sign-in, not after a reload."""
+        user = BotanistFactory(email="practice@example.com", password="testpass123")
+        prefs = user.get_preferences
+        prefs.practice_mode = practising
+        prefs.save(update_fields=["practice_mode"])
+
+        resp = api_client.post(
+            reverse("login"),
+            {"email": "practice@example.com", "password": "testpass123"},
+            format="json",
+        )
+
+        assert resp.status_code == 200
+        assert resp.data["user"]["practice_mode"] is practising
+
     def test_invalid_credentials(self, api_client):
         BotanistFactory(email="login2@example.com", password="testpass123")
         resp = api_client.post(

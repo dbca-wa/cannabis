@@ -63,7 +63,12 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         (
             "Defaults",
             {
-                "fields": ("default_approved_botanist",),
+                "fields": (
+                    "default_approved_botanist",
+                    "default_print_conveying_station",
+                    "default_print_requesting_station",
+                    "default_print_requesting_rank",
+                ),
             },
         ),
         (

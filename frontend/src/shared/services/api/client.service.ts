@@ -20,6 +20,7 @@ import {
 	isDjangoDetailError,
 	isDjangoNonFieldErrors,
 } from "@/shared/types/backend-api.types";
+import { describeFieldError } from "@/shared/utils/field-error.utils";
 
 export interface ApiError {
 	message: string;
@@ -238,10 +239,14 @@ export class ApiClientService {
 				const fieldMessages: string[] = [];
 
 				Object.entries(data).forEach(([field, errors]) => {
-					if (errors) {
+					// The server adds a "debug" block in development; it is not
+					// something the user entered.
+					if (errors && field !== "debug") {
 						const errorArray = Array.isArray(errors) ? errors : [errors];
 						fieldErrors![field] = errorArray;
-						fieldMessages.push(`${field}: ${errorArray[0]}`);
+						fieldMessages.push(
+							describeFieldError(field, String(errorArray[0]))
+						);
 					}
 				});
 

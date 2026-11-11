@@ -5,14 +5,6 @@
  * related components. Matches the backend Aptos template formatting logic.
  */
 
-export interface OfficerDetails {
-	rank_display?: string | null;
-	badge_number?: string | null;
-	given_names?: string | null;
-	last_name?: string | null;
-	station_name?: string | null;
-}
-
 /**
  * Format an ISO date string to "DD Month YYYY" (e.g., "11 June 2026").
  * Parses date parts manually to avoid timezone-related off-by-one errors
@@ -81,41 +73,6 @@ export const numberToWords = (n: number): string => {
 		return ones ? `${tens}-${ones}` : tens;
 	}
 	return String(n);
-};
-
-/**
- * Format officer details in legal certificate format:
- * "RoleLabelOrRank BadgeNumber SURNAME, FirstName of Organisation"
- *
- * When `roleLabel` is given (e.g. "Unsworn Officer" or "Sworn Officer") it takes
- * the place of the rank, matching the generated certificate. Without it, the
- * officer's rank is used. Returns "[Pending]" for a null/undefined officer or
- * when all fields are empty.
- */
-export const formatOfficerLegal = (
-	officer: OfficerDetails | null | undefined,
-	roleLabel?: string
-): string => {
-	if (!officer) return "[Pending]";
-
-	const rank = officer.rank_display || "";
-	const badge = officer.badge_number || "";
-	const surname = (officer.last_name || "").toUpperCase();
-	const firstName = officer.given_names || "";
-	const org = officer.station_name || "";
-
-	let result = "";
-	if (roleLabel) {
-		result = roleLabel;
-	} else if (rank && !["unknown", "other"].includes(rank.toLowerCase())) {
-		result = rank;
-	}
-	if (badge) result += result ? ` ${badge}` : badge;
-	if (surname) result += ` ${surname}`;
-	if (firstName) result += `, ${firstName}`;
-	if (org) result += ` of ${org}`;
-
-	return result.trim() || "[Pending]";
 };
 
 /**

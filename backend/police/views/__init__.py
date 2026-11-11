@@ -9,11 +9,13 @@ from .officers import (  # noqa: F401
     PoliceOfficerDetailView,
     PoliceOfficerExportView,
     PoliceOfficerListView,
+    PoliceOfficerUsageView,
 )
 from .stations import (  # noqa: F401
     PoliceStationDetailView,
     PoliceStationExportView,
     PoliceStationListView,
+    PoliceStationUsageView,
     StationMergeView,
 )
 
@@ -21,9 +23,11 @@ __all__ = [
     "PoliceStationListView",
     "PoliceStationDetailView",
     "PoliceStationExportView",
+    "PoliceStationUsageView",
     "StationMergeView",
     "PoliceOfficerListView",
     "PoliceOfficerDetailView",
     "PoliceOfficerExportView",
+    "PoliceOfficerUsageView",
     "OfficerMergeView",
 ]

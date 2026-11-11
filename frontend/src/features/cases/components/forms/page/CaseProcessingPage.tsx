@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { observer } from "mobx-react-lite";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 
 import { useCaseProcessingPageStore } from "@/app/providers/store.provider";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -11,6 +11,7 @@ import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 import {
 	CASE_SECTIONS,
+	FINALISED_PHASES,
 	deriveCaseSectionFlags,
 	deriveCaseSectionStates,
 	describeSectionState,
@@ -175,6 +176,18 @@ export const CaseProcessingPage = observer(
 			// A stale certificate would batch an out-of-date document.
 			!flags.certificatesStale &&
 			allFormsReady;
+
+		// Once every form has been finalised there is nothing left to finalise,
+		// so the button gives way to where the case now stands.
+		const formPhases = (forms ?? []).map((f) => f.phase as string);
+		const finalisedStatus =
+			flags.hasForms && formPhases.every((p) => FINALISED_PHASES.includes(p))
+				? formPhases.every((p) => p === "complete")
+					? "This case is complete. Its invoice number has been recorded."
+					: formPhases.some((p) => p === "in_batch" || p === "complete")
+						? "This case has been finalised and is in a batch."
+						: "This case has been finalised and is ready to batch from the Cases page."
+				: null;
 
 		const finaliseTitle = lockForNonAdmin
 			? COMPLETE_LOCK_MESSAGE
@@ -344,27 +357,42 @@ export const CaseProcessingPage = observer(
 					  natural place to commit once every section above has been
 					  worked through.
 					*/}
-					<div className="flex flex-col items-end gap-2 border-t pt-6">
-						{finaliseTitle && (
-							<p className="text-sm text-muted-foreground text-right">
-								{finaliseTitle}
+					{finalisedStatus ? (
+						<div className="flex justify-end border-t pt-6">
+							<p
+								className="flex items-center gap-2 text-sm text-muted-foreground"
+								data-testid="finalised-status"
+							>
+								<CheckCircle2
+									className="h-4 w-4 shrink-0 text-emerald-600"
+									aria-hidden="true"
+								/>
+								{finalisedStatus}
 							</p>
-						)}
-						<Button
-							size="lg"
-							onClick={handleFinalise}
-							disabled={
-								!canFinalise || store.state.isSubmitting || lockForNonAdmin
-							}
-							title={finaliseTitle}
-							className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
-						>
-							{store.state.isSubmitting && (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						</div>
+					) : (
+						<div className="flex flex-col items-end gap-2 border-t pt-6">
+							{finaliseTitle && (
+								<p className="text-sm text-muted-foreground text-right">
+									{finaliseTitle}
+								</p>
 							)}
-							Finalise Case
-						</Button>
-					</div>
+							<Button
+								size="lg"
+								onClick={handleFinalise}
+								disabled={
+									!canFinalise || store.state.isSubmitting || lockForNonAdmin
+								}
+								title={finaliseTitle}
+								className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
+							>
+								{store.state.isSubmitting && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
+								Finalise Case
+							</Button>
+						</div>
+					)}
 				</div>
 			</div>
 		);

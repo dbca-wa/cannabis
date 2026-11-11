@@ -21,27 +21,20 @@ import type {
 	DrugBagContentType,
 } from "../../../types/drugBags.types";
 import {
-	isPlantContent,
+	canHaveFemalePlants,
 	resizeEntries,
 	type BulkBagEntry,
 } from "./bulkAddBags.utils";
+import {
+	DETERMINATION_HELP,
+	DETERMINATION_OPTIONS,
+} from "../../../constants/determinations";
 
 const CONTENT_TYPE_OPTIONS: { value: DrugBagContentType; label: string }[] = [
 	{ value: "plant", label: "Plant" },
 	{ value: "plant_material", label: "Plant Material" },
 	{ value: "seed", label: "Seed" },
 	{ value: "unknown", label: "Other" },
-];
-
-const DETERMINATION_OPTIONS: {
-	value: BotanicalDetermination;
-	label: string;
-}[] = [
-	{ value: "pending", label: "Pending Assessment" },
-	{ value: "cannabis_sativa", label: "Cannabis sativa" },
-	{ value: "degraded", label: "Degraded" },
-	{ value: "inconclusive", label: "Inconclusive" },
-	{ value: "not_cannabis", label: "Not Cannabis" },
 ];
 
 // Defaults applied to every new bag entry — most cases are cannabis sativa, so
@@ -232,9 +225,10 @@ export const BulkAddBagsModal = ({
 			new_seal_tag_numbers: entry.new_seal_tag_numbers,
 			content_type: entry.content_type,
 			determination: entry.determination,
-			// Female plants only apply to plant content types.
+			// Female plants only apply to cannabis plant content.
 			contains_female_plants:
-				isPlantContent(entry.content_type) && entry.contains_female_plants,
+				canHaveFemalePlants(entry.content_type, entry.determination) &&
+				entry.contains_female_plants,
 		}));
 
 		onAddBags(bags);
@@ -319,6 +313,9 @@ export const BulkAddBagsModal = ({
 								))}
 							</SelectContent>
 						</Select>
+						<p className="text-xs text-muted-foreground">
+							{DETERMINATION_HELP}
+						</p>
 					</div>
 
 					{/* Scrollable bag entries */}
@@ -450,9 +447,12 @@ export const BulkAddBagsModal = ({
 										</Select>
 									</div>
 
-									{/* Female plants — only for plant content types, matching
-									    the single-bag add/edit control. */}
-									{isPlantContent(entry.content_type) && (
+									{/* Female plants — only for cannabis plant content,
+									    matching the single-bag add/edit control. */}
+									{canHaveFemalePlants(
+										entry.content_type,
+										entry.determination
+									) && (
 										<div className="col-span-full flex items-center gap-2 pt-1">
 											<input
 												type="checkbox"

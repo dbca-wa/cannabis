@@ -34,4 +34,7 @@ export {
 	useFeatureFlags,
 	useOcrEnabled,
 	useDefaultBotanistId,
+	useCertificatePrintDefaults,
+	INITIAL_PRINT_DEFAULTS,
+	type CertificatePrintDefaults,
 } from "./useFeatureFlags";
