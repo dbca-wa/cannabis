@@ -23,6 +23,7 @@ import {
 } from "@/features/cases/services/forms.service";
 import { CaseProcessingPage } from "@/features/cases/components/forms/page/CaseProcessingPage";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { keepScrollState } from "@/shared/utils/scroll.utils";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -182,11 +183,12 @@ const ProcessCaseContent = observer(() => {
 	const setActiveFormId = useCallback(
 		(nextFormId: number | null, { replace = false } = {}) => {
 			if (!parsedId) return;
+			// Stays on the case page, so the reader keeps their place.
 			navigate(
 				nextFormId === null
 					? `/cases/${parsedId}`
 					: `/cases/${parsedId}/forms/${nextFormId}`,
-				{ replace }
+				{ replace, state: keepScrollState(`/cases/${parsedId}`) }
 			);
 		},
 		[parsedId, navigate]
@@ -262,6 +264,8 @@ const ProcessCaseContent = observer(() => {
 			});
 			await queryClient.invalidateQueries({ queryKey: ["cases"] });
 			setActiveFormId(newForm.id);
+			// Bring the new form into view from the top of its section.
+			pageStore.requestSection("assessment");
 		},
 		onError: () => {
 			toast.error("Failed to create form");

@@ -17,10 +17,8 @@ import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
 
-const RANK_OPTIONS_PRIMARY = [
-	{ value: "unsworn_officer", label: "Unsworn Officer" },
-	{ value: "sworn_officer", label: "Sworn Officer" },
-];
+// "none" asks the API for officers with no rank on record.
+const RANK_OPTIONS_PRIMARY = [{ value: "none", label: "No rank" }];
 
 const RANK_OPTIONS_SECONDARY = [
 	{ value: "constable", label: "Constable" },

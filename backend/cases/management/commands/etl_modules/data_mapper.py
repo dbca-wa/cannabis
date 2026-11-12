@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 from cases.models import BotanicalAssessment
+from cases.services import certificate_wording as wording
 
 from .content_type_mapper import ContentTypeMapper
 from .police_data_parser import PoliceDataParser
@@ -188,13 +189,16 @@ class CannabisDataMapper:
             # Optional botanist
             approved_botanist = json_record.get("approved_botanist")
 
-            # Security movement envelope (goes to FormData)
-            # Truncate to 20 chars to fit CharField(max_length=20)
-            security_movement_envelope = f"SME-{cert_number}"[:20]
-
             # Unwrap comments into their correct slots
             additional_notes = self._get_additional_notes(json_record)
             internal_comments = self._get_internal_comments(json_record)
+
+            # The legacy system kept the envelope only in the Section C note,
+            # so take it from there when the note names exactly one. Blank
+            # otherwise; anything longer than the field allows stays in the
+            # note only.
+            envelope = wording.sme_from_note(additional_notes) or ""
+            security_movement_envelope = envelope if len(envelope) <= 20 else ""
 
             # Extract station from police_officer organisation
             station_name = self._get_station_name(json_record)

@@ -12,6 +12,7 @@ import { usePracticeSheet } from "@/features/practice/components/practiceSheet.c
 import { usePracticeMode } from "@/features/practice/hooks/usePracticeMode";
 import { usePageViewAudit } from "@/shared/hooks/usePageViewAudit";
 import { useSavedSearchGate } from "@/shared/hooks/useSavedSearchGate";
+import { shouldKeepScroll } from "@/shared/utils/scroll.utils";
 import { Outlet as RouterOutlet, useLocation } from "react-router";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef } from "react";
@@ -31,11 +32,20 @@ const MainContent = () => {
 	// `main` is the only scroll container (the document itself never scrolls), so
 	// window-based scroll restoration does nothing here. Reset this element to
 	// the top on each navigation so a new page always starts at the top rather
-	// than inheriting the previous page's scroll position.
+	// than inheriting the previous page's scroll position. A navigation that
+	// stays on the same page (switching or adding a form on a case) asks to keep
+	// the position instead.
 	const scrollRef = useRef<HTMLElement>(null);
-	const { pathname } = useLocation();
+	const previousPathname = useRef<string | null>(null);
+	const { pathname, state } = useLocation();
 	useEffect(() => {
+		const keep = shouldKeepScroll(state, previousPathname.current);
+		previousPathname.current = pathname;
+		if (keep) return;
 		scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+		// Only a change of address resets the position, not a change of state
+		// on the same address.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pathname]);
 
 	return (

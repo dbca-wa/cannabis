@@ -3,6 +3,7 @@
 import pytest
 
 from cases.management.commands.etl_modules.data_mapper import (
+    CannabisDataMapper,
     DrugBagData,
     FormData,
 )
@@ -118,3 +119,40 @@ class TestIdempotentReImport:
         factory.create_drug_bag(bag_data, form)
 
         assert DrugBag.objects.filter(form=form).count() == 1
+
+
+class TestLegacyEnvelope:
+    """The legacy system kept the envelope only in the Section C note."""
+
+    @staticmethod
+    def _map(other_matters):
+        record = {
+            "row_id": 7,
+            "cert_number": 4562,
+            "police_reference_number": "220225 0900 16977",
+            "receipt_date": '{"standardized_date": "2025-02-22"}',
+            "other_matters": other_matters,
+        }
+        _, form_data = CannabisDataMapper().map_submission_data(record)
+        return form_data
+
+    def test_the_envelope_is_read_from_the_note(self):
+        form_data = self._map(
+            "Bag T108582 contained female plants.\n"
+            "Subsamples placed into Security Movement Envelope WW00537475."
+        )
+        assert form_data.security_movement_envelope == "WW00537475"
+
+    @pytest.mark.parametrize(
+        "note",
+        [
+            None,
+            "Subsamples transferred to Security Movement Envelope WW1.",
+            "Subsamples placed into Security Movement Envelope WW1.\n"
+            "Subsamples placed into Security Movement Envelope WW2.",
+            "Subsamples placed into Security Movement Envelope "
+            "WW0000000000000000000001.",
+        ],
+    )
+    def test_no_envelope_is_made_up(self, note):
+        assert self._map(note).security_movement_envelope == ""

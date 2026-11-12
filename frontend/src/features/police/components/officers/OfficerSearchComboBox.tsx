@@ -202,11 +202,6 @@ export const OfficerSearchComboBox = React.forwardRef<
 								<>
 									<Shield className="h-4 w-4 text-muted-foreground" />
 									<span className="truncate">{displayValue}</span>
-									{selectedOfficer && !selectedOfficer.is_sworn && (
-										<span className="text-xs text-muted-foreground">
-											(not sworn)
-										</span>
-									)}
 								</>
 							) : (
 								<span>{placeholder}</span>
@@ -300,9 +295,11 @@ export const OfficerSearchComboBox = React.forwardRef<
 																{formatOfficerDetails(officer)}
 															</div>
 														</div>
-														<Badge variant="secondary" className="text-xs">
-															{officer.rank_display}
-														</Badge>
+														{officer.rank_display && (
+															<Badge variant="secondary" className="text-xs">
+																{officer.rank_display}
+															</Badge>
+														)}
 													</CommandItem>
 												))}
 										</CommandGroup>
@@ -357,9 +354,11 @@ export const OfficerSearchComboBox = React.forwardRef<
 															{formatOfficerDetails(officer)}
 														</div>
 													</div>
-													<Badge variant="secondary" className="text-xs">
-														{officer.rank_display}
-													</Badge>
+													{officer.rank_display && (
+														<Badge variant="secondary" className="text-xs">
+															{officer.rank_display}
+														</Badge>
+													)}
 												</CommandItem>
 											))}
 									</CommandGroup>

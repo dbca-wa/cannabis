@@ -125,7 +125,7 @@ const INSTRUCTIONS: Record<
 			"In the Assessment section, add a Priority 3 form.",
 			"Add each drug bag from your brief below: the original and new seal tag numbers, content type and determination.",
 			"Mark whether a bag holds female plants where your brief says so.",
-			"Add the Section C note or template if your brief lists a security movement envelope. Female plants and bags with a different result are added to Section C automatically.",
+			"Enter the SME Number if your brief lists a security movement envelope. The envelope, female plants and bags with a different result are added to Section C automatically, so only type a Section C note for anything else.",
 			"Each item in the 'On the form' checklist ticks off as you record it.",
 		],
 	},
@@ -193,7 +193,7 @@ const INSTRUCTIONS_REAL: Record<
 			"In the Assessment section, add a Priority 3 form.",
 			"Add each drug bag: the original and new seal tag numbers, content type and result (Cannabis sativa, Not Cannabis, Too degraded and could not be identified, or Inconclusive).",
 			"Mark whether a bag holds female plants.",
-			"Add the Section C note or template where a security movement envelope applies. Female plants and bags with a different result are added to Section C automatically.",
+			"Enter the SME Number where a security movement envelope applies. The envelope, female plants and bags with a different result are added to Section C automatically, so only type a Section C note for anything else.",
 		],
 	},
 	3: {

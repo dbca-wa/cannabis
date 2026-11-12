@@ -6,7 +6,6 @@ import {
 	getUsers,
 	createUser as createUserService,
 	updateUser as updateUserService,
-	deleteUser as deleteUserService,
 	inviteUser as inviteUserService,
 	sendResetEmail as sendResetEmailService,
 } from "../services/users.service";
@@ -106,36 +105,6 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		},
 	});
 
-	// Delete user mutation
-	const deleteUserMutation = useMutation({
-		mutationFn: async (userId: string | number) => {
-			logger.info("Deleting user", { userId });
-			await deleteUserService(userId);
-		},
-		onSuccess: async (_, deletedUserId) => {
-			// Remove user from cache
-			queryClient.removeQueries({
-				queryKey: usersQueryKeys.detail(
-					typeof deletedUserId === "string"
-						? parseInt(deletedUserId)
-						: deletedUserId
-				),
-			});
-
-			await invalidateRelatedQueries(queryClient, "users");
-
-			toast.success("User deleted successfully!");
-			logger.info("User deleted via hook", { userId: deletedUserId });
-		},
-		onError: (error: unknown) => {
-			const errorMessage = getErrorMessage(error);
-			toast.error(`Failed to delete user: ${errorMessage}`);
-			logger.error("Delete user failed via hook", {
-				error: errorMessage,
-			});
-		},
-	});
-
 	// Invite user mutation
 	const inviteUserMutation = useMutation({
 		mutationFn: async (inviteData: InviteUserRequest) => {
@@ -198,23 +167,6 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		});
 	};
 
-	const deleteUser = (
-		userId: string | number,
-		options?: {
-			onSuccess?: () => void;
-			onError?: (error: unknown) => void;
-		}
-	) => {
-		deleteUserMutation.mutate(userId, {
-			onSuccess: () => {
-				options?.onSuccess?.();
-			},
-			onError: (error) => {
-				options?.onError?.(error);
-			},
-		});
-	};
-
 	const inviteUser = (
 		inviteData: InviteUserRequest,
 		options?: {
@@ -257,20 +209,17 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		// Mutation functions
 		createUser,
 		updateUser,
-		deleteUser,
 		inviteUser,
 		refreshUsers,
 
 		// Mutation states
 		isCreating: createUserMutation.isPending,
 		isUpdating: updateUserMutation.isPending,
-		isDeleting: deleteUserMutation.isPending,
 		isInviting: inviteUserMutation.isPending,
 
 		// Individual mutation objects for advanced usage
 		createUserMutation,
 		updateUserMutation,
-		deleteUserMutation,
 		inviteUserMutation,
 
 		// Raw query for advanced usage

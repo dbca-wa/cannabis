@@ -20,8 +20,8 @@ const SCALE_STEP = 0.1;
 interface GeneratedCertificatesViewerProps {
 	caseId: number;
 	certificates: Certificate[];
-	/** Increment to force a PDF refetch (e.g. after regeneration) */
-	refreshKey?: number;
+	/** Change to force a PDF refetch (e.g. after regeneration) */
+	refreshKey?: number | string;
 }
 
 /**

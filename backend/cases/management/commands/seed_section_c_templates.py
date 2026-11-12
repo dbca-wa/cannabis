@@ -27,16 +27,8 @@ TEMPLATES = [
         "Female Plants",
         "{{female_plant_sentence}}",
     ),
-    (
-        "SME Number",
-        "Subsamples placed into Security Movement Envelope "
-        "{{security_movement_envelope}}.",
-    ),
-    (
-        "SME + Female",
-        "Subsamples placed into Security Movement Envelope "
-        "{{security_movement_envelope}}.\n{{female_plant_sentence}}",
-    ),
+    # No envelope template: Section C prints "Subsamples placed into Security
+    # Movement Envelope <number>." by itself whenever the form has one.
 ]
 
 

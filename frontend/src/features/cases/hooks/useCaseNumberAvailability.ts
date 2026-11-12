@@ -5,6 +5,12 @@ import {
 	type MatchedCase,
 } from "../services/cases.service";
 
+/** Query key for the police reference check (not under "cases"; see below). */
+export const CASE_NUMBER_CHECK_KEY = (
+	caseNumber: string,
+	excludeId: number | null
+) => ["case-number-check", caseNumber, excludeId] as const;
+
 interface CaseNumberAvailability {
 	/** True while the user is still typing (debouncing) or the check is in flight. */
 	isChecking: boolean;
@@ -35,10 +41,16 @@ export const useCaseNumberAvailability = (
 	const enabled = debounced.length > 0;
 
 	const query = useQuery({
-		queryKey: ["cases", "check-number", debounced, excludeId ?? null],
+		// Deliberately outside the "cases" key family. Creating a case
+		// invalidates every "cases" query; if this check were one of them it
+		// would refetch while the new-case form is still on screen, find the
+		// case that was just created, and flash "already exists" before the
+		// page moves on. Fresh on every mount instead (staleTime 0), so a
+		// reference created earlier is still caught.
+		queryKey: CASE_NUMBER_CHECK_KEY(debounced, excludeId ?? null),
 		queryFn: () => checkCaseNumberExists(debounced, excludeId),
 		enabled,
-		staleTime: 30_000,
+		staleTime: 0,
 	});
 
 	// Still settling if the debounced value hasn't caught up, or a request is live

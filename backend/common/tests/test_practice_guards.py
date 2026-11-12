@@ -102,10 +102,12 @@ class TestStaffAndInvitations:
         assert resp.status_code == 200
 
     def test_deleting_a_user_is_refused(self, practising_admin, finance_user):
+        # The app never deletes users, in practice mode or out of it.
         resp = practising_admin.delete(
             reverse("user_detail", kwargs={"pk": finance_user.pk})
         )
-        _refused(resp)
+        assert resp.status_code == 403
+        finance_user.refresh_from_db()
 
     def test_creating_a_user_is_refused(self, practising_admin):
         # Generated at runtime so no password literal sits in source control.

@@ -89,16 +89,17 @@ class PoliceOfficerListView(ListCreateAPIView):
                     | Q(station__name__icontains=term)
                 )
 
-        # Filter by rank
+        # Filter by rank ("none" means no rank recorded)
         rank = self.request.query_params.get("rank")
         if rank:
-            queryset = queryset.filter(rank=rank)
+            queryset = queryset.filter(
+                rank=PoliceOfficer.NO_RANK if rank == "none" else rank
+            )
 
         # Filter by sworn/unsworn officers
         is_sworn = self.request.query_params.get("is_sworn")
         if is_sworn is not None:
             sworn_ranks = [
-                PoliceOfficer.SeniorityChoices.SWORN_OFFICER,
                 PoliceOfficer.SeniorityChoices.CONSTABLE,
                 PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE,
                 PoliceOfficer.SeniorityChoices.FIRST_CLASS_CONSTABLE,
@@ -151,10 +152,9 @@ class PoliceOfficerListView(ListCreateAPIView):
 
         # Define rank seniority order (higher number = higher rank)
         rank_seniority_order = {
+            PoliceOfficer.NO_RANK: 0,
             PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
             PoliceOfficer.SeniorityChoices.OTHER: 1,
-            PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER: 2,
-            PoliceOfficer.SeniorityChoices.SWORN_OFFICER: 3,
             PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
             PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
             PoliceOfficer.SeniorityChoices.FIRST_CLASS_CONSTABLE: 6,
@@ -355,10 +355,9 @@ class PoliceOfficerExportView(APIView):
 
         # Define rank seniority order (higher number = higher rank)
         rank_seniority_order = {
+            PoliceOfficer.NO_RANK: 0,
             PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
             PoliceOfficer.SeniorityChoices.OTHER: 1,
-            PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER: 2,
-            PoliceOfficer.SeniorityChoices.SWORN_OFFICER: 3,
             PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
             PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
             PoliceOfficer.SeniorityChoices.FIRST_CLASS_CONSTABLE: 6,

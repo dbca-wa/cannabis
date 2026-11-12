@@ -54,9 +54,6 @@ const EditUserModal = lazy(() =>
 		default: m.EditUserModal,
 	}))
 );
-const DeleteUserModal = lazy(
-	() => import("@/features/user/components/modals/DeleteUserModal")
-);
 
 // Police modals
 const CreateOfficerRouteModal = lazy(() =>
@@ -173,7 +170,8 @@ export interface RouteConfig {
 		components: {
 			add: React.ComponentType;
 			edit: React.ComponentType;
-			delete: React.ComponentType;
+			/** Omitted for records the app never deletes (staff). */
+			delete?: React.ComponentType;
 		};
 	};
 }
@@ -250,7 +248,6 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 			components: {
 				add: AddUserModal,
 				edit: EditUserModal,
-				delete: DeleteUserModal,
 			},
 		},
 	},
@@ -381,7 +378,9 @@ const generateCrudRoutes = (
 	return [
 		{ path: "add", element: components.add },
 		{ path: `:${entityParam}`, element: components.edit },
-		{ path: `:${entityParam}/delete`, element: components.delete },
+		...(components.delete
+			? [{ path: `:${entityParam}/delete`, element: components.delete }]
+			: []),
 	];
 };
 

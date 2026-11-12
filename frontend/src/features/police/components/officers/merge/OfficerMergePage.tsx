@@ -152,9 +152,11 @@ const PrimaryOfficerSelector = ({
 					<Check className="h-4 w-4 text-green-600" />
 					<Shield className="h-4 w-4 text-muted-foreground" />
 					<span className="font-medium">{formatName(selected)}</span>
-					<Badge variant="secondary" className="text-xs">
-						{selected.rank_display}
-					</Badge>
+					{selected.rank_display && (
+						<Badge variant="secondary" className="text-xs">
+							{selected.rank_display}
+						</Badge>
+					)}
 				</div>
 			)}
 			<div className="relative">

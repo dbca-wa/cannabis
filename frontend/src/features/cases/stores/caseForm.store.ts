@@ -832,19 +832,6 @@ export class CaseFormStore {
 		};
 	};
 
-	// Auto-populate Additional Notes (Section C) based on bag count and envelope number
-	getAutoPopulatedAdditionalNotes = (): string => {
-		const bagCount = this.formData.bags.length;
-		const envelopeNumber = this.formData.security_movement_envelope;
-
-		if (!envelopeNumber || bagCount === 0) {
-			return "";
-		}
-
-		const bagText = bagCount === 1 ? "the bag" : "each bag";
-		return `Subsamples from ${bagText} removed to Security Movement Envelope ${envelopeNumber}`;
-	};
-
 	// ============================================================================
 	// CLEANUP
 	// ============================================================================

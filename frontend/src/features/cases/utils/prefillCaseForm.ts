@@ -130,7 +130,7 @@ const selectTopOfficerCandidate = (
 		given_names: null,
 		last_name: null,
 		full_name: String(top.display_data.full_name ?? ""),
-		rank: "unknown",
+		rank: "",
 		rank_display: "",
 		station: null,
 		station_name: String(top.display_data.station_name ?? ""),

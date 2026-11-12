@@ -181,6 +181,26 @@ const SYSTEM_SENTENCE = new RegExp(
 export const isSystemSentence = (line: string): boolean =>
 	SYSTEM_SENTENCE.test(comparable(line));
 
+export const SME_PHRASE = "Subsamples placed into Security Movement Envelope";
+
+const SME_SENTENCE = new RegExp(
+	"^" + escapeRegExp(SME_PHRASE.toLowerCase()) + " \\S.*$"
+);
+
+/**
+ * The Section C envelope sentence for a form, or null when none is set, e.g.
+ * "Subsamples placed into Security Movement Envelope WW1.".
+ */
+export const smeLine = (envelope: string | null | undefined): string | null => {
+	const value = (envelope ?? "").trim();
+	if (!value) return null;
+	return `${SME_PHRASE} ${value.endsWith(".") ? value.slice(0, -1) : value}.`;
+};
+
+/** True for a note line naming the envelope in the system's own words. */
+export const isSmeSentence = (line: string): boolean =>
+	SME_SENTENCE.test(comparable(line));
+
 const trimBlankEnds = (lines: string[]): string[] => {
 	let start = 0;
 	let end = lines.length;
@@ -192,16 +212,20 @@ const trimBlankEnds = (lines: string[]): string[] => {
 /**
  * Join the automatic lines and the botanist's note for Section C.
  *
- * Order: the bag result lines, then the botanist's note, then the female plant
- * sentence. Any note line that is itself a bag result or female plant sentence
- * (ignoring case, surrounding spaces and a trailing full stop) is dropped,
- * because the system writes those from the current bags. Returns null when
- * there is nothing to print, which the certificate shows as "None".
+ * Order: the bag result lines, the envelope sentence, the botanist's note,
+ * then the female plant sentence. Any note line that is itself a bag result or
+ * female plant sentence (ignoring case, surrounding spaces and a trailing full
+ * stop) is dropped, because the system writes those from the current bags.
+ * When the form has an envelope, a note line naming an envelope in the same
+ * words is dropped too; without one, such a line is the only record of the
+ * envelope and is kept. Returns null when there is nothing to print, which the
+ * certificate shows as "None".
  */
 export const composeSectionC = (
 	bagLines: string[],
 	note: string | null | undefined,
-	femaleLine: string | null = null
+	femaleLine: string | null = null,
+	envelopeLine: string | null = null
 ): string | null => {
 	const noteLines = trimBlankEnds(
 		(note ?? "")
@@ -211,9 +235,17 @@ export const composeSectionC = (
 			.map((line) => line.trim())
 	);
 	const kept = trimBlankEnds(
-		noteLines.filter((line) => !isSystemSentence(line))
+		noteLines.filter(
+			(line) =>
+				!isSystemSentence(line) && !(envelopeLine && isSmeSentence(line))
+		)
 	);
-	const lines = [...bagLines, ...kept, ...(femaleLine ? [femaleLine] : [])];
+	const lines = [
+		...bagLines,
+		...(envelopeLine ? [envelopeLine] : []),
+		...kept,
+		...(femaleLine ? [femaleLine] : []),
+	];
 	return lines.length > 0 ? lines.join("\n") : null;
 };
 
@@ -230,12 +262,7 @@ export interface OfficerFacts {
 }
 
 /** Rank values that are not a real police rank, so never replace the label. */
-export const UNRECORDED_RANKS = new Set([
-	"unknown",
-	"other",
-	"sworn_officer",
-	"unsworn_officer",
-]);
+export const UNRECORDED_RANKS = new Set(["unknown", "other"]);
 
 export const hasRecordedRank = (rank: string | null | undefined): boolean =>
 	!!rank && !UNRECORDED_RANKS.has(rank);

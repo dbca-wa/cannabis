@@ -22,6 +22,8 @@ import { StationSearchComboBox } from "../stations/StationSearchComboBox";
 import {
 	editOfficerSchema,
 	officerRankOptions,
+	rankFromFormValue,
+	rankToFormValue,
 	type EditOfficerFormData,
 } from "../../schemas/policeOfficerSchemas";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
@@ -47,7 +49,7 @@ export const EditOfficerForm = ({
 			badge_number: officer.badge_number || "",
 			given_names: officer.given_names || "",
 			last_name: officer.last_name || "",
-			rank: officer.rank || "unknown",
+			rank: rankToFormValue(officer.rank),
 			station: officer.station ? officer.station.toString() : "none",
 		},
 	});
@@ -58,7 +60,7 @@ export const EditOfficerForm = ({
 				badge_number: data.badge_number || null,
 				given_names: data.given_names || null,
 				last_name: data.last_name,
-				rank: data.rank,
+				rank: rankFromFormValue(data.rank),
 				station:
 					data.station && data.station !== "none"
 						? parseInt(data.station)
@@ -159,9 +161,7 @@ export const EditOfficerForm = ({
 					render={({ field }) => {
 						return (
 							<FormItem>
-								<FormLabel>
-									Rank <span className="text-red-500">*</span>
-								</FormLabel>
+								<FormLabel>Rank</FormLabel>
 								<Select
 									onValueChange={(value) => {
 										field.onChange(value);

@@ -1057,8 +1057,8 @@ class ModelFactory:
 
         # Direct mappings for clean ranks
         direct_mappings = {
-            "sworn officer": PoliceOfficer.SeniorityChoices.SWORN_OFFICER,
-            "unsworn officer": PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER,
+            "sworn officer": PoliceOfficer.NO_RANK,
+            "unsworn officer": PoliceOfficer.NO_RANK,
             "senior constable": PoliceOfficer.SeniorityChoices.SENIOR_CONSTABLE,
             "detective": PoliceOfficer.SeniorityChoices.DETECTIVE,
             "police constable": PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE,
@@ -1098,9 +1098,9 @@ class ModelFactory:
         elif "police constable" in rank_lower:
             return PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE
         elif "sworn officer" in rank_lower:
-            return PoliceOfficer.SeniorityChoices.SWORN_OFFICER
+            return PoliceOfficer.NO_RANK
         elif "unsworn officer" in rank_lower:
-            return PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER
+            return PoliceOfficer.NO_RANK
         elif "detective" in rank_lower:
             return PoliceOfficer.SeniorityChoices.DETECTIVE
         elif "sergeant" in rank_lower:
@@ -1110,7 +1110,7 @@ class ModelFactory:
         elif "constable" in rank_lower:
             return PoliceOfficer.SeniorityChoices.CONSTABLE
         elif "sworn" in rank_lower:  # Handle "Sworn Brett", "Sworn Shane"
-            return PoliceOfficer.SeniorityChoices.SWORN_OFFICER
+            return PoliceOfficer.NO_RANK
         elif "senior" in rank_lower:
             return PoliceOfficer.SeniorityChoices.SENIOR_CONSTABLE
         elif "first" in rank_lower:

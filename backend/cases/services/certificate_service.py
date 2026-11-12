@@ -287,12 +287,14 @@ class CertificateService:
             "receipt_date": receipt_date,
             # Section B's result sentence. Only section_b.italic is italicised.
             "section_b": results.section_b,
-            # Section C: the automatic per-bag result lines, the botanist's
-            # own note, then the automatic female plant sentence.
+            # Section C: the automatic per-bag result lines and envelope
+            # sentence, the botanist's own note, then the automatic female
+            # plant sentence.
             "other_matters": wording.compose_section_c(
                 results.bag_lines,
                 certificate.additional_notes if note is _OWN_NOTE else note,
                 wording.female_plant_line(CertificateService._female_flags(bags)),
+                wording.sme_line(certificate.form.security_movement_envelope),
             )
             or "None",
             "certification_date": certification_date,
@@ -337,6 +339,11 @@ class CertificateService:
             context = CertificateService.build_certificate_context(certificate, note)
         except ValidationError:
             return None
+        return CertificateService.fingerprint_context(context)
+
+    @staticmethod
+    def fingerprint_context(context):
+        """The fingerprint of a built certificate context."""
         printed = {
             key: value
             for key, value in context.items()

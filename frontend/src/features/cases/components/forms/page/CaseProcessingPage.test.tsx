@@ -20,7 +20,7 @@ vi.mock("../wizard/steps/UnsignedCertificateStep", () => ({
 	}) => (
 		<div data-testid="certificates-section">
 			<button type="button" onClick={() => onAllReadyChange?.(true)}>
-				mark all ready
+				report all ready
 			</button>
 		</div>
 	),
@@ -39,6 +39,21 @@ vi.mock("../wizard/FormPreviewToggle", () => ({
 const authState = { isAdmin: true };
 vi.mock("@/features/auth/hooks/useAuth", () => ({
 	useAuth: () => authState,
+}));
+// The bulk certificate action beside Finalise reads its state from the forms
+// passed to the page; only its actions are stubbed.
+const certificateActions = {
+	generateAll: vi.fn(async () => []),
+	regenerateAll: vi.fn(async () => []),
+	markAllReady: vi.fn(),
+	isGenerating: false,
+	isMarkingAllReady: false,
+};
+vi.mock("../../../hooks/useCaseCertificates", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("../../../hooks/useCaseCertificates")
+	>()),
+	useCaseCertificates: () => certificateActions,
 }));
 
 const { CaseProcessingPage } = await import("./CaseProcessingPage");
@@ -287,7 +302,9 @@ describe("CaseProcessingPage", () => {
 			const user = userEvent.setup();
 			renderPageWith();
 
-			await user.click(screen.getByRole("button", { name: /mark all ready/i }));
+			await user.click(
+				screen.getByRole("button", { name: /report all ready/i })
+			);
 
 			expect(
 				screen.getByRole("button", { name: /finalise case/i })
@@ -298,7 +315,9 @@ describe("CaseProcessingPage", () => {
 			const user = userEvent.setup();
 			const { onSubmit } = renderPageWith();
 
-			await user.click(screen.getByRole("button", { name: /mark all ready/i }));
+			await user.click(
+				screen.getByRole("button", { name: /report all ready/i })
+			);
 			await user.click(screen.getByRole("button", { name: /finalise case/i }));
 
 			expect(onSubmit).toHaveBeenCalledOnce();
@@ -310,7 +329,9 @@ describe("CaseProcessingPage", () => {
 				caseData: { ...completeCaseData(), case_number: "" },
 			});
 
-			await user.click(screen.getByRole("button", { name: /mark all ready/i }));
+			await user.click(
+				screen.getByRole("button", { name: /report all ready/i })
+			);
 			await user.click(screen.getByRole("button", { name: /finalise case/i }));
 
 			expect(onSubmit).not.toHaveBeenCalled();
@@ -369,6 +390,129 @@ describe("CaseProcessingPage", () => {
 			expect(
 				screen.getByRole("button", { name: /finalise case/i })
 			).toBeInTheDocument();
+		});
+	});
+
+	describe("certificate action beside Finalise", () => {
+		const generated = (overrides: Record<string, unknown> = {}) => ({
+			id: 5,
+			pdf_url: "/media/certificate.pdf",
+			pdf_file: "certificate.pdf",
+			additional_notes: null,
+			batch_id: null,
+			updated_at: "2026-11-01T00:00:00Z",
+			...overrides,
+		});
+		const formWith = (id: number, certificate: unknown, markedReady: boolean) =>
+			({
+				...assessedForm(id, certificate, markedReady),
+				additional_notes: null,
+			}) as unknown as Priority3Form;
+
+		it("sits to the left of Finalise Case", () => {
+			renderPageWith({ forms: [formWith(10, generated(), false)] });
+
+			const action = screen.getByRole("button", { name: "Mark All Ready" });
+			const finalise = screen.getByRole("button", { name: /finalise case/i });
+			expect(
+				action.compareDocumentPosition(finalise) &
+					Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
+		});
+
+		it("generates the missing certificates first", async () => {
+			const user = userEvent.setup();
+			renderPageWith({
+				forms: [formWith(10, generated(), true), formWith(11, null, false)],
+			});
+
+			await user.click(
+				screen.getByRole("button", { name: "Generate All (1)" })
+			);
+
+			expect(certificateActions.generateAll).toHaveBeenCalledOnce();
+		});
+
+		it("regenerates when a certificate is out of date", async () => {
+			const user = userEvent.setup();
+			renderPageWith({
+				forms: [
+					formWith(10, generated({ needs_regeneration: true }), false),
+					formWith(11, generated(), true),
+				],
+			});
+
+			await user.click(screen.getByRole("button", { name: "Regenerate All" }));
+
+			expect(certificateActions.regenerateAll).toHaveBeenCalledOnce();
+			expect(
+				screen.queryByRole("button", { name: "Mark All Ready" })
+			).not.toBeInTheDocument();
+		});
+
+		it("marks every form ready once all are current", async () => {
+			const user = userEvent.setup();
+			renderPageWith({
+				forms: [
+					formWith(10, generated(), true),
+					formWith(11, generated(), false),
+				],
+			});
+
+			await user.click(screen.getByRole("button", { name: "Mark All Ready" }));
+
+			expect(certificateActions.markAllReady).toHaveBeenCalledOnce();
+		});
+
+		it("cannot be clicked once every form is marked ready", () => {
+			renderPageWith({ forms: [formWith(10, generated(), true)] });
+
+			expect(
+				screen.getByRole("button", { name: "Mark All Ready" })
+			).toBeDisabled();
+		});
+
+		it("cannot be clicked while certificates are generating", () => {
+			certificateActions.isGenerating = true;
+			try {
+				renderPageWith({ forms: [formWith(10, null, false)] });
+
+				expect(
+					screen.getByRole("button", { name: "Generate All (1)" })
+				).toBeDisabled();
+			} finally {
+				certificateActions.isGenerating = false;
+			}
+		});
+
+		it("waits for a drug bag before offering to generate", () => {
+			renderPageWith({
+				forms: [
+					{ id: 10, bags: [], certificate: null } as unknown as Priority3Form,
+				],
+			});
+
+			const action = screen.getByRole("button", { name: "Generate All" });
+			expect(action).toBeDisabled();
+			expect(action).toHaveAttribute(
+				"title",
+				"Add a drug bag to a form before generating certificates"
+			);
+		});
+
+		it("is not offered once the case is finalised", () => {
+			renderPageWith({
+				forms: [
+					{
+						...formWith(10, generated(), true),
+						phase: "batching",
+					} as unknown as Priority3Form,
+				],
+			});
+
+			expect(
+				screen.queryByRole("button", { name: "Mark All Ready" })
+			).not.toBeInTheDocument();
 		});
 	});
 

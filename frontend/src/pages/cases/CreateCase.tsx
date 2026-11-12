@@ -91,12 +91,19 @@ const CreateCaseContent = observer(() => {
 		}
 	}, [printDefaults, printDefaultsLoaded, formStore]);
 
-	// Reset the creation presentation store on unmount
+	// Reset the creation presentation store on unmount, and once a case has
+	// been created, clear the form and its draft as the page leaves.
+	const createdRef = useRef(false);
 	useEffect(() => {
 		return () => {
 			creationStore.reset();
+			if (createdRef.current) {
+				void formStore.clearDraft();
+				formStore.resetForm();
+				ocrResultStore.clearAll();
+			}
 		};
-	}, [creationStore]);
+	}, [creationStore, formStore]);
 
 	const caseData = buildCaseData(formStore);
 
@@ -195,11 +202,11 @@ const CreateCaseContent = observer(() => {
 		createCase(submissionData, {
 			onSuccess: (newCase) => {
 				creationStore.setSubmitting(false);
-				// Navigate first, then clean up — prevents a brief red flash.
+				// The form is cleared when this page unmounts, not here: the new
+				// case page loads first, so clearing now would show the emptied
+				// form, red with "required", for a moment before it leaves.
+				createdRef.current = true;
 				navigate(`/cases/${newCase.id}`);
-				void formStore.clearDraft();
-				formStore.resetForm();
-				ocrResultStore.clearAll();
 				// Always clear any remembered cases search (regardless of the saved
 				// searches setting) so the just-created case is visible when the
 				// operator next returns to the list, not hidden behind an old filter.

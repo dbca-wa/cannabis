@@ -19,7 +19,6 @@ export { default as EditUserForm } from "./components/forms/EditUserForm";
 // User modals
 export { AddUserModal } from "./components/modals/AddUserModal";
 export { EditUserModal } from "./components/modals/EditUserModal";
-export { default as DeleteUserModal } from "./components/modals/DeleteUserModal";
 
 // User schemas
 export {

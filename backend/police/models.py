@@ -62,12 +62,14 @@ class PoliceOfficer(AuditModel):
         help_text=("Last name or surname."),
     )
 
-    # Determine if is_sworn based on seniority
+    # No rank recorded. "Sworn Officer" and "Unsworn Officer" are not ranks:
+    # the certificate prints them by role (conveying or requesting), so an
+    # officer without a real rank is left blank rather than labelled.
+    NO_RANK = ""
+
     class SeniorityChoices(models.TextChoices):
         # Standard ranks (based on actual cannabis data analysis)
         UNKNOWN = "unknown", "Unknown"  # have to because bad data
-        UNSWORN_OFFICER = "unsworn_officer", "Unsworn Officer"  # 1820 occurrences
-        SWORN_OFFICER = "sworn_officer", "Sworn Officer"  # 2107 occurrences
 
         # Constable ranks
         CONSTABLE = "constable", "Constable"  # 2 occurrences
@@ -99,8 +101,10 @@ class PoliceOfficer(AuditModel):
 
     rank = models.CharField(
         choices=SeniorityChoices.choices,
-        default=SeniorityChoices.UNKNOWN,
+        default=NO_RANK,
+        blank=True,
         max_length=50,
+        help_text="The officer's police rank. Blank when none is recorded.",
     )
 
     # Direct foreign key relationship
@@ -124,8 +128,8 @@ class PoliceOfficer(AuditModel):
     def is_sworn(self):
         """Determine if officer is sworn based on rank"""
         unsworn_ranks = [
+            self.NO_RANK,
             self.SeniorityChoices.UNKNOWN,
-            self.SeniorityChoices.UNSWORN_OFFICER,
             self.SeniorityChoices.OTHER,
         ]
         return self.rank not in unsworn_ranks
