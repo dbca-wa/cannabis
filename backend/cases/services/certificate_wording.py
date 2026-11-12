@@ -32,11 +32,17 @@ PRINTABLE_DETERMINATIONS = (CANNABIS, NOT_CANNABIS, DEGRADED, INCONCLUSIVE)
 
 SPECIES = "Cannabis sativa"
 
-# Section C line for each bag Section B does not describe: "Bag <tag> <phrase>."
+# Section C line for the bags Section B does not describe, one line per result:
+# "Bag <tag> <phrase>." for one bag, "Bags <tags> <plural phrase>." for several.
 BAG_LINE_PHRASES = {
     NOT_CANNABIS: "did not contain Cannabis",
     DEGRADED: "was too degraded and could not be identified",
     INCONCLUSIVE: "was inconclusive",
+}
+BAGS_LINE_PHRASES = {
+    NOT_CANNABIS: "did not contain Cannabis",
+    DEGRADED: "were too degraded and could not be identified",
+    INCONCLUSIVE: "were inconclusive",
 }
 
 FEMALE_PHRASE = "contained female plants"
@@ -54,7 +60,10 @@ SME_SENTENCE = re.compile(r"^" + re.escape(SME_PHRASE.lower()) + r" \S.*$")
 # compose_section_c).
 SYSTEM_SENTENCE = re.compile(
     r"^(?:bags? \S.* (?:"
-    + "|".join(re.escape(phrase.lower()) for phrase in BAG_LINE_PHRASES.values())
+    + "|".join(
+        re.escape(phrase.lower())
+        for phrase in sorted({*BAG_LINE_PHRASES.values(), *BAGS_LINE_PHRASES.values()})
+    )
     + "|"
     + re.escape(FEMALE_PHRASE)
     + r")|all bags "
@@ -138,6 +147,28 @@ def bag_line(tag: str, determination: str) -> str:
     return f"Bag {tag} {BAG_LINE_PHRASES[determination]}."
 
 
+def bags_line(tags: Sequence[str], determination: str) -> str:
+    """The Section C line for the bags sharing one result.
+
+    For example "Bag T1 was inconclusive." or "Bags T1 and T3 were
+    inconclusive.".
+    """
+    if len(tags) == 1:
+        return bag_line(tags[0], determination)
+    return f"Bags {join_with_and(tags)} {BAGS_LINE_PHRASES[determination]}."
+
+
+def group_bag_lines(listed: Sequence[tuple[str, str]]) -> tuple[str, ...]:
+    """One Section C line per result, in the order each result first appears.
+
+    Tags keep the order the bags were added.
+    """
+    groups: dict[str, list[str]] = {}
+    for tag, determination in listed:
+        groups.setdefault(determination, []).append(tag)
+    return tuple(bags_line(tags, d) for d, tags in groups.items())
+
+
 def summarise(bags: Sequence[tuple[str, str]]) -> Results:
     """Work out Section B and the automatic Section C lines for a form.
 
@@ -146,11 +177,13 @@ def summarise(bags: Sequence[tuple[str, str]]) -> Results:
             Every determination must be printable; see ``unprintable_bags``.
 
     Rules:
-        - Any Cannabis sativa bag: the cannabis sentence, and a line for every
+        - Any Cannabis sativa bag: the cannabis sentence, and lines for every
           other bag.
         - No cannabis, one shared result: that result's sentence, no lines.
         - No cannabis, differing results: "No item could be identified as
-          Cannabis sativa.", and a line for every bag.
+          Cannabis sativa.", and lines for every bag.
+
+        Bags sharing a result share one line (see ``group_bag_lines``).
     """
     if not bags:
         raise ValueError("A certificate needs at least one bag.")
@@ -173,7 +206,7 @@ def summarise(bags: Sequence[tuple[str, str]]) -> Results:
     prefix, italic, suffix = SECTION_B_WORDING[key][number]
     return Results(
         section_b=SectionB(key=key, prefix=prefix, italic=italic, suffix=suffix),
-        bag_lines=tuple(bag_line(tag, d) for tag, d in listed),
+        bag_lines=group_bag_lines(listed),
     )
 
 
@@ -255,8 +288,8 @@ def compose_section_c(
 ) -> Optional[str]:
     """Join the automatic lines and the botanist's note for Section C.
 
-    Order: the bag result lines, the envelope sentence, the botanist's note,
-    then the female plant sentence. Any note line that is itself a bag result
+    Order: the botanist's note, the bag result lines, the female plant
+    sentence, then the envelope sentence. Any note line that is itself a bag result
     or female plant sentence (ignoring case, surrounding spaces and a trailing
     full stop) is dropped, because the system writes those from the current
     bags. When the form has an envelope, a note line naming an envelope in the
@@ -285,10 +318,10 @@ def compose_section_c(
         kept.pop()
 
     lines = (
-        list(bag_lines)
-        + ([envelope_line] if envelope_line else [])
-        + kept
+        kept
+        + list(bag_lines)
         + ([female_line] if female_line else [])
+        + ([envelope_line] if envelope_line else [])
     )
     return "\n".join(lines) if lines else None
 

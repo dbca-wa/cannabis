@@ -63,7 +63,7 @@ const describeBags = (bags: string[]) => bags.join(", ");
 describe("certificate wording parity with the PDF", () => {
 	it("covers every combination", () => {
 		expect(fixture.results).toHaveLength(1364);
-		expect(fixture.section_c).toHaveLength(360);
+		expect(fixture.section_c).toHaveLength(396);
 		expect(fixture.female).toHaveLength(584);
 		expect(fixture.officers).toHaveLength(420);
 	});

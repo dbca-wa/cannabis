@@ -262,11 +262,22 @@ describe("CaseProcessingPage — certificate print options", () => {
 		expect(text).toContain("Bag T2 was inconclusive.");
 	});
 
-	it("prints the form's envelope in Section C without a template", () => {
+	it("prints the note first, then grouped bag lines, then the envelope", () => {
+		const initial = caseData(1, 2);
 		renderPage(
 			<Harness
 				initial={{
-					...caseData(1, 2),
+					...initial,
+					bags: [
+						...initial.bags,
+						{
+							id: 3,
+							seal_tag_numbers: "T3",
+							new_seal_tag_numbers: "N3",
+							content_type_display: "Plant",
+							assessment: { determination: "inconclusive" },
+						},
+					],
 					security_movement_envelope: "WW00537475",
 					additional_notes:
 						"Subsamples placed into Security Movement Envelope WW1.\nHanded back.",
@@ -277,7 +288,7 @@ describe("CaseProcessingPage — certificate print options", () => {
 		// Section C lines render as separate lines, so allow for no gap.
 		const text = previewText();
 		expect(text).toMatch(
-			/Bag T2 was inconclusive\.\s?Subsamples placed into Security Movement Envelope WW00537475\.\s?Handed back\./
+			/Handed back\.\s?Bags T2 and T3 were inconclusive\.\s?Subsamples placed into Security Movement Envelope WW00537475\./
 		);
 		expect(text).not.toContain("Envelope WW1.");
 	});

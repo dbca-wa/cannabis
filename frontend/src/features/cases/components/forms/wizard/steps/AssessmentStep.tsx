@@ -302,12 +302,13 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const envelopeLine = smeLine(
 		caseData?.security_movement_envelope as string | null | undefined
 	);
-	// Bag result lines and the envelope sentence print before the note and the
-	// female plant sentence after it; the box lists them in that order.
+	// These print after the botanist's note, in the order the box lists
+	// them: the bag result lines, the female plant sentence, then the
+	// envelope sentence.
 	const automaticLines = [
 		...(certificateResults?.bagLines ?? []),
-		...(envelopeLine ? [envelopeLine] : []),
 		...(femaleLine ? [femaleLine] : []),
+		...(envelopeLine ? [envelopeLine] : []),
 	];
 	const resultsDiffer =
 		!!certificateResults &&
@@ -742,9 +743,9 @@ export const AssessmentStep = observer(function AssessmentStep({
 								Added automatically from the bags and envelope
 							</p>
 							<p className="mb-1.5 text-xs text-muted-foreground">
-								No need to type these. Result and envelope lines print before
-								your note and the female plants line after it. If your note has
-								one of these lines, the up-to-date one prints instead.
+								No need to type these. They print after your note, in this
+								order. If your note has one of these lines, the up-to-date one
+								prints instead.
 							</p>
 							<ul className="space-y-0.5 text-sm">
 								{automaticLines.map((line) => (
