@@ -49,6 +49,8 @@ NOTE_VARIANTS = (
     # case, is superseded only when the form has an envelope.
     "Subsamples transferred to Security Movement Envelope WW3.\n"
     "subsamples placed into security movement envelope ww4",
+    # A grouped result line is a system sentence too, so it is superseded.
+    "Bags T1 and T2 were inconclusive.\nKept note.",
 )
 
 # The automatic female plant sentence, absent or present.

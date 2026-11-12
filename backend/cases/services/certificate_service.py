@@ -287,9 +287,8 @@ class CertificateService:
             "receipt_date": receipt_date,
             # Section B's result sentence. Only section_b.italic is italicised.
             "section_b": results.section_b,
-            # Section C: the automatic per-bag result lines and envelope
-            # sentence, the botanist's own note, then the automatic female
-            # plant sentence.
+            # Section C: the botanist's own note, then the automatic bag
+            # result lines, female plant sentence and envelope sentence.
             "other_matters": wording.compose_section_c(
                 results.bag_lines,
                 certificate.additional_notes if note is _OWN_NOTE else note,

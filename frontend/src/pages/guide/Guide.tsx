@@ -5,6 +5,7 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import {
 	ALL_FEMALE_LINE,
 	BAG_LINE_PHRASES,
+	bagsLine,
 	FEMALE_PHRASE,
 	SECTION_B_WORDING,
 	type SectionBKey,
@@ -756,8 +757,9 @@ const Guide = () => {
 									Security Movement Envelope&quot; with the SME Number when one
 									is entered, and one saying which bags held female plants. They
 									appear in a grey box headed{" "}
-									<Ui>Added automatically from the bags and envelope</Ui>. You
-									do not need to type them or use a template for them.
+									<Ui>Added automatically from the bags and envelope</Ui> and
+									print after your own note. You do not need to type them or use
+									a template for them.
 								</li>
 								<li>
 									For anything else, choose one under <Ui>Use Template</Ui> if
@@ -1250,6 +1252,11 @@ const Guide = () => {
 								</li>
 							</ul>
 							<p>
+								Bags that share a result share one line, for example{" "}
+								<q>{bagsLine(["T9045", "T9046"], "inconclusive")}</q> or{" "}
+								<q>{bagsLine(["T1245", "T1246", "T1247"], "degraded")}</q>
+							</p>
+							<p>
 								Section C also says which <em>Cannabis sativa</em> bags held
 								female plants, from the <Ui>Contains female plants</Ui> tick
 								box, for example <q>Bags T1001 and T1003 {FEMALE_PHRASE}.</q> or{" "}
@@ -1266,8 +1273,9 @@ const Guide = () => {
 									followed by the number.
 								</li>
 								<li>
-									The order is always: the bag result lines, then the envelope
-									line, then your own notes, then the female plants line.
+									The order is always: your own notes first, then the bag result
+									lines, then the female plants line, then the envelope line
+									last.
 								</li>
 								<li>
 									These lines always come from the current bags and SME Number.
@@ -1284,11 +1292,12 @@ const Guide = () => {
 
 							<h3>A worked example</h3>
 							<p>
-								A form holds three bags: T1001 is <em>Cannabis sativa</em> and
+								A form holds four bags: T1001 is <em>Cannabis sativa</em> and
 								holds female plants, T1002 is{" "}
-								{DETERMINATION_LABELS.not_cannabis} and T1003 is{" "}
+								{DETERMINATION_LABELS.not_cannabis}, and T1003 and T1004 are{" "}
 								{DETERMINATION_LABELS.inconclusive}. The SME Number is
-								WW00564835 and there is no note. The certificate reads:
+								WW00564835 and the botanist&apos;s note reads &quot;All bags
+								received sealed.&quot; The certificate reads:
 							</p>
 							<div className="not-prose space-y-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
 								<div>
@@ -1300,16 +1309,18 @@ const Guide = () => {
 								<div>
 									<p className="font-semibold">(c) Additional Notes</p>
 									<p>
+										<q>All bags received sealed.</q>
+										<br />
 										<BagLineExample tag="T1002" result="not_cannabis" />
 										<br />
-										<BagLineExample tag="T1003" result="inconclusive" />
+										<q>{bagsLine(["T1003", "T1004"], "inconclusive")}</q>
+										<br />
+										<q>Bag T1001 {FEMALE_PHRASE}.</q>
 										<br />
 										<q>
 											Subsamples placed into Security Movement Envelope
 											WW00564835.
 										</q>
-										<br />
-										<q>Bag T1001 {FEMALE_PHRASE}.</q>
 									</p>
 								</div>
 							</div>

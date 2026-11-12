@@ -60,10 +60,22 @@ class TestEveryResultSequence:
         assert (section_b.prefix, section_b.italic, section_b.suffix) == (
             wording.SECTION_B_WORDING[expected_key][number]
         )
-        assert results.bag_lines == tuple(
-            f"Bag {t} {wording.BAG_LINE_PHRASES[d]}." for t, d in expected_listed
+        # One line per result, in the order each result first appears, naming
+        # its bags in the order they were added.
+        groups = {}
+        for t, d in expected_listed:
+            groups.setdefault(d, []).append(t)
+        expected_lines = tuple(
+            (
+                f"Bag {tags[0]} {wording.BAG_LINE_PHRASES[d]}."
+                if len(tags) == 1
+                else f"Bags {', '.join(tags[:-1])} and {tags[-1]} "
+                f"{wording.BAGS_LINE_PHRASES[d]}."
+            )
+            for d, tags in groups.items()
         )
-        # A cannabis bag is never listed; the lines keep the bags' order.
+        assert results.bag_lines == expected_lines
+        # A cannabis bag is never listed.
         assert not any("Cannabis sativa" in line for line in results.bag_lines)
         # Only the species name is ever italicised.
         assert section_b.italic in ("", wording.SPECIES)
@@ -104,10 +116,36 @@ class TestSectionBWording:
     def test_mixed_non_cannabis_lists_every_bag(self):
         results = wording.summarise([("A", N), ("B", N), ("C", I)])
         assert results.bag_lines == (
-            "Bag A did not contain Cannabis.",
-            "Bag B did not contain Cannabis.",
+            "Bags A and B did not contain Cannabis.",
             "Bag C was inconclusive.",
         )
+
+    def test_bags_sharing_a_result_share_a_line(self):
+        results = wording.summarise(
+            [("afg", S), ("gawdaw", N), ("gaw", I), ("ggg", D), ("qwrqwr", I)]
+        )
+        assert results.bag_lines == (
+            "Bag gawdaw did not contain Cannabis.",
+            "Bags gaw and qwrqwr were inconclusive.",
+            "Bag ggg was too degraded and could not be identified.",
+        )
+
+    def test_three_bags_sharing_a_result(self):
+        results = wording.summarise([("T1", S), ("T2", D), ("T3", D), ("T4", D)])
+        assert results.bag_lines == (
+            "Bags T2, T3 and T4 were too degraded and could not be identified.",
+        )
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "Bags T1 and T2 were inconclusive.",
+            "bags t1, t2 and t3 were too degraded and could not be identified",
+            "Bags T1 and T2 did not contain Cannabis.",
+        ],
+    )
+    def test_a_grouped_line_is_a_system_sentence(self, line):
+        assert wording.is_system_sentence(line)
 
     @pytest.mark.parametrize("value", [None, "pending", "mixed", "unidentifiable"])
     def test_refuses_unprintable_results(self, value):
@@ -158,19 +196,20 @@ class TestSectionCComposition:
             return
         assert composed is not None
         printed = composed.split("\n")
-        # The bag result lines come first, in order, then the envelope line;
-        # the female line is last.
-        assert printed[: len(lines)] == lines
-        if envelope_line:
-            assert printed[len(lines)] == envelope_line
-            lines = [*lines, envelope_line]
-        middle = printed[len(lines) : len(printed) - (1 if female_line else 0)]
-        if female_line:
-            assert printed[-1] == female_line
-        # Everything between is the botanist's own note, in its order, with no
-        # system sentence left in it.
-        assert [line for line in middle if line] == note_lines
-        assert not any(wording.is_system_sentence(line) for line in middle if line)
+        # The automatic lines come last, in order: the bag result lines, the
+        # female line, then the envelope line.
+        automatic = [
+            *lines,
+            *([female_line] if female_line else []),
+            *([envelope_line] if envelope_line else []),
+        ]
+        if automatic:
+            assert printed[-len(automatic) :] == automatic
+        note_part = printed[: len(printed) - len(automatic)]
+        # Everything before them is the botanist's own note, in its order, with
+        # no system sentence left in it.
+        assert [line for line in note_part if line] == note_lines
+        assert not any(wording.is_system_sentence(line) for line in note_part if line)
         # Nothing prints twice, and no line carries stray spaces or "\r".
         non_blank = [line for line in printed if line]
         assert len({line.lower().rstrip(".") for line in non_blank}) == len(non_blank)
@@ -182,11 +221,30 @@ class TestSectionCComposition:
         assert wording.compose_section_c([], note) is None
         assert wording.compose_section_c(_lines(1), note) == _lines(1)[0]
 
-    def test_note_follows_the_automatic_lines(self):
+    def test_note_comes_before_the_automatic_lines(self):
         composed = wording.compose_section_c(
             ["Bag T2 was inconclusive."], "Subsamples placed into SME WW1."
         )
-        assert composed == "Bag T2 was inconclusive.\nSubsamples placed into SME WW1."
+        assert composed == "Subsamples placed into SME WW1.\nBag T2 was inconclusive."
+
+    def test_the_approved_order(self):
+        results = wording.summarise(
+            [("afg", S), ("gawdaw", N), ("gaw", I), ("ggg", D), ("qwrqwr", I)]
+        )
+        composed = wording.compose_section_c(
+            results.bag_lines,
+            "ABC",
+            "Bag afg contained female plants.",
+            wording.sme_line("fadwdadwadawd"),
+        )
+        assert composed == (
+            "ABC\n"
+            "Bag gawdaw did not contain Cannabis.\n"
+            "Bags gaw and qwrqwr were inconclusive.\n"
+            "Bag ggg was too degraded and could not be identified.\n"
+            "Bag afg contained female plants.\n"
+            "Subsamples placed into Security Movement Envelope fadwdadwadawd."
+        )
 
     @pytest.mark.parametrize(
         "typed",
@@ -200,7 +258,7 @@ class TestSectionCComposition:
         composed = wording.compose_section_c(
             ["Bag T2 was inconclusive."], f"{typed}\nSME WW1."
         )
-        assert composed == "Bag T2 was inconclusive.\nSME WW1."
+        assert composed == "SME WW1.\nBag T2 was inconclusive."
 
     def test_stale_template_sentences_are_replaced(self):
         """A note left over from a template never contradicts the bags."""
@@ -210,7 +268,7 @@ class TestSectionCComposition:
             "Bag T1 contained female plants.",
         )
         assert composed == (
-            "Bag T2 did not contain Cannabis.\nSME WW1.\n"
+            "SME WW1.\nBag T2 did not contain Cannabis.\n"
             "Bag T1 contained female plants."
         )
 
@@ -248,7 +306,7 @@ class TestEnvelopeLine:
     def test_none_without_an_envelope(self, envelope):
         assert wording.sme_line(envelope) is None
 
-    def test_follows_the_bag_lines_and_replaces_a_note_copy(self):
+    def test_comes_last_and_replaces_a_note_copy(self):
         composed = wording.compose_section_c(
             ["Bag T2 was inconclusive."],
             "Subsamples placed into Security Movement Envelope WW1.\nHanded back.",
@@ -256,10 +314,10 @@ class TestEnvelopeLine:
             wording.sme_line("WW9"),
         )
         assert composed == (
-            "Bag T2 was inconclusive.\n"
-            "Subsamples placed into Security Movement Envelope WW9.\n"
             "Handed back.\n"
-            "Bag T1 contained female plants."
+            "Bag T2 was inconclusive.\n"
+            "Bag T1 contained female plants.\n"
+            "Subsamples placed into Security Movement Envelope WW9."
         )
 
     def test_a_note_copy_is_kept_when_the_form_has_no_envelope(self):
@@ -274,8 +332,8 @@ class TestEnvelopeLine:
             wording.sme_line("WW1"),
         )
         assert composed == (
-            "Subsamples placed into Security Movement Envelope WW1.\n"
-            "Subsamples transferred to Security Movement Envelope WW1."
+            "Subsamples transferred to Security Movement Envelope WW1.\n"
+            "Subsamples placed into Security Movement Envelope WW1."
         )
 
     @pytest.mark.parametrize(
@@ -468,4 +526,4 @@ def test_shared_fixture_is_current():
         len(data["section_c"]),
         len(data["female"]),
         len(data["officers"]),
-    ) == (1364, 360, 584, 420)
+    ) == (1364, 396, 584, 420)

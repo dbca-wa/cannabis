@@ -16,14 +16,22 @@ import {
 
 export const SPECIES = "Cannabis sativa";
 
-/** Section C line for each bag Section B does not describe. */
-export const BAG_LINE_PHRASES: Record<
-	Exclude<PrintableDetermination, "cannabis_sativa">,
-	string
-> = {
+type ListedDetermination = Exclude<PrintableDetermination, "cannabis_sativa">;
+
+/**
+ * Section C line for the bags Section B does not describe, one line per
+ * result: "Bag <tag> <phrase>." for one bag, "Bags <tags> <plural phrase>."
+ * for several.
+ */
+export const BAG_LINE_PHRASES: Record<ListedDetermination, string> = {
 	not_cannabis: "did not contain Cannabis",
 	degraded: "was too degraded and could not be identified",
 	inconclusive: "was inconclusive",
+};
+export const BAGS_LINE_PHRASES: Record<ListedDetermination, string> = {
+	not_cannabis: "did not contain Cannabis",
+	degraded: "were too degraded and could not be identified",
+	inconclusive: "were inconclusive",
 };
 
 export type SectionBKey = PrintableDetermination | "mixed_not_cannabis";
@@ -77,8 +85,38 @@ export interface BagResult {
 
 export const bagLine = (
 	tag: string,
-	determination: Exclude<PrintableDetermination, "cannabis_sativa">
+	determination: ListedDetermination
 ): string => `Bag ${tag} ${BAG_LINE_PHRASES[determination]}.`;
+
+/**
+ * The Section C line for the bags sharing one result, e.g. "Bag T1 was
+ * inconclusive." or "Bags T1 and T3 were inconclusive.".
+ */
+export const bagsLine = (
+	tags: string[],
+	determination: ListedDetermination
+): string =>
+	tags.length === 1
+		? bagLine(tags[0], determination)
+		: `Bags ${joinWithAnd(tags)} ${BAGS_LINE_PHRASES[determination]}.`;
+
+/**
+ * One Section C line per result, in the order each result first appears.
+ * Tags keep the order the bags were added.
+ */
+export const groupBagLines = (
+	listed: Array<{ tag: string; determination: ListedDetermination }>
+): string[] => {
+	const groups = new Map<ListedDetermination, string[]>();
+	for (const { tag, determination } of listed) {
+		const tags = groups.get(determination) ?? [];
+		tags.push(tag);
+		groups.set(determination, tags);
+	}
+	return [...groups].map(([determination, tags]) =>
+		bagsLine(tags, determination)
+	);
+};
 
 export const sectionBText = (sectionB: SectionB): string =>
 	`${sectionB.prefix}${sectionB.italic}${sectionB.suffix}`;
@@ -87,11 +125,13 @@ export const sectionBText = (sectionB: SectionB): string =>
  * Work out Section B and the automatic Section C lines for a form, or null
  * when any bag has no printable result yet (the preview shows "[Pending]").
  *
- * - Any Cannabis sativa bag: the cannabis sentence, and a line for every
+ * - Any Cannabis sativa bag: the cannabis sentence, and lines for every
  *   other bag.
  * - No cannabis, one shared result: that result's sentence, no lines.
  * - No cannabis, differing results: "No item could be identified as
- *   Cannabis sativa.", and a line for every bag.
+ *   Cannabis sativa.", and lines for every bag.
+ *
+ * Bags sharing a result share one line (see groupBagLines).
  */
 export const summariseResults = (
 	bags: BagResult[]
@@ -123,11 +163,11 @@ export const summariseResults = (
 		SECTION_B_WORDING[key][bags.length === 1 ? "one" : "many"];
 	return {
 		sectionB: { key, prefix, italic, suffix },
-		bagLines: listed.map((b) =>
-			bagLine(
-				b.tag,
-				b.determination as Exclude<PrintableDetermination, "cannabis_sativa">
-			)
+		bagLines: groupBagLines(
+			listed.map((b) => ({
+				tag: b.tag,
+				determination: b.determination as ListedDetermination,
+			}))
 		),
 	};
 };
@@ -165,7 +205,13 @@ const escapeRegExp = (value: string): string =>
 
 const SYSTEM_SENTENCE = new RegExp(
 	"^(?:bags? \\S.* (?:" +
-		[...Object.values(BAG_LINE_PHRASES), FEMALE_PHRASE]
+		[
+			...new Set([
+				...Object.values(BAG_LINE_PHRASES),
+				...Object.values(BAGS_LINE_PHRASES),
+			]),
+			FEMALE_PHRASE,
+		]
 			.map((phrase) => escapeRegExp(phrase.toLowerCase()))
 			.join("|") +
 		")|all bags " +
@@ -212,8 +258,8 @@ const trimBlankEnds = (lines: string[]): string[] => {
 /**
  * Join the automatic lines and the botanist's note for Section C.
  *
- * Order: the bag result lines, the envelope sentence, the botanist's note,
- * then the female plant sentence. Any note line that is itself a bag result or
+ * Order: the botanist's note, the bag result lines, the female plant
+ * sentence, then the envelope sentence. Any note line that is itself a bag result or
  * female plant sentence (ignoring case, surrounding spaces and a trailing full
  * stop) is dropped, because the system writes those from the current bags.
  * When the form has an envelope, a note line naming an envelope in the same
@@ -241,10 +287,10 @@ export const composeSectionC = (
 		)
 	);
 	const lines = [
-		...bagLines,
-		...(envelopeLine ? [envelopeLine] : []),
 		...kept,
+		...bagLines,
 		...(femaleLine ? [femaleLine] : []),
+		...(envelopeLine ? [envelopeLine] : []),
 	];
 	return lines.length > 0 ? lines.join("\n") : null;
 };

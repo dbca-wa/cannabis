@@ -83,7 +83,7 @@ def test_every_sequence_renders_as_approved(sequence, note):
         assert "<em>" not in section_b
     assert html.count("<em>Cannabis sativa</em>") == (1 if expected_b.italic else 0)
 
-    expected_c = list(results.bag_lines) + ([html_lib.escape(note)] if note else [])
+    expected_c = ([html_lib.escape(note)] if note else []) + list(results.bag_lines)
     assert section_c == (expected_c or ["None"])
 
 
@@ -127,9 +127,7 @@ class TestContextFromTheDatabase:
 
         expected = wording.summarise([(f"T{i + 1}", r) for i, r in enumerate(results)])
         assert context["section_b"] == expected.section_b
-        assert context["other_matters"] == "\n".join(
-            list(expected.bag_lines) + ["SME WW1."]
-        )
+        assert context["other_matters"] == "\n".join(["SME WW1.", *expected.bag_lines])
 
     def test_bags_print_in_the_order_they_were_added(self):
         form = _form_with((N, S, I))
@@ -142,7 +140,7 @@ class TestContextFromTheDatabase:
             "Bag T1 did not contain Cannabis.\nBag T3 was inconclusive."
         )
 
-    def test_female_plants_print_after_the_note(self):
+    def test_female_plants_print_after_the_bag_lines(self):
         form = _form_with((S, I, S), note="SME WW1.\nAll bags contained female plants.")
         bags = list(DrugBag.objects.filter(form=form).order_by("pk"))
         for bag in (bags[0], bags[1]):
@@ -157,7 +155,7 @@ class TestContextFromTheDatabase:
         # T2 is inconclusive, so its flag is ignored; the stale template line
         # in the note is replaced by the sentence from the current bags.
         assert context["other_matters"] == (
-            "Bag T2 was inconclusive.\nSME WW1.\nBag T1 contained female plants."
+            "SME WW1.\nBag T2 was inconclusive.\nBag T1 contained female plants."
         )
 
     def test_empty_section_c_prints_none(self):
@@ -167,7 +165,7 @@ class TestContextFromTheDatabase:
 
         assert context["other_matters"] == "None"
 
-    def test_the_envelope_prints_after_the_bag_lines(self):
+    def test_the_envelope_prints_last(self):
         """The form's envelope is written in by itself, replacing any copy a
         template left in the note, even one naming an older envelope."""
         note = "Subsamples placed into Security Movement Envelope WW1.\nHanded back."
@@ -180,10 +178,10 @@ class TestContextFromTheDatabase:
         context = CertificateService.build_certificate_context(certificate)
 
         assert context["other_matters"] == (
-            "Bag T2 was inconclusive.\n"
-            "Subsamples placed into Security Movement Envelope WW00537475.\n"
             "Handed back.\n"
-            "Bag T1 contained female plants."
+            "Bag T2 was inconclusive.\n"
+            "Bag T1 contained female plants.\n"
+            "Subsamples placed into Security Movement Envelope WW00537475."
         )
 
     def test_the_envelope_alone_fills_section_c(self):
@@ -267,11 +265,11 @@ def test_real_pdf_prints_section_b_and_c(results, tmp_path):
 @needs_prince
 @pytest.mark.django_db
 def test_real_pdf_prints_the_envelope(tmp_path):
-    certificate = CertificateFactory(form=_form_with((S, N), envelope="WW00537475"))
+    certificate = CertificateFactory(form=_form_with((S, N, N), envelope="WW00537475"))
 
     text = _pdf_text(CertificateService._render_pdf(certificate), tmp_path)
 
     assert (
-        "Bag T2 did not contain Cannabis. "
+        "Bags T2 and T3 did not contain Cannabis. "
         "Subsamples placed into Security Movement Envelope WW00537475."
     ) in text
