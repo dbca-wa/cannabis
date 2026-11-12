@@ -1,0 +1,53 @@
+# Runs the production images together for the startup check in
+# security-scan.yml: Postgres and Redis, the backend under gunicorn and the
+# frontend server. The workflow supplies the images; the environment below is
+# throwaway configuration for a local, unauthenticated stack.
+name: startup-check
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: cannabis
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cannabis"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    environment:
+      SECRET_KEY: startup-check-only
+      DATABASE_URL: postgresql://postgres@db:5432/cannabis
+      ENVIRONMENT: local
+      DEBUG: "True"
+      EXTERNAL_PASS: startup-check-only
+      MAIN_DOMAIN: localhost
+      DEFAULT_FROM_EMAIL: Cannabis <cannabis-noreply@example.com>
+      MAINTAINER_EMAIL: startup-check@example.com
+      EMAIL_HOST: localhost
+      EMAIL_PORT: "25"
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    ports:
+      - "127.0.0.1:3000:3000"
