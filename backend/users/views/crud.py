@@ -11,8 +11,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.http import HttpResponse, StreamingHttpResponse
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -115,11 +115,14 @@ class UserListView(ListCreateAPIView):
         )
 
 
-class UserDetailView(RetrieveUpdateDestroyAPIView):
+class UserDetailView(RetrieveUpdateAPIView):
     """
     GET: Get user details (full info except sensitive data)
     PUT/PATCH: Update user (admin only, or self with restrictions)
-    DELETE: Delete user (admin only)
+
+    Users are never deleted through the app, by anyone: deleting a person
+    would strip them from the cases they worked on. Deactivate them instead.
+    A superuser can still delete an account through Django admin or code.
     """
 
     queryset = User.objects.all()
@@ -129,7 +132,7 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         """Different permissions for different actions"""
-        if self.request.method in ["PUT", "PATCH", "DELETE"]:
+        if self.request.method in ["PUT", "PATCH"]:
             # Staff accounts are real and have no practice copy.
             return [HasAppAccess(), NotInPracticeMode()]
         else:
@@ -140,14 +143,15 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
         super().check_object_permissions(request, obj)
 
         # For modifications, only allow admin or self
-        if request.method in ["PUT", "PATCH", "DELETE"]:
+        if request.method in ["PUT", "PATCH"]:
             if not (request.user.is_staff or request.user == obj):
                 self.permission_denied(request, "You can only modify your own profile")
 
-        # For deletion, only admins
-        if request.method == "DELETE":
-            if not request.user.is_superuser:
-                self.permission_denied(request, "Only administrators can delete users")
+    def delete(self, request, *args, **kwargs):
+        """Refuse: users are deactivated, never deleted, in the app."""
+        raise PermissionDenied(
+            "Users cannot be deleted in the app. Deactivate the account instead."
+        )
 
     # Fields that decide what a user can do or who they are. Only an
     # administrator changes them, and never on their own account for the
@@ -204,14 +208,6 @@ class UserDetailView(RetrieveUpdateDestroyAPIView):
             f"{describe_user(serializer.instance)}"
         )
         serializer.save()
-
-    def perform_destroy(self, instance):
-        """Delete user permanently."""
-        settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted user "
-            f"{describe_user(instance)}"
-        )
-        instance.delete()
 
 
 class UserExportView(APIView):

@@ -22,6 +22,7 @@ import {
 import { FormsNavigator } from "../FormsNavigator";
 import { CaseSection } from "./CaseSection";
 import { CaseSectionIndex } from "./CaseSectionIndex";
+import { CertificateBulkAction } from "./CertificateBulkAction";
 import { FormPreviewToggle } from "../wizard/FormPreviewToggle";
 import { WizardPreviewPanel } from "../wizard/WizardPreviewPanel";
 import { CaseCreationSummaryStep } from "../wizard/steps/CaseCreationSummaryStep";
@@ -377,20 +378,30 @@ export const CaseProcessingPage = observer(
 									{finaliseTitle}
 								</p>
 							)}
-							<Button
-								size="lg"
-								onClick={handleFinalise}
-								disabled={
-									!canFinalise || store.state.isSubmitting || lockForNonAdmin
-								}
-								title={finaliseTitle}
-								className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
-							>
-								{store.state.isSubmitting && (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								)}
-								Finalise Case
-							</Button>
+							<div className="flex flex-wrap items-center justify-end gap-3">
+								{/* The next certificate step, so it can be done from here
+								    without scrolling back up to the Certificates section. */}
+								<CertificateBulkAction
+									caseId={caseId}
+									forms={forms ?? []}
+									locked={lockForNonAdmin}
+									lockMessage={COMPLETE_LOCK_MESSAGE}
+								/>
+								<Button
+									size="lg"
+									onClick={handleFinalise}
+									disabled={
+										!canFinalise || store.state.isSubmitting || lockForNonAdmin
+									}
+									title={finaliseTitle}
+									className="min-h-11 bg-cannabis-green-dark hover:bg-cannabis-green-dark/90"
+								>
+									{store.state.isSubmitting && (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									)}
+									Finalise Case
+								</Button>
+							</div>
 						</div>
 					)}
 				</div>

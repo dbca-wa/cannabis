@@ -22,7 +22,9 @@ import {
 import { StationSearchComboBox } from "../stations/StationSearchComboBox";
 import {
 	createOfficerSchema,
+	NO_RANK_FORM_VALUE,
 	officerRankOptions,
+	rankFromFormValue,
 	type CreateOfficerFormData,
 } from "../../schemas/policeOfficerSchemas";
 
@@ -47,7 +49,7 @@ export const CreateOfficerForm = ({
 			badge_number: "",
 			given_names: initialName?.given_names ?? "",
 			last_name: initialName?.last_name ?? "",
-			rank: "constable",
+			rank: NO_RANK_FORM_VALUE,
 			station: "none",
 		},
 	});
@@ -59,7 +61,7 @@ export const CreateOfficerForm = ({
 				badge_number: data.badge_number || null,
 				given_names: data.given_names || null,
 				last_name: data.last_name,
-				rank: data.rank,
+				rank: rankFromFormValue(data.rank),
 				station:
 					data.station && data.station !== "none"
 						? parseInt(data.station)
@@ -150,7 +152,7 @@ export const CreateOfficerForm = ({
 					name="rank"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>Rank *</FormLabel>
+							<FormLabel>Rank</FormLabel>
 							<Select
 								onValueChange={field.onChange}
 								value={field.value}

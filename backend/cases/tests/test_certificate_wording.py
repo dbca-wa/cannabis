@@ -139,23 +139,31 @@ class TestSectionCComposition:
     @pytest.mark.parametrize("count", range(0, 6))
     @pytest.mark.parametrize("note", fixture.NOTE_VARIANTS)
     @pytest.mark.parametrize("female_line", fixture.FEMALE_LINES)
-    def test_every_line_count_with_every_note(self, count, note, female_line):
+    @pytest.mark.parametrize("envelope", fixture.ENVELOPES)
+    def test_every_line_count_with_every_note(self, count, note, female_line, envelope):
         lines = _lines(count)
-        composed = wording.compose_section_c(lines, note, female_line)
+        envelope_line = wording.sme_line(envelope)
+        composed = wording.compose_section_c(lines, note, female_line, envelope_line)
 
         # Note lines the system does not write itself.
         note_lines = [
             line.strip()
             for line in (note or "").replace("\r\n", "\n").split("\n")
-            if line.strip() and not wording.is_system_sentence(line)
+            if line.strip()
+            and not wording.is_system_sentence(line)
+            and not (envelope_line and wording.is_sme_sentence(line))
         ]
-        if not lines and not note_lines and not female_line:
+        if not lines and not envelope_line and not note_lines and not female_line:
             assert composed is None
             return
         assert composed is not None
         printed = composed.split("\n")
-        # The bag result lines come first, in order; the female line is last.
+        # The bag result lines come first, in order, then the envelope line;
+        # the female line is last.
         assert printed[: len(lines)] == lines
+        if envelope_line:
+            assert printed[len(lines)] == envelope_line
+            lines = [*lines, envelope_line]
         middle = printed[len(lines) : len(printed) - (1 if female_line else 0)]
         if female_line:
             assert printed[-1] == female_line
@@ -222,8 +230,87 @@ class TestSectionCComposition:
         assert composed == "One.\n\nTwo."
 
 
-RANKS = PoliceOfficer.SeniorityChoices.values
-RECORDED = [r for r in RANKS if r not in wording.UNRECORDED_RANKS]
+class TestEnvelopeLine:
+    @pytest.mark.parametrize(
+        "envelope,expected",
+        [
+            ("WW00564835", "WW00564835"),
+            ("  WW1  ", "WW1"),
+            ("WW1.", "WW1"),
+        ],
+    )
+    def test_names_the_envelope(self, envelope, expected):
+        assert wording.sme_line(envelope) == (
+            f"Subsamples placed into Security Movement Envelope {expected}."
+        )
+
+    @pytest.mark.parametrize("envelope", [None, "", "   "])
+    def test_none_without_an_envelope(self, envelope):
+        assert wording.sme_line(envelope) is None
+
+    def test_follows_the_bag_lines_and_replaces_a_note_copy(self):
+        composed = wording.compose_section_c(
+            ["Bag T2 was inconclusive."],
+            "Subsamples placed into Security Movement Envelope WW1.\nHanded back.",
+            "Bag T1 contained female plants.",
+            wording.sme_line("WW9"),
+        )
+        assert composed == (
+            "Bag T2 was inconclusive.\n"
+            "Subsamples placed into Security Movement Envelope WW9.\n"
+            "Handed back.\n"
+            "Bag T1 contained female plants."
+        )
+
+    def test_a_note_copy_is_kept_when_the_form_has_no_envelope(self):
+        note = "Subsamples placed into Security Movement Envelope WW1."
+        assert wording.compose_section_c([], note, None, None) == note
+
+    def test_other_envelope_wording_is_kept(self):
+        composed = wording.compose_section_c(
+            [],
+            "Subsamples transferred to Security Movement Envelope WW1.",
+            None,
+            wording.sme_line("WW1"),
+        )
+        assert composed == (
+            "Subsamples placed into Security Movement Envelope WW1.\n"
+            "Subsamples transferred to Security Movement Envelope WW1."
+        )
+
+    @pytest.mark.parametrize(
+        "note,expected",
+        [
+            (
+                "Subsamples placed into Security Movement Envelope WW00537475.",
+                "WW00537475",
+            ),
+            (
+                "Bag T1 contained female plants.\n"
+                "  subsamples placed into security movement envelope WW5  ",
+                "WW5",
+            ),
+            (
+                "Subsamples placed into Security Movement Envelope WW1.\n"
+                "Subsamples placed into Security Movement Envelope WW1.",
+                "WW1",
+            ),
+            (
+                "Subsamples placed into Security Movement Envelope WW1.\n"
+                "Subsamples placed into Security Movement Envelope WW2.",
+                None,
+            ),
+            ("Subsamples transferred to Security Movement Envelope WW1.", None),
+            (None, None),
+        ],
+    )
+    def test_reads_the_envelope_from_a_note(self, note, expected):
+        assert wording.sme_from_note(note) == expected
+
+
+# No rank recorded (blank) first, then every rank choice.
+RANKS = [PoliceOfficer.NO_RANK, *PoliceOfficer.SeniorityChoices.values]
+RECORDED = [r for r in RANKS if r and r not in wording.UNRECORDED_RANKS]
 
 
 def _officer(station="Midland Police Station", rank="senior_constable", **kwargs):
@@ -232,7 +319,7 @@ def _officer(station="Midland Police Station", rank="senior_constable", **kwargs
         "last_name": "Barns",
         "given_names": "Tahlia",
         "rank": rank,
-        "rank_display": PoliceOfficer.SeniorityChoices(rank).label,
+        "rank_display": PoliceOfficer.SeniorityChoices(rank).label if rank else "",
         "station_name": station,
     }
     values.update(kwargs)
@@ -240,8 +327,13 @@ def _officer(station="Midland Police Station", rank="senior_constable", **kwargs
 
 
 class TestOfficers:
-    def test_there_are_14_ranks_and_4_placeholders(self):
-        assert len(RANKS) == 14
+    def test_ranks_and_placeholders(self):
+        # "Sworn Officer" and "Unsworn Officer" are labels the certificate
+        # prints by role, not ranks an officer can hold.
+        assert "sworn_officer" not in RANKS
+        assert "unsworn_officer" not in RANKS
+        # Blank, unknown and other are not real ranks; ten are.
+        assert len(RANKS) == 13
         assert len(RECORDED) == 10
 
     @pytest.mark.parametrize("rank", RANKS)
@@ -376,4 +468,4 @@ def test_shared_fixture_is_current():
         len(data["section_c"]),
         len(data["female"]),
         len(data["officers"]),
-    ) == (1364, 108, 584, 452)
+    ) == (1364, 360, 584, 420)

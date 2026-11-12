@@ -45,10 +45,18 @@ NOTE_VARIANTS = (
     # Similar but not system sentences, so they are kept.
     "Bag T1 was inconclusive due to mould on the sample.\n"
     "Female plants were noted on arrival.",
+    # An envelope in other words is kept; one in the system's words, in any
+    # case, is superseded only when the form has an envelope.
+    "Subsamples transferred to Security Movement Envelope WW3.\n"
+    "subsamples placed into security movement envelope ww4",
 )
 
 # The automatic female plant sentence, absent or present.
 FEMALE_LINES = (None, "Bag T1 contained female plants.")
+
+# The form's security movement envelope: none, a plain value, and one with
+# stray spaces.
+ENVELOPES = (None, "WW00564835", "  WW2  ")
 
 # Female plant cases cover every result and flag for one to three bags.
 FEMALE_MAX_BAGS = 3
@@ -88,16 +96,20 @@ def section_c_cases():
         lines = [
             wording.bag_line(f"T{i + 1}", wording.NOT_CANNABIS) for i in range(count)
         ]
-        for note in NOTE_VARIANTS:
-            for female_line in FEMALE_LINES:
-                cases.append(
-                    {
-                        "bag_lines": lines,
-                        "note": note,
-                        "female_line": female_line,
-                        "expected": wording.compose_section_c(lines, note, female_line),
-                    }
-                )
+        for note, female_line, envelope in itertools.product(
+            NOTE_VARIANTS, FEMALE_LINES, ENVELOPES
+        ):
+            cases.append(
+                {
+                    "bag_lines": lines,
+                    "note": note,
+                    "female_line": female_line,
+                    "envelope": envelope,
+                    "expected": wording.compose_section_c(
+                        lines, note, female_line, wording.sme_line(envelope)
+                    ),
+                }
+            )
     return cases
 
 
@@ -121,13 +133,21 @@ def female_cases():
     return cases
 
 
+# Every rank an officer can hold, starting with none recorded (blank).
+RANKS = [PoliceOfficer.NO_RANK, *PoliceOfficer.SeniorityChoices.values]
+
+
+def _rank_display(rank):
+    return PoliceOfficer.SeniorityChoices(rank).label if rank else ""
+
+
 def _facts(station, rank):
     return wording.OfficerFacts(
         badge_number="PD17432",
         last_name="Barns",
         given_names="Tahlia",
         rank=rank,
-        rank_display=PoliceOfficer.SeniorityChoices(rank).label,
+        rank_display=_rank_display(rank),
         station_name=station,
     )
 
@@ -153,7 +173,7 @@ def officer_cases():
         (_facts(station, rank), print_station, print_rank)
         for station in STATIONS
         for print_station in (True, False)
-        for rank in PoliceOfficer.SeniorityChoices.values
+        for rank in RANKS
         for print_rank in (True, False)
     ]
     cases = []

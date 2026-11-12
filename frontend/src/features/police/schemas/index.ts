@@ -11,6 +11,9 @@ export {
 	createOfficerSchema,
 	editOfficerSchema,
 	officerRankOptions,
+	NO_RANK_FORM_VALUE,
+	rankToFormValue,
+	rankFromFormValue,
 	type CreateOfficerFormData,
 	type EditOfficerFormData,
 } from "./policeOfficerSchemas";

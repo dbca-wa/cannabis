@@ -24,6 +24,7 @@ import { TemplatePicker } from "../../../templates/TemplatePicker";
 import {
 	femalePlantLine,
 	sectionBText,
+	smeLine,
 	summariseResults,
 } from "../../../../utils/certificateWording";
 import { addBagsToForm } from "../../../../services/forms.service";
@@ -298,10 +299,14 @@ export const AssessmentStep = observer(function AssessmentStep({
 			female: b.contains_female_plants,
 		}))
 	);
-	// Bag result lines print before the note and the female plant sentence
-	// after it; the box lists them in that order.
+	const envelopeLine = smeLine(
+		caseData?.security_movement_envelope as string | null | undefined
+	);
+	// Bag result lines and the envelope sentence print before the note and the
+	// female plant sentence after it; the box lists them in that order.
 	const automaticLines = [
 		...(certificateResults?.bagLines ?? []),
+		...(envelopeLine ? [envelopeLine] : []),
 		...(femaleLine ? [femaleLine] : []),
 	];
 	const resultsDiffer =
@@ -326,7 +331,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const handleAddBag = () => wrangler.addBag();
 
 	// Persist every prepared (in-memory) bag in one validated batch request.
-	const handleAddAll = async () => {
+	const handleConfirmAll = async () => {
 		if (!formId) {
 			toast.error("Cannot save bags — form not loaded yet");
 			return;
@@ -636,13 +641,13 @@ export const AssessmentStep = observer(function AssessmentStep({
 							type="button"
 							variant="default"
 							size="sm"
-							onClick={handleAddAll}
+							onClick={handleConfirmAll}
 							disabled={batchCreateMutation.isPending}
 						>
 							<Save className="mr-2 h-4 w-4" />
 							{batchCreateMutation.isPending
 								? "Saving..."
-								: `Add All (${wrangler.state.bags.length})`}
+								: `Confirm All (${wrangler.state.bags.length})`}
 						</Button>
 					)}
 					{wrangler.state.bags.length > 0 && (
@@ -681,9 +686,15 @@ export const AssessmentStep = observer(function AssessmentStep({
 							onFieldChange("security_movement_envelope", e.target.value)
 						}
 						placeholder="Enter security movement envelope number (optional)"
+						aria-describedby="security-movement-envelope-hint"
 					/>
-					<p className="text-xs text-muted-foreground">
-						Optional. The security movement envelope number for this form.
+					<p
+						id="security-movement-envelope-hint"
+						className="text-xs text-muted-foreground"
+					>
+						Optional. The security movement envelope number for this form. When
+						set, Section C prints &quot;Subsamples placed into Security Movement
+						Envelope&quot; followed by the number by itself.
 					</p>
 				</div>
 			</SectionCard>
@@ -728,12 +739,12 @@ export const AssessmentStep = observer(function AssessmentStep({
 								id="automatic-lines-heading"
 								className="mb-1 text-sm font-medium"
 							>
-								Added automatically from the bag results
+								Added automatically from the bags and envelope
 							</p>
 							<p className="mb-1.5 text-xs text-muted-foreground">
-								No need to type these. Result lines print before your note and
-								the female plants line after it. If your note has one of these
-								lines, the up-to-date one prints instead.
+								No need to type these. Result and envelope lines print before
+								your note and the female plants line after it. If your note has
+								one of these lines, the up-to-date one prints instead.
 							</p>
 							<ul className="space-y-0.5 text-sm">
 								{automaticLines.map((line) => (

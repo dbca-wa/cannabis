@@ -10,6 +10,7 @@ import {
 	femalePlantLine,
 	formatOfficer,
 	sectionBText,
+	smeLine,
 	summariseResults,
 	type OfficerFacts,
 	type SectionBKey,
@@ -30,6 +31,7 @@ interface SectionCCase {
 	bag_lines: string[];
 	note: string | null;
 	female_line: string | null;
+	envelope: string | null;
 	expected: string | null;
 }
 
@@ -61,9 +63,9 @@ const describeBags = (bags: string[]) => bags.join(", ");
 describe("certificate wording parity with the PDF", () => {
 	it("covers every combination", () => {
 		expect(fixture.results).toHaveLength(1364);
-		expect(fixture.section_c).toHaveLength(108);
+		expect(fixture.section_c).toHaveLength(360);
 		expect(fixture.female).toHaveLength(584);
-		expect(fixture.officers).toHaveLength(452);
+		expect(fixture.officers).toHaveLength(420);
 	});
 
 	it.each(fixture.results.map((c) => [describeBags(c.bags), c] as const))(
@@ -81,9 +83,9 @@ describe("certificate wording parity with the PDF", () => {
 	it.each(fixture.section_c.map((c, i) => [i, c] as const))(
 		"Section C case %i",
 		(_i, c) => {
-			expect(composeSectionC(c.bag_lines, c.note, c.female_line)).toBe(
-				c.expected
-			);
+			expect(
+				composeSectionC(c.bag_lines, c.note, c.female_line, smeLine(c.envelope))
+			).toBe(c.expected);
 		}
 	);
 

@@ -4,15 +4,17 @@ import {
 } from "@/shared/components/layout/ResponsiveModal";
 import { useUsers } from "@/features/user/hooks/useUsers";
 import { useNavigate, useParams } from "react-router";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import EditUserForm from "@/features/user/components/forms/EditUserForm";
 import type { EditUserFormData } from "../../types";
 
+/**
+ * Edits a staff member. People are never deleted in the app (it would strip
+ * them from their cases); deactivate them in this form instead.
+ */
 export const EditUserModal = () => {
 	const navigate = useNavigate();
 	const { userId } = useParams();
-	const { user: currentUser } = useAuth();
-	const { updateUser, isUpdating, deleteUser } = useUsers();
+	const { updateUser, isUpdating } = useUsers();
 
 	const handleClose = () => {
 		navigate("/staff");
@@ -28,19 +30,6 @@ export const EditUserModal = () => {
 			}
 		);
 	};
-
-	const handleDelete = () => {
-		if (!userId) return;
-		if (
-			!window.confirm(
-				"Are you sure you want to delete this user? This action cannot be undone."
-			)
-		)
-			return;
-		deleteUser(userId, { onSuccess: () => handleClose() });
-	};
-
-	const isAdmin = currentUser?.is_superuser || currentUser?.is_staff;
 
 	return (
 		<ResponsiveModal
@@ -58,7 +47,6 @@ export const EditUserModal = () => {
 					onCancel={handleClose}
 					onSubmit={handleSubmit}
 					isSubmitting={isUpdating}
-					onDelete={isAdmin ? handleDelete : undefined}
 				/>
 			</ResponsiveModalContent>
 		</ResponsiveModal>

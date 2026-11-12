@@ -42,6 +42,13 @@ BAG_LINE_PHRASES = {
 FEMALE_PHRASE = "contained female plants"
 ALL_FEMALE_LINE = f"All bags {FEMALE_PHRASE}."
 
+SME_PHRASE = "Subsamples placed into Security Movement Envelope"
+
+# A Section C note line naming the envelope in the system's own words, e.g.
+# "Subsamples placed into Security Movement Envelope WW00537475.". Compared
+# lower-case without a trailing full stop.
+SME_SENTENCE = re.compile(r"^" + re.escape(SME_PHRASE.lower()) + r" \S.*$")
+
 # Sentences the system writes into Section C, compared lower-case without a
 # trailing full stop. A note line matching one is superseded (see
 # compose_section_c).
@@ -88,7 +95,8 @@ UNSWORN_LABEL = "Unsworn Officer"
 SWORN_LABEL = "Sworn Officer"
 
 # Rank values that are not a real police rank, so they never replace the label.
-UNRECORDED_RANKS = frozenset({"unknown", "other", "sworn_officer", "unsworn_officer"})
+# A blank rank (none recorded) is caught by the truthiness check below.
+UNRECORDED_RANKS = frozenset({"unknown", "other"})
 
 PENDING = "[Pending]"
 
@@ -208,18 +216,53 @@ def is_system_sentence(line: str) -> bool:
     return bool(SYSTEM_SENTENCE.match(_comparable(line)))
 
 
+def sme_line(envelope: Optional[str]) -> Optional[str]:
+    """The Section C envelope sentence for a form, or None when none is set.
+
+    For example "Subsamples placed into Security Movement Envelope WW1.".
+    """
+    value = (envelope or "").strip()
+    if not value:
+        return None
+    return f"{SME_PHRASE} {value[:-1] if value.endswith('.') else value}."
+
+
+def is_sme_sentence(line: str) -> bool:
+    """True for a note line naming the envelope in the system's own words."""
+    return bool(SME_SENTENCE.match(_comparable(line)))
+
+
+def sme_from_note(note: Optional[str]) -> Optional[str]:
+    """The envelope a note names in the system's words, or None.
+
+    None unless exactly one envelope is named that way, so a note that
+    mentions two envelopes never has one picked at random.
+    """
+    found = set()
+    for line in (note or "").splitlines():
+        if is_sme_sentence(line):
+            text = line.strip()
+            text = text[:-1] if text.endswith(".") else text
+            found.add(text[len(SME_PHRASE) :].strip())
+    return found.pop() if len(found) == 1 else None
+
+
 def compose_section_c(
     bag_lines: Sequence[str],
     note: Optional[str],
     female_line: Optional[str] = None,
+    envelope_line: Optional[str] = None,
 ) -> Optional[str]:
     """Join the automatic lines and the botanist's note for Section C.
 
-    Order: the bag result lines, then the botanist's note, then the female
-    plant sentence. Any note line that is itself a bag result or female plant
-    sentence (ignoring case, surrounding spaces and a trailing full stop) is
-    dropped, because the system writes those from the current bags. Returns
-    None when there is nothing to print, which the template shows as "None".
+    Order: the bag result lines, the envelope sentence, the botanist's note,
+    then the female plant sentence. Any note line that is itself a bag result
+    or female plant sentence (ignoring case, surrounding spaces and a trailing
+    full stop) is dropped, because the system writes those from the current
+    bags. When the form has an envelope, a note line naming an envelope in the
+    same words is dropped too; without one, such a line is the only record of
+    the envelope and is kept. Returns None when there is nothing to print,
+    which the template shows as "None".
     """
     note_lines = [
         line.strip()
@@ -230,13 +273,23 @@ def compose_section_c(
     while note_lines and not note_lines[-1]:
         note_lines.pop()
 
-    kept = [line for line in note_lines if not is_system_sentence(line)]
+    kept = [
+        line
+        for line in note_lines
+        if not is_system_sentence(line)
+        and not (envelope_line and is_sme_sentence(line))
+    ]
     while kept and not kept[0]:
         kept.pop(0)
     while kept and not kept[-1]:
         kept.pop()
 
-    lines = list(bag_lines) + kept + ([female_line] if female_line else [])
+    lines = (
+        list(bag_lines)
+        + ([envelope_line] if envelope_line else [])
+        + kept
+        + ([female_line] if female_line else [])
+    )
     return "\n".join(lines) if lines else None
 
 

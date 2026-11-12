@@ -14,7 +14,7 @@ pytestmark = pytest.mark.django_db
 def test_seeds_the_named_templates():
     call_command("seed_section_c_templates")
     names = set(SectionCTemplate.objects.values_list("name", flat=True))
-    assert {"Female Plants", "SME Number"} <= names
+    assert "Female Plants" in names
 
 
 def test_female_plants_template_lists_bags_without_the_word_numbers():
@@ -26,15 +26,15 @@ def test_female_plants_template_lists_bags_without_the_word_numbers():
     assert "numbers" not in female.content.lower()
 
 
-def test_sme_number_template_references_the_envelope():
+def test_no_envelope_template_is_seeded():
+    """Section C prints the envelope sentence by itself."""
     call_command("seed_section_c_templates")
-    sme = SectionCTemplate.objects.get(name="SME Number")
-    assert "{{security_movement_envelope}}" in sme.content
-    assert sme.content.startswith("Subsamples placed into Security Movement Envelope")
+    assert not SectionCTemplate.objects.filter(
+        content__icontains="security movement envelope"
+    ).exists()
 
 
 def test_is_idempotent():
     call_command("seed_section_c_templates")
     call_command("seed_section_c_templates")
     assert SectionCTemplate.objects.filter(name="Female Plants").count() == 1
-    assert SectionCTemplate.objects.filter(name="SME Number").count() == 1

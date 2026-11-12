@@ -22,6 +22,9 @@ vi.mock("../wizard/steps/UnsignedCertificateStep", () => ({
 vi.mock("../FormsNavigator", () => ({
 	FormsNavigator: () => <div data-testid="forms-navigator" />,
 }));
+vi.mock("./CertificateBulkAction", () => ({
+	CertificateBulkAction: () => null,
+}));
 vi.mock("../wizard/FormPreviewToggle", () => ({
 	FormPreviewToggle: () => <div data-testid="preview-toggle" />,
 }));
@@ -83,8 +86,8 @@ const OFFICERS: Record<number, OfficerRecord> = {
 		badge_number: "PD99999",
 		given_names: "Sam",
 		last_name: "Lee",
-		rank: "sworn_officer",
-		rank_display: "Sworn Officer",
+		rank: "",
+		rank_display: "",
 		station: null,
 		station_details: null,
 	},
@@ -257,6 +260,26 @@ describe("CaseProcessingPage — certificate print options", () => {
 		const text = previewText();
 		expect(text).toContain("I identified the items as Cannabis sativa.");
 		expect(text).toContain("Bag T2 was inconclusive.");
+	});
+
+	it("prints the form's envelope in Section C without a template", () => {
+		renderPage(
+			<Harness
+				initial={{
+					...caseData(1, 2),
+					security_movement_envelope: "WW00537475",
+					additional_notes:
+						"Subsamples placed into Security Movement Envelope WW1.\nHanded back.",
+				}}
+			/>
+		);
+
+		// Section C lines render as separate lines, so allow for no gap.
+		const text = previewText();
+		expect(text).toMatch(
+			/Bag T2 was inconclusive\.\s?Subsamples placed into Security Movement Envelope WW00537475\.\s?Handed back\./
+		);
+		expect(text).not.toContain("Envelope WW1.");
 	});
 
 	it("has no accessibility violations across the case details", async () => {

@@ -86,13 +86,6 @@ export const updateUser = async (
 };
 
 /**
- * Delete a user by ID.
- */
-export const deleteUser = async (id: string | number): Promise<void> => {
-	await apiClient.delete(ENDPOINTS.USERS.DELETE(id));
-};
-
-/**
  * Send a user invitation.
  */
 export const inviteUser = async (

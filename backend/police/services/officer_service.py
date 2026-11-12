@@ -12,10 +12,9 @@ logger = logging.getLogger(__name__)
 
 # Rank seniority order (higher number = higher rank)
 RANK_SENIORITY_ORDER = {
+    PoliceOfficer.NO_RANK: 0,
     PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
     PoliceOfficer.SeniorityChoices.OTHER: 1,
-    PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER: 2,
-    PoliceOfficer.SeniorityChoices.SWORN_OFFICER: 3,
     PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
     PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
     PoliceOfficer.SeniorityChoices.FIRST_CLASS_CONSTABLE: 6,
@@ -30,7 +29,6 @@ RANK_SENIORITY_ORDER = {
 
 # Sworn rank values for filtering
 SWORN_RANKS = [
-    PoliceOfficer.SeniorityChoices.SWORN_OFFICER,
     PoliceOfficer.SeniorityChoices.CONSTABLE,
     PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE,
     PoliceOfficer.SeniorityChoices.FIRST_CLASS_CONSTABLE,
@@ -92,7 +90,9 @@ class OfficerService:
         # Filter by rank
         rank = params.get("rank")
         if rank:
-            queryset = queryset.filter(rank=rank)
+            queryset = queryset.filter(
+                rank=PoliceOfficer.NO_RANK if rank == "none" else rank
+            )
 
         # Filter by sworn/unsworn status
         is_sworn = params.get("is_sworn")
@@ -179,7 +179,9 @@ class OfficerService:
         # Filter by rank
         rank = params.get("rank")
         if rank and rank != "all":
-            queryset = queryset.filter(rank=rank)
+            queryset = queryset.filter(
+                rank=PoliceOfficer.NO_RANK if rank == "none" else rank
+            )
 
         # Filter by sworn status
         sworn = params.get("sworn")

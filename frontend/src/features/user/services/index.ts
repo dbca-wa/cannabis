@@ -5,7 +5,6 @@ export {
 	getUserById,
 	createUser,
 	updateUser,
-	deleteUser,
 	inviteUser,
 } from "./users.service";
 export { UserPreferencesService } from "./userPreferences.service";

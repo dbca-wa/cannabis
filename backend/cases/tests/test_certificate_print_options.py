@@ -287,7 +287,7 @@ class TestNeedsRegeneration:
     def test_an_unprinted_option_change_is_not_flagged(self, admin_user):
         """The rank option does nothing for an officer without a real rank."""
         case, form = _generated_case()
-        case.requesting_officer.rank = "sworn_officer"
+        case.requesting_officer.rank = ""
         case.requesting_officer.save()
         certificate = _generate(form, admin_user)
 

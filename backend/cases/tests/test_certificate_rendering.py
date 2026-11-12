@@ -87,11 +87,12 @@ def test_every_sequence_renders_as_approved(sequence, note):
     assert section_c == (expected_c or ["None"])
 
 
-def _form_with(results, case=None, note=None):
+def _form_with(results, case=None, note=None, envelope=""):
     """A form whose bags have the given results, in order, tagged T1..Tn."""
     form = Priority3FormFactory(
         case=case or CaseFactory(submitting_officer=PoliceOfficerFactory()),
         additional_notes=note,
+        security_movement_envelope=envelope,
     )
     for i, result in enumerate(results):
         bag = DrugBagFactory(form=form, seal_tag_numbers=f"T{i + 1}")
@@ -166,6 +167,34 @@ class TestContextFromTheDatabase:
 
         assert context["other_matters"] == "None"
 
+    def test_the_envelope_prints_after_the_bag_lines(self):
+        """The form's envelope is written in by itself, replacing any copy a
+        template left in the note, even one naming an older envelope."""
+        note = "Subsamples placed into Security Movement Envelope WW1.\nHanded back."
+        form = _form_with((S, I), note=note, envelope="WW00537475")
+        DrugBag.objects.filter(form=form, seal_tag_numbers="T1").update(
+            contains_female_plants=True
+        )
+        certificate = CertificateFactory(form=form, additional_notes=note)
+
+        context = CertificateService.build_certificate_context(certificate)
+
+        assert context["other_matters"] == (
+            "Bag T2 was inconclusive.\n"
+            "Subsamples placed into Security Movement Envelope WW00537475.\n"
+            "Handed back.\n"
+            "Bag T1 contained female plants."
+        )
+
+    def test_the_envelope_alone_fills_section_c(self):
+        certificate = CertificateFactory(form=_form_with((S,), envelope="WW5"))
+
+        context = CertificateService.build_certificate_context(certificate)
+
+        assert context["other_matters"] == (
+            "Subsamples placed into Security Movement Envelope WW5."
+        )
+
 
 LEGACY_RESULTS = [
     ("mixed", "Mixed"),
@@ -233,3 +262,16 @@ def test_real_pdf_prints_section_b_and_c(results, tmp_path):
         assert line in text
     if not expected.bag_lines:
         assert "should be noted: None" in text
+
+
+@needs_prince
+@pytest.mark.django_db
+def test_real_pdf_prints_the_envelope(tmp_path):
+    certificate = CertificateFactory(form=_form_with((S, N), envelope="WW00537475"))
+
+    text = _pdf_text(CertificateService._render_pdf(certificate), tmp_path)
+
+    assert (
+        "Bag T2 did not contain Cannabis. "
+        "Subsamples placed into Security Movement Envelope WW00537475."
+    ) in text

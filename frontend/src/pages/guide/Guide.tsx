@@ -384,7 +384,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Security Movement Envelope (SME)",
-		"The envelope number recorded per form when subsamples are placed into a security movement envelope. Templates can fill it in.",
+		'The envelope number recorded per form when subsamples are placed into a security movement envelope. When entered, Section C prints "Subsamples placed into Security Movement Envelope" and the number by itself.',
 	],
 	[
 		"State",
@@ -396,7 +396,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Unsaved bags",
-		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Add All.",
+		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Confirm All.",
 	],
 	[
 		"Variable (building block)",
@@ -516,6 +516,12 @@ const Guide = () => {
 									<Ui>Send Password Reset</Ui>.
 								</li>
 							</ol>
+							<p>
+								Staff accounts are never deleted in the app, so the cases
+								someone worked on keep their name. To stop someone logging in,
+								an administrator unticks <Ui>Active User</Ui> on their account
+								in <Ui>Staff</Ui>.
+							</p>
 							<p>
 								What you see depends on your role. Approved botanists and
 								finance officers see the whole workflow. Anyone without a role
@@ -694,9 +700,9 @@ const Guide = () => {
 									then says which bags held female plants by itself.
 								</li>
 								<li>
-									Click <Ui>Confirm</Ui> on a bag, or <Ui>Add All</Ui> to save
-									every new bag at once. Bags that are not saved yet sit in a
-									dashed amber box.
+									Click <Ui>Confirm</Ui> on a bag, or <Ui>Confirm All</Ui> to
+									save every new bag at once. Bags that are not saved yet sit in
+									a dashed amber box.
 								</li>
 								<li>
 									To change a saved bag, click <Ui>Edit</Ui> on it, make the
@@ -740,16 +746,22 @@ const Guide = () => {
 							</p>
 							<ol>
 								<li>
-									The system adds two kinds of line by itself: one for each bag
-									with a different result, and one saying which bags held female
-									plants. They appear in a grey box headed{" "}
-									<Ui>Added automatically from the bag results</Ui>. You do not
-									need to type them.
+									If the subsamples went into a security movement envelope,
+									enter its number in <Ui>SME Number</Ui> under{" "}
+									<Ui>Security Movement Envelope</Ui>.
 								</li>
 								<li>
-									For anything else, such as the security movement envelope,
-									choose one under <Ui>Use Template</Ui> if one fits. It fills
-									in this form&apos;s tag numbers, envelope number and counts
+									The system adds three kinds of line by itself: one for each
+									bag with a different result, &quot;Subsamples placed into
+									Security Movement Envelope&quot; with the SME Number when one
+									is entered, and one saying which bags held female plants. They
+									appear in a grey box headed{" "}
+									<Ui>Added automatically from the bags and envelope</Ui>. You
+									do not need to type them or use a template for them.
+								</li>
+								<li>
+									For anything else, choose one under <Ui>Use Template</Ui> if
+									one fits. It fills in this form&apos;s tag numbers and counts
 									for you.
 								</li>
 								<li>
@@ -866,6 +878,15 @@ const Guide = () => {
 									certificate is out of date — regenerate it before
 									finalising&quot;. Sections that still need work also show
 									without a tick in the bar at the top.
+								</li>
+								<li>
+									The button to the left of <Ui>Finalise Case</Ui> does the next
+									certificate step without scrolling back up. It reads{" "}
+									<Ui>Generate All</Ui> while a form has no certificate,{" "}
+									<Ui>Regenerate All</Ui> while one is out of date, then{" "}
+									<Ui>Mark All Ready</Ui>. It is greyed out once every form is
+									marked ready. Read each certificate before marking them all
+									ready.
 								</li>
 							</ol>
 							<Outcome>
@@ -1117,6 +1138,13 @@ const Guide = () => {
 									same person. The system will not let you choose one person for
 									both.
 								</li>
+								<li>
+									&quot;Sworn Officer&quot; and &quot;Unsworn Officer&quot; are
+									labels the certificate prints for each role. They are not
+									ranks. An officer&apos;s record holds a real rank, such as
+									Senior Constable, or no rank, in which case the officer list
+									and picker show none.
+								</li>
 							</ul>
 
 							<h3>Results</h3>
@@ -1233,15 +1261,20 @@ const Guide = () => {
 									the order the bags were added.
 								</li>
 								<li>
-									The order is always: the bag result lines, then your own notes
-									(for example the envelope number), then the female plants
-									line.
+									When the form has an SME Number, Section C also says{" "}
+									<q>Subsamples placed into Security Movement Envelope</q>{" "}
+									followed by the number.
 								</li>
 								<li>
-									These lines always come from the current bags. If your notes
-									contain one, including one left by a template, it is replaced
-									by the up-to-date line, so it never prints twice or goes out
-									of date.
+									The order is always: the bag result lines, then the envelope
+									line, then your own notes, then the female plants line.
+								</li>
+								<li>
+									These lines always come from the current bags and SME Number.
+									If your notes contain one, including one left by a template,
+									it is replaced by the up-to-date line, so it never prints
+									twice or goes out of date. An envelope line in your notes is
+									kept only when the form has no SME Number.
 								</li>
 								<li>
 									When there are no added lines and no notes, Section C reads
@@ -1254,8 +1287,8 @@ const Guide = () => {
 								A form holds three bags: T1001 is <em>Cannabis sativa</em> and
 								holds female plants, T1002 is{" "}
 								{DETERMINATION_LABELS.not_cannabis} and T1003 is{" "}
-								{DETERMINATION_LABELS.inconclusive}. The botanist&apos;s note
-								says where the subsamples went. The certificate reads:
+								{DETERMINATION_LABELS.inconclusive}. The SME Number is
+								WW00564835 and there is no note. The certificate reads:
 							</p>
 							<div className="not-prose space-y-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
 								<div>

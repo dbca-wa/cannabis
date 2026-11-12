@@ -49,14 +49,12 @@ interface EditUserFormProps {
 	onCancel: () => void;
 	onSubmit: (data: EditUserFormData) => void;
 	isSubmitting?: boolean;
-	onDelete?: () => void;
 }
 
 const EditUserForm = ({
 	onCancel,
 	onSubmit,
 	isSubmitting = false,
-	onDelete,
 }: EditUserFormProps) => {
 	const { userId } = useParams<{ userId: string }>();
 	const {
@@ -593,7 +591,9 @@ const EditUserForm = ({
 							)}
 						</div>
 						<p className="text-xs text-gray-500 ml-6">
-							Inactive users cannot log in to the system.
+							Inactive users cannot log in to the system. Accounts are never
+							deleted here, so their cases keep their names; untick this
+							instead.
 							{user?.is_superuser && " (Cannot be disabled for super admin)"}
 						</p>
 
@@ -613,17 +613,6 @@ const EditUserForm = ({
 
 			{/* Footer */}
 			<ResponsiveModalFooter>
-				{onDelete && (
-					<Button
-						type="button"
-						variant="destructive"
-						onClick={onDelete}
-						disabled={isSubmitting}
-						className="mr-auto cursor-pointer"
-					>
-						Delete User
-					</Button>
-				)}
 				{(currentUser?.is_staff || currentUser?.is_superuser) &&
 					currentUser?.id !== user?.id && (
 						<Button

@@ -127,11 +127,11 @@ class PoliceOfficerAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     mark_as_sworn.short_description = "Mark selected officers as Constable (sworn)"
 
     def mark_as_unsworn(self, request, queryset):
-        """Mark selected officers as unsworn"""
-        updated = queryset.update(rank=PoliceOfficer.SeniorityChoices.UNSWORN_OFFICER)
-        self.message_user(request, f"{updated} officers marked as unsworn")
+        """Clear the rank of selected officers (no rank)"""
+        updated = queryset.update(rank=PoliceOfficer.NO_RANK)
+        self.message_user(request, f"{updated} officers set to no rank")
 
-    mark_as_unsworn.short_description = "Mark selected officers as unsworn"
+    mark_as_unsworn.short_description = "Clear the rank of selected officers (no rank)"
 
     def clear_station_assignment(self, request, queryset):
         """Clear station assignments for selected officers"""

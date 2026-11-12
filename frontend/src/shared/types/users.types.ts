@@ -13,11 +13,11 @@ export interface PaginatedResponse<T> {
 // POLICE TYPES (matches Django PoliceStation and PoliceOfficer models)
 // ============================================================================
 
-// Officer rank choices (matches PoliceOfficer.SeniorityChoices in Django)
+// Officer rank choices (matches PoliceOfficer.SeniorityChoices in Django).
+// An empty string means the officer has no rank on record.
 export type OfficerRank =
+	| ""
 	| "unknown"
-	| "unsworn_officer"
-	| "sworn_officer"
 	| "constable"
 	| "police_constable"
 	| "first_class_constable"

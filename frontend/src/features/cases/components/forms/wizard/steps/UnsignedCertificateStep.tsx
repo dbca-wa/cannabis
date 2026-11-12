@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
 	FileText,
 	RefreshCw,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router";
-import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import {
@@ -22,11 +20,7 @@ import {
 	TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/utils/style.utils";
-import {
-	getCaseForms,
-	generateFormCertificate,
-	updateForm,
-} from "../../../../services/forms.service";
+import { useCaseCertificates } from "../../../../hooks/useCaseCertificates";
 import { GeneratedCertificatesViewer } from "../GeneratedCertificatesViewer";
 import { isFormStale } from "../../../../utils/certificateStaleness";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
@@ -53,199 +47,26 @@ export const UnsignedCertificateStep = ({
 	lockMessage,
 	onAllReadyChange,
 }: UnsignedCertificateStepProps) => {
-	const queryClient = useQueryClient();
-	const [generatingFormIds, setGeneratingFormIds] = useState<Set<number>>(
-		new Set()
-	);
-	const [viewerRefreshKeys, setViewerRefreshKeys] = useState<
-		Record<number, number>
-	>({});
+	const {
+		eligibleForms,
+		generatedForms,
+		pendingForms,
+		staleForms,
+		allGenerated,
+		hasStaleCertificates,
+		anyBatched,
+		allFormsReady,
+		generatingFormIds,
+		generate: handleGenerate,
+		generateAll: handleGenerateAll,
+		regenerateAll: handleRegenerateAll,
+		setReady,
+		markAllReady: handleMarkAllReady,
+	} = useCaseCertificates(caseId);
 
-	// Load all forms for this case
-	const { data: formsData } = useQuery({
-		queryKey: ["cases", caseId, "forms"],
-		queryFn: () => getCaseForms(caseId),
-		staleTime: 30_000,
-	});
-	const forms: Priority3Form[] = Array.isArray(formsData) ? formsData : [];
+	const toggleReady = (form: Priority3Form) =>
+		setReady(form.id, !form.marked_ready);
 
-	// Per-form readiness derived from server data (marked_ready field)
-	const readyFormIds = new Set(
-		forms.filter((f) => f.marked_ready).map((f) => f.id)
-	);
-
-	// Forms with bags (eligible for generation)
-	const eligibleForms = forms.filter((f) => (f.bags?.length ?? 0) > 0);
-	// Forms that already have a generated certificate
-	const generatedForms = eligibleForms.filter(
-		(f) => f.certificate && (f.certificate.pdf_url || f.certificate.pdf_file)
-	);
-	// Forms that need generation
-	const pendingForms = eligibleForms.filter(
-		(f) => !f.certificate || (!f.certificate.pdf_url && !f.certificate.pdf_file)
-	);
-
-	const allGenerated = eligibleForms.length > 0 && pendingForms.length === 0;
-
-	const staleForms = eligibleForms.filter(isFormStale);
-	const hasStaleCertificates = staleForms.length > 0;
-
-	// Check if any certificate is already batched (blocks regeneration)
-	const anyBatched = eligibleForms.some((f) => f.certificate?.batch_id != null);
-
-	// Track whether a batch operation is in progress to suppress per-form toasts
-	const batchCountRef = useRef(0);
-
-	// Generate mutation for a single form
-	const generateMutation = useMutation({
-		mutationFn: (fId: number) => generateFormCertificate(fId, {}),
-		onSuccess: async (_data, fId) => {
-			await queryClient.invalidateQueries({
-				queryKey: ["cases", caseId, "forms"],
-			});
-			// Only refresh the specific form's PDF viewer
-			setViewerRefreshKeys((prev) => ({
-				...prev,
-				[fId]: (prev[fId] ?? 0) + 1,
-			}));
-			// Only show individual toast if not in a batch operation
-			if (batchCountRef.current <= 1) {
-				toast.success("Certificate generated");
-			}
-		},
-		onError: (error: unknown) => {
-			// A 404 here means the form no longer exists on the server — most
-			// often a practice case that was reset (practice mode toggled or the
-			// session expired) while this tab still showed the old form. Give a
-			// clear message rather than a generic failure.
-			const status = (error as { status?: number })?.status;
-			if (status === 404) {
-				toast.error(
-					"This form no longer exists — your practice case may have been reset. Reload and start a new practice case."
-				);
-			} else {
-				toast.error("Failed to generate certificate");
-			}
-		},
-		onSettled: (_data, _err, fId) => {
-			setGeneratingFormIds((prev) => {
-				const next = new Set(prev);
-				next.delete(fId);
-				return next;
-			});
-			// Decrement batch counter and show summary toast when all done
-			if (batchCountRef.current > 1) {
-				batchCountRef.current -= 1;
-				if (batchCountRef.current === 0) {
-					toast.success("All certificates regenerated");
-				}
-			} else {
-				batchCountRef.current = 0;
-			}
-		},
-	});
-
-	const handleGenerate = (fId: number) => {
-		setGeneratingFormIds((prev) => new Set(prev).add(fId));
-		generateMutation.mutate(fId);
-	};
-
-	const handleGenerateAll = () => {
-		batchCountRef.current = pendingForms.length;
-		for (const form of pendingForms) {
-			handleGenerate(form.id);
-		}
-	};
-
-	const handleRegenerateAll = () => {
-		batchCountRef.current = eligibleForms.length;
-		for (const form of eligibleForms) {
-			handleGenerate(form.id);
-		}
-	};
-
-	const formsQueryKey = ["cases", caseId, "forms"] as const;
-
-	const toggleReadyMutation = useMutation({
-		mutationFn: ({ fId, ready }: { fId: number; ready: boolean }) =>
-			updateForm(fId, { marked_ready: ready }),
-		// Flip the circle immediately rather than waiting for the PATCH and a
-		// refetch to land. The button felt laggy because its state came only from
-		// server data.
-		onMutate: async ({ fId, ready }) => {
-			await queryClient.cancelQueries({ queryKey: formsQueryKey });
-			const previous = queryClient.getQueryData<Priority3Form[]>(formsQueryKey);
-			queryClient.setQueryData<Priority3Form[]>(formsQueryKey, (old) =>
-				Array.isArray(old)
-					? old.map((f) => (f.id === fId ? { ...f, marked_ready: ready } : f))
-					: old
-			);
-			return { previous };
-		},
-		onError: (_err, _vars, context) => {
-			// Roll back to the pre-click state.
-			if (context?.previous) {
-				queryClient.setQueryData(formsQueryKey, context.previous);
-			}
-			toast.error("Failed to update readiness");
-		},
-		onSettled: () => {
-			// Reconcile with the server once the request resolves.
-			queryClient.invalidateQueries({ queryKey: formsQueryKey });
-		},
-	});
-
-	const toggleReady = (formId: number) => {
-		const currentlyReady = readyFormIds.has(formId);
-		toggleReadyMutation.mutate({ fId: formId, ready: !currentlyReady });
-	};
-
-	const markAllReadyMutation = useMutation({
-		mutationFn: () =>
-			Promise.all(
-				eligibleForms
-					.filter((f) => !f.marked_ready)
-					.map((f) => updateForm(f.id, { marked_ready: true }))
-			),
-		// Mark every eligible form ready in the cache up front so all the circles
-		// fill at once, then reconcile.
-		onMutate: async () => {
-			await queryClient.cancelQueries({ queryKey: formsQueryKey });
-			const previous = queryClient.getQueryData<Priority3Form[]>(formsQueryKey);
-			queryClient.setQueryData<Priority3Form[]>(formsQueryKey, (old) =>
-				Array.isArray(old)
-					? old.map((f) =>
-							(f.bags?.length ?? 0) > 0 ? { ...f, marked_ready: true } : f
-						)
-					: old
-			);
-			return { previous };
-		},
-		onError: (_err, _vars, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(formsQueryKey, context.previous);
-			}
-			toast.error("Failed to mark all ready");
-		},
-		onSuccess: () => {
-			toast.success("All forms marked ready");
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: formsQueryKey });
-		},
-	});
-
-	const handleMarkAllReady = () => {
-		markAllReadyMutation.mutate();
-	};
-
-	// Notify parent when all-ready state changes. A stale certificate is never
-	// "ready" — its earlier review no longer applies to the changed data.
-	const allFormsReady =
-		eligibleForms.length > 0 &&
-		allGenerated &&
-		!hasStaleCertificates &&
-		eligibleForms.every((f) => readyFormIds.has(f.id));
 	useEffect(() => {
 		onAllReadyChange?.(allFormsReady);
 	}, [allFormsReady, onAllReadyChange]);
@@ -254,14 +75,14 @@ export const UnsignedCertificateStep = ({
 	// that has since changed. Clear it on the server so the botanist must review
 	// and re-mark the regenerated certificate. Guarded so it only fires for forms
 	// still flagged ready, avoiding a loop.
-	const staleReadyFormIds = staleForms
+	const staleReadyKey = staleForms
 		.filter((f) => f.marked_ready)
-		.map((f) => f.id);
-	const staleReadyKey = staleReadyFormIds.join(",");
+		.map((f) => f.id)
+		.join(",");
 	useEffect(() => {
 		if (!staleReadyKey) return;
 		for (const id of staleReadyKey.split(",").map(Number)) {
-			toggleReadyMutation.mutate({ fId: id, ready: false });
+			setReady(id, false);
 		}
 		// Fire only when the set of stale-yet-ready forms changes.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -563,7 +384,7 @@ export const UnsignedCertificateStep = ({
 										<TooltipTrigger asChild>
 											<button
 												type="button"
-												onClick={() => hasGenerated && toggleReady(form.id)}
+												onClick={() => hasGenerated && toggleReady(form)}
 												disabled={!hasGenerated}
 												className={cn(
 													"inline-flex items-center gap-1.5 h-8 px-3 rounded-md border-2 text-xs font-medium transition-all duration-200 cursor-pointer",
@@ -652,7 +473,7 @@ export const UnsignedCertificateStep = ({
 									<GeneratedCertificatesViewer
 										caseId={caseId}
 										certificates={[cert]}
-										refreshKey={viewerRefreshKeys[form.id] ?? 0}
+										refreshKey={cert.updated_at}
 									/>
 								</div>
 							)}

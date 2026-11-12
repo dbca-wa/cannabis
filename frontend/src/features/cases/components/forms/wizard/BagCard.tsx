@@ -148,7 +148,7 @@ export const BagCard = ({
 		const err = validateTagFormat(value, "Original tag");
 		if (err) setTagError(err);
 		else setTagError(null);
-		// Keep the in-memory store in sync so "Add All" sees the typed value.
+		// Keep the in-memory store in sync so "Confirm All" sees the typed value.
 		if (isUnsaved) onUpdateBag(bag.id, { seal_tag_numbers: value });
 	};
 

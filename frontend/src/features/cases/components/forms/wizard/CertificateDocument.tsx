@@ -16,6 +16,7 @@ import {
 	femalePlantLine,
 	formatOfficer,
 	readPrintOptions,
+	smeLine,
 	summariseResults,
 	type OfficerFacts,
 } from "@/features/cases/utils/certificateWording";
@@ -132,7 +133,12 @@ export const CertificateDocument = ({
 		}))
 	);
 	const sectionCLines = (
-		composeSectionC(results?.bagLines ?? [], note, femaleLine) ?? "None"
+		composeSectionC(
+			results?.bagLines ?? [],
+			note,
+			femaleLine,
+			smeLine(caseData.security_movement_envelope as string | null | undefined)
+		) ?? "None"
 	).split("\n");
 	const policeReferenceNumber = (caseData.case_number as string) ?? null;
 	const approvedBotanist = (caseData.approved_botanist_name as string) ?? null;
