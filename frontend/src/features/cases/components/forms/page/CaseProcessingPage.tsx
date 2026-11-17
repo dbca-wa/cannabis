@@ -16,6 +16,7 @@ import {
 	deriveCaseSectionStates,
 	describeSectionState,
 	firstIncompleteSection,
+	isLegacyForm,
 	type CaseSectionId,
 } from "../../../utils/caseSections";
 
@@ -181,8 +182,11 @@ export const CaseProcessingPage = observer(
 		// Once every form has been finalised there is nothing left to finalise,
 		// so the button gives way to where the case now stands.
 		const formPhases = (forms ?? []).map((f) => f.phase as string);
-		const finalisedStatus =
-			flags.hasForms && formPhases.every((p) => FINALISED_PHASES.includes(p))
+		// Imported cases were certified and invoiced in the old system.
+		const allLegacy = flags.hasForms && (forms ?? []).every(isLegacyForm);
+		const finalisedStatus = allLegacy
+			? "This case was imported from the old system, which issued its certificates."
+			: flags.hasForms && formPhases.every((p) => FINALISED_PHASES.includes(p))
 				? formPhases.every((p) => p === "complete")
 					? "This case is complete. Its invoice number has been recorded."
 					: formPhases.some((p) => p === "in_batch" || p === "complete")

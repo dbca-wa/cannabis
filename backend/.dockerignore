@@ -1,5 +1,8 @@
-# ETL data pipeline (not needed in production image)
-etl/
+# Legacy import: the code ships (the import runs from the Settings page); its
+# data holds personal information and never goes into the image.
+etl/data/
+etl/**/debug.txt
+etl/**/transformation_logs.txt
 
 # Git and version control
 .git/

@@ -40,6 +40,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
             "is_staff",
             "is_active",
             "is_superuser",
+            "is_maintainer",
             "is_legacy",
             "date_joined",
             "last_login",
@@ -51,6 +52,7 @@ class UserJWTObjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "is_maintainer",
             "date_joined",
             "last_login",
             "is_authenticated",
@@ -146,11 +148,13 @@ class UserBasicSerializer(serializers.ModelSerializer):
             "is_authenticated",
             "is_staff",
             "is_superuser",
+            "is_maintainer",
             "is_active",
             "requires_password_change",
             "practice_mode",
             "practice_mode_started_at",
         ]
+        read_only_fields = ["is_maintainer"]
 
     def get_practice_mode(self, obj):
         from common.practice import is_in_practice_mode

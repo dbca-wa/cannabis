@@ -13,16 +13,22 @@ later instead.
 
 import logging
 
-from django.db import migrations
+from django.db import migrations, transaction
 
 logger = logging.getLogger(__name__)
 
 
 def record_fingerprints(apps, schema_editor):
+    # Nothing to do on a new database. This also keeps the migration from
+    # reaching for the current models, whose later columns do not exist yet.
+    if not apps.get_model("submissions", "Certificate").objects.exists():
+        return
     try:
         from cases.services.certificate_service import CertificateService
 
-        matched, out_of_date = CertificateService.record_existing_fingerprints()
+        # A savepoint, so a failure here cannot abort the migration's transaction.
+        with transaction.atomic():
+            matched, out_of_date = CertificateService.record_existing_fingerprints()
     except Exception as exc:  # pragma: no cover - only on unusual databases
         logger.warning(
             "Could not record certificate fingerprints; run "

@@ -1,0 +1,33 @@
+{
+    "source_column_name": "Defendant",
+    "sink_column_name": "defendants",
+    "bad_data_handling": {
+        "strategy": "flag_and_preserve",
+        "flag_value": "UNKNOWN_DEFENDANT",
+        "preserve_original": true,
+        "require_manual_review": true,
+        "fuzzy_matching": {
+            "enabled": true,
+            "threshold": 0.85
+        }
+    },
+    "entries": [
+        {
+            "canonical": [],
+            "variants": [
+                "",
+                "Location seized:",
+                "UKNOWN",
+                "UNKNOWN",
+                "INQ CONT",
+                "INQ CONT.",
+                "INQS",
+                "ENQUIRIES CONTINUING",
+                "unknown",
+                "Unknown",
+                "Inquiries Continuing",
+                "Defendant Unknown"
+            ]
+        }
+    ]
+}

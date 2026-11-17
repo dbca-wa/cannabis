@@ -1,0 +1,145 @@
+{
+  "source_column_name": "Police Officer",
+  "sink_column_name": "police_officer",
+  "rank_standardization": {
+    "abbreviations": {
+      "S/C": "Senior Constable",
+      "S/Constable": "Senior Constable",
+      "S/CONSTABLE": "Senior Constable",
+      "PC": "Police Constable",
+      "P/C": "Police Constable",
+      "CONST": "Police Constable",
+      "Det": "Detective",
+      "DET": "Detective",
+      "DET.": "Detective",
+      "1/C": "First Class Constable",
+      "Sgt": "Sergeant",
+      "Insp": "Inspector",
+      "S/Sgt": "Senior Sergeant",
+      "A/C": "Acting Constable",
+      "A/S/C": "Acting Senior Constable",
+      "A/Sgt": "Acting Sergeant",
+      "Det Const": "Detective Constable",
+      "Det Const 1/C": "Detective First Class Constable",
+      "Constable": "Police Constable"
+    },
+    "seniority_levels": {
+      "Police Constable": 1,
+      "Acting Constable": 1,
+      "First Class Constable": 2,
+      "Senior Constable": 3,
+      "Acting Senior Constable": 3,
+      "Sworn Officer": 3,
+      "Detective": 4,
+      "Sergeant": 5,
+      "Acting Sergeant": 5,
+      "Senior Sergeant": 6,
+      "Inspector": 7,
+      "Acting Inspector": 7,
+      "Chief Inspector": 8,
+      "Superintendent": 9,
+      "Acting Superintendent": 9,
+      "Chief Superintendent": 10,
+      "Assistant Commissioner": 11,
+      "Deputy Commissioner": 12,
+      "Commissioner": 13,
+      "Unsworn Officer": 1,
+      "Detective Constable": 4,
+      "Detective First Class Constable": 4
+    },
+    "canonical_forms": {
+      "police constable": "Police Constable",
+      "senior constable": "Senior Constable",
+      "first class constable": "First Class Constable",
+      "detective": "Detective",
+      "sergeant": "Sergeant",
+      "senior sergeant": "Senior Sergeant",
+      "inspector": "Inspector",
+      "acting inspector": "Acting Inspector",
+      "chief inspector": "Chief Inspector",
+      "superintendent": "Superintendent",
+      "acting superintendent": "Acting Superintendent",
+      "chief superintendent": "Chief Superintendent",
+      "assistant commissioner": "Assistant Commissioner",
+      "deputy commissioner": "Deputy Commissioner",
+      "commissioner": "Commissioner",
+      "sworn officer": "Sworn Officer",
+      "unsworn officer": "Unsworn Officer",
+      "conveying officer": "Unsworn Officer",
+      "conveying_officer": "Unsworn Officer",
+      "acting constable": "Acting Constable",
+      "acting senior constable": "Acting Senior Constable",
+      "acting sergeant": "Acting Sergeant",
+      "p/c": "Police Constable",
+      "s/c": "Senior Constable",
+      "s/constable": "Senior Constable",
+      "const": "Police Constable",
+      "det": "Detective",
+      "det.": "Detective",
+      "det const": "Detective Constable",
+      "det const 1/c": "Detective First Class Constable",
+      "constable": "Police Constable"
+    }
+  },
+  "organization_abbreviations": {
+    "TIG": "Tactical Investigation Group",
+    "DSG": "District Support Group",
+    "CIB": "Criminal Investigation Branch",
+    "DRU": "Drug Response Unit",
+    "CSU": "Crime Scene Unit",
+    "MIG": "Major Incident Group",
+    "OCI": "Organised Crime Investigations",
+    "OMCG": "Outlaw Motorcycle Gang Taskforce",
+    "TRG": "Tactical Response Group",
+    "BAS": "Breath Analysis Section",
+    "IMU": "Intelligence Management Unit"
+  },
+  "corruption_patterns": {
+    "defendant_name_patterns": [
+      "^[A-Z]+\\s+[A-Z]+\\s+[A-Z]+$",
+      "^[A-Z]+\\s+[A-Z]+$",
+      "^[A-Z-]+,\\s*[A-Z\\s]+$",
+      "^[A-Z]+\\s+[A-Z]+\\s+[A-Z]+\\s+[A-Z]+$"
+    ],
+    "corruption_indicators": [
+      "quantity of",
+      "plant",
+      "seed",
+      "head",
+      "striking",
+      "leaf",
+      "stem",
+      "bag",
+      "dried",
+      "fresh"
+    ],
+    "description_patterns": [
+      "quantity of.*plant",
+      "\\d+\\s*(plant|seed|head|bag)",
+      "dried.*cannabis",
+      "fresh.*cannabis"
+    ]
+  },
+  "standardized_values": {
+    "UNKNOWN": {
+      "canonical": "Unknown Officer",
+      "return_empty": true
+    },
+    "INQ CONT": {
+      "canonical": "Inquiry Continued",
+      "return_empty": true
+    },
+    "NOT SPECIFIED": {
+      "canonical": "Not Specified",
+      "return_empty": true
+    },
+    "N/A": {
+      "canonical": "Not Available",
+      "return_empty": true
+    },
+    "": {
+      "canonical": "Empty",
+      "return_empty": true
+    }
+  }
+}

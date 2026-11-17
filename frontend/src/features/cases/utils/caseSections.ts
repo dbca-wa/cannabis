@@ -65,6 +65,14 @@ export const FINALISED_PHASES: readonly string[] = [
 	"complete",
 ];
 
+/**
+ * True for a form imported from the old system. Its certificate was issued
+ * there (and may have been presented in court), so none is made here.
+ */
+export const isLegacyForm = (
+	form: Pick<Priority3Form, "legacy_certificate_number">
+): boolean => !!form.legacy_certificate_number;
+
 type BagWithAssessment = {
 	assessment?: { determination?: string | null } | null;
 };
@@ -126,10 +134,15 @@ export const deriveCaseSectionFlags = (
 			return bags.length > 0 && bags.every(isBagAssessed);
 		});
 
-	const allFormsHaveCerts =
-		hasForms && forms!.every((form) => !!form.certificate);
-	const anyFormHasCert = hasForms && forms!.some((form) => !!form.certificate);
-	const allFormsReady = hasForms && forms!.every((form) => !!form.marked_ready);
+	// A form imported from the old system was certified there, so it counts as
+	// certified and checked even though it has no certificate in this app.
+	const isCertified = (form: Priority3Form) =>
+		!!form.certificate || isLegacyForm(form);
+	const allFormsHaveCerts = hasForms && forms!.every(isCertified);
+	const anyFormHasCert = hasForms && forms!.some(isCertified);
+	const allFormsReady =
+		hasForms &&
+		forms!.every((form) => !!form.marked_ready || isLegacyForm(form));
 
 	// A certificate whose bag data changed after it was generated is out of date
 	// and must be regenerated before the case can be finalised.

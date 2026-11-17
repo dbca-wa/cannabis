@@ -437,6 +437,21 @@ class CertificateService:
         return CertificateService._content_changed(certificate)
 
     @staticmethod
+    def _raise_if_legacy(form):
+        """Refuse a certificate for a form imported from the old system.
+
+        The old system already certified it and that certificate may have been
+        presented in court. A certificate made here would be a second, different
+        document for the same examination, under a new number.
+        """
+        if form.legacy_certificate_number:
+            raise ValidationError(
+                "This form was certified by the old system as certificate "
+                f"{form.legacy_certificate_number}. A new certificate cannot be "
+                "made for it."
+            )
+
+    @staticmethod
     def _raise_if_unprintable(bags):
         """Refuse a certificate while any bag's result cannot be printed.
 
@@ -489,6 +504,7 @@ class CertificateService:
             ValidationError: If the form has no drug bags, exceeds the bag cap,
                 has an unassessed bag, or its certificate is already batched.
         """
+        CertificateService._raise_if_legacy(form)
         bags = CertificateService._ordered_bags(form)
         if not bags:
             raise ValidationError("This form has no drug bags; add at least one.")
@@ -560,6 +576,7 @@ class CertificateService:
         Raises:
             ValidationError: If the certificate already belongs to a batch.
         """
+        CertificateService._raise_if_legacy(certificate.form)
         if certificate.batch_id is not None:
             raise ValidationError(
                 "Cannot regenerate a certificate that is already batched."

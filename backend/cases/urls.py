@@ -3,6 +3,22 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Legacy import (maintainers only, from the Settings page)
+    path(
+        "legacy-import/bundle",
+        views.LegacyImportBundleView.as_view(),
+        name="legacy_import_bundle",
+    ),
+    path(
+        "legacy-import/runs",
+        views.LegacyImportRunListView.as_view(),
+        name="legacy_import_runs",
+    ),
+    path(
+        "legacy-import/runs/<int:pk>",
+        views.LegacyImportRunDetailView.as_view(),
+        name="legacy_import_run",
+    ),
     # Draft endpoint
     path("drafts", views.CaseDraftView.as_view(), name="case_draft"),
     # Case endpoints

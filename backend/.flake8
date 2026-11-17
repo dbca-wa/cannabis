@@ -9,6 +9,4 @@ exclude =
     */.venv/*,
     build,
     dist,
-    _run_etl.py,
-    _etl_*,
-    scripts/
+    etl/data/

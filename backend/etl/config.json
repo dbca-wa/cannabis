@@ -1,0 +1,269 @@
+{
+	"columns": [
+		{
+			"name": "Certificate Number",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "",
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "MISSING_CERT_NUMBER",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "cert_number",
+					"column_type": "string",
+					"empty_handling": "",
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Approved Botanist",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "",
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "UNKNOWN_BOTANIST",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "approved_botanist",
+					"column_type": "string",
+					"empty_handling": "",
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Police Reference Number",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "",
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "MISSING_CASE_NUMBER",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "police_reference_number",
+					"column_type": "string",
+					"empty_handling": "",
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Location",
+			"skip_and_drop": true,
+			"keep": false,
+			"column_type": "string",
+			"empty_handling": "",
+			"resulting_columns": []
+		},
+		{
+			"name": "Quantity of Bags",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "1",
+			"bad_data_handling": {
+				"strategy": "replace",
+				"value": "1",
+				"require_manual_review": false
+			},
+			"resulting_columns": [
+				{
+					"name": "quantity_of_bags",
+					"column_type": "string",
+					"empty_handling": 1,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Tag Number",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "",
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "MISSING_TAG_NUMBERS",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "tag_numbers",
+					"column_type": "string_array",
+					"empty_handling": [],
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Description",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": "",
+			"resulting_columns": [
+				{
+					"name": "description",
+					"column_type": "string",
+					"empty_handling": "",
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Defendant",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": null,
+			"resulting_columns": [
+				{
+					"name": "defendants",
+					"column_type": "string",
+					"empty_handling": null,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Police Officer",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": null,
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "UNPARSEABLE_OFFICER_DATA",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "police_officer",
+					"column_type": "string",
+					"empty_handling": null,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Result",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": null,
+			"bad_data_handling": {
+				"strategy": "flag_and_preserve",
+				"value": "UNPARSEABLE_RESULT_DATA",
+				"require_manual_review": true
+			},
+			"resulting_columns": [
+				{
+					"name": "result",
+					"column_type": "object",
+					"empty_handling": null,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "Quantity Sub Sampled",
+			"skip_and_drop": true,
+			"keep": false,
+			"column_type": "string",
+			"empty_handling": "",
+			"resulting_columns": []
+		},
+		{
+			"name": "Other Matters",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": null,
+			"resulting_columns": [
+				{
+					"name": "other_matters",
+					"column_type": "object",
+					"empty_handling": null,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		},
+		{
+			"name": "New Bag Numbers",
+			"skip_and_drop": true,
+			"keep": false,
+			"column_type": "string",
+			"empty_handling": "",
+			"resulting_columns": []
+		},
+		{
+			"name": "MailMerge",
+			"skip_and_drop": true,
+			"keep": false,
+			"column_type": "boolean",
+			"empty_handling": false,
+			"resulting_columns": []
+		},
+		{
+			"name": "Comments",
+			"skip_and_drop": false,
+			"keep": true,
+			"column_type": "string",
+			"empty_handling": null,
+			"resulting_columns": [
+				{
+					"name": "internal_comments",
+					"column_type": "object",
+					"empty_handling": null,
+					"column_placement": "right",
+					"select_content": "all",
+					"select_character": null,
+					"select_from_side": null
+				}
+			]
+		}
+	]
+}

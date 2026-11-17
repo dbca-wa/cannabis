@@ -1,0 +1,113 @@
+{
+    "source_column_name": "Approved Botanist",
+    "sink_column_name": "approved_botanist",
+    "bad_data_handling": {
+        "strategy": "flag_and_preserve",
+        "flag_value": "UNKNOWN_BOTANIST",
+        "preserve_original": true,
+        "log_level": "warn",
+        "require_manual_review": true,
+        "fuzzy_matching": {
+            "enabled": true,
+            "threshold": 0.8,
+            "log_matches": true
+        }
+    },
+    "entries": [
+        {
+            "canonical": "Alex Chapman",
+            "variants": [
+                "Alex R Chapman"
+            ]
+        },
+        {
+            "canonical": "Fang Chang Sha",
+            "variants": [
+                "Fang Chang Sha",
+                "Fang ChangSha",
+                "Fang Chang  Sha",
+                "Fang chang Sha",
+                "Fang Chang Sha'",
+                "Chang Sha Fang",
+                "Fang Chang sha",
+                "FANG CHANG SHA",
+                "FANG CHANG CHA",
+                "FANG CHANG Sha"
+            ]
+        },
+        {
+            "canonical": "John Huisman",
+            "variants": [
+                "HUISMAN, John",
+                "John Huisman"
+            ]
+        },
+        {
+            "canonical": "Karina Knight",
+            "variants": [
+                "Karina Knight"
+            ]
+        },
+        {
+            "canonical": "Kelly Shepherd",
+            "variants": [
+                "SHEPHERD, Kelly",
+                "SHEPHERD, KELLY",
+                "SHEPHERD Kelly",
+                "Kelly Shepherd"
+            ]
+        },
+        {
+            "canonical": "Neville Marchant",
+            "variants": [
+                "Dr Neville G Marchant",
+                "Dr Neville  Marchant",
+                "Dr Neville Marchant",
+                "NEVILLE MARCHANT",
+                "DR NEVILLE MARCHANT"
+            ]
+        },
+        {
+            "canonical": "Nicholas Lander",
+            "variants": [
+                "Nicholas S Lander",
+                "Nicholas S. Lander",
+                "NICHOLAS S. LANDER",
+                "Nicholas S lander",
+                "NICHOLAS LANDER",
+                "Nicholas Lander",
+                "Nicholas lander",
+                "LANDER, Nicholas",
+                "LANDER,Nicholas",
+                "LANDER Nicholas",
+                "LANDER, nicholas",
+                "LANDER, Nocholas",
+                "Lander, Nicholas",
+                "LANDER. Nicholas"
+            ]
+        },
+        {
+            "canonical": "Raymond Cranfield",
+            "variants": [
+                "Raymond J Cranfield",
+                "Raymond C Cranfield",
+                "RAYMOND CRANFIELD",
+                "CRANFIELD RAY",
+                "Raymond Cranfield",
+                "RAY CRANFIELD",
+                "Ray Cranfield",
+                "CRANFIELD, Raymond",
+                "Cranfield, Raymond",
+                "CRANFIELD, Ray",
+                "CRANFIELD Raymond",
+                "CRANFIELD Ray"
+            ]
+        },
+        {
+            "canonical": "Susan Patrick",
+            "variants": [
+                "Susan Patrick"
+            ]
+        }
+    ]
+}

@@ -12,6 +12,7 @@ import {
 	updateForm,
 } from "../services/forms.service";
 import { isFormStale } from "../utils/certificateStaleness";
+import { isLegacyForm } from "../utils/caseSections";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
 const hasPdf = (form: Priority3Form): boolean =>
@@ -23,6 +24,12 @@ const hasPdf = (form: Priority3Form): boolean =>
 /** The next bulk certificate step for a case, or null when all are ready. */
 export type CertificateBulkAction = "generate" | "regenerate" | "markReady";
 
+export { isLegacyForm };
+
+/** A form that can have a certificate generated in this app. */
+export const canHaveCertificate = (form: Priority3Form): boolean =>
+	(form.bags?.length ?? 0) > 0 && !isLegacyForm(form);
+
 /**
  * Which bulk action a case's certificates need next: generate the missing
  * ones, then regenerate any out of date, then mark every form ready. Null
@@ -32,7 +39,7 @@ export type CertificateBulkAction = "generate" | "regenerate" | "markReady";
 export const nextCertificateAction = (
 	forms: Priority3Form[]
 ): CertificateBulkAction | null => {
-	const eligible = forms.filter((f) => (f.bags?.length ?? 0) > 0);
+	const eligible = forms.filter(canHaveCertificate);
 	if (eligible.length === 0) return null;
 	if (eligible.some((f) => !hasPdf(f))) return "generate";
 	if (eligible.some(isFormStale)) return "regenerate";
@@ -60,8 +67,10 @@ export const useCaseCertificates = (caseId: number) => {
 	});
 	const forms: Priority3Form[] = Array.isArray(formsData) ? formsData : [];
 
-	// Forms with bags can have a certificate.
-	const eligibleForms = forms.filter((f) => (f.bags?.length ?? 0) > 0);
+	// Forms with bags can have a certificate, except those the old system
+	// already certified.
+	const eligibleForms = forms.filter(canHaveCertificate);
+	const legacyForms = forms.filter(isLegacyForm);
 	const generatedForms = eligibleForms.filter(hasPdf);
 	const pendingForms = eligibleForms.filter((f) => !hasPdf(f));
 	const staleForms = eligibleForms.filter(isFormStale);
@@ -202,6 +211,7 @@ export const useCaseCertificates = (caseId: number) => {
 	return {
 		forms,
 		eligibleForms,
+		legacyForms,
 		generatedForms,
 		pendingForms,
 		staleForms,
