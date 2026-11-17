@@ -1,6 +1,4 @@
-"""Property 2: A form has at most five drug bags (R10.2).
-
-**Validates: Requirements 10.2**
+"""A form has at most five drug bags.
 
 Attempts to add k bags (k from 1..10) to a form via DrugBagService. Asserts
 form.bags.count() == min(k, 5) and the service rejects bags beyond 5.

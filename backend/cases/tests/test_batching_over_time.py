@@ -1,7 +1,5 @@
 """Integration tests for batching behaviour over time.
 
-**Validates: Requirements 6.7, 6.8, 6.9, 9.2, 9.3**
-
 Covers:
 - create_batch rejects an empty selection
 - A case's certificates can land in different batches at different times

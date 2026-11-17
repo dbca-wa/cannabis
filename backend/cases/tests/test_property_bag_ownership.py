@@ -1,6 +1,4 @@
-"""Property 1: Each drug bag belongs to exactly one form (R10.1).
-
-**Validates: Requirements 10.1**
+"""Each drug bag belongs to exactly one form.
 
 Generates a case with 1-8 forms, each with 1-5 bags. Asserts every DrugBag has
 a non-null form, and no bag appears under two forms.

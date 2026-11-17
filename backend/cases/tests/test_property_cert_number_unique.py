@@ -1,6 +1,4 @@
-"""Property 5: Every certificate number is unique (R10.5).
-
-**Validates: Requirements 10.5**
+"""Every certificate number is unique.
 
 Generates N forms (1-30) across cases, generates certificates in random order.
 Asserts all certificate numbers are distinct.
