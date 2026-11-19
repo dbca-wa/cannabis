@@ -397,7 +397,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Unsaved bags",
-		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Confirm All.",
+		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Confirm All, and are lost if you leave or reload the page first.",
 	],
 	[
 		"Variable (building block)",
@@ -703,7 +703,10 @@ const Guide = () => {
 								<li>
 									Click <Ui>Confirm</Ui> on a bag, or <Ui>Confirm All</Ui> to
 									save every new bag at once. Bags that are not saved yet sit in
-									a dashed amber box.
+									a dashed amber box. <Ui>Add All</Ui> in <Ui>Add Multiple</Ui>{" "}
+									only puts the bags in that box; they are not saved until you
+									confirm them. Unsaved bags are lost if you leave or reload the
+									page, so confirm before moving on.
 								</li>
 								<li>
 									To change a saved bag, click <Ui>Edit</Ui> on it, make the
@@ -784,7 +787,7 @@ const Guide = () => {
 							</Tip>
 							<img
 								src="/assets/guide/section-c.png"
-								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bag results, and the botanist's own note"
+								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bags and envelope (bag results, female plants and the Security Movement Envelope sentence), and an empty note for anything else"
 								className="rounded-lg border shadow-sm"
 							/>
 							<Outcome>
@@ -1373,6 +1376,16 @@ const Guide = () => {
 									kept.
 								</li>
 							</ol>
+							<Tip>
+								Duplicates often share a name and badge number, so check the
+								station shown beside each one. Keep the record with the correct
+								station and rank.
+							</Tip>
+							<img
+								src="/assets/guide/merge-officers.png"
+								alt="The Merge Officers page with one officer kept as the primary, two duplicates selected, and the preview listing each with its badge number, station and case count above the Confirm Merge button"
+								className="rounded-lg border shadow-sm"
+							/>
 							<h3>Deleting a record</h3>
 							<ol>
 								<li>
@@ -1401,6 +1414,11 @@ const Guide = () => {
 								choosing a replacement. The defendant is taken off each case,
 								and a case with no other defendant prints UNKNOWN.
 							</Rule>
+							<img
+								src="/assets/guide/delete-defendant-unknown.png"
+								alt="The Delete defendant dialog for an Unknown Unknown record, listing the two cases that use it, with Set these cases to an unknown defendant ticked and the button reading Set 2 cases to unknown and delete"
+								className="mx-auto max-w-xl rounded-lg border shadow-sm"
+							/>
 							<Tip>
 								Only an administrator can delete or merge away a record used by
 								a complete case, because that changes the case. An officer

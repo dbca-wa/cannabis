@@ -56,11 +56,11 @@ export const usePoliceOfficers = (params: PoliceOfficerSearchParams = {}) => {
 /**
  * Hook to fetch a single police officer by ID
  */
-export const usePoliceOfficer = (id: number) => {
+export const usePoliceOfficer = (id: number, enabled = true) => {
 	return useQuery({
 		queryKey: policeOfficersQueryKeys.detail(id),
 		queryFn: () => policeOfficersService.getOfficer(id),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 10 * 60 * 1000, // 10 minutes
 	});
@@ -143,12 +143,7 @@ export const useDeletePoliceOfficer = () => {
 			id: number;
 			replacementId?: number | null;
 		}) => policeOfficersService.deleteOfficer(id, replacementId),
-		onSuccess: async (_, { id }) => {
-			// Remove the officer from the cache
-			queryClient.removeQueries({
-				queryKey: policeOfficersQueryKeys.detail(id),
-			});
-
+		onSuccess: async () => {
 			// Moved cases are refreshed too.
 			await invalidateRelatedQueries(queryClient, "policeOfficers");
 
@@ -162,10 +157,10 @@ export const useDeletePoliceOfficer = () => {
 };
 
 /** The cases that name an officer, shown before deleting them. */
-export const useOfficerUsage = (id: number | null) =>
+export const useOfficerUsage = (id: number | null, enabled = true) =>
 	useQuery({
 		queryKey: [...policeOfficersQueryKeys.detail(id ?? 0), "usage"],
 		queryFn: () => policeOfficersService.getOfficerUsage(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		staleTime: 0,
 	});

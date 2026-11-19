@@ -40,11 +40,11 @@ export const useDefendants = (params: DefendantsQueryParams = {}) => {
 };
 
 /** Hook to fetch a single defendant by ID */
-export const useDefendantById = (id: number | null) => {
+export const useDefendantById = (id: number | null, enabled = true) => {
 	return useQuery({
 		queryKey: defendantsQueryKeys.detail(id!),
 		queryFn: () => getDefendantById(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		...cacheConfig.detail,
 		retry: 2,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
@@ -108,10 +108,7 @@ export const useDeleteDefendant = () => {
 			replacementId?: number | null;
 			unknown?: boolean;
 		}) => deleteDefendant(id, replacementId, unknown),
-		onSuccess: async (_, { id }) => {
-			queryClient.removeQueries({
-				queryKey: defendantsQueryKeys.detail(id),
-			});
+		onSuccess: async () => {
 			// Moved cases are refreshed too.
 			await invalidateRelatedQueries(queryClient, "defendants");
 			toast.success("Defendant deleted");
@@ -124,10 +121,10 @@ export const useDeleteDefendant = () => {
 };
 
 /** The cases that name a defendant, shown before deleting them. */
-export const useDefendantUsage = (id: number | null) =>
+export const useDefendantUsage = (id: number | null, enabled = true) =>
 	useQuery({
 		queryKey: [...defendantsQueryKeys.detail(id ?? 0), "usage"],
 		queryFn: () => getDefendantUsage(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		staleTime: 0,
 	});

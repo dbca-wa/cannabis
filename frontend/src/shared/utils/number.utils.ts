@@ -18,3 +18,9 @@ export const formatFileSize = (bytes: number): string => {
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+/**
+ * A count with its noun, e.g. "1 case" or "3 cases".
+ */
+export const countOf = (count: number, word: string): string =>
+	`${count} ${word}${count === 1 ? "" : "s"}`;

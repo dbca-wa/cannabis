@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatCurrency, formatFileSize } from "./number.utils";
+import { countOf, formatCurrency, formatFileSize } from "./number.utils";
 
 describe("number.utils", () => {
 	describe("formatCurrency", () => {
@@ -29,6 +29,14 @@ describe("number.utils", () => {
 
 		it("formats megabytes", () => {
 			expect(formatFileSize(5 * 1024 * 1024)).toBe("5.0 MB");
+		});
+	});
+
+	describe("countOf", () => {
+		it("uses the singular for one and the plural otherwise", () => {
+			expect(countOf(1, "case")).toBe("1 case");
+			expect(countOf(0, "case")).toBe("0 cases");
+			expect(countOf(3, "officer")).toBe("3 officers");
 		});
 	});
 });
