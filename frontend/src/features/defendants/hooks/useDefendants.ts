@@ -102,10 +102,12 @@ export const useDeleteDefendant = () => {
 		mutationFn: ({
 			id,
 			replacementId,
+			unknown,
 		}: {
 			id: number;
 			replacementId?: number | null;
-		}) => deleteDefendant(id, replacementId),
+			unknown?: boolean;
+		}) => deleteDefendant(id, replacementId, unknown),
 		onSuccess: async (_, { id }) => {
 			queryClient.removeQueries({
 				queryKey: defendantsQueryKeys.detail(id),

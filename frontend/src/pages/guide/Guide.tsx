@@ -1355,6 +1355,23 @@ const Guide = () => {
 								changes the cases that use the duplicate, so if any of them is
 								complete, only an administrator can merge it.
 							</p>
+							<ol>
+								<li>
+									On <Ui>Officers</Ui>, click <Ui>Merge</Ui>.
+								</li>
+								<li>
+									Under <Ui>Primary Officer</Ui>, search for and pick the record
+									to keep (usually the one with the correct station and rank).
+								</li>
+								<li>
+									Under <Ui>Secondary Officers</Ui>, search for and pick each
+									duplicate.
+								</li>
+								<li>
+									Click <Ui>Merge</Ui> and confirm. The duplicates are removed
+									and their cases now name the record you kept.
+								</li>
+							</ol>
 							<h3>Deleting a record</h3>
 							<ol>
 								<li>
@@ -1374,6 +1391,15 @@ const Guide = () => {
 									defendant.
 								</li>
 							</ol>
+							<Rule title="Unknown defendants">
+								Never create a defendant named &quot;Unknown&quot;; the app
+								rejects it. When the defendant is not known, use the{" "}
+								<Ui>Defendant is unknown</Ui> button on the case. To remove an
+								old &quot;Unknown&quot; record, delete it and tick{" "}
+								<Ui>Set these cases to an unknown defendant</Ui> instead of
+								choosing a replacement. The defendant is taken off each case,
+								and a case with no other defendant prints UNKNOWN.
+							</Rule>
 							<Tip>
 								Only an administrator can delete or merge away a record used by
 								a complete case, because that changes the case. An officer

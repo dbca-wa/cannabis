@@ -27,10 +27,13 @@ export const DeleteDefendantRouteModal = () => {
 		navigate("/defendants");
 	};
 
-	const handleDelete = async (replacementId: number | null) => {
+	const handleDelete = async (
+		replacementId: number | null,
+		unknown: boolean
+	) => {
 		if (!id) return;
 		try {
-			await deleteDefendant.mutateAsync({ id, replacementId });
+			await deleteDefendant.mutateAsync({ id, replacementId, unknown });
 			handleClose();
 		} catch {
 			// The mutation shows the error.
@@ -88,6 +91,8 @@ export const DeleteDefendantRouteModal = () => {
 					placeholder="Search for a defendant..."
 				/>
 			)}
+			noReplacementLabel="Set these cases to an unknown defendant"
+			noReplacementHint="The defendant is taken off each case. A case with no other defendant prints UNKNOWN on its certificate."
 			onConfirm={handleDelete}
 			onClose={handleClose}
 		/>

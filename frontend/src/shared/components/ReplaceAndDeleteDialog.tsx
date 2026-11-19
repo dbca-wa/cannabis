@@ -7,6 +7,7 @@ import {
 } from "@/shared/components/layout/ResponsiveModal";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { Button } from "@/shared/components/ui/button";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Label } from "@/shared/components/ui/label";
 import type { RecordUsage } from "@/shared/types/record-usage.types";
 import { describeRoles } from "@/shared/utils/record-usage.utils";
@@ -34,7 +35,13 @@ interface ReplaceAndDeleteDialogProps {
 	isAdmin: boolean;
 	isDeleting: boolean;
 	renderPicker: (props: ReplacementPickerProps) => ReactNode;
-	onConfirm: (replacementId: number | null) => void;
+	/**
+	 * When set, the user may delete without a replacement and leave the cases
+	 * with none (for a defendant, an unknown defendant).
+	 */
+	noReplacementLabel?: string;
+	noReplacementHint?: string;
+	onConfirm: (replacementId: number | null, noReplacement: boolean) => void;
 	onClose: () => void;
 }
 
@@ -61,10 +68,13 @@ export const ReplaceAndDeleteDialog = ({
 	isAdmin,
 	isDeleting,
 	renderPicker,
+	noReplacementLabel,
+	noReplacementHint,
 	onConfirm,
 	onClose,
 }: ReplaceAndDeleteDialogProps) => {
 	const [replacementId, setReplacementId] = useState<number | null>(null);
+	const [noReplacement, setNoReplacement] = useState(false);
 
 	const cases = usage?.cases ?? [];
 	const officers = usage?.officers ?? [];
@@ -75,7 +85,7 @@ export const ReplaceAndDeleteDialog = ({
 		!!usage &&
 		!isDeleting &&
 		!blockedByComplete &&
-		(!inUse || (replacementId !== null && !sameRecord));
+		(!inUse || noReplacement || (replacementId !== null && !sameRecord));
 
 	const usedBy = [
 		cases.length > 0 ? plural(cases.length, "case") : null,
@@ -145,9 +155,16 @@ export const ReplaceAndDeleteDialog = ({
 									aria-hidden="true"
 								/>
 								<p className="text-sm text-amber-900 dark:text-amber-100">
-									<strong>{name}</strong> is used by {usedBy}. Choose another{" "}
-									{noun} to move them to. They are moved first, then {name} is
-									deleted, so no case is left without {withArticle(noun)}.
+									<strong>{name}</strong> is used by {usedBy}.{" "}
+									{noReplacement ? (
+										<>{name} is taken off them first, then deleted.</>
+									) : (
+										<>
+											Choose another {noun} to move them to. They are moved
+											first, then {name} is deleted, so no case is left without{" "}
+											{withArticle(noun)}.
+										</>
+									)}
 								</p>
 							</div>
 
@@ -211,14 +228,39 @@ export const ReplaceAndDeleteDialog = ({
 								</p>
 							) : (
 								<div className="space-y-2">
-									<Label htmlFor={pickerId}>Replace with</Label>
-									{renderPicker({
-										id: pickerId,
-										value: replacementId,
-										onValueChange: setReplacementId,
-										error: sameRecord,
-									})}
-									{sameRecord && (
+									{noReplacementLabel && (
+										<div className="flex items-start gap-2">
+											<Checkbox
+												id={`${pickerId}-none`}
+												checked={noReplacement}
+												onCheckedChange={(checked) =>
+													setNoReplacement(checked === true)
+												}
+											/>
+											<div className="space-y-1">
+												<Label htmlFor={`${pickerId}-none`}>
+													{noReplacementLabel}
+												</Label>
+												{noReplacementHint && (
+													<p className="text-sm text-muted-foreground">
+														{noReplacementHint}
+													</p>
+												)}
+											</div>
+										</div>
+									)}
+									{!noReplacement && (
+										<>
+											<Label htmlFor={pickerId}>Replace with</Label>
+											{renderPicker({
+												id: pickerId,
+												value: replacementId,
+												onValueChange: setReplacementId,
+												error: sameRecord,
+											})}
+										</>
+									)}
+									{sameRecord && !noReplacement && (
 										<p
 											id={pickerErrorId}
 											className="text-sm text-destructive"
@@ -245,7 +287,12 @@ export const ReplaceAndDeleteDialog = ({
 						</Button>
 						<Button
 							variant="destructive"
-							onClick={() => onConfirm(inUse ? replacementId : null)}
+							onClick={() =>
+								onConfirm(
+									inUse && !noReplacement ? replacementId : null,
+									inUse && noReplacement
+								)
+							}
 							disabled={!canConfirm}
 						>
 							{isDeleting && (
@@ -257,7 +304,9 @@ export const ReplaceAndDeleteDialog = ({
 							{isDeleting
 								? "Deleting..."
 								: inUse
-									? `Move ${usedBy} and delete`
+									? noReplacement
+										? `Set ${usedBy} to unknown and delete`
+										: `Move ${usedBy} and delete`
 									: `Delete ${noun}`}
 						</Button>
 					</div>

@@ -161,14 +161,16 @@ class DefendantService:
 
     @staticmethod
     @transaction.atomic
-    def delete_defendant(defendant, user, replacement=None):
+    def delete_defendant(defendant, user, replacement=None, unknown=False):
         """Delete a defendant, first moving any cases that name them.
 
         Args:
             defendant: The Defendant instance to delete.
             user: Who is deleting, for the complete-case rule and the log.
             replacement: The defendant to name on those cases instead. Required
-                when any case names this defendant.
+                when any case names this defendant, unless ``unknown`` is set.
+            unknown: Take this defendant off those cases without naming
+                another, so a case left with no defendant prints UNKNOWN.
 
         Raises:
             ValidationError: No replacement for a defendant in use, or the
@@ -183,20 +185,23 @@ class DefendantService:
 
         cases = DefendantService.case_usage(defendant)
         check_replacement(defendant, replacement, "defendant")
-        require_replacement(defendant.full_name, cases, replacement, "defendant")
+        if not unknown:
+            require_replacement(defendant.full_name, cases, replacement, "defendant")
         ensure_cases_changeable(cases, user)
 
         for case in cases:
-            case.defendants.add(replacement)
+            if replacement is not None:
+                case.defendants.add(replacement)
             case.defendants.remove(defendant)
 
         name, pk = str(defendant), defendant.pk
         defendant.delete()
-        moved = (
-            f"; {len(cases)} case(s) moved to {replacement} ({replacement.pk})"
-            if cases
-            else ""
-        )
+        if cases and replacement is not None:
+            moved = f"; {len(cases)} case(s) moved to {replacement} ({replacement.pk})"
+        elif cases:
+            moved = f"; removed from {len(cases)} case(s)"
+        else:
+            moved = ""
         settings.LOGGER.info(
             f"{describe_user(user)} deleted defendant {name} ({pk}){moved}"
         )

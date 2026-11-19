@@ -213,3 +213,36 @@ class TestDefendants:
         )
 
         assert resp.data["cases"][0]["case_number"] == "IR 5"
+
+    def test_unknown_takes_the_defendant_off_its_cases(self, botanist_client):
+        defendant, co_accused = DefendantFactory(), DefendantFactory()
+        alone, shared = CaseFactory(), CaseFactory()
+        alone.defendants.add(defendant)
+        shared.defendants.add(defendant, co_accused)
+
+        resp = _delete(botanist_client, "defendant_detail", defendant.pk, "unknown")
+
+        assert resp.status_code == 204
+        assert not Defendant.objects.filter(pk=defendant.pk).exists()
+        # A case with no defendant left prints UNKNOWN; co-accused stay.
+        assert not alone.defendants.exists()
+        assert list(shared.defendants.values_list("pk", flat=True)) == [co_accused.pk]
+
+    def test_unknown_still_follows_the_complete_case_rule(
+        self, botanist_client, monkeypatch
+    ):
+        from rest_framework.exceptions import PermissionDenied
+
+        from cases.services import reassignment
+
+        def refuse(cases, user):
+            raise PermissionDenied("complete")
+
+        monkeypatch.setattr(reassignment, "ensure_cases_changeable", refuse)
+        defendant = DefendantFactory()
+        CaseFactory().defendants.add(defendant)
+
+        resp = _delete(botanist_client, "defendant_detail", defendant.pk, "unknown")
+
+        assert resp.status_code == 403
+        assert Defendant.objects.filter(pk=defendant.pk).exists()

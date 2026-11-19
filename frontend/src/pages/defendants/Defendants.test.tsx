@@ -133,6 +133,50 @@ describe("Defendants Page", () => {
 			within(dialog).getByRole("button", { name: "Move 1 case and delete" })
 		);
 
-		expect(mutateAsync).toHaveBeenCalledWith({ id: 4, replacementId: 12 });
+		expect(mutateAsync).toHaveBeenCalledWith({
+			id: 4,
+			replacementId: 12,
+			unknown: false,
+		});
+	});
+
+	it("can set a deleted defendant's cases to an unknown defendant", async () => {
+		const user = userEvent.setup();
+		usage = {
+			cases: [
+				{
+					id: 41,
+					case_number: "IR 41",
+					roles: ["defendant"],
+					status: "assessment",
+					status_display: "Assessment",
+					is_complete: false,
+				},
+			],
+		};
+		renderDelete();
+
+		const dialog = await screen.findByRole("dialog");
+		const confirm = within(dialog).getByRole("button", {
+			name: "Move 1 case and delete",
+		});
+		expect(confirm).toBeDisabled();
+
+		await user.click(
+			within(dialog).getByLabelText(/set these cases to an unknown defendant/i)
+		);
+		// The picker is replaced by the unknown option.
+		expect(within(dialog).queryByLabelText(/replace with/i)).toBeNull();
+		await user.click(
+			within(dialog).getByRole("button", {
+				name: "Set 1 case to unknown and delete",
+			})
+		);
+
+		expect(mutateAsync).toHaveBeenCalledWith({
+			id: 4,
+			replacementId: null,
+			unknown: true,
+		});
 	});
 });
