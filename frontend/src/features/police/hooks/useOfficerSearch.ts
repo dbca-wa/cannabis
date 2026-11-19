@@ -7,6 +7,7 @@ import type {
 	PaginatedPoliceOfficersResponse,
 	PoliceOfficerTiny,
 } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 export interface UseOfficerSearchOptions {
 	query?: string;
@@ -79,7 +80,7 @@ export const useOfficerSearch = (
 		...cacheConfig.search, // Use optimized cache settings
 		// Keep previous results visible during the next search to avoid flashing
 		placeholderData: keepPreviousData,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 
@@ -96,7 +97,7 @@ export const useOfficerSearch = (
 		},
 		enabled: enabled && isInitialDataRequest,
 		...cacheConfig.initial, // Use optimized cache settings for initial data
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 

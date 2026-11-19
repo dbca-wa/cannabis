@@ -11,6 +11,7 @@ from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.exceptions import NotFound, ValidationError
 
 from common.logging import describe_user
+from common.utils.search import search_terms as split_search
 
 from ..models import Defendant
 from ..serializers import DefendantTinySerializer
@@ -93,7 +94,7 @@ class DefendantService:
             queryset = queryset.exclude(placeholder_name_q())
 
         if search:
-            search_terms = search.strip().split()
+            search_terms = split_search(search)
             for term in search_terms:
                 queryset = queryset.filter(
                     Q(given_names__icontains=term) | Q(last_name__icontains=term)

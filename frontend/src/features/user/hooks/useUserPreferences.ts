@@ -3,6 +3,7 @@ import { UserPreferencesService } from "@/features/user/services/userPreferences
 import type { UserPreferences } from "@/shared/types/backend-api.types";
 import { logger } from "@/shared/services/logger.service";
 import { toast } from "sonner";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 /**
  * Query keys for user preferences
@@ -21,7 +22,7 @@ export function useUserPreferences() {
 		queryFn: UserPreferencesService.getPreferences,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 10 * 60 * 1000, // 10 minutes
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 }

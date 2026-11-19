@@ -8,6 +8,7 @@ import {
 	type Role,
 	type IUser,
 } from "../types/users.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 export interface UseUserSearchOptions {
 	query?: string;
@@ -108,7 +109,7 @@ export const useUserSearch = (
 		...cacheConfig.search,
 		// Keep previous results visible during the next search to avoid flashing
 		placeholderData: keepPreviousData,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 
@@ -143,7 +144,7 @@ export const useUserSearch = (
 		},
 		enabled: enabled && isInitialDataRequest,
 		...cacheConfig.initial,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 

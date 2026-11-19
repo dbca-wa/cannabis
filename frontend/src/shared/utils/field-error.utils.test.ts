@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { describeFieldError } from "./field-error.utils";
+import { describe, expect, it, vi } from "vitest";
+import {
+	applyServerFieldErrors,
+	describeFieldError,
+	serverFieldErrors,
+} from "./field-error.utils";
 
 describe("describeFieldError", () => {
 	it("leaves a full sentence from the server as it is", () => {
@@ -12,9 +16,9 @@ describe("describeFieldError", () => {
 		expect(
 			describeFieldError(
 				"last_name",
-				"An officer named 'Alex Turner' already exists at Fremantle."
+				"An officer named 'TURNER, Alex' already exists at Fremantle."
 			)
-		).toBe("An officer named 'Alex Turner' already exists at Fremantle.");
+		).toBe("An officer named 'TURNER, Alex' already exists at Fremantle.");
 	});
 
 	it.each([
@@ -44,5 +48,62 @@ describe("describeFieldError", () => {
 		expect(describeFieldError("non_field_errors", "This field is wrong.")).toBe(
 			"This field is wrong."
 		);
+	});
+});
+
+describe("serverFieldErrors", () => {
+	it("reads the API client's fieldErrors, first message per field", () => {
+		expect(
+			serverFieldErrors({
+				message: "x",
+				status: 400,
+				fieldErrors: {
+					badge_number: ["Badge number PD1 already belongs to TURNER, Alex."],
+					last_name: ["First.", "Second."],
+				},
+			})
+		).toEqual({
+			badge_number: "Badge number PD1 already belongs to TURNER, Alex.",
+			last_name: "First.",
+		});
+	});
+
+	it("also reads a raw response body and ignores the debug block", () => {
+		expect(
+			serverFieldErrors({
+				response: { data: { name: "Taken.", debug: { exception: "x" } } },
+			})
+		).toEqual({ name: "Taken." });
+	});
+
+	it("returns nothing for errors without field messages", () => {
+		expect(serverFieldErrors(new Error("Network"))).toEqual({});
+		expect(serverFieldErrors(null)).toEqual({});
+		expect(serverFieldErrors("oops")).toEqual({});
+	});
+});
+
+describe("applyServerFieldErrors", () => {
+	it("sets each listed field the server rejected", () => {
+		const setError = vi.fn();
+		const shown = applyServerFieldErrors(
+			{ fieldErrors: { badge_number: ["In use."], rank: ["Bad."] } },
+			setError,
+			["last_name", "badge_number"]
+		);
+		expect(shown).toBe(true);
+		expect(setError).toHaveBeenCalledOnce();
+		expect(setError).toHaveBeenCalledWith("badge_number", {
+			type: "server",
+			message: "In use.",
+		});
+	});
+
+	it("reports false when no listed field was rejected", () => {
+		const setError = vi.fn();
+		expect(applyServerFieldErrors(new Error("x"), setError, ["name"])).toBe(
+			false
+		);
+		expect(setError).not.toHaveBeenCalled();
 	});
 });

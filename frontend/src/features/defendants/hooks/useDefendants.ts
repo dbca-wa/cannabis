@@ -17,6 +17,7 @@ import type {
 	DefendantCreateRequest,
 	DefendantUpdateRequest,
 } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 // Query keys following established patterns
 export const defendantsQueryKeys = {
@@ -34,7 +35,7 @@ export const useDefendants = (params: DefendantsQueryParams = {}) => {
 		queryKey: defendantsQueryKeys.list(params),
 		queryFn: () => getDefendants(params),
 		staleTime: 5 * 60 * 1000,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
@@ -46,7 +47,7 @@ export const useDefendantById = (id: number | null, enabled = true) => {
 		queryFn: () => getDefendantById(id!),
 		enabled: !!id && enabled,
 		...cacheConfig.detail,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };

@@ -340,6 +340,14 @@ const GLOSSARY: [string, string][] = [
 		"A botanist from older records, hidden from the selection list while their past cases stay intact.",
 	],
 	[
+		"Merge",
+		"Combines duplicate records of one officer, station or defendant into the one you keep. Their cases move to it and the duplicates are removed.",
+	],
+	[
+		"Names",
+		"Officers and defendants are shown as SURNAME, Given Names everywhere, as on the certificate. Staff names are shown given name first.",
+	],
+	[
 		"Needs re-package",
 		"Shown on a batch whose certificates have changed since it was packaged. Re-package it to rebuild them.",
 	],
@@ -1339,6 +1347,13 @@ const Guide = () => {
 								points at the record, so a correction made here shows on every
 								case that uses it.
 							</p>
+							<Tip>
+								Officers and defendants are always shown surname first in
+								capitals, for example WINCHESTER, Dean, the same as on the
+								Priority 3 form and the certificate. To find someone, type the
+								surname, the given name, or the name exactly as shown; the comma
+								is optional.
+							</Tip>
 							<h3>Correcting a record</h3>
 							<p>
 								Click the row to open it, change the details, and click{" "}
@@ -1379,7 +1394,9 @@ const Guide = () => {
 							<Tip>
 								Duplicates often share a name and badge number, so check the
 								station shown beside each one. Keep the record with the correct
-								station and rank.
+								station and rank. To stop new duplicates, the app refuses a
+								badge number another officer already has and names that officer,
+								so you can search for them instead.
 							</Tip>
 							<img
 								src="/assets/guide/merge-officers.png"
@@ -1416,7 +1433,7 @@ const Guide = () => {
 							</Rule>
 							<img
 								src="/assets/guide/delete-defendant-unknown.png"
-								alt="The Delete defendant dialog for an Unknown Unknown record, listing the two cases that use it, with Set these cases to an unknown defendant ticked and the button reading Set 2 cases to unknown and delete"
+								alt="The Delete defendant dialog for an UNKNOWN, Unknown record, listing the two cases that use it, with Set these cases to an unknown defendant ticked and the button reading Set 2 cases to unknown and delete"
 								className="mx-auto max-w-xl rounded-lg border shadow-sm"
 							/>
 							<Tip>

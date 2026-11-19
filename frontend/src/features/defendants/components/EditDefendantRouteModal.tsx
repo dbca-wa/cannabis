@@ -26,22 +26,19 @@ export const EditDefendantRouteModal = () => {
 	const handleSubmit = async (data: EditDefendantFormData) => {
 		if (!defendantIdNum) return;
 
-		try {
-			// Transform form data for API
-			const apiData = {
-				given_names: data.given_names || null,
-				last_name: data.last_name,
-			};
+		// Errors reach the form, which shows each message beside its field;
+		// the mutation also shows a toast and the modal stays open.
+		// Transform form data for API
+		const apiData = {
+			given_names: data.given_names || null,
+			last_name: data.last_name,
+		};
 
-			await updateDefendant.mutateAsync({
-				id: defendantIdNum,
-				data: apiData,
-			});
-			handleClose();
-		} catch (error) {
-			// Error is handled by the mutation
-			console.error("Failed to update defendant:", error);
-		}
+		await updateDefendant.mutateAsync({
+			id: defendantIdNum,
+			data: apiData,
+		});
+		handleClose();
 	};
 
 	if (isLoading) {

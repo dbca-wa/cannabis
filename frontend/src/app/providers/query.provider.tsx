@@ -1,39 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { logger } from "@/shared/services/logger.service";
-import { getErrorMessage, isApiError } from "@/shared/utils/error.utils";
+import { getErrorMessage } from "@/shared/utils/error.utils";
+import { getErrorStatus } from "@/shared/utils/query-retry.utils";
 
 interface QueryProviderProps {
 	children: ReactNode;
-}
-
-// error detection
-function getErrorStatus(error: unknown): number | null {
-	// Check if it's an API error first
-	if (isApiError(error)) {
-		return error.status;
-	}
-
-	// Check for direct status property
-	if (error && typeof error === "object" && "status" in error) {
-		const status = (error as { status: unknown }).status;
-		return typeof status === "number" ? status : null;
-	}
-
-	// Check for response.status property
-	if (
-		error &&
-		typeof error === "object" &&
-		"response" in error &&
-		error.response &&
-		typeof error.response === "object" &&
-		"status" in error.response
-	) {
-		const status = (error.response as { status: unknown }).status;
-		return typeof status === "number" ? status : null;
-	}
-
-	return null;
 }
 
 function isAuthError(error: unknown): boolean {

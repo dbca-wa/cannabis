@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.logging import describe_user
+from common.utils.search import search_terms as split_search
 from users.permissions import HasAppAccess
 
 from ..models import Case
@@ -132,15 +133,26 @@ def _apply_filters(queryset, params):
 
     search = params.get("search")
     if search:
-        search_q = (
-            Q(case_number__icontains=search)
-            | Q(requesting_officer__given_names__icontains=search)
-            | Q(requesting_officer__last_name__icontains=search)
-            | Q(submitting_officer__given_names__icontains=search)
-            | Q(submitting_officer__last_name__icontains=search)
-            | Q(defendants__given_names__icontains=search)
-            | Q(defendants__last_name__icontains=search)
+        # A police reference matches as typed. Names match word by word, so
+        # "WINCHESTER, Dean" (as names are shown) and "Dean Winchester" both
+        # find the case.
+        name_fields = (
+            "requesting_officer__given_names",
+            "requesting_officer__last_name",
+            "submitting_officer__given_names",
+            "submitting_officer__last_name",
+            "defendants__given_names",
+            "defendants__last_name",
         )
+        names_q = Q()
+        for term in split_search(search):
+            term_q = Q()
+            for field in name_fields:
+                term_q |= Q(**{f"{field}__icontains": term})
+            names_q &= term_q
+        search_q = Q(case_number__icontains=search)
+        if names_q:
+            search_q |= names_q
         if search.isdigit():
             search_q = search_q | Q(pk=int(search))
         queryset = queryset.filter(search_q).distinct()

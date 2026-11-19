@@ -16,15 +16,10 @@ export const CreateOfficerRouteModal = () => {
 	};
 
 	const handleSubmit = async (data: unknown) => {
-		try {
-			await createOfficerMutation.mutateAsync(
-				data as PoliceOfficerCreateRequest
-			);
-			handleClose();
-		} catch (error) {
-			// Error is handled by the mutation
-			console.error("Create officer error:", error);
-		}
+		// Errors reach the form, which shows each message beside its field;
+		// the mutation also shows a toast and the modal stays open.
+		await createOfficerMutation.mutateAsync(data as PoliceOfficerCreateRequest);
+		handleClose();
 	};
 
 	return (

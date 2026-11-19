@@ -18,6 +18,7 @@ from rest_framework.status import (
 from rest_framework.views import APIView
 
 from common.logging import describe_user
+from common.utils.search import search_terms as split_search
 from users.permissions import HasAppAccess
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ class PoliceOfficerListView(ListCreateAPIView):
         # "Shane P" finds officers where ALL words match across any searchable field
         search = self.request.query_params.get("search")
         if search:
-            search_terms = search.strip().split()
+            search_terms = split_search(search)
             for term in search_terms:
                 queryset = queryset.filter(
                     Q(given_names__icontains=term)
@@ -299,7 +300,7 @@ class PoliceOfficerExportView(APIView):
         # Search functionality — supports multi-word queries
         search = self.request.query_params.get("search")
         if search:
-            search_terms = search.strip().split()
+            search_terms = split_search(search)
             for term in search_terms:
                 queryset = queryset.filter(
                     Q(given_names__icontains=term)

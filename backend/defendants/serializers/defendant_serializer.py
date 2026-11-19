@@ -75,7 +75,10 @@ class DefendantSerializer(serializers.ModelSerializer):
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            full = f"{given_names} {last_name}".strip()
+            # Surname first, as defendants are shown everywhere else.
+            surname = (last_name or "").strip().upper()
+            given = (given_names or "").strip()
+            full = f"{surname}, {given}" if given else surname
             raise serializers.ValidationError(
                 {"last_name": f"A defendant named '{full}' already exists."}
             )
