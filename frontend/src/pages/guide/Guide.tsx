@@ -1368,8 +1368,9 @@ const Guide = () => {
 									duplicate.
 								</li>
 								<li>
-									Click <Ui>Merge</Ui> and confirm. The duplicates are removed
-									and their cases now name the record you kept.
+									Check the preview, then click <Ui>Confirm Merge</Ui>. The
+									duplicates are removed and their cases now name the record you
+									kept.
 								</li>
 							</ol>
 							<h3>Deleting a record</h3>
