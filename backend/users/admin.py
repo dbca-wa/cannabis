@@ -60,6 +60,7 @@ class CustomUserAdmin(UserAdmin):
                 "fields": (
                     "is_superuser",
                     "is_staff",
+                    "is_maintainer",
                     "is_active",
                     "groups",
                     "user_permissions",
@@ -84,6 +85,13 @@ class CustomUserAdmin(UserAdmin):
     )
 
     readonly_fields = ("invitation_accepted_at", "password_last_changed")
+
+    def get_readonly_fields(self, request, obj=None):
+        # Maintainers can run system tasks, so only a superuser grants it.
+        fields = tuple(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            fields += ("is_maintainer",)
+        return fields
 
     # Add fieldsets for user creation
     add_fieldsets = (
@@ -112,6 +120,7 @@ class CustomUserAdmin(UserAdmin):
         "is_active",
         "is_staff",
         "is_superuser",
+        "is_maintainer",
         "date_joined",
     )
 

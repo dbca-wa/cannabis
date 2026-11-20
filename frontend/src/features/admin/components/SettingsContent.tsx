@@ -29,6 +29,7 @@ import {
 	type CertificateDefaultField,
 } from "@/features/admin/components/settings/CertificateDefaultsCard";
 import { TemplatesSettingsCard } from "@/features/cases/components/templates/TemplatesSettingsCard";
+import { LegacyImportCard } from "@/features/admin/components/settings/LegacyImportCard";
 import { logger } from "@/shared/services/logger.service";
 
 import type { SystemSettings } from "@/shared/types/backend-api.types";
@@ -554,6 +555,10 @@ const SettingsContent = () => {
 							administrators.
 						</p>
 					</Card>
+				)}
+				{/* Legacy import — maintainers only (the server checks too) */}
+				{user?.is_maintainer && (
+					<LegacyImportCard environment={settings.environment} />
 				)}
 			</div>
 

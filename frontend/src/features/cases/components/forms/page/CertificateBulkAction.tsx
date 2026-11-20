@@ -2,6 +2,8 @@ import { Check, FileText, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 import {
+	canHaveCertificate,
+	isLegacyForm,
 	nextCertificateAction,
 	useCaseCertificates,
 } from "../../../hooks/useCaseCertificates";
@@ -34,7 +36,7 @@ export const CertificateBulkAction = ({
 		isMarkingAllReady,
 	} = useCaseCertificates(caseId);
 	const action = nextCertificateAction(forms);
-	const eligible = forms.filter((f) => (f.bags?.length ?? 0) > 0);
+	const eligible = forms.filter(canHaveCertificate);
 	const missingCount = eligible.filter(
 		(f) => !f.certificate?.pdf_url && !f.certificate?.pdf_file
 	).length;
@@ -42,15 +44,18 @@ export const CertificateBulkAction = ({
 	const busy = isGenerating || isMarkingAllReady;
 
 	const noBags = eligible.length === 0;
+	const onlyLegacy = noBags && forms.some(isLegacyForm);
 	const blockedReason = locked
 		? lockMessage
-		: noBags
-			? "Add a drug bag to a form before generating certificates"
-			: action === "regenerate" && anyBatched
-				? "Certificates are batched. Use Re-package on the batch in Batches to rebuild them."
-				: action === null
-					? "Every certificate is up to date and marked ready"
-					: undefined;
+		: onlyLegacy
+			? "These forms were certified by the old system; no new certificate is made"
+			: noBags
+				? "Add a drug bag to a form before generating certificates"
+				: action === "regenerate" && anyBatched
+					? "Certificates are batched. Use Re-package on the batch in Batches to rebuild them."
+					: action === null
+						? "Every certificate is up to date and marked ready"
+						: undefined;
 	const disabled = busy || blockedReason !== undefined;
 
 	const icon = busy ? (

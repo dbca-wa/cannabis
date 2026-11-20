@@ -81,8 +81,11 @@ uploads/
 backend/media/
 backend/files/
 
-# ETL
-backend/etl/
+# ETL: the code is tracked; all data (source rows, transformed records,
+# reports, screenshots) holds personal information and must never be committed.
+backend/etl/data/
+backend/etl/**/debug.txt
+backend/etl/**/transformation_logs.txt
 
 # Build artifacts (generated files)
 staticfiles/

@@ -1,6 +1,4 @@
-"""Property 4: Each bag is covered by exactly its form's one certificate (R10.4).
-
-**Validates: Requirements 10.4**
+"""Each bag is covered by exactly its form's one certificate.
 
 Generates a form with bags, generates its certificate. Asserts
 certificate.form.bags == form.bags exactly (no bag in two certificates).

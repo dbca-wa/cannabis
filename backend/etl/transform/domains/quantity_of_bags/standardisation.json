@@ -1,0 +1,578 @@
+{
+    "source_column_name": "Quantity of Bags",
+    "sink_column_name": "quantity_of_bags",
+    "bad_data_handling": {
+        "strategy": "flag_and_preserve",
+        "flag_value": "INVALID_QUANTITY",
+        "preserve_original": true,
+        "log_level": "warn",
+        "require_manual_review": true,
+        "fuzzy_matching": {
+            "enabled": true,
+            "threshold": 0.8,
+            "log_matches": true
+        }
+    },
+    "validation_rules": {
+        "min_quantity": 1,
+        "max_quantity": 500,
+        "reasonable_max": 50
+    },
+    "entries": [
+        {
+            "canonical": 1,
+            "variants": [
+                "one",
+                "One",
+                "ONE",
+                "1"
+            ]
+        },
+        {
+            "canonical": 2,
+            "variants": [
+                "two",
+                "Two",
+                "TWO",
+                "2",
+                "two (16 & 17, of 17 randomly selected from 174)"
+            ]
+        },
+        {
+            "canonical": 3,
+            "variants": [
+                "three",
+                "Three",
+                "THREE",
+                "3"
+            ]
+        },
+        {
+            "canonical": 4,
+            "variants": [
+                "four",
+                "Four",
+                "FOUR",
+                "4",
+                "four (6 to 9, of 17 randomly selected from 174)"
+            ]
+        },
+        {
+            "canonical": 5,
+            "variants": [
+                "five",
+                "Five",
+                "FIVE",
+                "fiive",
+                "5",
+                "five (1 to 5, of 17 randomly selected from 174)"
+            ]
+        },
+        {
+            "canonical": 6,
+            "variants": [
+                "six",
+                "Six",
+                "SIX",
+                "6",
+                "six (10 to 15, of 17 randomly selected from 174)"
+            ]
+        },
+        {
+            "canonical": 7,
+            "variants": [
+                "seven",
+                "Seven",
+                "SEVEN",
+                "7"
+            ]
+        },
+        {
+            "canonical": 8,
+            "variants": [
+                "eight",
+                "Eight",
+                "EIGHT",
+                "8"
+            ]
+        },
+        {
+            "canonical": 9,
+            "variants": [
+                "nine",
+                "Nine",
+                "NINE",
+                "9"
+            ]
+        },
+        {
+            "canonical": 10,
+            "variants": [
+                "ten",
+                "Ten",
+                "TEN",
+                "10"
+            ]
+        },
+        {
+            "canonical": 11,
+            "variants": [
+                "eleven",
+                "Eleven",
+                "ELEVEN",
+                "11"
+            ]
+        },
+        {
+            "canonical": 12,
+            "variants": [
+                "twelve",
+                "Twelve",
+                "TWELVE",
+                "12"
+            ]
+        },
+        {
+            "canonical": 13,
+            "variants": [
+                "thirteen",
+                "Thirteen",
+                "THIRTEEN",
+                "13"
+            ]
+        },
+        {
+            "canonical": 14,
+            "variants": [
+                "fourteen",
+                "Fourteen",
+                "FOURTEEN",
+                "14"
+            ]
+        },
+        {
+            "canonical": 15,
+            "variants": [
+                "fifteen",
+                "Fifteen",
+                "FIFTEEN",
+                "15"
+            ]
+        },
+        {
+            "canonical": 16,
+            "variants": [
+                "sixteen",
+                "Sixteen",
+                "SIXTEEN",
+                "16"
+            ]
+        },
+        {
+            "canonical": 17,
+            "variants": [
+                "seventeen",
+                "Seventeen",
+                "SEVENTEEN",
+                "17"
+            ]
+        },
+        {
+            "canonical": 18,
+            "variants": [
+                "eighteen",
+                "Eighteen",
+                "EIGHTEEN",
+                "18"
+            ]
+        },
+        {
+            "canonical": 19,
+            "variants": [
+                "nineteen",
+                "Nineteen",
+                "NINETEEN",
+                "19"
+            ]
+        },
+        {
+            "canonical": 20,
+            "variants": [
+                "twenty",
+                "Twenty",
+                "TWENTY",
+                "20"
+            ]
+        },
+        {
+            "canonical": 21,
+            "variants": [
+                "twenty one",
+                "twenty-one",
+                "twentyone",
+                "Twenty One",
+                "21"
+            ]
+        },
+        {
+            "canonical": 22,
+            "variants": [
+                "twenty two",
+                "twenty-two",
+                "twentytwo",
+                "Twenty Two",
+                "22"
+            ]
+        },
+        {
+            "canonical": 23,
+            "variants": [
+                "twenty three",
+                "twenty-three",
+                "twentythree",
+                "Twenty Three",
+                "23"
+            ]
+        },
+        {
+            "canonical": 24,
+            "variants": [
+                "twenty four",
+                "twenty-four",
+                "twentyfour",
+                "Twenty Four",
+                "24"
+            ]
+        },
+        {
+            "canonical": 25,
+            "variants": [
+                "twenty five",
+                "twenty-five",
+                "twentyfive",
+                "Twenty Five",
+                "25"
+            ]
+        },
+        {
+            "canonical": 26,
+            "variants": [
+                "twenty six",
+                "twenty-six",
+                "twentysix",
+                "Twenty Six",
+                "26"
+            ]
+        },
+        {
+            "canonical": 27,
+            "variants": [
+                "twenty seven",
+                "twenty-seven",
+                "twentyseven",
+                "Twenty Seven",
+                "27"
+            ]
+        },
+        {
+            "canonical": 28,
+            "variants": [
+                "twenty eight",
+                "twenty-eight",
+                "twentyeight",
+                "Twenty Eight",
+                "28"
+            ]
+        },
+        {
+            "canonical": 29,
+            "variants": [
+                "twenty nine",
+                "twenty-nine",
+                "twentynine",
+                "Twenty Nine",
+                "29"
+            ]
+        },
+        {
+            "canonical": 30,
+            "variants": [
+                "thirty",
+                "Thirty",
+                "THIRTY",
+                "30"
+            ]
+        },
+        {
+            "canonical": 38,
+            "variants": [
+                "thirty eight",
+                "thirty-eight",
+                "thirtyeight",
+                "Thirty Eight",
+                "38"
+            ]
+        },
+        {
+            "canonical": 40,
+            "variants": [
+                "forty",
+                "Forty",
+                "FORTY",
+                "40"
+            ]
+        },
+        {
+            "canonical": 50,
+            "variants": [
+                "fifty",
+                "Fifty",
+                "FIFTY",
+                "50"
+            ]
+        },
+        {
+            "canonical": 55,
+            "variants": [
+                "fifty five",
+                "fifty-five",
+                "fiftyfive",
+                "Fifty Five",
+                "55"
+            ]
+        },
+        {
+            "canonical": 60,
+            "variants": [
+                "sixty",
+                "Sixty",
+                "SIXTY",
+                "60"
+            ]
+        },
+        {
+            "canonical": 70,
+            "variants": [
+                "seventy",
+                "Seventy",
+                "SEVENTY",
+                "70"
+            ]
+        },
+        {
+            "canonical": 80,
+            "variants": [
+                "eighty",
+                "Eighty",
+                "EIGHTY",
+                "80"
+            ]
+        },
+        {
+            "canonical": 81,
+            "variants": [
+                "eighty one",
+                "eighty-one",
+                "eightyone",
+                "Eighty One",
+                "81"
+            ]
+        },
+        {
+            "canonical": 82,
+            "variants": [
+                "eighty two",
+                "eighty-two",
+                "eightytwo",
+                "Eighty Two",
+                "82"
+            ]
+        },
+        {
+            "canonical": 83,
+            "variants": [
+                "eighty three",
+                "eighty-three",
+                "eightythree",
+                "Eighty Three",
+                "83"
+            ]
+        },
+        {
+            "canonical": 84,
+            "variants": [
+                "eighty four",
+                "eighty-four",
+                "eightyfour",
+                "Eighty Four",
+                "84"
+            ]
+        },
+        {
+            "canonical": 85,
+            "variants": [
+                "eighty five",
+                "eighty-five",
+                "eightyfive",
+                "Eighty Five",
+                "85"
+            ]
+        },
+        {
+            "canonical": 86,
+            "variants": [
+                "eighty six",
+                "eighty-six",
+                "eightysix",
+                "Eighty Six",
+                "86"
+            ]
+        },
+        {
+            "canonical": 87,
+            "variants": [
+                "eighty seven",
+                "eighty-seven",
+                "eightyseven",
+                "Eighty Seven",
+                "87"
+            ]
+        },
+        {
+            "canonical": 88,
+            "variants": [
+                "eighty eight",
+                "eighty-eight",
+                "eightyeight",
+                "Eighty Eight",
+                "88"
+            ]
+        },
+        {
+            "canonical": 89,
+            "variants": [
+                "eighty nine",
+                "eighty-nine",
+                "eightynine",
+                "Eighty Nine",
+                "89"
+            ]
+        },
+        {
+            "canonical": 90,
+            "variants": [
+                "ninety",
+                "Ninety",
+                "NINETY",
+                "90"
+            ]
+        },
+        {
+            "canonical": 91,
+            "variants": [
+                "ninety one",
+                "ninety-one",
+                "ninetyone",
+                "Ninety One",
+                "91"
+            ]
+        },
+        {
+            "canonical": 92,
+            "variants": [
+                "ninety two",
+                "ninety-two",
+                "ninetytwo",
+                "Ninety Two",
+                "92"
+            ]
+        },
+        {
+            "canonical": 93,
+            "variants": [
+                "ninety three",
+                "ninety-three",
+                "ninetythree",
+                "Ninety Three",
+                "93"
+            ]
+        },
+        {
+            "canonical": 94,
+            "variants": [
+                "ninety four",
+                "ninety-four",
+                "ninetyfour",
+                "Ninety Four",
+                "94"
+            ]
+        },
+        {
+            "canonical": 95,
+            "variants": [
+                "ninety five",
+                "ninety-five",
+                "ninetyfive",
+                "Ninety Five",
+                "95"
+            ]
+        },
+        {
+            "canonical": 96,
+            "variants": [
+                "ninety six",
+                "ninety-six",
+                "ninetysix",
+                "Ninety Six",
+                "96"
+            ]
+        },
+        {
+            "canonical": 97,
+            "variants": [
+                "ninety seven",
+                "ninety-seven",
+                "ninetyseven",
+                "Ninety Seven",
+                "97"
+            ]
+        },
+        {
+            "canonical": 98,
+            "variants": [
+                "ninety eight",
+                "ninety-eight",
+                "ninetyeight",
+                "Ninety Eight",
+                "98"
+            ]
+        },
+        {
+            "canonical": 99,
+            "variants": [
+                "ninety nine",
+                "ninety-nine",
+                "ninetynine",
+                "Ninety Nine",
+                "99"
+            ]
+        },
+        {
+            "canonical": 100,
+            "variants": [
+                "one hundred",
+                "one-hundred",
+                "onehundred",
+                "One Hundred",
+                "100"
+            ]
+        },
+        {
+            "canonical": 36,
+            "variants": [
+                "36",
+                "thirty six"
+            ]
+        }
+    ]
+}

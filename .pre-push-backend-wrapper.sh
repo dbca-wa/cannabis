@@ -32,7 +32,7 @@ echo "→ Flake8 (linting)..."
 poetry run flake8 \
     --max-line-length=88 \
     --extend-ignore=E203,W503,E501 \
-    --exclude=migrations,__pycache__,.venv,venv,build,dist,.pytest_cache,htmlcov,staticfiles,etl,scripts,_run_etl.py,_etl_ \
+    --exclude=migrations,__pycache__,.venv,venv,build,dist,.pytest_cache,htmlcov,staticfiles,etl/data \
     . || {
     echo "✗ Flake8 errors. Fix them before pushing (or use --no-verify to bypass)."
     exit 1
@@ -40,7 +40,7 @@ poetry run flake8 \
 
 echo "→ Bandit (security)..."
 poetry run bandit -c pyproject.toml -r . \
-    --exclude tests,migrations,venv,scripts,_run_etl.py -q || {
+    --exclude tests,migrations,venv,etl/data -q || {
     echo "✗ Bandit findings. Fix them before pushing (or use --no-verify to bypass)."
     exit 1
 }

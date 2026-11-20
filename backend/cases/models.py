@@ -257,6 +257,25 @@ class Priority3Form(AuditModel):
         help_text="Per-form Section C 'other matters' content for this form's certificate",
     )
 
+    # Identity of the certificate this form was imported from. Legacy forms have
+    # no Certificate row (the app's R-number sequence is not shared), so the old
+    # system's number and date live here. Not unique: a legacy certificate with
+    # more than five bags is split across several forms. Blank on forms made in
+    # the app.
+    legacy_certificate_number = models.CharField(
+        max_length=20,
+        blank=True,
+        db_index=True,
+        verbose_name="Legacy Certificate Number",
+        help_text="Certificate number from the old system, for imported forms only",
+    )
+    legacy_certified_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="Legacy Certification Date",
+        help_text="Date the old system certified this form, for imported forms only",
+    )
+
     # Certificate readiness — set by the user after reviewing the generated cert
     marked_ready = models.BooleanField(
         default=False,
@@ -962,3 +981,134 @@ class SectionCTemplate(AuditModel):
 
     def __str__(self):
         return self.name
+
+
+class LegacySourceRecord(models.Model):
+    """One row of the old system's certificate table, kept exactly as imported.
+
+    The legacy import turns each row into a case, forms, bags and results. This
+    record keeps the original row next to what the import made of it, so any
+    mistake found after go-live can be traced to its source and corrected
+    without the old database. ``source_row`` is the row as read from the Access
+    table (dates in ISO form); ``transformed`` is the standardised record the
+    loader used. The row's forms carry the same ``legacy_certificate_number``.
+    """
+
+    certificate_number = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Certificate Number of the source row (its key in the old system)",
+    )
+    source_table = models.CharField(
+        max_length=100,
+        default="Cannabis2000.mdb: Cannabis",
+        help_text="Where the row came from",
+    )
+    source_row = models.JSONField(
+        help_text="The source row exactly as read from the old system",
+    )
+    transformed = models.JSONField(
+        help_text="The standardised record the import loaded from this row",
+    )
+    # Kept when its case is deleted in the app, so the source is never lost.
+    case = models.ForeignKey(
+        Case,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="legacy_source_records",
+        help_text="The legacy case this row was imported into",
+    )
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Legacy Source Record"
+        verbose_name_plural = "Legacy Source Records"
+        ordering = ["case", "certificate_number"]
+        db_table = "submissions_legacysourcerecord"
+
+    def __str__(self):
+        return f"Legacy certificate {self.certificate_number}"
+
+    @property
+    def forms(self):
+        """The forms created from this row (more than one when over five bags)."""
+        return Priority3Form.all_objects.filter(
+            case=self.case, legacy_certificate_number=self.certificate_number
+        )
+
+
+class LegacyImportBundle(models.Model):
+    """The uploaded legacy import bundle (see ``etl/bundle.py``).
+
+    Holds the old system's table, which contains personal data, so it is kept
+    in the database rather than file storage: it is never given a URL and is
+    read only by the import. Delete it once the import is finished.
+    """
+
+    content = models.BinaryField(editable=False)
+    filename = models.CharField(max_length=255)
+    size = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64)
+    summary = models.JSONField(
+        default=dict, help_text="Rows, files and build time read from the bundle"
+    )
+    uploaded_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="legacy_import_bundles",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Legacy Import Bundle"
+        verbose_name_plural = "Legacy Import Bundles"
+        ordering = ["-uploaded_at"]
+        db_table = "submissions_legacyimportbundle"
+
+    def __str__(self):
+        return f"{self.filename} ({self.sha256[:12]})"
+
+
+class LegacyImportRun(models.Model):
+    """One run of a legacy import task started from the Settings page."""
+
+    class Action(models.TextChoices):
+        DRY_RUN = "dry_run", "Dry run"
+        IMPORT = "import", "Import"
+        RECONCILE = "reconcile", "Reconcile"
+        UNDO = "undo", "Undo import"
+
+    class Status(models.TextChoices):
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        PROBLEMS = "problems", "Finished with problems"
+        FAILED = "failed", "Failed"
+
+    action = models.CharField(max_length=20, choices=Action.choices)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.RUNNING
+    )
+    started_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="legacy_import_runs",
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    bundle_sha256 = models.CharField(max_length=64, blank=True)
+    summary = models.JSONField(default=dict, help_text="Counts and headline results")
+    report = models.JSONField(default=dict, help_text="Full results, e.g. every check")
+    log = models.TextField(blank=True)
+    error = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Legacy Import Run"
+        verbose_name_plural = "Legacy Import Runs"
+        ordering = ["-started_at"]
+        db_table = "submissions_legacyimportrun"
+
+    def __str__(self):
+        return f"{self.get_action_display()} {self.started_at:%Y-%m-%d %H:%M} ({self.status})"

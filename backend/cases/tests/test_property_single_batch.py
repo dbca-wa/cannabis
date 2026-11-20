@@ -1,6 +1,4 @@
-"""Property 6: Each certificate belongs to at most one batch.
-
-**Validates: Requirements 6.8**
+"""Each certificate belongs to at most one batch.
 
 Creates eligible certificates, batches them in disjoint subsets, and asserts
 each certificate is in at most one batch and that create_batch rejects an

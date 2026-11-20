@@ -48,7 +48,8 @@ services:
 
     # PostgreSQL Database
     db:
-        image: postgres:17
+        # Same major version as the staging and production servers.
+        image: postgres:16
         volumes:
             - postgres_data:/var/lib/postgresql/data/
         environment:
@@ -63,7 +64,7 @@ services:
 
     # Redis Cache Service
     redis:
-        image: redis:7-alpine
+        image: redis:8-alpine
         ports:
             - "6379:6379"
         volumes:

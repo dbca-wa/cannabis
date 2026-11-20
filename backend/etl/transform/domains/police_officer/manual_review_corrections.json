@@ -1,0 +1,32 @@
+{
+  "manual_corrections": {
+    "description": "Manual corrections for police officer entries that cannot be automatically parsed",
+    "corrections": [],
+    "flagged_for_review": []
+  },
+  "correction_patterns": {
+    "description": "Patterns for applying manual corrections",
+    "examples": [
+      {
+        "original_value": "problematic entry text",
+        "corrected_structure": {
+          "submitting_officer": {
+            "name": "Officer Name",
+            "rank": "Officer Rank",
+            "badge_id": "Badge ID"
+          },
+          "requesting_officer": {
+            "name": "Officer Name",
+            "rank": "Officer Rank",
+            "badge_id": "Badge ID"
+          },
+          "organisation": "Organization Name",
+          "processing_notes": {
+            "reason": "manual_correction_applied",
+            "correction_type": "manual_review"
+          }
+        }
+      }
+    ]
+  }
+}

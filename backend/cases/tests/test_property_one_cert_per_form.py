@@ -1,6 +1,4 @@
-"""Property 3: A generated form has exactly one certificate (R10.3).
-
-**Validates: Requirements 10.3**
+"""A generated form has exactly one certificate.
 
 Generates a form with 1-5 assessed bags, calls generate_certificate g times
 (g=1..3). Asserts exactly one Certificate exists for the form, and repeated

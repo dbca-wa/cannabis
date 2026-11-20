@@ -1,6 +1,4 @@
-"""Property 8: batch.certificate_count == batch.certificates.count() == k.
-
-**Validates: Requirements 7.5**
+"""batch.certificate_count == batch.certificates.count() == k.
 
 Creates a batch from k eligible certificates (k=1..12) and asserts both the
 stored denormalised count and the actual queryset count equal k.

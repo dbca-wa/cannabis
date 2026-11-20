@@ -1,0 +1,39 @@
+{
+    "source_column_name": "Police Reference Number",
+    "sink_column_name": "police_reference_number",
+    "bad_data_handling": {
+        "strategy": "flag_and_preserve",
+        "flag_value": "UNKNOWN_REF_FORMAT",
+        "preserve_original": true,
+        "log_level": "warn",
+        "require_manual_review": true,
+        "fuzzy_matching": {
+            "enabled": false,
+            "threshold": 0.8,
+            "log_matches": true
+        }
+    },
+    "format_patterns": {
+        "simple_letter_number": {
+            "pattern": "^[A-Z]\\d+$",
+            "description": "Single letter followed by numbers (A12345, B67890)",
+            "standardization": "uppercase_preserve"
+        },
+        "space_separated_format": {
+            "pattern": "^\\d{6}\\s+\\d{4}\\s+\\d+$",
+            "description": "Space separated number format (123456 1234 12345)",
+            "standardization": "preserve_as_is"
+        },
+        "scientific_notation": {
+            "pattern": ".*E\\+.*",
+            "description": "Excel scientific notation corruption",
+            "standardization": "convert_to_string_number"
+        },
+        "pure_numeric": {
+            "pattern": "^\\d+$",
+            "description": "All numeric reference numbers",
+            "standardization": "preserve_as_string"
+        }
+    },
+    "entries": []
+}

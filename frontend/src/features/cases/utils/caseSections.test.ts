@@ -5,6 +5,7 @@ import {
 	deriveCaseSectionStates,
 	describeSectionState,
 	firstIncompleteSection,
+	isLegacyForm,
 } from "./caseSections";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
@@ -457,5 +458,51 @@ describe("describeSectionState", () => {
 		const flags = deriveCaseSectionFlags(completeCaseData(), [staleForm(1)]);
 
 		expect(describeSectionState("certificates", flags)).toMatch(/out of date/i);
+	});
+});
+
+describe("legacy forms", () => {
+	const legacyForm = (id: number, determination = "cannabis_sativa") =>
+		({
+			...form(id, [{ determination }]),
+			phase: "complete",
+			legacy_certificate_number: String(900 + id),
+			legacy_certified_date: "2000-07-28",
+		}) as unknown as Priority3Form;
+
+	it("identifies a form imported from the old system", () => {
+		expect(isLegacyForm(legacyForm(1))).toBe(true);
+		expect(isLegacyForm(form(2, [{ determination: "cannabis_sativa" }]))).toBe(
+			false
+		);
+	});
+
+	it("counts the old system's certificate, so the certificates section is complete", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			legacyForm(1),
+			legacyForm(2),
+		]);
+		expect(flags.allFormsHaveCerts).toBe(true);
+		expect(flags.allFormsReady).toBe(true);
+		expect(flags.certificates).toBe(true);
+		expect(deriveCaseSectionStates(flags).certificates).toBe("complete");
+		expect(describeSectionState("certificates", flags)).toBeNull();
+	});
+
+	it("still reports a legacy bag with no result as unassessed", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			legacyForm(1, "pending"),
+		]);
+		expect(flags.assessment).toBe(false);
+		expect(flags.certificates).toBe(true);
+	});
+
+	it("still needs a certificate for an app form added to a legacy case", () => {
+		const flags = deriveCaseSectionFlags(completeCaseData(), [
+			legacyForm(1),
+			form(2, [{ determination: "cannabis_sativa" }]),
+		]);
+		expect(flags.allFormsHaveCerts).toBe(false);
+		expect(flags.certificates).toBe(false);
 	});
 });

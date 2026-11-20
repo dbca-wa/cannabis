@@ -1,0 +1,352 @@
+{
+    "source_column_name": "Description",
+    "sink_column_name": "description",
+    "bad_data_handling": {
+        "strategy": "flag_and_preserve",
+        "flag_value": "UNKNOWN_DESCRIPTION",
+        "preserve_original": true,
+        "log_level": "warn",
+        "require_manual_review": true,
+        "fuzzy_matching": {
+            "enabled": false,
+            "threshold": 0.8,
+            "log_matches": false
+        }
+    },
+    "entries": [
+        {
+            "canonical": ["plant"],
+            "variants": [
+                "quantity of plant",
+                "quantity of plant bases and plants",
+                "quanityt of plants",
+                "quanitity of plant",
+                "quantity of plants",
+                "quatity of plants",
+                "quantity of plant.",
+                "quantity of plant material and household material",
+                "quantity pf plants",
+                "plant",
+                "plants",
+                "containing a quantity of plants",
+                "quantity of plant and loose green leaf material",
+                "quantity of plant material.",
+                "cannabis",
+                "containing 8 samples numbered t16243, t11753, t11751, t16252, t16247, t11752, t16249 and t16250 containing a quantity of cannabis plant material",
+                "quantity of plants referred to as cannabis strikings",
+                "quantity of plants and stumps",
+                "quantity of plants and branches",
+                "quantity of plants and a plant branch",
+                "quantity of plants (part of)",
+                "quantity of plant strikings",
+                "quantity of plant stems"
+            ]
+        },
+        {
+            "canonical": ["plant_material"],
+            "variants": [
+                "quantity of plant material",
+                "quantity of plant materials"
+            ]
+        },
+        {
+            "canonical": ["seed"],
+            "variants": [
+                "quantity of seed",
+                "qantity of seed",
+                "quantity of seeds",
+                "three smaller bags, each containing a quantity of seeds",
+                "seed",
+                "quantity of seeds, smoking implement and tin",
+                "quantity of seed.",
+                "quantity of seed in jars",
+                "quantity of seed and tin",
+                "quantity of seed and leaf fragments",
+                "2 x small black plant pots containing soil and seeds",
+                "25 grams of seed",
+                "quantity of cannabis seeds"
+            ]
+        },
+        {
+            "canonical": ["seedling"],
+            "variants": [
+                "quantity of seedlings",
+                "seedling"
+            ]
+        },
+        {
+            "canonical": ["stem"],
+            "variants": [
+                "quantity of stems"
+            ]
+        },
+        {
+            "canonical": ["rootball"],
+            "variants": [
+                "quantity of root balls",
+                "quantity of rootballs"
+            ]
+        },
+        {
+            "canonical": ["cutting"],
+            "variants": [
+                "quantity of plant cuttings",
+                "quantity of cuttings"
+            ]
+        },
+        {
+            "canonical": ["head"],
+            "variants": [
+                "quantity of cannabis head and leaf material"
+            ]
+        },
+        {
+            "canonical": ["unknown_seed"],
+            "variants": [
+                "unknown seeds",
+                "quantity of unknown seeds",
+                "clipseal bag containing black and brown seeds",
+                "quantity of clip seal bag marked rainbow rose seeds"
+            ]
+        },
+        {
+            "canonical": ["poppy_capsule"],
+            "variants": [
+                "containing one poppy capsule",
+                "poppy capsule"
+            ]
+        },
+        {
+            "canonical": ["poppy_plant"],
+            "variants": [
+                "quantity of poppy plants - not known if illegal type"
+            ]
+        },
+        {
+            "canonical": ["mushroom"],
+            "variants": [
+                "quantity of mushrooms"
+            ]
+        },
+        {
+            "canonical": ["unknown"],
+            "variants": [
+                "quantity of unknown drug/chemical",
+                "quantity of agricultural items"
+            ]
+        },
+        {
+            "canonical": ["unsure"],
+            "variants": [
+                "t36410, t36409, t36408,t36407, t36406, t36405",
+                "quantity of small glass pot containing seeds btb cannabis",
+                "quantity of plant and plant root stalks"
+            ]
+        },
+        {
+            "canonical": ["plant", "rootball"],
+            "variants": [
+                "plant and rootballs",
+                "quantity of plants, leaf and rootballs",
+                "quantity of plants and roots",
+                "quantity of plants and rootballs",
+                "quantity of plants and plant root balls",
+                "quantity of plant with roots from back garden"
+            ]
+        },
+        {
+            "canonical": ["plant", "seed"],
+            "variants": [
+                "quantity of plant and seed",
+                "quantity of seed and plant",
+                "quantity of seed and plants",
+                "quantity of plants and seeds",
+                "quantity of plants and seed",
+                "quantity of seeds and plants",
+                "quantity of seeds and plants.",
+                "quantity of seeds and plant",
+                "plant and a quantity of seeds",
+                "quantity of plant and seeds",
+                "93 plants weighing in total 3.6 kg and 47.3 gms of seeds",
+                "plant and seed",
+                "quantity of plant & seed",
+                "quantity of plant and cannabis seeds",
+                "quantity of plant and seed in jars",
+                "quantity of plant and seed."
+            ]
+        },
+        {
+            "canonical": ["plant", "plant_material"],
+            "variants": [
+                "quantity of plant and plant material",
+                "quantity of plants and plant material",
+                "quantity of plant material and plant",
+                "quantity of plant & plant material",
+                "quantity of plant material and plants",
+                "quantity of plant materials and plant"
+            ]
+        },
+        {
+            "canonical": ["plant", "seedling"],
+            "variants": [
+                "quantity of plants and seedlings",
+                "quantity of seedlings and a plant",
+                "quantity of seedlings and plants",
+                "plant material, very small seedlings"
+            ]
+        },
+        {
+            "canonical": ["plant", "cutting"],
+            "variants": [
+                "quantity of plants and cuttings",
+                "quantity of cuttings/plants"
+            ]
+        },
+        {
+            "canonical": ["plant", "stem"],
+            "variants": [
+                "quantity of stems and plants"
+            ]
+        },
+        {
+            "canonical": ["plant_material", "seed"],
+            "variants": [
+                "quantity of plant material and seed",
+                "quantity of seed and plant material",
+                "quantity of seeds and plant materials",
+                "quantity of seeds and plant material.",
+                "quantity of seeds and plant material",
+                "quantity of plant material and seeds"
+            ]
+        },
+        {
+            "canonical": ["seed", "seedling"],
+            "variants": [
+                "quantity of seedlings and seeds"
+            ]
+        },
+        {
+            "canonical": ["seed", "cutting"],
+            "variants": [
+                "quantity of seeds and cuttings"
+            ]
+        },
+        {
+            "canonical": ["head", "seed"],
+            "variants": [
+                "quantity of seeds and heads"
+            ]
+        },
+        {
+            "canonical": ["stalk", "plant"],
+            "variants": [
+                "quantity of plants and stalks",
+                "quantity of plants and stalk"
+            ]
+        },
+        {
+            "canonical": ["poppy_head", "poppy_seed"],
+            "variants": [
+                "quantity of poppy heads/seeds"
+            ]
+        },
+        {
+            "canonical": ["unknown", "poppy"],
+            "variants": [
+                "quantity of unknown seeds and dried poppy plants"
+            ]
+        },
+        {
+            "canonical": ["plant", "seed", "plant_material"],
+            "variants": [
+                "quantity of seeds, plant material and plants",
+                "quantity of seed, plants and plant material",
+                "quantity of seed, plant material, plants",
+                "quantity of seed, plant material and plant",
+                "quantity of plant, seed and plant material",
+                "quantity of plants, plant material and seed",
+                "quantity of plants, seeds and plant material",
+                "quanity of seeds, plant and plant materials",
+                "quantity of plant, plant material and seed"
+            ]
+        },
+        {
+            "canonical": ["plant", "seedling", "seed"],
+            "variants": [
+                "quantity of plants, seedlings and seeds"
+            ]
+        },
+        {
+            "canonical": ["plant", "seedling", "plant_material"],
+            "variants": [
+                "quantity of plants, seedling and plant material"
+            ]
+        },
+        {
+            "canonical": ["seed", "seedling", "plant_material"],
+            "variants": [
+                "quantity of plant material, seedlings and seeds"
+            ]
+        },
+        {
+            "canonical": ["cutting", "seed", "plant_material"],
+            "variants": [
+                "plant cuttings, leaf material, seeds, and plant material"
+            ]
+        },
+        {
+            "canonical": ["seedling", "stalk", "plant"],
+            "variants": [
+                "quantity of seedlings, stalks and plants"
+            ]
+        },
+        {
+            "canonical": ["plant", "stem", "rootball"],
+            "variants": [
+                "quantity of plants, plant stems and root balls"
+            ]
+        },
+        {
+            "canonical": ["plant", "rootball", "seedling"],
+            "variants": [
+                "quantity of plants, a seedling and root balls"
+            ]
+        },
+        {
+            "canonical": ["plant", "rootball", "seedling", "seed"],
+            "variants": [
+                "quantity of plants, rootballs, seedlings and seeds"
+            ]
+        },
+        {
+            "canonical": ["stalk", "rootball", "plant"],
+            "variants": [
+                "quantity of roots/stalks and plants"
+            ]
+        },
+        {
+            "canonical": ["plant_material", "rootball", "stem"],
+            "variants": [
+                "quantity of plant material, and one bag number t050732 containing a quantity of root and stem material"
+            ]
+        },
+        {
+            "canonical": ["seed", "seed_material", "plant_material"],
+            "variants": [
+                "quantity of seed, seed material and plant material"
+            ]
+        },
+        {
+            "canonical": ["seed", "plant", "plant_material", "seed_material"],
+            "variants": [
+                "quantity of seed, plant material, plant and seed material"
+            ]
+        },
+        {
+            "canonical": ["plant", "plant_material", "tablet"],
+            "variants": [
+                "quantity of plants, plant material and tablet"
+            ]
+        }
+    ]
+}

@@ -6,7 +6,8 @@ name: startup-check
 
 services:
   db:
-    image: postgres:17
+    # Same major version as the staging and production servers.
+    image: postgres:16
     environment:
       POSTGRES_DB: cannabis
       POSTGRES_USER: postgres
@@ -18,7 +19,7 @@ services:
       retries: 30
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
