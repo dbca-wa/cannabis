@@ -184,10 +184,7 @@ export class PreferencesSyncService {
 		localPreferences: Partial<UserPreferences>,
 		serverPreferences: UserPreferences,
 		strategy:
-			| "user_choice"
-			| "timestamp"
-			| "server_wins"
-			| "local_wins" = "server_wins"
+			"user_choice" | "timestamp" | "server_wins" | "local_wins" = "server_wins"
 	): Promise<UserPreferences> {
 		logger.info("Handling preference sync conflict", { strategy });
 

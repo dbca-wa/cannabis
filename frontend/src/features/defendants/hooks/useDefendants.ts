@@ -17,6 +17,7 @@ import type {
 	DefendantCreateRequest,
 	DefendantUpdateRequest,
 } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 // Query keys following established patterns
 export const defendantsQueryKeys = {
@@ -34,19 +35,19 @@ export const useDefendants = (params: DefendantsQueryParams = {}) => {
 		queryKey: defendantsQueryKeys.list(params),
 		queryFn: () => getDefendants(params),
 		staleTime: 5 * 60 * 1000,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
 
 /** Hook to fetch a single defendant by ID */
-export const useDefendantById = (id: number | null) => {
+export const useDefendantById = (id: number | null, enabled = true) => {
 	return useQuery({
 		queryKey: defendantsQueryKeys.detail(id!),
 		queryFn: () => getDefendantById(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		...cacheConfig.detail,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
@@ -102,14 +103,13 @@ export const useDeleteDefendant = () => {
 		mutationFn: ({
 			id,
 			replacementId,
+			unknown,
 		}: {
 			id: number;
 			replacementId?: number | null;
-		}) => deleteDefendant(id, replacementId),
-		onSuccess: async (_, { id }) => {
-			queryClient.removeQueries({
-				queryKey: defendantsQueryKeys.detail(id),
-			});
+			unknown?: boolean;
+		}) => deleteDefendant(id, replacementId, unknown),
+		onSuccess: async () => {
 			// Moved cases are refreshed too.
 			await invalidateRelatedQueries(queryClient, "defendants");
 			toast.success("Defendant deleted");
@@ -122,10 +122,10 @@ export const useDeleteDefendant = () => {
 };
 
 /** The cases that name a defendant, shown before deleting them. */
-export const useDefendantUsage = (id: number | null) =>
+export const useDefendantUsage = (id: number | null, enabled = true) =>
 	useQuery({
 		queryKey: [...defendantsQueryKeys.detail(id ?? 0), "usage"],
 		queryFn: () => getDefendantUsage(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		staleTime: 0,
 	});

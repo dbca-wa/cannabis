@@ -11,6 +11,7 @@ import {
 } from "../../schemas/policeStationSchemas";
 import { useUpdateStation } from "../../hooks/usePoliceStations";
 import type { PoliceStation } from "@/shared/types/backend-api.types";
+import { applyServerFieldErrors } from "@/shared/utils/field-error.utils";
 
 interface EditStationFormProps {
 	station: PoliceStation;
@@ -57,18 +58,8 @@ export const EditStationForm = ({
 			});
 			onSuccess?.();
 		} catch (error: unknown) {
-			// Surface server-side validation errors (e.g. duplicate name)
-			const err = error as { response?: { data?: Record<string, string[]> } };
-			const serverErrors = err?.response?.data;
-			if (serverErrors) {
-				if (serverErrors.name) {
-					setError("name", {
-						message: Array.isArray(serverErrors.name)
-							? serverErrors.name[0]
-							: (serverErrors.name as string),
-					});
-				}
-			}
+			// The mutation shows a toast; keep the message beside the field too.
+			applyServerFieldErrors(error, setError, ["name"]);
 		}
 	};
 

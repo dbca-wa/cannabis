@@ -16,6 +16,7 @@ import { officersSearchStore } from "@/app/stores/derived/officers-search.store"
 import { useEphemeralSearch } from "@/shared/hooks/useEphemeralSearch";
 import { StationSearchComboBox } from "@/shared/components/police";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
+import { useLinkedFilters } from "@/shared/hooks/useLinkedFilters";
 
 // "none" asks the API for officers with no rank on record.
 const RANK_OPTIONS_PRIMARY = [{ value: "none", label: "No rank" }];
@@ -34,13 +35,18 @@ const RANK_OPTIONS_SECONDARY = [
 	{ value: "senior_constable", label: "Senior Constable" },
 	{ value: "senior_detective", label: "Senior Detective" },
 	{ value: "sergeant", label: "Sergeant" },
-	{ value: "unknown", label: "Unknown" },
 	{ value: "other", label: "Other" },
 ];
 
 export const OfficersFilters = observer(() => {
 	const store = officersSearchStore;
 	useEphemeralSearch(store);
+	// "View officers" on a station links here with its id; show exactly the
+	// officers based there, clearing any other search.
+	useLinkedFilters(["station"] as const, (ids) => {
+		store.clearSearchAndFilters();
+		store.setFilters({ station: ids.station ?? null });
+	});
 
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);

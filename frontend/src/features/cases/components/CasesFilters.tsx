@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react-lite";
 import { useSearchParams } from "react-router";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import {
@@ -22,6 +22,8 @@ import {
 	StationSearchComboBox,
 } from "@/shared/components/police";
 import { useDebounce } from "@/shared/hooks/core/useDebounce";
+import { useLinkedFilters } from "@/shared/hooks/useLinkedFilters";
+import { useDefendantById } from "@/features/defendants/hooks/useDefendants";
 
 // Built from the shared phase config so the filter always uses the same
 // state names as the State column, the Dashboard and the guide.
@@ -51,6 +53,18 @@ export const CasesFilters = observer(() => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchParams]);
 
+	// "View cases" on an officer, station or defendant links here with that
+	// record's id; show exactly its cases, clearing any other search.
+	useLinkedFilters(["officer", "station", "defendant"] as const, (ids) => {
+		store.clearSearchAndFilters();
+		store.setFilters({
+			officer: ids.officer ?? null,
+			station: ids.station ?? null,
+			defendant: ids.defendant ?? null,
+		});
+	});
+	const defendantFilter = store.state.filters.defendant;
+	const { data: filteredDefendant } = useDefendantById(defendantFilter);
 	// Local state for immediate UI feedback on search input
 	const [localSearch, setLocalSearch] = useState(store.state.searchTerm);
 	const [localTagSearch, setLocalTagSearch] = useState(
@@ -190,6 +204,24 @@ export const CasesFilters = observer(() => {
 				</div>
 			</div>
 
+			{/* A defendant filter has no picker; it comes from the defendant's
+			    record, so show who it is and let the user remove it. */}
+			{defendantFilter !== null && (
+				<div className="flex flex-wrap items-center gap-2 text-sm">
+					<span className="text-muted-foreground">Defendant:</span>
+					<span className="inline-flex items-center gap-1 rounded-full border bg-muted/50 py-1 pl-3 pr-1 font-medium">
+						{filteredDefendant?.full_name ?? "Loading..."}
+						<button
+							type="button"
+							onClick={() => store.setFilters({ defendant: null })}
+							className="cursor-pointer rounded-full p-1 hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							aria-label="Remove the defendant filter"
+						>
+							<X className="h-3.5 w-3.5" aria-hidden="true" />
+						</button>
+					</span>
+				</div>
+			)}
 			{/* Search controls */}
 			<SearchControls
 				saveSearch={store.state.saveSearch}

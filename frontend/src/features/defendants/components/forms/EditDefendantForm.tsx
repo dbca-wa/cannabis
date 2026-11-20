@@ -17,6 +17,7 @@ import {
 	type EditDefendantFormData,
 } from "../../schemas/defendantSchemas";
 import type { Defendant } from "@/shared/types/backend-api.types";
+import { applyServerFieldErrors } from "@/shared/utils/field-error.utils";
 
 interface EditDefendantFormProps {
 	defendant: Defendant;
@@ -41,7 +42,15 @@ export const EditDefendantForm: React.FC<EditDefendantFormProps> = ({
 	});
 
 	const handleSubmit = async (data: EditDefendantFormData) => {
-		await onSubmit(data);
+		try {
+			await onSubmit(data);
+		} catch (error) {
+			// The mutation shows a toast; keep each message beside its field too.
+			applyServerFieldErrors(error, form.setError, [
+				"last_name",
+				"given_names",
+			]);
+		}
 	};
 
 	return (

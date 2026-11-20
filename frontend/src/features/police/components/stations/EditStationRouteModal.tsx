@@ -4,10 +4,11 @@ import {
 } from "@/shared/components/layout/ResponsiveModal";
 import { useNavigate, useParams } from "react-router";
 import { EditStationForm } from "./EditStationForm";
-import { useStation } from "../../hooks/usePoliceStations";
+import { useStation, useStationUsage } from "../../hooks/usePoliceStations";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
+import { RelatedRecordLinks } from "@/shared/components/RelatedRecordLinks";
 export const EditStationRouteModal = () => {
 	const navigate = useNavigate();
 	const { stationId } = useParams();
@@ -18,6 +19,8 @@ export const EditStationRouteModal = () => {
 		isLoading,
 		error,
 	} = useStation(stationId ? parseInt(stationId) : 0);
+	// The officers based here and the cases that use it, for the counts.
+	const usage = useStationUsage(stationId ? parseInt(stationId) : null);
 
 	const handleClose = () => {
 		navigate("/stations");
@@ -71,6 +74,20 @@ export const EditStationRouteModal = () => {
 					station={station}
 					onSuccess={handleClose}
 					onCancel={handleClose}
+				/>
+				<RelatedRecordLinks
+					links={[
+						{
+							noun: "officers",
+							count: usage.data?.officers?.length,
+							to: `/officers?station=${station.id}`,
+						},
+						{
+							noun: "cases",
+							count: usage.data?.cases.length,
+							to: `/cases?station=${station.id}`,
+						},
+					]}
 				/>
 				<DeleteRecordFooter
 					noun="station"

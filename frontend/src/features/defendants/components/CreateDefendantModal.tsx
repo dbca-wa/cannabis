@@ -44,27 +44,23 @@ export const CreateDefendantModal: React.FC<CreateDefendantModalProps> = ({
 	};
 
 	const handleSubmit = async (data: CreateDefendantFormData) => {
-		try {
-			// Transform form data for API
-			const apiData = {
-				given_names: data.given_names || null,
-				last_name: data.last_name,
-			};
+		// Errors reach the form, which shows each message beside its field;
+		// the mutation also shows a toast and the modal stays open.
+		// Transform form data for API
+		const apiData = {
+			given_names: data.given_names || null,
+			last_name: data.last_name,
+		};
 
-			const newDefendant = await createDefendant.mutateAsync(apiData);
+		const newDefendant = await createDefendant.mutateAsync(apiData);
 
-			// Call onCreate callback if provided (for inline modals)
-			if (onCreate) {
-				onCreate(newDefendant);
-			}
-
-			// Close the modal
-			handleClose();
-		} catch (error) {
-			// Error is handled by the mutation (toast shown)
-			console.error("Failed to create defendant:", error);
-			// Don't close modal on error so user can retry
+		// Call onCreate callback if provided (for inline modals)
+		if (onCreate) {
+			onCreate(newDefendant);
 		}
+
+		// Close the modal
+		handleClose();
 	};
 
 	return (

@@ -69,7 +69,6 @@ class PoliceOfficer(AuditModel):
 
     class SeniorityChoices(models.TextChoices):
         # Standard ranks (based on actual cannabis data analysis)
-        UNKNOWN = "unknown", "Unknown"  # have to because bad data
 
         # Constable ranks
         CONSTABLE = "constable", "Constable"  # 2 occurrences
@@ -119,17 +118,23 @@ class PoliceOfficer(AuditModel):
 
     @property
     def full_name(self):
-        """Return officer's full name"""
-        if self.given_names and self.last_name:
-            return f"{self.given_names} {self.last_name}"
-        return self.given_names or self.last_name or "Unknown Officer"
+        """The officer's name as shown everywhere in the app: SURNAME, Given.
+
+        Surname first in capitals, matching the Priority 3 form and the
+        certificate, so a name reads the same in every list, picker and
+        message.
+        """
+        last = (self.last_name or "").strip()
+        given = (self.given_names or "").strip()
+        if last and given:
+            return f"{last.upper()}, {given}"
+        return last.upper() or given or "Unknown Officer"
 
     @property
     def is_sworn(self):
         """Determine if officer is sworn based on rank"""
         unsworn_ranks = [
             self.NO_RANK,
-            self.SeniorityChoices.UNKNOWN,
             self.SeniorityChoices.OTHER,
         ]
         return self.rank not in unsworn_ranks

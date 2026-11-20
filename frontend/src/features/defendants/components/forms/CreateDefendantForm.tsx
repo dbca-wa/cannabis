@@ -16,6 +16,7 @@ import {
 	createDefendantSchema,
 	type CreateDefendantFormData,
 } from "../../schemas/defendantSchemas";
+import { applyServerFieldErrors } from "@/shared/utils/field-error.utils";
 
 interface CreateDefendantFormProps {
 	onSubmit: (data: CreateDefendantFormData) => Promise<void>;
@@ -40,7 +41,15 @@ export const CreateDefendantForm: React.FC<CreateDefendantFormProps> = ({
 	});
 
 	const handleSubmit = async (data: CreateDefendantFormData) => {
-		await onSubmit(data);
+		try {
+			await onSubmit(data);
+		} catch (error) {
+			// The mutation shows a toast; keep each message beside its field too.
+			applyServerFieldErrors(error, form.setError, [
+				"last_name",
+				"given_names",
+			]);
+		}
 	};
 
 	/** Title-case a string, handling spaces and hyphens (e.g. "jimmy-lee van" → "Jimmy-Lee Van") */

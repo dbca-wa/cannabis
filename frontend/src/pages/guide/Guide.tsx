@@ -340,6 +340,14 @@ const GLOSSARY: [string, string][] = [
 		"A botanist from older records, hidden from the selection list while their past cases stay intact.",
 	],
 	[
+		"Merge",
+		"Combines duplicate records of one officer, station or defendant into the one you keep. Their cases move to it and the duplicates are removed.",
+	],
+	[
+		"Names",
+		"Officers and defendants are shown as SURNAME, Given Names everywhere, as on the certificate. Staff names are shown given name first.",
+	],
+	[
 		"Needs re-package",
 		"Shown on a batch whose certificates have changed since it was packaged. Re-package it to rebuild them.",
 	],
@@ -397,7 +405,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"Unsaved bags",
-		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Confirm All.",
+		"Bags you have entered but not saved yet. They sit in a dashed amber box until you click Confirm or Confirm All, and are lost if you leave or reload the page first.",
 	],
 	[
 		"Variable (building block)",
@@ -703,7 +711,10 @@ const Guide = () => {
 								<li>
 									Click <Ui>Confirm</Ui> on a bag, or <Ui>Confirm All</Ui> to
 									save every new bag at once. Bags that are not saved yet sit in
-									a dashed amber box.
+									a dashed amber box. <Ui>Add All</Ui> in <Ui>Add Multiple</Ui>{" "}
+									only puts the bags in that box; they are not saved until you
+									confirm them. Unsaved bags are lost if you leave or reload the
+									page, so confirm before moving on.
 								</li>
 								<li>
 									To change a saved bag, click <Ui>Edit</Ui> on it, make the
@@ -784,7 +795,7 @@ const Guide = () => {
 							</Tip>
 							<img
 								src="/assets/guide/section-c.png"
-								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bag results, and the botanist's own note"
+								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bags and envelope (bag results, female plants and the Security Movement Envelope sentence), and an empty note for anything else"
 								className="rounded-lg border shadow-sm"
 							/>
 							<Outcome>
@@ -1143,9 +1154,10 @@ const Guide = () => {
 								<li>
 									&quot;Sworn Officer&quot; and &quot;Unsworn Officer&quot; are
 									labels the certificate prints for each role. They are not
-									ranks. An officer&apos;s record holds a real rank, such as
-									Senior Constable, or no rank, in which case the officer list
-									and picker show none.
+									ranks, and neither is &quot;Unknown&quot;. An officer&apos;s
+									record holds a real rank, such as Senior Constable, or{" "}
+									<Ui>No rank</Ui> when none is known, in which case the officer
+									list and picker show none.
 								</li>
 							</ul>
 
@@ -1336,6 +1348,13 @@ const Guide = () => {
 								points at the record, so a correction made here shows on every
 								case that uses it.
 							</p>
+							<Tip>
+								Officers and defendants are always shown surname first in
+								capitals, for example WINCHESTER, Dean, the same as on the
+								Priority 3 form and the certificate. To find someone, type the
+								surname, the given name, or the name exactly as shown; the comma
+								is optional.
+							</Tip>
 							<h3>Correcting a record</h3>
 							<p>
 								Click the row to open it, change the details, and click{" "}
@@ -1344,6 +1363,32 @@ const Guide = () => {
 								details show <Ui>Out of date</Ui> until they are regenerated, or
 								their batch re-packaged.
 							</p>
+							<h3>Seeing what uses a record</h3>
+							<p>
+								Open an officer, station or defendant. Under{" "}
+								<Ui>Related records</Ui>, <Ui>View cases</Ui> opens the Cases
+								list showing only that record&apos;s cases, and on a station{" "}
+								<Ui>View officers</Ui> lists the officers based there. Each
+								button shows how many there are; with none, it reads{" "}
+								<Ui>No cases</Ui> or <Ui>No officers</Ui> instead.
+							</p>
+							<ul className="list-disc space-y-1 pl-5">
+								<li>
+									An officer&apos;s cases include those where they are the
+									conveying officer and those where they are the requesting
+									officer.
+								</li>
+								<li>
+									A defendant&apos;s cases appear with a{" "}
+									<Ui>Defendant: SURNAME, Given</Ui> tag above the list. Click
+									its cross, or <Ui>Clear search</Ui>, to see every case again.
+								</li>
+							</ul>
+							<img
+								src="/assets/guide/related-records.png"
+								alt="A station's edit dialog showing the Related records section with View officers (2) and View cases (2) buttons above Delete station"
+								className="mx-auto max-w-xl rounded-lg border shadow-sm"
+							/>
 							<h3>Merging duplicates</h3>
 							<p>
 								If the same officer, station or defendant has been entered
@@ -1355,6 +1400,36 @@ const Guide = () => {
 								changes the cases that use the duplicate, so if any of them is
 								complete, only an administrator can merge it.
 							</p>
+							<ol>
+								<li>
+									On <Ui>Officers</Ui>, click <Ui>Merge</Ui>.
+								</li>
+								<li>
+									Under <Ui>Primary Officer</Ui>, search for and pick the record
+									to keep (usually the one with the correct station and rank).
+								</li>
+								<li>
+									Under <Ui>Secondary Officers</Ui>, search for and pick each
+									duplicate.
+								</li>
+								<li>
+									Check the preview, then click <Ui>Confirm Merge</Ui>. The
+									duplicates are removed and their cases now name the record you
+									kept.
+								</li>
+							</ol>
+							<Tip>
+								Duplicates often share a name and badge number, so check the
+								station shown beside each one. Keep the record with the correct
+								station and rank. To stop new duplicates, the app refuses a
+								badge number another officer already has and names that officer,
+								so you can search for them instead.
+							</Tip>
+							<img
+								src="/assets/guide/merge-officers.png"
+								alt="The Merge Officers page with one officer kept as the primary, two duplicates selected, and the preview listing each with its badge number, station and case count above the Confirm Merge button"
+								className="rounded-lg border shadow-sm"
+							/>
 							<h3>Deleting a record</h3>
 							<ol>
 								<li>
@@ -1374,6 +1449,20 @@ const Guide = () => {
 									defendant.
 								</li>
 							</ol>
+							<Rule title="Unknown defendants">
+								Never create a defendant named &quot;Unknown&quot;; the app
+								rejects it. When the defendant is not known, use the{" "}
+								<Ui>Defendant is unknown</Ui> button on the case. To remove an
+								old &quot;Unknown&quot; record, delete it and tick{" "}
+								<Ui>Set these cases to an unknown defendant</Ui> instead of
+								choosing a replacement. The defendant is taken off each case,
+								and a case with no other defendant prints UNKNOWN.
+							</Rule>
+							<img
+								src="/assets/guide/delete-defendant-unknown.png"
+								alt="The Delete defendant dialog for an UNKNOWN, Unknown record, listing the two cases that use it, with Set these cases to an unknown defendant ticked and the button reading Set 2 cases to unknown and delete"
+								className="mx-auto max-w-xl rounded-lg border shadow-sm"
+							/>
 							<Tip>
 								Only an administrator can delete or merge away a record used by
 								a complete case, because that changes the case. An officer

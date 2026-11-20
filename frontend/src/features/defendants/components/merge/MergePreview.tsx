@@ -18,7 +18,9 @@ export const MergePreview = ({ primary, secondaries }: MergePreviewProps) => {
 				<p className="text-sm font-medium text-muted-foreground">
 					Primary (will be kept):
 				</p>
-				<p className="text-base font-semibold">{primary.full_name}</p>
+				<p className="text-base font-semibold">
+					{primary.full_name} (ID {primary.id})
+				</p>
 			</div>
 
 			<div>
@@ -28,7 +30,7 @@ export const MergePreview = ({ primary, secondaries }: MergePreviewProps) => {
 				<ul className="mt-1 space-y-1">
 					{secondaries.map((defendant) => (
 						<li key={defendant.id} className="text-sm">
-							{defendant.full_name}{" "}
+							{defendant.full_name} (ID {defendant.id}){" "}
 							<span className="text-muted-foreground">
 								({defendant.cases_count}{" "}
 								{defendant.cases_count === 1 ? "case" : "cases"})

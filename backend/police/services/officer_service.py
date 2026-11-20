@@ -6,6 +6,8 @@ from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, When
 from rest_framework.exceptions import NotFound, ValidationError
 
+from common.utils.search import search_terms as split_search
+
 from ..models import PoliceOfficer
 
 logger = logging.getLogger(__name__)
@@ -13,7 +15,6 @@ logger = logging.getLogger(__name__)
 # Rank seniority order (higher number = higher rank)
 RANK_SENIORITY_ORDER = {
     PoliceOfficer.NO_RANK: 0,
-    PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
     PoliceOfficer.SeniorityChoices.OTHER: 1,
     PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
     PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
@@ -78,7 +79,7 @@ class OfficerService:
         # Multi-word search across name, badge, and station
         search = params.get("search")
         if search:
-            search_terms = search.strip().split()
+            search_terms = split_search(search)
             for term in search_terms:
                 queryset = queryset.filter(
                     Q(given_names__icontains=term)
@@ -119,14 +120,14 @@ class OfficerService:
         if unknown_only.lower() == "true":
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
         elif include_unknown.lower() == "false":
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -156,7 +157,7 @@ class OfficerService:
         # Search
         search = params.get("search")
         if search:
-            search_terms = search.strip().split()
+            search_terms = split_search(search)
             for term in search_terms:
                 queryset = queryset.filter(
                     Q(given_names__icontains=term)
@@ -195,14 +196,14 @@ class OfficerService:
         if unknown_only.lower() == "true":
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
         elif include_unknown.lower() == "false":
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )

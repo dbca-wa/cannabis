@@ -164,7 +164,10 @@ const PrimaryStationSelector = ({
 								<li key={station.id} role="option" aria-selected={isSelected}>
 									<button
 										type="button"
-										onClick={() => onSelect(station)}
+										onClick={() => {
+											onSelect(station);
+											setSearchQuery("");
+										}}
 										className={cn(
 											"flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted cursor-pointer",
 											isSelected && "bg-green-50 dark:bg-green-950/30"

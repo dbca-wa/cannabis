@@ -91,15 +91,17 @@ export const useCaseCertificates = (caseId: number) => {
 		})
 	);
 
-	// Counts the certificates left in a bulk run, so one toast reports it.
-	const batchCountRef = useRef(0);
+	// A bulk run reports once at the end instead of once per certificate:
+	// how many are left, whether any failed, and what to say when done.
+	const bulkRemainingRef = useRef(0);
+	const bulkFailedRef = useRef(false);
+	const bulkMessageRef = useRef("All certificates generated");
 	const generateMutation = useMutation({
 		mutationKey: generateKey,
 		mutationFn: (formId: number) => generateFormCertificate(formId, {}),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: formsQueryKey });
-			// A bulk run reports once, when its last certificate settles.
-			if (batchCountRef.current <= 1) {
+			if (bulkRemainingRef.current === 0) {
 				toast.success("Certificate generated");
 			}
 		},
@@ -115,33 +117,51 @@ export const useCaseCertificates = (caseId: number) => {
 				toast.error("Failed to generate certificate");
 			}
 		},
-		onSettled: () => {
-			if (batchCountRef.current > 1) {
-				batchCountRef.current -= 1;
-				if (batchCountRef.current === 0) {
-					toast.success("All certificates regenerated");
-				}
-			} else {
-				batchCountRef.current = 0;
+		onSettled: (_data, error) => {
+			if (bulkRemainingRef.current === 0) return;
+			if (error) bulkFailedRef.current = true;
+			bulkRemainingRef.current -= 1;
+			// Failures already have their own message.
+			if (bulkRemainingRef.current === 0 && !bulkFailedRef.current) {
+				toast.success(bulkMessageRef.current);
 			}
 		},
 	});
 
 	const generate = (formId: number) => generateMutation.mutate(formId);
 
-	// Failures are reported by onError; settle every one so none goes unhandled.
-	const generateMany = (targets: Priority3Form[]) => {
-		batchCountRef.current = targets.length;
-		return Promise.allSettled(
-			targets.map((f) => generateMutation.mutateAsync(f.id))
-		);
+	// One at a time in form order, so new certificate numbers follow the forms
+	// (form 1 gets the lower number). Failures are reported by onError and do
+	// not stop the remaining forms.
+	const generateMany = async (
+		targets: Priority3Form[],
+		doneMessage: string
+	) => {
+		const ordered = [...targets].sort((a, b) => a.id - b.id);
+		bulkRemainingRef.current = ordered.length;
+		bulkFailedRef.current = false;
+		bulkMessageRef.current = doneMessage;
+		const results: PromiseSettledResult<unknown>[] = [];
+		for (const form of ordered) {
+			try {
+				results.push({
+					status: "fulfilled",
+					value: await generateMutation.mutateAsync(form.id),
+				});
+			} catch (reason) {
+				results.push({ status: "rejected", reason });
+			}
+		}
+		return results;
 	};
 
 	/** Generate every form's missing certificate. */
-	const generateAll = () => generateMany(pendingForms);
+	const generateAll = () =>
+		generateMany(pendingForms, "All certificates generated");
 
 	/** Regenerate every form's certificate from the current data. */
-	const regenerateAll = () => generateMany(eligibleForms);
+	const regenerateAll = () =>
+		generateMany(eligibleForms, "All certificates regenerated");
 
 	const setReadyMutation = useMutation({
 		mutationFn: ({ formId, ready }: { formId: number; ready: boolean }) =>

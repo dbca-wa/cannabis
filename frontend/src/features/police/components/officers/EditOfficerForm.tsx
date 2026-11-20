@@ -27,6 +27,7 @@ import {
 	type EditOfficerFormData,
 } from "../../schemas/policeOfficerSchemas";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
+import { applyServerFieldErrors } from "@/shared/utils/field-error.utils";
 
 interface EditOfficerFormProps {
 	officer: PoliceOfficerTiny;
@@ -68,25 +69,13 @@ export const EditOfficerForm = ({
 			};
 			await onSubmit(transformedData);
 		} catch (error: unknown) {
-			// Surface server-side validation errors
-			const err = error as { response?: { data?: Record<string, string[]> } };
-			const serverErrors = err?.response?.data;
-			if (serverErrors) {
-				if (serverErrors.last_name) {
-					form.setError("last_name", {
-						message: Array.isArray(serverErrors.last_name)
-							? serverErrors.last_name[0]
-							: (serverErrors.last_name as string),
-					});
-				}
-				if (serverErrors.badge_number) {
-					form.setError("badge_number", {
-						message: Array.isArray(serverErrors.badge_number)
-							? serverErrors.badge_number[0]
-							: (serverErrors.badge_number as string),
-					});
-				}
-			}
+			// The mutation shows a toast; keep each message beside its field too.
+			applyServerFieldErrors(error, form.setError, [
+				"last_name",
+				"given_names",
+				"badge_number",
+				"station",
+			]);
 		}
 	};
 

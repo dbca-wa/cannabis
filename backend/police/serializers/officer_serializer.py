@@ -10,10 +10,37 @@ from .station_serializer import PoliceStationTinySerializer
 
 def duplicate_officer_message(given_names, last_name, station):
     """The error shown when an officer with this name already exists here."""
-    full_name = f"{given_names} {last_name}".strip() if given_names else last_name
+    # Surname first, as officers are shown everywhere else.
+    surname = (last_name or "").strip().upper()
+    given = (given_names or "").strip()
+    full_name = f"{surname}, {given}" if surname and given else surname or given
     if station:
         return f"An officer named '{full_name}' already exists at {station.name}."
     return f"An officer named '{full_name}' with no station already exists."
+
+
+def check_badge_number_free(value, instance=None, hint=None):
+    """Refuse a badge number another officer already has.
+
+    The message names that officer, so whoever is entering the case can pick
+    the existing record instead of creating a duplicate.
+    """
+    value = (value or "").strip()
+    if not value:
+        return value
+    existing = (
+        PoliceOfficer.objects.filter(badge_number__iexact=value)
+        .exclude(pk=instance.pk if instance else None)
+        .select_related("station")
+        .first()
+    )
+    if existing:
+        where = f" ({existing.station.name})" if existing.station else ""
+        raise serializers.ValidationError(
+            f"Badge number {value} already belongs to {existing.full_name}{where}. "
+            + (hint or "Search for them instead of adding them again.")
+        )
+    return value
 
 
 class PoliceOfficerSerializer(serializers.ModelSerializer):
@@ -75,15 +102,23 @@ class PoliceOfficerSerializer(serializers.ModelSerializer):
         return value
 
     def validate_badge_number(self, value):
-        """Ensure badge numbers are unique when provided"""
-        if (
-            value
-            and PoliceOfficer.objects.filter(badge_number=value)
-            .exclude(pk=self.instance.pk if self.instance else None)
-            .exists()
-        ):
-            raise serializers.ValidationError("Badge number must be unique.")
-        return value
+        """Ensure badge numbers are unique when provided.
+
+        Only a changed badge is checked, so an older record that already
+        shares its badge with a duplicate can still be edited (and merged).
+        """
+        if self.instance is not None:
+            unchanged = (value or "").strip().upper() == (
+                self.instance.badge_number or ""
+            ).strip().upper()
+            if unchanged:
+                return value
+        return check_badge_number_free(
+            value,
+            self.instance,
+            hint="If they are the same person, merge the two records on the "
+            "Officers page.",
+        )
 
     def validate(self, attrs):
         """Ensure officer name is unique within the same station."""
@@ -174,6 +209,10 @@ class PoliceOfficerCreateSerializer(serializers.ModelSerializer):
             "station",
         ]
         read_only_fields = ["id"]
+
+    def validate_badge_number(self, value):
+        """Ensure badge numbers are unique when provided."""
+        return check_badge_number_free(value)
 
     def validate(self, attrs):
         """Ensure at least first or last name is provided, and unique within station."""

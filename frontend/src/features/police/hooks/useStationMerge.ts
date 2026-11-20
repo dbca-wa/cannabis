@@ -6,6 +6,7 @@ import {
 } from "../services/policeStations.service";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import { getErrorMessage } from "@/shared/utils/error.utils";
+import { countOf } from "@/shared/utils/number.utils";
 
 /**
  * Hook to merge secondary stations into a primary station.
@@ -21,7 +22,7 @@ export function useStationMerge() {
 			await invalidateRelatedQueries(queryClient, "policeStations");
 
 			toast.success(
-				`Merge complete. ${response.officers_reassigned} officer(s) and ${response.cases_reassigned} case(s) reassigned.`
+				`Merge complete. ${countOf(response.officers_reassigned, "officer")} and ${countOf(response.cases_reassigned, "case")} moved.`
 			);
 		},
 		onError: (error: unknown) => {

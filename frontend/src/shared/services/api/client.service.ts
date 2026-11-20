@@ -28,6 +28,15 @@ export interface ApiError {
 	fieldErrors?: Record<string, string[]> | undefined;
 }
 
+/**
+ * Replace the framework's "No Case matches the given query." with a sentence
+ * a person can act on. Other messages are left as the server wrote them.
+ */
+export const readableNotFound = (status: number, message: string): string =>
+	status === 404 && /^No \w+ matches the given query\.?$/.test(message.trim())
+		? "This record could not be found. It may have been deleted, or it may not be visible in practice mode."
+		: message;
+
 export class ApiClientService {
 	private client: AxiosInstance;
 	private onUnauthorized: (() => void) | null = null;
@@ -231,7 +240,7 @@ export class ApiClientService {
 
 		if (data) {
 			if (isDjangoDetailError(data)) {
-				message = data.detail;
+				message = readableNotFound(status, data.detail);
 			} else if (isDjangoNonFieldErrors(data)) {
 				message = data.non_field_errors[0] ?? message;
 			} else if (isDjangoFieldErrors(data)) {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
 	ResponsiveModal,
 	ResponsiveModalContent,
@@ -18,10 +19,12 @@ export const DeleteStationRouteModal = () => {
 	const navigate = useNavigate();
 	const { stationId } = useParams();
 	const id = stationId ? parseInt(stationId, 10) : 0;
+	// Once deletion starts, stop refetching the record being deleted.
+	const [deleting, setDeleting] = useState(false);
 	const { isAdmin } = useAuth();
 	const deleteStationMutation = useDeleteStation();
-	const { data: station, isLoading, error } = useStation(id);
-	const usage = useStationUsage(id || null);
+	const { data: station, isLoading, error } = useStation(id, !deleting);
+	const usage = useStationUsage(id || null, !deleting);
 
 	const handleClose = () => {
 		navigate("/stations");
@@ -29,10 +32,12 @@ export const DeleteStationRouteModal = () => {
 
 	const handleDelete = async (replacementId: number | null) => {
 		if (!id) return;
+		setDeleting(true);
 		try {
 			await deleteStationMutation.mutateAsync({ id, replacementId });
 			handleClose();
 		} catch {
+			setDeleting(false);
 			// The mutation shows the error.
 		}
 	};

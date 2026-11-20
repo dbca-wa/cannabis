@@ -6,6 +6,7 @@ import {
 } from "../services/defendants.service";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import { getErrorMessage } from "@/shared/utils/error.utils";
+import { countOf } from "@/shared/utils/number.utils";
 
 /**
  * Hook to merge secondary defendants into a primary defendant.
@@ -20,7 +21,7 @@ export const useDefendantMerge = () => {
 			await invalidateRelatedQueries(queryClient, "defendants");
 
 			toast.success(
-				`Merge complete. ${response.cases_reassigned} case(s) reassigned.`
+				`Merge complete. ${countOf(response.cases_reassigned, "case")} moved.`
 			);
 		},
 		onError: (error: unknown) => {

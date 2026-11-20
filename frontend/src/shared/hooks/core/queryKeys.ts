@@ -9,6 +9,7 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 /**
  * Cache optimization settings with enhanced configurations
@@ -19,7 +20,7 @@ export const cacheConfig = {
 		staleTime: 2 * 60 * 1000, // 2 minutes
 		gcTime: 5 * 60 * 1000, // 5 minutes
 		refetchOnWindowFocus: false,
-		retry: 1,
+		retry: retryUnlessClientError(1),
 	},
 
 	// Initial data - longer TTL since it changes less frequently
@@ -27,7 +28,7 @@ export const cacheConfig = {
 		staleTime: 10 * 60 * 1000, // 10 minutes
 		gcTime: 30 * 60 * 1000, // 30 minutes
 		refetchOnWindowFocus: true,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 	},
 
 	// Detail data - medium TTL
@@ -35,7 +36,7 @@ export const cacheConfig = {
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 15 * 60 * 1000, // 15 minutes
 		refetchOnWindowFocus: true,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 	},
 
 	// External searches - shorter TTL since external data changes frequently
@@ -43,7 +44,7 @@ export const cacheConfig = {
 		staleTime: 1 * 60 * 1000, // 1 minute
 		gcTime: 3 * 60 * 1000, // 3 minutes
 		refetchOnWindowFocus: false,
-		retry: 1,
+		retry: retryUnlessClientError(1),
 	},
 
 	// Real-time data - very short TTL
@@ -51,7 +52,7 @@ export const cacheConfig = {
 		staleTime: 30 * 1000, // 30 seconds
 		gcTime: 2 * 60 * 1000, // 2 minutes
 		refetchOnWindowFocus: true,
-		retry: 3,
+		retry: retryUnlessClientError(3),
 	},
 
 	// Static data - very long TTL
@@ -59,7 +60,7 @@ export const cacheConfig = {
 		staleTime: 60 * 60 * 1000, // 1 hour
 		gcTime: 24 * 60 * 60 * 1000, // 24 hours
 		refetchOnWindowFocus: false,
-		retry: 1,
+		retry: retryUnlessClientError(1),
 	},
 } as const;
 

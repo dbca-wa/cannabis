@@ -99,7 +99,7 @@ class CertificateSerializer(serializers.ModelSerializer):
         if case:
             defendants = case.defendants.all()
             if defendants:
-                return ", ".join(d.full_name for d in defendants)
+                return "; ".join(d.full_name for d in defendants)
         return None
 
     def get_bag_ids(self, obj):

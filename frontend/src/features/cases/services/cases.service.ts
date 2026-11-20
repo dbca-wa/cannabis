@@ -24,6 +24,7 @@ export const getCases = async (
 		botanist: params.botanist,
 		officer: params.officer,
 		station: params.station,
+		defendant: params.defendant,
 		finance: params.finance,
 		cannabis_only: params.cannabis_only,
 		date_from: params.date_from,

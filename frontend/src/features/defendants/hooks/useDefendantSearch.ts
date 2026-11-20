@@ -8,6 +8,7 @@ import type {
 	DefendantTiny,
 	DefendantSearchParams,
 } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 export interface UseDefendantSearchOptions {
 	query?: string;
@@ -91,7 +92,7 @@ export const useDefendantSearch = (
 		// Keep the previous results visible while the next query loads so the
 		// dropdown stays open and stable instead of flashing on each keystroke
 		placeholderData: keepPreviousData,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 
@@ -109,7 +110,7 @@ export const useDefendantSearch = (
 		},
 		enabled: enabled && isInitialDataRequest,
 		...cacheConfig.initial, // Use optimized cache settings for initial data
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 
