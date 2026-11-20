@@ -27,6 +27,7 @@ import {
 	rankFromFormValue,
 	type CreateOfficerFormData,
 } from "../../schemas/policeOfficerSchemas";
+import { applyServerFieldErrors } from "@/shared/utils/field-error.utils";
 
 interface CreateOfficerFormProps {
 	onSubmit: (data: unknown) => Promise<void>;
@@ -70,8 +71,13 @@ export const CreateOfficerForm = ({
 			await onSubmit(transformedData);
 			form.reset();
 		} catch (error) {
-			// Error handling is done in the parent component
-			console.error("Form case error:", error);
+			// The mutation shows a toast; keep each message beside its field too.
+			applyServerFieldErrors(error, form.setError, [
+				"last_name",
+				"given_names",
+				"badge_number",
+				"station",
+			]);
 		}
 	};
 

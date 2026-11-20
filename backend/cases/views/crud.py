@@ -1,11 +1,13 @@
 from django.conf import settings
 from django.db.models import Case as CaseExpr
 from django.db.models import F, IntegerField, Min, Q, Value, When
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.logging import describe_user
+from common.utils.search import search_terms as split_search
 from users.permissions import HasAppAccess
 
 from ..models import Case
@@ -101,6 +103,21 @@ def _apply_ordering(queryset, ordering):
     return queryset.order_by(ordering)
 
 
+def _id_param(params, name):
+    """A numeric record id from the query string, or None when absent.
+
+    A link with a mistyped id is refused with a clear message rather than
+    failing in the database.
+    """
+    raw = params.get(name)
+    if raw in (None, ""):
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        raise ValidationError({name: f"'{raw}' is not a valid {name} id."})
+
+
 def _apply_filters(queryset, params):
     """Apply query parameter filters to the case queryset."""
     phase = params.get("phase")
@@ -108,19 +125,24 @@ def _apply_filters(queryset, params):
         # Cases with at least one form in the requested phase.
         queryset = queryset.filter(forms__phase=phase).distinct()
 
-    botanist_id = params.get("botanist")
+    botanist_id = _id_param(params, "botanist")
     if botanist_id:
         queryset = queryset.filter(approved_botanist_id=botanist_id)
 
-    officer_id = params.get("officer")
+    officer_id = _id_param(params, "officer")
     if officer_id:
         queryset = queryset.filter(
             Q(requesting_officer_id=officer_id) | Q(submitting_officer_id=officer_id)
         )
 
-    station_id = params.get("station")
+    station_id = _id_param(params, "station")
     if station_id:
         queryset = queryset.filter(station_id=station_id)
+
+    # Cases naming one defendant, as listed from the defendant's record.
+    defendant_id = _id_param(params, "defendant")
+    if defendant_id:
+        queryset = queryset.filter(defendants__id=defendant_id).distinct()
 
     date_from = params.get("date_from")
     if date_from:
@@ -132,15 +154,26 @@ def _apply_filters(queryset, params):
 
     search = params.get("search")
     if search:
-        search_q = (
-            Q(case_number__icontains=search)
-            | Q(requesting_officer__given_names__icontains=search)
-            | Q(requesting_officer__last_name__icontains=search)
-            | Q(submitting_officer__given_names__icontains=search)
-            | Q(submitting_officer__last_name__icontains=search)
-            | Q(defendants__given_names__icontains=search)
-            | Q(defendants__last_name__icontains=search)
+        # A police reference matches as typed. Names match word by word, so
+        # "WINCHESTER, Dean" (as names are shown) and "Dean Winchester" both
+        # find the case.
+        name_fields = (
+            "requesting_officer__given_names",
+            "requesting_officer__last_name",
+            "submitting_officer__given_names",
+            "submitting_officer__last_name",
+            "defendants__given_names",
+            "defendants__last_name",
         )
+        names_q = Q()
+        for term in split_search(search):
+            term_q = Q()
+            for field in name_fields:
+                term_q |= Q(**{f"{field}__icontains": term})
+            names_q &= term_q
+        search_q = Q(case_number__icontains=search)
+        if names_q:
+            search_q |= names_q
         if search.isdigit():
             search_q = search_q | Q(pk=int(search))
         queryset = queryset.filter(search_q).distinct()
@@ -284,8 +317,9 @@ class CaseDetailView(RetrieveUpdateDestroyAPIView):
 
         ensure_case_deletable(instance)
 
-        settings.LOGGER.info(
-            f"{describe_user(self.request.user)} deleted case "
-            f"{instance.case_number} ({instance.pk})"
-        )
+        # Logged after the delete, so a failed delete is never recorded as done.
+        number, pk = instance.case_number, instance.pk
         super().perform_destroy(instance)
+        settings.LOGGER.info(
+            f"{describe_user(self.request.user)} deleted case {number} ({pk})"
+        )

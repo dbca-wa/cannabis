@@ -2,12 +2,7 @@ import { cn } from "@/shared/utils";
 import * as React from "react";
 
 export type SectionWrapperVariant =
-	| "default"
-	| "minimal"
-	| "dark"
-	| "card"
-	| "sunset"
-	| "ocean";
+	"default" | "minimal" | "dark" | "card" | "sunset" | "ocean";
 
 interface SectionWrapperProps {
 	children: React.ReactNode;

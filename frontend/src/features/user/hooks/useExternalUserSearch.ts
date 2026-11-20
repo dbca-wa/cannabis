@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDebounce, cacheConfig, debounceConfig } from "@/shared/hooks/core";
 import type { ExternalUserSearchResponse } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 export interface UseExternalUserSearchOptions {
 	query?: string;
@@ -41,7 +42,7 @@ export const useExternalUserSearch = (
 		},
 		enabled: shouldFetch as boolean,
 		...cacheConfig.external, // Use optimized cache settings for external data
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 

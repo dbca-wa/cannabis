@@ -17,7 +17,6 @@ export interface PaginatedResponse<T> {
 // An empty string means the officer has no rank on record.
 export type OfficerRank =
 	| ""
-	| "unknown"
 	| "constable"
 	| "police_constable"
 	| "first_class_constable"

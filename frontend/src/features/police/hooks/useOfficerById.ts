@@ -3,6 +3,7 @@ import { policeOfficersService } from "../services/policeOfficers.service";
 import { useQuery } from "@tanstack/react-query";
 import { policeOfficersQueryKeys } from "./usePoliceOfficers";
 import type { PoliceOfficer } from "@/shared/types/backend-api.types";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 export const useOfficerById = (officerId: number | null) => {
 	return useQuery({
@@ -16,7 +17,7 @@ export const useOfficerById = (officerId: number | null) => {
 		enabled: !!officerId,
 		staleTime: APP_CONFIG.CACHE.DEFAULT_TTL,
 		gcTime: APP_CONFIG.CACHE.DEFAULT_TTL * 2,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: 1000,
 	});
 };

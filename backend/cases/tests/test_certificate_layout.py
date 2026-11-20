@@ -30,6 +30,17 @@ A4_WIDTH_PT = 595.28
 # Tolerance for comparing whitespace gaps, in points (~0.7 mm)
 GAP_TOLERANCE_PT = 2.0
 
+
+def _prince_is_licensed():
+    """An unlicensed Prince stamps a logo in the page corner, which would be
+    measured as ink. Licensed installs report their licence in --version."""
+    result = subprocess.run(
+        ["prince", "--version"], capture_output=True, text=True, check=False
+    )
+    output = result.stdout + result.stderr
+    return "inapplicable license" not in output and "No license" not in output
+
+
 needs_renderers = pytest.mark.skipif(
     not (
         shutil.which("prince") and shutil.which("pdftoppm") and shutil.which("pdfinfo")
@@ -159,5 +170,7 @@ def test_signature_block_sits_on_the_bottom_margin(overrides, tmp_path):
     pages, gaps = _measure(PDFService._html_to_pdf(html), tmp_path)
 
     assert pages == 1
+    if not _prince_is_licensed():
+        pytest.skip("Prince is unlicensed here; its corner logo would skew margins")
     assert abs(gaps["bottom"] - gaps["top"]) <= GAP_TOLERANCE_PT, gaps
     assert abs(gaps["left"] - gaps["right"]) <= GAP_TOLERANCE_PT, gaps

@@ -116,3 +116,8 @@ __all__ = [
     "CasePhaseHistoryView",
     "FormWorkflowView",
 ]
+from .legacy_import import (  # noqa: F401
+    LegacyImportBundleView,
+    LegacyImportRunDetailView,
+    LegacyImportRunListView,
+)

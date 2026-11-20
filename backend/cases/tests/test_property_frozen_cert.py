@@ -1,6 +1,4 @@
-"""Property 7: Batched certificates are frozen — immutable number/bags/PDF.
-
-**Validates: Requirements 4.5, 6.8**
+"""Batched certificates are frozen — immutable number/bags/PDF.
 
 Generates a certificate, batches it, then performs further operations (add new
 forms, generate new certs, batch those). Asserts the original batched cert's

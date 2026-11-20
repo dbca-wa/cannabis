@@ -25,6 +25,7 @@ import { apiClient } from "@/shared/services/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
 import { getErrorMessage } from "@/shared/utils/error.utils";
+import { countOf } from "@/shared/utils/number.utils";
 import { toast } from "sonner";
 import type { PoliceOfficerTiny } from "@/shared/types/backend-api.types";
 
@@ -44,30 +45,39 @@ export const OfficerMergePage = () => {
 				target_name: string;
 				cases_reassigned: number;
 			}>("/police/officers/merge", data),
-		onSuccess: async (response) => {
-			await invalidateRelatedQueries(queryClient, "policeOfficers");
-			toast.success(
-				`Merge complete. ${response.cases_reassigned} case(s) reassigned.`
-			);
-		},
-		onError: (error: unknown) => {
-			toast.error(getErrorMessage(error) || "Merge failed. Please try again.");
-		},
 	});
 
+	// Each duplicate is merged in its own request; one message reports the
+	// total, or how far it got when a merge is refused.
 	const handleMerge = async () => {
 		if (!primary || secondaries.length === 0) return;
+		let merged = 0;
+		let casesMoved = 0;
 		try {
 			for (const secondary of secondaries) {
-				await mergeMutation.mutateAsync({
+				const response = await mergeMutation.mutateAsync({
 					target_officer_id: primary.id,
 					source_officer_id: secondary.id,
 				});
+				merged += 1;
+				casesMoved += response.cases_reassigned;
 			}
+			toast.success(
+				`Merged ${countOf(merged, "officer")} into ${primary.full_name}. ` +
+					`${countOf(casesMoved, "case")} now name ${primary.full_name}.`
+			);
 			setPrimary(null);
 			setSecondaries([]);
-		} catch {
-			// Error handled by mutation
+		} catch (error) {
+			const done =
+				merged > 0 ? ` ${countOf(merged, "officer")} merged before this.` : "";
+			toast.error(
+				(getErrorMessage(error) || "Merge failed. Please try again.") + done
+			);
+			// Keep only the duplicates that were not merged.
+			setSecondaries((current) => current.slice(merged));
+		} finally {
+			await invalidateRelatedQueries(queryClient, "policeOfficers");
 		}
 	};
 
@@ -194,7 +204,10 @@ const PrimaryOfficerSelector = ({
 							>
 								<button
 									type="button"
-									onClick={() => onSelect(officer)}
+									onClick={() => {
+										onSelect(officer);
+										setSearchQuery("");
+									}}
 									className={cn(
 										"flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted cursor-pointer",
 										selected?.id === officer.id &&
@@ -249,10 +262,13 @@ const SecondaryOfficerSelector = ({
 
 	return (
 		<div className="space-y-3">
-			<label className="text-sm font-medium">Secondary Officers</label>
+			<label className="text-sm font-medium" htmlFor="secondary-officer-search">
+				Secondary Officers
+			</label>
 			<div className="relative">
 				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 				<Input
+					id="secondary-officer-search"
 					placeholder="Search officers to merge..."
 					value={searchQuery}
 					onChange={(e) => setSearchQuery(e.target.value)}
@@ -328,6 +344,14 @@ const SecondaryOfficerSelector = ({
 	);
 };
 
+/** "Dean Winchester (PD70001), Joondalup Police Station". */
+const describeOfficer = (officer: PoliceOfficerTiny) => {
+	const name = officer.badge_number
+		? `${officer.full_name} (${officer.badge_number})`
+		: officer.full_name;
+	return `${name}, ${officer.station_name || "no station"}`;
+};
+
 const MergePreview = ({
 	primary,
 	secondaries,
@@ -340,7 +364,7 @@ const MergePreview = ({
 			<p className="text-sm font-medium text-muted-foreground">
 				Primary (will be kept):
 			</p>
-			<p className="text-base font-semibold">{primary.full_name}</p>
+			<p className="text-base font-semibold">{describeOfficer(primary)}</p>
 		</div>
 		<div>
 			<p className="text-sm font-medium text-muted-foreground">
@@ -349,7 +373,7 @@ const MergePreview = ({
 			<ul className="mt-1 space-y-1">
 				{secondaries.map((officer) => (
 					<li key={officer.id} className="text-sm">
-						{officer.full_name}{" "}
+						{describeOfficer(officer)}{" "}
 						<span className="text-muted-foreground">
 							({officer.case_count}{" "}
 							{officer.case_count === 1 ? "case" : "cases"})

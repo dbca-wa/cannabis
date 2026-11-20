@@ -38,11 +38,11 @@ export function useStations(params: StationsQueryParams = {}) {
 /**
  * Hook to fetch a single police station
  */
-export function useStation(id: number) {
+export function useStation(id: number, enabled = true) {
 	return useQuery({
 		queryKey: stationsQueryKeys.detail(id),
 		queryFn: () => policeStationsService.getStation(id),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		...cacheConfig.detail, // Use optimized cache settings
 	});
 }
@@ -124,12 +124,7 @@ export function useDeleteStation() {
 			id: number;
 			replacementId?: number | null;
 		}) => policeStationsService.deleteStation(id, replacementId),
-		onSuccess: async (_, { id }) => {
-			// Remove the station from the cache
-			queryClient.removeQueries({
-				queryKey: stationsQueryKeys.detail(id),
-			});
-
+		onSuccess: async () => {
 			// Moved cases and officers are refreshed too.
 			await invalidateRelatedQueries(queryClient, "policeStations");
 
@@ -144,11 +139,11 @@ export function useDeleteStation() {
 }
 
 /** The cases and officers that use a station, shown before deleting it. */
-export function useStationUsage(id: number | null) {
+export function useStationUsage(id: number | null, enabled = true) {
 	return useQuery({
 		queryKey: [...stationsQueryKeys.detail(id ?? 0), "usage"],
 		queryFn: () => policeStationsService.getStationUsage(id!),
-		enabled: !!id,
+		enabled: !!id && enabled,
 		staleTime: 0,
 	});
 }

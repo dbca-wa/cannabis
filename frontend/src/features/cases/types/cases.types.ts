@@ -136,6 +136,10 @@ export interface Priority3Form {
 	completed_at: string | null;
 	/** Last time the form itself changed (SME, Section C notes, etc.) */
 	updated_at: string;
+	/** Certificate number from the old system; blank on forms made in the app */
+	legacy_certificate_number?: string;
+	/** Date the old system certified the form (YYYY-MM-DD), or null */
+	legacy_certified_date?: string | null;
 }
 
 // Lightweight Priority 3 form for nesting in case listings
@@ -152,6 +156,10 @@ export interface Priority3FormTiny {
 	marked_ready: boolean;
 	certificates_generated_at: string | null;
 	completed_at: string | null;
+	/** Certificate number from the old system; blank on forms made in the app */
+	legacy_certificate_number?: string;
+	/** Date the old system certified the form (YYYY-MM-DD), or null */
+	legacy_certified_date?: string | null;
 }
 
 // Priority 3 form creation request (matches Priority3FormSerializer writable fields)
@@ -249,6 +257,7 @@ export interface CasesSearchParams {
 	botanist?: number;
 	officer?: number;
 	station?: number;
+	defendant?: number;
 	finance?: number;
 	cannabis_only?: boolean;
 	date_from?: string;

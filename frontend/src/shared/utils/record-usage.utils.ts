@@ -1,11 +1,14 @@
 /** Add the chosen replacement to a delete request, when there is one. */
 export const withReplacement = (
 	url: string,
-	replacementId: number | null | undefined
-): string =>
-	replacementId
+	replacementId: number | null | undefined,
+	unknown = false
+): string => {
+	if (unknown) return `${url}?replacement=unknown`;
+	return replacementId
 		? `${url}?replacement=${encodeURIComponent(replacementId)}`
 		: url;
+};
 
 /** Readable names for how a case uses a record. */
 const ROLE_LABELS: Record<string, string> = {

@@ -1,7 +1,5 @@
-"""Property 10: Batch cost is computed from snapshotted rates and is immune to
+"""Batch cost is computed from snapshotted rates and is immune to
 later rate changes.
-
-**Validates: Requirements 6.4, 7.1, 7.2, 7.3**
 
 Sets randomised rates, creates a batch, then changes the global rates. Asserts
 the batch's stored totals match the snapshot formula and that later rate changes

@@ -17,6 +17,7 @@ import {
 import type { AddUserFormData } from "../components/forms/schemas/addUserSchema";
 import type { InviteUserRequest } from "@/shared/types/backend-api.types";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 // Standardised query keys following police/defendants pattern
 export const usersQueryKeys = {
@@ -36,7 +37,7 @@ export const useUsers = (params: UserSearchParams = {}) => {
 		queryKey: usersQueryKeys.list(params),
 		queryFn: () => getUsers(params),
 		staleTime: 5 * 60 * 1000, // 5 minutes
-		retry: 3,
+		retry: retryUnlessClientError(3),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 

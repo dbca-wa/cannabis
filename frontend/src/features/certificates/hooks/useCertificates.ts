@@ -18,6 +18,7 @@ import type {
 import { toast } from "sonner";
 import { logger } from "@/shared/services/logger.service";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 // Query keys for certificates
 export const certificateQueryKeys = {
@@ -47,7 +48,7 @@ export const useCertificates = (
 		queryFn: (): Promise<PaginatedCertificatesResponse> =>
 			getCertificates(params),
 		staleTime: 5 * 60 * 1000,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
@@ -62,7 +63,7 @@ export const useCertificateById = (id: number | null) => {
 		},
 		enabled: !!id,
 		staleTime: 5 * 60 * 1000,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };
@@ -75,7 +76,7 @@ export const useCertificateSearch = (params: CertificateSearchParams) => {
 			searchCertificates(params),
 		enabled: !!params.search || !!params.case,
 		staleTime: 2 * 60 * 1000,
-		retry: 2,
+		retry: retryUnlessClientError(2),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	});
 };

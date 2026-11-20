@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 "first_name": "John",
                 "last_name": "Unknown",
                 "badge_number": "UNK001",
-                "rank": PoliceOfficer.SeniorityChoices.UNKNOWN,
+                "rank": PoliceOfficer.NO_RANK,
                 "station": stations[0] if stations else None,
             },
             {
@@ -38,7 +38,7 @@ class Command(BaseCommand):
                 "first_name": "Bob",
                 "last_name": "Mystery",
                 "badge_number": "UNK002",
-                "rank": PoliceOfficer.SeniorityChoices.UNKNOWN,
+                "rank": PoliceOfficer.NO_RANK,
                 "station": stations[2] if len(stations) > 2 else stations[0],
             },
             {

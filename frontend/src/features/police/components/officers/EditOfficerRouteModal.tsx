@@ -7,11 +7,13 @@ import { EditOfficerForm } from "./EditOfficerForm";
 import {
 	useUpdatePoliceOfficer,
 	usePoliceOfficer,
+	useOfficerUsage,
 } from "../../hooks/usePoliceOfficers";
 import { PageLoading } from "@/shared/components/feedback/LoadingSpinner";
 import { ErrorAlert } from "@/shared/components/feedback/ErrorAlert";
 import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
 import type { PoliceOfficerUpdateRequest } from "@/shared/types/backend-api.types";
+import { RelatedRecordLinks } from "@/shared/components/RelatedRecordLinks";
 
 export const EditOfficerRouteModal = () => {
 	const navigate = useNavigate();
@@ -24,6 +26,8 @@ export const EditOfficerRouteModal = () => {
 		isLoading,
 		error,
 	} = usePoliceOfficer(officerId ? parseInt(officerId) : 0);
+	// The cases that name this officer, for the "View cases" count.
+	const usage = useOfficerUsage(officerId ? parseInt(officerId) : null);
 
 	const handleClose = () => {
 		navigate("/officers");
@@ -90,6 +94,15 @@ export const EditOfficerRouteModal = () => {
 					onSubmit={handleSubmit}
 					onCancel={handleClose}
 					isLoading={updateOfficerMutation.isPending}
+				/>
+				<RelatedRecordLinks
+					links={[
+						{
+							noun: "cases",
+							count: usage.data?.cases.length,
+							to: `/cases?officer=${officer.id}`,
+						},
+					]}
 				/>
 				<DeleteRecordFooter
 					noun="officer"

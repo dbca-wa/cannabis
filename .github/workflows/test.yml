@@ -210,7 +210,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17
+        # Same major version as the staging and production servers.
+        image: postgres:16
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: test_user

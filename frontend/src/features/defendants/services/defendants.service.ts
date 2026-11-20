@@ -67,11 +67,12 @@ export const updateDefendant = async (
 /** Delete a defendant */
 export const deleteDefendant = async (
 	id: number,
-	replacementId?: number | null
+	replacementId?: number | null,
+	unknown = false
 ): Promise<void> => {
 	// Cases naming the defendant move to the replacement before deletion.
 	await apiClient.delete(
-		withReplacement(ENDPOINTS.DEFENDANTS.DELETE(id), replacementId)
+		withReplacement(ENDPOINTS.DEFENDANTS.DELETE(id), replacementId, unknown)
 	);
 };
 

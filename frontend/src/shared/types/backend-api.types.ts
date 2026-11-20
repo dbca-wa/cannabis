@@ -120,6 +120,8 @@ export interface User {
 	is_staff: boolean;
 	is_active: boolean;
 	is_superuser: boolean;
+	/** Maintainer of the app: may run system tasks such as the legacy import */
+	is_maintainer?: boolean;
 	is_legacy: boolean;
 	requires_password_change: boolean;
 	date_joined: string; // ISO datetime string

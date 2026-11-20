@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 def adopt_envelope_line(apps, schema_editor):
+    # Nothing to do on a new database, and the current models may have columns
+    # that later migrations have not added yet.
+    if not apps.get_model("submissions", "Certificate").objects.exists():
+        return
     try:
         from cases.models import Case, Certificate
         from cases.services.certificate_service import CertificateService

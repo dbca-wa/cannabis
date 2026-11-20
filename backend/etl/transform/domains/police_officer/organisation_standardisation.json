@@ -1,0 +1,1104 @@
+{
+    "source_column_name": "Police Officers",
+    "sink_column_name": "organisation",
+    "entries": [
+        {
+            "canonical": "Albany Police",
+            "variants": [
+                "albany",
+                "albany police"
+            ]
+        },
+        {
+            "canonical": "Albany Detectives",
+            "variants": [
+                "albany detectives",
+                "albany dets"
+            ]
+        },
+        {
+            "canonical": "Armadale Police",
+            "variants": [
+                "a/dale",
+                "armadale",
+                "armadale district office"
+            ]
+        },
+        {
+            "canonical": "Armadale Detectives",
+            "variants": [
+                "arm dets",
+                "armadale detectives",
+                "armadale dets"
+            ]
+        },
+        {
+            "canonical": "Atone Police",
+            "variants": [
+                "atone"
+            ]
+        },
+        {
+            "canonical": "Augusta Police",
+            "variants": [
+                "augusta"
+            ]
+        },
+        {
+            "canonical": "Australind Police",
+            "variants": [
+                "australind"
+            ]
+        },
+        {
+            "canonical": "Ballajura Police",
+            "variants": [
+                "ballajura"
+            ]
+        },
+        {
+            "canonical": "Bayswater Police",
+            "variants": [
+                "bayswater",
+                "bayswater station"
+            ]
+        },
+        {
+            "canonical": "Belmont Police",
+            "variants": [
+                "belmont"
+            ]
+        },
+        {
+            "canonical": "Boyup Brook Police",
+            "variants": [
+                "boyup brook police station"
+            ]
+        },
+        {
+            "canonical": "Breath Analysis Section",
+            "variants": [
+                "b.a.s.",
+                "b.a.s",
+                "bas",
+                "breath analysis section"
+            ]
+        },
+        {
+            "canonical": "Bridgetown Police",
+            "variants": [
+                "bridgetown",
+                "bridgetown police station"
+            ]
+        },
+        {
+            "canonical": "Broome Police",
+            "variants": [
+                "broome"
+            ]
+        },
+        {
+            "canonical": "Bunbury Police",
+            "variants": [
+                "bunbury",
+                "bunbury police",
+                "bunbury station"
+            ]
+        },
+        {
+            "canonical": "Bunbury Detectives",
+            "variants": [
+                "bunbury detectives"
+            ]
+        },
+        {
+            "canonical": "Busselton Police",
+            "variants": [
+                "busselton"
+            ]
+        },
+        {
+            "canonical": "Cannington Police",
+            "variants": [
+                "cannington",
+                "cannington district office"
+            ]
+        },
+        {
+            "canonical": "Cannington Detectives",
+            "variants": [
+                "cannington detectives"
+            ]
+        },
+        {
+            "canonical": "Cannington Divisional Support Group",
+            "variants": [
+                "cannington dsg"
+            ]
+        },
+        {
+            "canonical": "Cannington Tactical Investigations Group",
+            "variants": [
+                "cannington tig",
+                "c'ton tig",
+                "c/ton tig"
+            ]
+        },
+        {
+            "canonical": "Carnarvon Police",
+            "variants": [
+                "carnarvon"
+            ]
+        },
+        {
+            "canonical": "Central District Tactical Support Group",
+            "variants": [
+                "cdtsg"
+            ]
+        },
+        {
+            "canonical": "Central Metropolitan Divisional Support Group",
+            "variants": [
+                "central metro dsg",
+                "c.m.dsg",
+                "c/metro dsg"
+            ]
+        },
+        {
+            "canonical": "Central Metropolitan Police",
+            "variants": [
+                "central metropolitan district office"
+            ]
+        },
+        {
+            "canonical": "Central Metropolitan Tactical Investigations Group",
+            "variants": [
+                "central metro tig",
+                "c.m.tig",
+                "central metropolitan tig",
+                "central tig"
+            ]
+        },
+        {
+            "canonical": "Child Abuse Unit",
+            "variants": [
+                "child abuse unit"
+            ]
+        },
+        {
+            "canonical": "City Detectives",
+            "variants": [
+                "city dets"
+            ]
+        },
+        {
+            "canonical": "Clarkson Police",
+            "variants": [
+                "clarkson police station"
+            ]
+        },
+        {
+            "canonical": "Cockburn Police",
+            "variants": [
+                "cockburn"
+            ]
+        },
+        {
+            "canonical": "Collie Police",
+            "variants": [
+                "collie"
+            ]
+        },
+        {
+            "canonical": "Commercial Crime Division",
+            "variants": [
+                "commercial crime divisional office"
+            ]
+        },
+        {
+            "canonical": "Coolgardie Police",
+            "variants": [
+                "coolgardie"
+            ]
+        },
+        {
+            "canonical": "Counter Terrorism and Emergency Response",
+            "variants": [
+                "counter terrorism and emergency response"
+            ]
+        },
+        {
+            "canonical": "Crime Scene Unit",
+            "variants": [
+                "crime scene unit",
+                "csu"
+            ]
+        },
+        {
+            "canonical": "Criminal Gangs and Regional Investigations",
+            "variants": [
+                "criminal gangs and regional investigations"
+            ]
+        },
+        {
+            "canonical": "Cunderdin Police",
+            "variants": [
+                "cunderdin"
+            ]
+        },
+        {
+            "canonical": "Denmark Police",
+            "variants": [
+                "denmark",
+                "denmark police"
+            ]
+        },
+        {
+            "canonical": "Derby Police",
+            "variants": [
+                "derby"
+            ]
+        },
+        {
+            "canonical": "Dongara Police",
+            "variants": [
+                "dongara"
+            ]
+        },
+        {
+            "canonical": "Donnybrook Police",
+            "variants": [
+                "donnybrook"
+            ]
+        },
+        {
+            "canonical": "Drug Response Unit",
+            "variants": [
+                "dru",
+                "drug"
+            ]
+        },
+        {
+            "canonical": "Dunsborough Police",
+            "variants": [
+                "dunsborough"
+            ]
+        },
+        {
+            "canonical": "Dwellingup Police",
+            "variants": [
+                "dwellingup"
+            ]
+        },
+        {
+            "canonical": "East Metropolitan Police",
+            "variants": [
+                "east metropolitan district office",
+                "the east metropolitan district office"
+            ]
+        },
+        {
+            "canonical": "East Metropolitan Tactical Investigations Group",
+            "variants": [
+                "east metropolitan tig",
+                "em tig"
+            ]
+        },
+        {
+            "canonical": "Esperance Police",
+            "variants": [
+                "esperance"
+            ]
+        },
+        {
+            "canonical": "Eucla Police",
+            "variants": [
+                "eucla",
+                "eucla police"
+            ]
+        },
+        {
+            "canonical": "Exmouth Police",
+            "variants": [
+                "exmouth"
+            ]
+        },
+        {
+            "canonical": "Forrestfield Police",
+            "variants": [
+                "forrestfield"
+            ]
+        },
+        {
+            "canonical": "Fremantle Police",
+            "variants": [
+                "fremantle",
+                "fremantle district office",
+                "fremantle police"
+            ]
+        },
+        {
+            "canonical": "Fremantle Detectives",
+            "variants": [
+                "fremantle detectives",
+                "fremantle dets",
+                "frem dets",
+                "ftle dets"
+            ]
+        },
+        {
+            "canonical": "Fremantle Divisional Support Group",
+            "variants": [
+                "ftle dsg"
+            ]
+        },
+        {
+            "canonical": "Fremantle Tactical Investigations Group",
+            "variants": [
+                "fremantle tig"
+            ]
+        },
+        {
+            "canonical": "Gang Response Unit",
+            "variants": [
+                "gang response unit"
+            ]
+        },
+        {
+            "canonical": "Geraldton Police",
+            "variants": [
+                "geraldton",
+                "geraldton police",
+                "geralton"
+            ]
+        },
+        {
+            "canonical": "Geraldton Detectives",
+            "variants": [
+                "geraldton detectives",
+                "geraldton dets"
+            ]
+        },
+        {
+            "canonical": "Gingin Police",
+            "variants": [
+                "gingin"
+            ]
+        },
+        {
+            "canonical": "Gold Stealing Detective Unit",
+            "variants": [
+                "gold stealing detective unit",
+                "gold stealing det unit",
+                "gold stealing d/u"
+            ]
+        },
+        {
+            "canonical": "Goldfields Police",
+            "variants": [
+                "goldfields - esperance district office"
+            ]
+        },
+        {
+            "canonical": "Great Southern District Police",
+            "variants": [
+                "great southern district office"
+            ]
+        },
+        {
+            "canonical": "Harvey Police",
+            "variants": [
+                "harvey"
+            ]
+        },
+        {
+            "canonical": "Hillarys Police",
+            "variants": [
+                "hillarys"
+            ]
+        },
+        {
+            "canonical": "Joondalup Police",
+            "variants": [
+                "joondalup",
+                "joondalup district office"
+            ]
+        },
+        {
+            "canonical": "Joondalup Detectives",
+            "variants": [
+                "joondalup detectives",
+                "joondalup detectives."
+            ]
+        },
+        {
+            "canonical": "Joondalup Divisional Support Group",
+            "variants": [
+                "joondalup dsg"
+            ]
+        },
+        {
+            "canonical": "Joondalup Tactical Investigations Group",
+            "variants": [
+                "joondalup tig"
+            ]
+        },
+        {
+            "canonical": "Kalbarri Police",
+            "variants": [
+                "kalbarri"
+            ]
+        },
+        {
+            "canonical": "Kalgoorlie Police",
+            "variants": [
+                "kalgoorlie"
+            ]
+        },
+        {
+            "canonical": "Kalgoorlie Detectives",
+            "variants": [
+                "kalgoorlie detectives",
+                "kalgoorlie dets"
+            ]
+        },
+        {
+            "canonical": "Kambalda Police",
+            "variants": [
+                "kambalda"
+            ]
+        },
+        {
+            "canonical": "Katanning Police",
+            "variants": [
+                "katanning"
+            ]
+        },
+        {
+            "canonical": "Kiara Police",
+            "variants": [
+                "kiara"
+            ]
+        },
+        {
+            "canonical": "Kimberley Police",
+            "variants": [
+                "kimberley district office"
+            ]
+        },
+        {
+            "canonical": "Kojonup Police",
+            "variants": [
+                "kojonup"
+            ]
+        },
+        {
+            "canonical": "Kununurra Police",
+            "variants": [
+                "kununurra"
+            ]
+        },
+        {
+            "canonical": "Kwinana Police",
+            "variants": [
+                "kwinana"
+            ]
+        },
+        {
+            "canonical": "Kwinana Detectives",
+            "variants": [
+                "kwinana dets"
+            ]
+        },
+        {
+            "canonical": "Lancelin Police",
+            "variants": [
+                "lancelin"
+            ]
+        },
+        {
+            "canonical": "Leederville Police",
+            "variants": [
+                "leederville"
+            ]
+        },
+        {
+            "canonical": "Licensing Enforcement Division",
+            "variants": [
+                "licensing enforcement divisional office"
+            ]
+        },
+        {
+            "canonical": "Lockridge Police",
+            "variants": [
+                "lockridge"
+            ]
+        },
+        {
+            "canonical": "Major Crime Division",
+            "variants": [
+                "major crime divisional office"
+            ]
+        },
+        {
+            "canonical": "Major Incident Group",
+            "variants": [
+                "major incident group",
+                "mig"
+            ]
+        },
+        {
+            "canonical": "Mandurah Police",
+            "variants": [
+                "mandurah",
+                "mandurah district office"
+            ]
+        },
+        {
+            "canonical": "Mandurah Detectives",
+            "variants": [
+                "mandurah dets"
+            ]
+        },
+        {
+            "canonical": "Mandurah Intelligence Management Unit",
+            "variants": [
+                "mandurah imu"
+            ]
+        },
+        {
+            "canonical": "Manjimup Police",
+            "variants": [
+                "manjimup",
+                "manjimup police station",
+                "manjimup police on behalf of senior constable p. bernstein"
+            ]
+        },
+        {
+            "canonical": "Margaret River Police",
+            "variants": [
+                "margaret river"
+            ]
+        },
+        {
+            "canonical": "Meekatharra Police",
+            "variants": [
+                "meekatharra"
+            ]
+        },
+        {
+            "canonical": "Merredin Detectives",
+            "variants": [
+                "merredin detectives"
+            ]
+        },
+        {
+            "canonical": "Mid-West Gascoyne Police",
+            "variants": [
+                "mid west-gascoyne district office"
+            ]
+        },
+        {
+            "canonical": "Midland Police",
+            "variants": [
+                "midland",
+                "midland district office"
+            ]
+        },
+        {
+            "canonical": "Midland Detectives",
+            "variants": [
+                "midland detectives",
+                "midland dets",
+                "mid dets"
+            ]
+        },
+        {
+            "canonical": "Midland Tactical Investigations Group",
+            "variants": [
+                "midland tig"
+            ]
+        },
+        {
+            "canonical": "Mirrabooka Police",
+            "variants": [
+                "mirrabooka",
+                "m/booka",
+                "mirrabooka police station",
+                "mirrabooka district office"
+            ]
+        },
+        {
+            "canonical": "Mirrabooka Detectives",
+            "variants": [
+                "mirrabooka detectives",
+                "mirrabooka dets"
+            ]
+        },
+        {
+            "canonical": "Mirrabooka Divisional Support Group",
+            "variants": [
+                "mirrabooka dsg"
+            ]
+        },
+        {
+            "canonical": "Mirrabooka Tactical Investigations Group",
+            "variants": [
+                "mirrabooka tig"
+            ]
+        },
+        {
+            "canonical": "Moora Police",
+            "variants": [
+                "moora"
+            ]
+        },
+        {
+            "canonical": "Morley Police",
+            "variants": [
+                "morley"
+            ]
+        },
+        {
+            "canonical": "Morley Detectives",
+            "variants": [
+                "morley detectives",
+                "morley dets"
+            ]
+        },
+        {
+            "canonical": "Mt Hawthorn Police",
+            "variants": [
+                "mt hawthorn"
+            ]
+        },
+        {
+            "canonical": "Mt Magnet Police",
+            "variants": [
+                "mt magnet"
+            ]
+        },
+        {
+            "canonical": "Murdoch Police",
+            "variants": [
+                "murdoch"
+            ]
+        },
+        {
+            "canonical": "Murdoch Detectives",
+            "variants": [
+                "murdoch detectives",
+                "murdoch dets"
+            ]
+        },
+        {
+            "canonical": "Nannup Police",
+            "variants": [
+                "nannup"
+            ]
+        },
+        {
+            "canonical": "Narrogin Police",
+            "variants": [
+                "narrogin"
+            ]
+        },
+        {
+            "canonical": "Northam Police",
+            "variants": [
+                "northam"
+            ]
+        },
+        {
+            "canonical": "Northampton Police",
+            "variants": [
+                "northampton"
+            ]
+        },
+        {
+            "canonical": "North-West Metropolitan Police",
+            "variants": [
+                "north west metropolitan district",
+                "north west metropolitan district office"
+            ]
+        },
+        {
+            "canonical": "North-West Metropolitan Tactical Investigations Group",
+            "variants": [
+                "n/w metro tig"
+            ]
+        },
+        {
+            "canonical": "Organised Crime Investigations",
+            "variants": [
+                "o.c.i.",
+                "o.c.i",
+                "oci",
+                "organised crime divisional office",
+                "organised crome divisional office",
+                "organised crime divisional",
+                "organised crime investigations",
+                "organised crime investigaton",
+                "organised crime investigation",
+                "organized crime"
+            ]
+        },
+        {
+            "canonical": "Outlaw Motorcycle Gang Taskforce",
+            "variants": [
+                "o.m.c.g. taskforce",
+                "omcg",
+                "omcg t/f",
+                "omcg t/force",
+                "omcg task force",
+                "omcg taskforce"
+            ]
+        },
+        {
+            "canonical": "Palmyra Police",
+            "variants": [
+                "palmyra"
+            ]
+        },
+        {
+            "canonical": "Peel Police",
+            "variants": [
+                "peel district office",
+                "peel district.",
+                "peel district"
+            ]
+        },
+        {
+            "canonical": "Peel Detectives",
+            "variants": [
+                "peel dets"
+            ]
+        },
+        {
+            "canonical": "Peel Intelligence Management Unit",
+            "variants": [
+                "peel imu"
+            ]
+        },
+        {
+            "canonical": "Pemberton Police",
+            "variants": [
+                "pemberton",
+                "pemberton police station"
+            ]
+        },
+        {
+            "canonical": "Perth City Police",
+            "variants": [
+                "perth",
+                "perth city",
+                "perth district office"
+            ]
+        },
+        {
+            "canonical": "Perth City Detectives",
+            "variants": [
+                "perth city detectives"
+            ]
+        },
+        {
+            "canonical": "Perth City Tactical Investigations Group",
+            "variants": [
+                "perth t.i.g.",
+                "perth t.i.g",
+                "perth tig"
+            ]
+        },
+        {
+            "canonical": "Pilbara Police",
+            "variants": [
+                "pilbara district office"
+            ]
+        },
+        {
+            "canonical": "Pingelly Police",
+            "variants": [
+                "pingelly"
+            ]
+        },
+        {
+            "canonical": "Pinjarra Police",
+            "variants": [
+                "pinjarra"
+            ]
+        },
+        {
+            "canonical": "Police Transit Unit",
+            "variants": [
+                "police transit unit",
+                "the police transit unit"
+            ]
+        },
+        {
+            "canonical": "Public Sector Investigations",
+            "variants": [
+                "public sector investigations"
+            ]
+        },
+        {
+            "canonical": "Railway Police",
+            "variants": [
+                "railway police"
+            ]
+        },
+        {
+            "canonical": "Regional Operations and Investigations",
+            "variants": [
+                "regional operations & investigations division"
+            ]
+        },
+        {
+            "canonical": "Regional Coordinator",
+            "variants": [
+                "the regional coordinator"
+            ]
+        },
+        {
+            "canonical": "Rockingham Police",
+            "variants": [
+                "rockingham",
+                "r'ham",
+                "rockingham police"
+            ]
+        },
+        {
+            "canonical": "Rockingham Detectives",
+            "variants": [
+                "rockingham detectives",
+                "rockingham dets"
+            ]
+        },
+        {
+            "canonical": "Rockingham Divisional Support Group",
+            "variants": [
+                "r/ham dsg"
+            ]
+        },
+        {
+            "canonical": "Serious and Organised Crime Division",
+            "variants": [
+                "serious & organised crime",
+                "serious & organised crime divisional office",
+                "serious & organised crime divisional office.",
+                "serious & organised crime divsional office",
+                "serious and organiised crime divisional office.",
+                "serious and organiised crime divisional office",
+                "serious and organised crime divisional office"
+            ]
+        },
+        {
+            "canonical": "Sex Crime Division",
+            "variants": [
+                "sex crime dicisional office",
+                "sex crime divisional office"
+            ]
+        },
+        {
+            "canonical": "South East Metropolitan Police",
+            "variants": [
+                "sem district control centre (om)",
+                "south east metropolitan district",
+                "south east metropolitan district office",
+                "soutn east metropolitan district office"
+            ]
+        },
+        {
+            "canonical": "South East Metropolitan Tactical Investigations Group",
+            "variants": [
+                "south east metropilitan tig",
+                "south east metropolitan tig",
+                "south east metroplitan tig",
+                "south east metro tig",
+                "s/e metro tig",
+                "s.e.m. tig",
+                "sem tig",
+                "s/metro tig"
+            ]
+        },
+        {
+            "canonical": "South Hedland Police",
+            "variants": [
+                "south hedland"
+            ]
+        },
+        {
+            "canonical": "South Metropolitan Police",
+            "variants": [
+                "south metropolitan district office",
+                "south metro district control",
+                "south metropolitan district"
+            ]
+        },
+        {
+            "canonical": "South Metropolitan Divisional Support Group",
+            "variants": [
+                "s.m. dsg",
+                "sth metro dsg"
+            ]
+        },
+        {
+            "canonical": "South Metropolitan Tactical Investigations Group",
+            "variants": [
+                "sm tig",
+                "south metropolitan tig"
+            ]
+        },
+        {
+            "canonical": "South West Police",
+            "variants": [
+                "south west district",
+                "south west district office",
+                "the south west district office",
+                "south wet district office",
+                "south west office"
+            ]
+        },
+        {
+            "canonical": "State Intelligence Division",
+            "variants": [
+                "state intelligence divisional office"
+            ]
+        },
+        {
+            "canonical": "Stirling Detectives",
+            "variants": [
+                "stirling detectives",
+                "stirling dets"
+            ]
+        },
+        {
+            "canonical": "Subiaco Police",
+            "variants": [
+                "subiaco"
+            ]
+        },
+        {
+            "canonical": "Tactical Response Group",
+            "variants": [
+                "trg"
+            ]
+        },
+        {
+            "canonical": "Toodyay Police",
+            "variants": [
+                "toodyay"
+            ]
+        },
+        {
+            "canonical": "Traffic Enforcement",
+            "variants": [
+                "traffic enforcement"
+            ]
+        },
+        {
+            "canonical": "Two Rocks Police",
+            "variants": [
+                "two rocks"
+            ]
+        },
+        {
+            "canonical": "Victoria Park Police",
+            "variants": [
+                "victoria park",
+                "vic park",
+                "vic pk"
+            ]
+        },
+        {
+            "canonical": "Wanneroo Police",
+            "variants": [
+                "wanneroo"
+            ]
+        },
+        {
+            "canonical": "Warwick Police",
+            "variants": [
+                "warwick"
+            ]
+        },
+        {
+            "canonical": "Warwick Detectives",
+            "variants": [
+                "warwick detectives",
+                "warwick dets"
+            ]
+        },
+        {
+            "canonical": "Water Police",
+            "variants": [
+                "water police"
+            ]
+        },
+        {
+            "canonical": "Wembley Police",
+            "variants": [
+                "wembley"
+            ]
+        },
+        {
+            "canonical": "Wembley Detectives",
+            "variants": [
+                "wembley dets",
+                "wembley police station"
+            ]
+        },
+        {
+            "canonical": "West Metropolitan Police",
+            "variants": [
+                "west metropolitan district office"
+            ]
+        },
+        {
+            "canonical": "West Metropolitan Divisional Support Group",
+            "variants": [
+                "w.m.d.s.g.",
+                "w.m.d.s.g"
+            ]
+        },
+        {
+            "canonical": "West Metropolitan Tactical Investigations Group",
+            "variants": [
+                "w m tig",
+                "w.m.t.i.g.",
+                "w.m.t.i.g",
+                "w/metro tig",
+                "west metropolitan tig"
+            ]
+        },
+        {
+            "canonical": "West Metropolitan Traffic",
+            "variants": [
+                "west metropolitan traffic"
+            ]
+        },
+        {
+            "canonical": "Westrail Police",
+            "variants": [
+                "westrail"
+            ]
+        },
+        {
+            "canonical": "Wheatbelt Police",
+            "variants": [
+                "wheatbelt district office"
+            ]
+        },
+        {
+            "canonical": "Wundowie Police",
+            "variants": [
+                "wundowie"
+            ]
+        },
+        {
+            "canonical": "Yarloop Police",
+            "variants": [
+                "yarloop"
+            ]
+        }
+    ]
+}

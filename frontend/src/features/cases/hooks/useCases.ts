@@ -18,6 +18,7 @@ import {
 	type WorkflowActionRequest,
 } from "@/shared/types/backend-api.types";
 import { invalidateRelatedQueries } from "@/shared/services/cache/queryInvalidation";
+import { retryUnlessClientError } from "@/shared/utils/query-retry.utils";
 
 // Standardised query keys following established patterns
 export const casesQueryKeys = {
@@ -37,7 +38,7 @@ export const useCases = (params: CasesSearchParams = {}) => {
 		queryKey: casesQueryKeys.list(params),
 		queryFn: () => getCases(params),
 		staleTime: 2 * 60 * 1000,
-		retry: 3,
+		retry: retryUnlessClientError(3),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 
@@ -207,7 +208,7 @@ export const useCaseById = (id: number | null) => {
 		queryFn: () => getCaseById(id!),
 		enabled: !!id,
 		staleTime: 5 * 60 * 1000,
-		retry: 3,
+		retry: retryUnlessClientError(3),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 };
@@ -226,7 +227,7 @@ export const usePhaseHistory = (
 		queryFn: () => getPhaseHistory(submissionId!, params),
 		enabled: !!submissionId,
 		staleTime: 2 * 60 * 1000,
-		retry: 3,
+		retry: retryUnlessClientError(3),
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 };

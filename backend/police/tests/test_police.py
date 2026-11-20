@@ -84,7 +84,7 @@ class TestDuplicateOfficerMessage:
 
         assert resp.status_code == 400
         assert resp.data["last_name"] == [
-            "An officer named 'Alex Turner' already exists at Fremantle."
+            "An officer named 'TURNER, Alex' already exists at Fremantle."
         ]
 
     def test_says_when_there_is_no_station(self, admin_client):
@@ -96,5 +96,5 @@ class TestDuplicateOfficerMessage:
 
         assert resp.status_code == 400
         assert resp.data["last_name"] == [
-            "An officer named 'Alex Turner' with no station already exists."
+            "An officer named 'TURNER, Alex' with no station already exists."
         ]

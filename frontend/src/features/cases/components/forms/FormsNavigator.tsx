@@ -28,6 +28,8 @@ const CERT_STATE_STYLES: Record<string, string> = {
 		"border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
 	batched:
 		"border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300",
+	legacy:
+		"border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200",
 };
 
 interface FormsNavigatorProps {
@@ -99,13 +101,18 @@ export const FormsNavigator = ({
 					);
 					const hasCert = !!form.certificate;
 					const isMarkedReady = form.marked_ready;
+					// Imported forms were certified by the old system and have no
+					// certificate here, so they show that certificate's number.
+					const legacyNumber = form.legacy_certificate_number;
 					const certState = isBatched
 						? "batched"
 						: isMarkedReady
 							? "ready"
 							: hasCert
 								? "generated"
-								: "pending";
+								: legacyNumber
+									? "legacy"
+									: "pending";
 					const certStateLabel =
 						certState === "batched"
 							? "Batched"
@@ -113,7 +120,9 @@ export const FormsNavigator = ({
 								? "Ready"
 								: certState === "generated"
 									? "Generated"
-									: "Pending";
+									: certState === "legacy"
+										? `Legacy #${legacyNumber}`
+										: "Pending";
 					return (
 						<div
 							key={form.id}

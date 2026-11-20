@@ -57,10 +57,19 @@ class DefendantRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         # Cases naming this defendant are moved to ?replacement=<id> first, so
         # no case loses its defendant.
-        replacement = replacement_from_request(
-            self.request, Defendant.objects.all(), "defendant"
+        # ?replacement=unknown takes the defendant off those cases instead; a
+        # case left with no defendant prints UNKNOWN.
+        unknown = self.request.query_params.get("replacement") == "unknown"
+        replacement = (
+            None
+            if unknown
+            else replacement_from_request(
+                self.request, Defendant.objects.all(), "defendant"
+            )
         )
-        DefendantService.delete_defendant(instance, self.request.user, replacement)
+        DefendantService.delete_defendant(
+            instance, self.request.user, replacement, unknown=unknown
+        )
 
 
 class DefendantUsageView(APIView):

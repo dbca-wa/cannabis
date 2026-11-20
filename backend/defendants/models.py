@@ -40,10 +40,17 @@ class Defendant(AuditModel):
 
     @property
     def full_name(self):
-        """Return defendant's full name"""
-        if self.given_names and self.last_name:
-            return f"{self.given_names} {self.last_name}"
-        return self.last_name or "Unknown"
+        """The defendant's name as shown everywhere in the app: SURNAME, Given.
+
+        Surname first in capitals, matching the Priority 3 form and the
+        certificate, so a name reads the same in every list, picker and
+        message.
+        """
+        last = (self.last_name or "").strip()
+        given = (self.given_names or "").strip()
+        if last and given:
+            return f"{last.upper()}, {given}"
+        return last.upper() or "Unknown"
 
     def __str__(self):
         return f"{self.id} - {self.full_name}"

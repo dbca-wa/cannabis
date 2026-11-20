@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
 	ResponsiveModal,
@@ -18,21 +19,28 @@ export const DeleteDefendantRouteModal = () => {
 	const navigate = useNavigate();
 	const { defendantId } = useParams<{ defendantId: string }>();
 	const id = defendantId ? parseInt(defendantId, 10) : null;
+	// Once deletion starts, stop refetching the record being deleted.
+	const [deleting, setDeleting] = useState(false);
 	const { isAdmin } = useAuth();
 	const deleteDefendant = useDeleteDefendant();
-	const { data: defendant, isLoading, error } = useDefendantById(id);
-	const usage = useDefendantUsage(id);
+	const { data: defendant, isLoading, error } = useDefendantById(id, !deleting);
+	const usage = useDefendantUsage(id, !deleting);
 
 	const handleClose = () => {
 		navigate("/defendants");
 	};
 
-	const handleDelete = async (replacementId: number | null) => {
+	const handleDelete = async (
+		replacementId: number | null,
+		unknown: boolean
+	) => {
 		if (!id) return;
+		setDeleting(true);
 		try {
-			await deleteDefendant.mutateAsync({ id, replacementId });
+			await deleteDefendant.mutateAsync({ id, replacementId, unknown });
 			handleClose();
 		} catch {
+			setDeleting(false);
 			// The mutation shows the error.
 		}
 	};
@@ -88,6 +96,8 @@ export const DeleteDefendantRouteModal = () => {
 					placeholder="Search for a defendant..."
 				/>
 			)}
+			noReplacementLabel="Set these cases to an unknown defendant"
+			noReplacementHint="The defendant is taken off each case. A case with no other defendant prints UNKNOWN on its certificate."
 			onConfirm={handleDelete}
 			onClose={handleClose}
 		/>

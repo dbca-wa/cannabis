@@ -87,6 +87,10 @@ def _previous_section_c(bag_lines, note, female_line, envelope_line, is_sme):
 
 
 def adopt_section_c_order(apps, schema_editor):
+    # Nothing to do on a new database, and the current models may have columns
+    # that later migrations have not added yet.
+    if not apps.get_model("submissions", "Certificate").objects.exists():
+        return
     try:
         from rest_framework.exceptions import ValidationError
 

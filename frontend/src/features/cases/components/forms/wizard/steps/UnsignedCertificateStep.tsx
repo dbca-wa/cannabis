@@ -22,6 +22,7 @@ import {
 import { cn } from "@/shared/utils/style.utils";
 import { useCaseCertificates } from "../../../../hooks/useCaseCertificates";
 import { GeneratedCertificatesViewer } from "../GeneratedCertificatesViewer";
+import { LegacyCertificatesNotice } from "./LegacyCertificatesNotice";
 import { isFormStale } from "../../../../utils/certificateStaleness";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
 
@@ -49,6 +50,7 @@ export const UnsignedCertificateStep = ({
 }: UnsignedCertificateStepProps) => {
 	const {
 		eligibleForms,
+		legacyForms,
 		generatedForms,
 		pendingForms,
 		staleForms,
@@ -88,20 +90,28 @@ export const UnsignedCertificateStep = ({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [staleReadyKey]);
 
+	const legacyNotice =
+		legacyForms.length > 0 ? (
+			<LegacyCertificatesNotice forms={legacyForms} />
+		) : null;
+
 	if (eligibleForms.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-				<AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
-				<p className="mb-2 text-sm font-medium">No forms with drug bags</p>
-				<p className="text-xs text-muted-foreground">
-					Add drug bags to at least one form before generating certificates.
-				</p>
-			</div>
+			legacyNotice ?? (
+				<div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+					<AlertCircle className="mb-4 h-12 w-12 text-muted-foreground" />
+					<p className="mb-2 text-sm font-medium">No forms with drug bags</p>
+					<p className="text-xs text-muted-foreground">
+						Add drug bags to at least one form before generating certificates.
+					</p>
+				</div>
+			)
 		);
 	}
 
 	return (
 		<div className="space-y-6">
+			{legacyNotice}
 			{/* Summary */}
 			{hasStaleCertificates ? (
 				// A generated certificate no longer matches its bag data. Reuse the

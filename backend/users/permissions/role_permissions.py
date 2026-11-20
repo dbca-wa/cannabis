@@ -31,3 +31,22 @@ class HasAppAccess(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.has_app_access
+
+
+class IsMaintainer(BasePermission):
+    """Only the app's maintainers (``User.is_maintainer``) may run system tasks.
+
+    Being an administrator or superuser is not enough: tasks such as the legacy
+    import replace data across the whole app.
+    """
+
+    message = "Only a maintainer of the app can do this."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and getattr(user, "is_maintainer", False)
+        )

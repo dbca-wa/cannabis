@@ -1,6 +1,4 @@
-"""Property 9: batch.bag_count == sum of bags across its certificates' forms.
-
-**Validates: Requirements 7.5**
+"""batch.bag_count == sum of bags across its certificates' forms.
 
 Creates a batch from eligible certificates with varying bag counts and asserts
 the stored bag_count equals the sum of each certificate's form's bag count.

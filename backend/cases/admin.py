@@ -13,6 +13,9 @@ from .models import (
     CasePhaseHistory,
     Certificate,
     DrugBag,
+    LegacyImportBundle,
+    LegacyImportRun,
+    LegacySourceRecord,
     Priority3Form,
     SectionCTemplate,
 )
@@ -76,8 +79,18 @@ class Priority3FormInline(PracticeAwareInlineMixin, admin.TabularInline):
 
     model = Priority3Form
     extra = 0
-    fields = ("phase", "security_movement_envelope", "scanned_image")
-    readonly_fields = ("created_at",)
+    fields = (
+        "phase",
+        "security_movement_envelope",
+        "scanned_image",
+        "legacy_certificate_number",
+        "legacy_certified_date",
+    )
+    readonly_fields = (
+        "created_at",
+        "legacy_certificate_number",
+        "legacy_certified_date",
+    )
     show_change_link = True
 
 
@@ -126,6 +139,7 @@ class CaseAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     search_fields = (
         "case_number",
         "forms__security_movement_envelope",
+        "forms__legacy_certificate_number",
         "requesting_officer__given_names",
         "requesting_officer__last_name",
         "defendants__given_names",
@@ -259,6 +273,7 @@ class Priority3FormAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     search_fields = (
         "case__case_number",
         "security_movement_envelope",
+        "legacy_certificate_number",
     )
     ordering = ("case", "id")
     readonly_fields = (
@@ -266,6 +281,8 @@ class Priority3FormAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
         "updated_at",
         "certificates_generated_at",
         "completed_at",
+        "legacy_certificate_number",
+        "legacy_certified_date",
     )
     inlines = [DrugBagInline, CertificateInline]
 
@@ -513,3 +530,70 @@ class CaseDraftAdmin(PracticeAwareAdminMixin, admin.ModelAdmin):
     search_fields = ("user__email", "user__given_names", "user__last_name")
     ordering = ("-updated_at",)
     list_select_related = ("user",)
+
+
+@admin.register(LegacySourceRecord)
+class LegacySourceRecordAdmin(admin.ModelAdmin):
+    """Read-only view of the old system's rows, for tracing imported data."""
+
+    list_display = ("certificate_number", "case_link", "imported_at")
+    search_fields = ("certificate_number", "case__case_number")
+    readonly_fields = (
+        "certificate_number",
+        "source_table",
+        "case",
+        "imported_at",
+        "source_row",
+        "transformed",
+    )
+    ordering = ("certificate_number",)
+
+    def case_link(self, obj):
+        if obj.case is None:
+            return "(case deleted)"
+        url = reverse("admin:submissions_case_change", args=[obj.case.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.case.case_number)
+
+    case_link.short_description = "Case"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+class _ReadOnlyAdmin(admin.ModelAdmin):
+    """Records written by the legacy import tasks; viewed here, never edited."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(LegacyImportBundle)
+class LegacyImportBundleAdmin(_ReadOnlyAdmin):
+    # The content holds personal data and is never shown; only its details.
+    list_display = ("filename", "size", "sha256", "uploaded_by", "uploaded_at")
+    fields = ("filename", "size", "sha256", "summary", "uploaded_by", "uploaded_at")
+    readonly_fields = fields
+
+
+@admin.register(LegacyImportRun)
+class LegacyImportRunAdmin(_ReadOnlyAdmin):
+    list_display = ("action", "status", "started_by", "started_at", "finished_at")
+    list_filter = ("action", "status")
+    readonly_fields = (
+        "action",
+        "status",
+        "started_by",
+        "started_at",
+        "finished_at",
+        "bundle_sha256",
+        "summary",
+        "log",
+        "error",
+        "report",
+    )

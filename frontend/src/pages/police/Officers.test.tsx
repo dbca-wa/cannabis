@@ -33,6 +33,9 @@ vi.mock("@/features/police/components/officers/OfficerSearchComboBox", () => ({
 }));
 
 const authState = { isAdmin: false };
+vi.mock("@/features/police/components/officers/EditOfficerForm", () => ({
+	EditOfficerForm: () => <div data-testid="edit-officer-form" />,
+}));
 vi.mock("@/features/auth/hooks/useAuth", () => ({
 	useAuth: () => authState,
 }));
@@ -56,6 +59,8 @@ vi.mock(
 );
 
 const Officers = await import("./Officers").then((m) => m.default);
+const { EditOfficerRouteModal } =
+	await import("@/features/police/components/officers/EditOfficerRouteModal");
 const { DeleteOfficerRouteModal } =
 	await import("@/features/police/components/officers/DeleteOfficerRouteModal");
 
@@ -206,5 +211,48 @@ describe("Officers Page", () => {
 			const results = await testAccessibility(dialog);
 			expect(results).toHaveNoViolations();
 		});
+	});
+});
+
+describe("Officer record: related cases", () => {
+	const renderEdit = () =>
+		renderPage(
+			<Routes>
+				<Route path="/officers" element={<Officers />}>
+					<Route path=":officerId" element={<EditOfficerRouteModal />} />
+				</Route>
+			</Routes>,
+			{ initialEntries: ["/officers/5"] }
+		);
+
+	it("links to the officer's cases with the count", async () => {
+		usage = {
+			cases: [
+				{
+					id: 41,
+					case_number: "IR 41",
+					roles: ["conveying"],
+					status: "assessment",
+					status_display: "Assessment",
+					is_complete: false,
+				},
+			],
+		};
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		expect(
+			within(dialog).getByRole("link", { name: /view cases \(1\)/i })
+		).toHaveAttribute("href", "/cases?officer=5");
+	});
+
+	it("says when the officer has no cases", async () => {
+		usage = { cases: [] };
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		expect(
+			within(dialog).getByRole("button", { name: "No cases" })
+		).toBeDisabled();
 	});
 });

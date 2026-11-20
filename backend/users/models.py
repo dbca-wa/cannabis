@@ -97,6 +97,16 @@ class User(AbstractUser):
         help_text="Legacy users are hidden from selection dropdowns but retain historical data.",
     )
 
+    # Maintainer of the app: may run system tasks such as the legacy import.
+    # Separate from admin and superuser, and set only in Django admin.
+    is_maintainer = models.BooleanField(
+        default=False,
+        help_text=(
+            "Maintainers can run system tasks such as the legacy data import "
+            "from the Settings page."
+        ),
+    )
+
     # Set email as the username field
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []  # Email is already required as USERNAME_FIELD
