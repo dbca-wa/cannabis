@@ -34,6 +34,9 @@ vi.mock("@/features/police/components/stations/StationSearchComboBox", () => ({
 	),
 }));
 
+vi.mock("@/features/police/components/stations/EditStationForm", () => ({
+	EditStationForm: () => <div data-testid="edit-station-form" />,
+}));
 vi.mock("@/features/auth/hooks/useAuth", () => ({
 	useAuth: () => ({ isAdmin: false }),
 }));
@@ -57,6 +60,8 @@ vi.mock(
 );
 
 const Stations = await import("./Stations").then((m) => m.default);
+const { EditStationRouteModal } =
+	await import("@/features/police/components/stations/EditStationRouteModal");
 const { DeleteStationRouteModal } =
 	await import("@/features/police/components/stations/DeleteStationRouteModal");
 
@@ -138,6 +143,59 @@ describe("Stations Page", () => {
 		expect(within(dialog).getByLabelText(/replace with/i)).toBeInTheDocument();
 		expect(
 			within(dialog).getByRole("button", { name: "Move 1 officer and delete" })
+		).toBeDisabled();
+	});
+});
+
+describe("Station record: related officers and cases", () => {
+	const renderEdit = () =>
+		renderPage(
+			<Routes>
+				<Route path="/stations" element={<Stations />}>
+					<Route path=":stationId" element={<EditStationRouteModal />} />
+				</Route>
+			</Routes>,
+			{ initialEntries: ["/stations/3"] }
+		);
+
+	it("links to the officers based there and the station's cases", async () => {
+		usage = {
+			cases: [
+				{
+					id: 41,
+					case_number: "IR 41",
+					roles: ["station"],
+					status: "assessment",
+					status_display: "Assessment",
+					is_complete: false,
+				},
+			],
+			officers: [
+				{ id: 7, full_name: "TURNER, Alex" },
+				{ id: 8, full_name: "HARGREAVES, Sam" },
+			],
+		};
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		expect(
+			within(dialog).getByRole("link", { name: /view officers \(2\)/i })
+		).toHaveAttribute("href", "/officers?station=3");
+		expect(
+			within(dialog).getByRole("link", { name: /view cases \(1\)/i })
+		).toHaveAttribute("href", "/cases?station=3");
+	});
+
+	it("says when there are no officers or cases", async () => {
+		usage = { cases: [], officers: [] };
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		expect(
+			within(dialog).getByRole("button", { name: "No officers" })
+		).toBeDisabled();
+		expect(
+			within(dialog).getByRole("button", { name: "No cases" })
 		).toBeDisabled();
 	});
 });

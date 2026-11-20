@@ -102,6 +102,7 @@ export const CasesTable = observer(
 			botanist: casesSearchStore.state.filters.botanist ?? undefined,
 			officer: casesSearchStore.state.filters.officer ?? undefined,
 			station: casesSearchStore.state.filters.station ?? undefined,
+			defendant: casesSearchStore.state.filters.defendant ?? undefined,
 			tag_search: casesSearchStore.state.filters.tagSearch || undefined,
 		};
 

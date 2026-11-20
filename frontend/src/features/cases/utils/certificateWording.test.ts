@@ -65,7 +65,7 @@ describe("certificate wording parity with the PDF", () => {
 		expect(fixture.results).toHaveLength(1364);
 		expect(fixture.section_c).toHaveLength(396);
 		expect(fixture.female).toHaveLength(584);
-		expect(fixture.officers).toHaveLength(420);
+		expect(fixture.officers).toHaveLength(388);
 	});
 
 	it.each(fixture.results.map((c) => [describeBags(c.bags), c] as const))(

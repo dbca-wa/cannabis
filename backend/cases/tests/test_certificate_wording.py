@@ -390,8 +390,8 @@ class TestOfficers:
         # prints by role, not ranks an officer can hold.
         assert "sworn_officer" not in RANKS
         assert "unsworn_officer" not in RANKS
-        # Blank, unknown and other are not real ranks; ten are.
-        assert len(RANKS) == 13
+        # Blank and other are not real ranks; ten are.
+        assert len(RANKS) == 12
         assert len(RECORDED) == 10
 
     @pytest.mark.parametrize("rank", RANKS)
@@ -526,4 +526,4 @@ def test_shared_fixture_is_current():
         len(data["section_c"]),
         len(data["female"]),
         len(data["officers"]),
-    ) == (1364, 396, 584, 420)
+    ) == (1364, 396, 584, 388)

@@ -8,8 +8,13 @@ import {
 } from "@/shared/components/ui/dialog";
 import { DeleteRecordFooter } from "@/shared/components/DeleteRecordFooter";
 import { EditDefendantForm } from "./forms";
-import { useDefendantById, useUpdateDefendant } from "../hooks/useDefendants";
+import {
+	useDefendantById,
+	useDefendantUsage,
+	useUpdateDefendant,
+} from "../hooks/useDefendants";
 import type { EditDefendantFormData } from "../schemas/defendantSchemas";
+import { RelatedRecordLinks } from "@/shared/components/RelatedRecordLinks";
 
 export const EditDefendantRouteModal = () => {
 	const navigate = useNavigate();
@@ -18,6 +23,8 @@ export const EditDefendantRouteModal = () => {
 
 	const defendantIdNum = defendantId ? parseInt(defendantId, 10) : null;
 	const { data: defendant, isLoading } = useDefendantById(defendantIdNum);
+	// The cases that name this defendant, for the "View cases" count.
+	const usage = useDefendantUsage(defendantIdNum);
 
 	const handleClose = () => {
 		navigate("/defendants");
@@ -98,6 +105,15 @@ export const EditDefendantRouteModal = () => {
 					onSubmit={handleSubmit}
 					onCancel={handleClose}
 					isSubmitting={updateDefendant.isPending}
+				/>
+				<RelatedRecordLinks
+					links={[
+						{
+							noun: "cases",
+							count: usage.data?.cases.length,
+							to: `/cases?defendant=${defendant.id}`,
+						},
+					]}
 				/>
 				<DeleteRecordFooter
 					noun="defendant"

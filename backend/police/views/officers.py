@@ -135,7 +135,7 @@ class PoliceOfficerListView(ListCreateAPIView):
             # Show ONLY unknown/other ranks (for data quality review)
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -143,7 +143,7 @@ class PoliceOfficerListView(ListCreateAPIView):
             # Exclude unknown/other ranks (normal filtering)
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -154,7 +154,6 @@ class PoliceOfficerListView(ListCreateAPIView):
         # Define rank seniority order (higher number = higher rank)
         rank_seniority_order = {
             PoliceOfficer.NO_RANK: 0,
-            PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
             PoliceOfficer.SeniorityChoices.OTHER: 1,
             PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
             PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
@@ -338,7 +337,7 @@ class PoliceOfficerExportView(APIView):
             # Show ONLY unknown/other ranks (for data quality review)
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -346,7 +345,7 @@ class PoliceOfficerExportView(APIView):
             # Exclude unknown/other ranks (normal filtering)
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -357,7 +356,6 @@ class PoliceOfficerExportView(APIView):
         # Define rank seniority order (higher number = higher rank)
         rank_seniority_order = {
             PoliceOfficer.NO_RANK: 0,
-            PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
             PoliceOfficer.SeniorityChoices.OTHER: 1,
             PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
             PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,

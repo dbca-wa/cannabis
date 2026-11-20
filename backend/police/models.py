@@ -69,7 +69,6 @@ class PoliceOfficer(AuditModel):
 
     class SeniorityChoices(models.TextChoices):
         # Standard ranks (based on actual cannabis data analysis)
-        UNKNOWN = "unknown", "Unknown"  # have to because bad data
 
         # Constable ranks
         CONSTABLE = "constable", "Constable"  # 2 occurrences
@@ -136,7 +135,6 @@ class PoliceOfficer(AuditModel):
         """Determine if officer is sworn based on rank"""
         unsworn_ranks = [
             self.NO_RANK,
-            self.SeniorityChoices.UNKNOWN,
             self.SeniorityChoices.OTHER,
         ]
         return self.rank not in unsworn_ranks

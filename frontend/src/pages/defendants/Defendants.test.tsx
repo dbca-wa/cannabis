@@ -59,12 +59,15 @@ vi.mock(
 		}),
 		useDefendantUsage: () => ({ data: usage, isLoading: false, error: null }),
 		useDeleteDefendant: () => ({ mutateAsync, isPending: false }),
+		useUpdateDefendant: () => ({ mutateAsync, isPending: false }),
 	})
 );
 
 const Defendants = await import("./Defendants").then((m) => m.default);
 const { DeleteDefendantRouteModal } =
 	await import("@/features/defendants/components/DeleteDefendantRouteModal");
+const { EditDefendantRouteModal } =
+	await import("@/features/defendants/components/EditDefendantRouteModal");
 
 const renderDelete = () =>
 	renderPage(
@@ -178,5 +181,69 @@ describe("Defendants Page", () => {
 			replacementId: null,
 			unknown: true,
 		});
+	});
+});
+
+describe("Defendant record: related cases", () => {
+	const renderEdit = () =>
+		renderPage(
+			<Routes>
+				<Route path="/defendants" element={<Defendants />}>
+					<Route path=":defendantId" element={<EditDefendantRouteModal />} />
+				</Route>
+			</Routes>,
+			{ initialEntries: ["/defendants/4"] }
+		);
+
+	beforeEach(() => {
+		usage = { cases: [] };
+	});
+
+	it("links to the defendant's cases with the count", async () => {
+		usage = {
+			cases: [
+				{
+					id: 41,
+					case_number: "IR 41",
+					roles: ["defendant"],
+					status: "assessment",
+					status_display: "Assessment",
+					is_complete: false,
+				},
+				{
+					id: 42,
+					case_number: "IR 42",
+					roles: ["defendant"],
+					status: "complete",
+					status_display: "Complete",
+					is_complete: true,
+				},
+			],
+		};
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		const link = within(dialog).getByRole("link", {
+			name: /view cases \(2\)/i,
+		});
+		expect(link).toHaveAttribute("href", "/cases?defendant=4");
+	});
+
+	it("says there are no cases instead of linking to an empty list", async () => {
+		renderEdit();
+
+		const dialog = await screen.findByRole("dialog");
+		expect(
+			within(dialog).queryByRole("link", { name: /view cases/i })
+		).toBeNull();
+		expect(
+			within(dialog).getByRole("button", { name: "No cases" })
+		).toBeDisabled();
+	});
+
+	it("has no accessibility violations", async () => {
+		const { container } = renderEdit();
+		await screen.findByRole("dialog");
+		await testAccessibility(container);
 	});
 });

@@ -13,7 +13,6 @@ type OfficerRankFormValue =
 // Officer rank choices (matches Django PoliceOfficer.SeniorityChoices)
 const officerRankChoices: [OfficerRankFormValue, ...OfficerRankFormValue[]] = [
 	NO_RANK_FORM_VALUE,
-	"unknown",
 	"constable",
 	"police_constable",
 	"first_class_constable",

@@ -1154,9 +1154,10 @@ const Guide = () => {
 								<li>
 									&quot;Sworn Officer&quot; and &quot;Unsworn Officer&quot; are
 									labels the certificate prints for each role. They are not
-									ranks. An officer&apos;s record holds a real rank, such as
-									Senior Constable, or no rank, in which case the officer list
-									and picker show none.
+									ranks, and neither is &quot;Unknown&quot;. An officer&apos;s
+									record holds a real rank, such as Senior Constable, or{" "}
+									<Ui>No rank</Ui> when none is known, in which case the officer
+									list and picker show none.
 								</li>
 							</ul>
 
@@ -1362,6 +1363,32 @@ const Guide = () => {
 								details show <Ui>Out of date</Ui> until they are regenerated, or
 								their batch re-packaged.
 							</p>
+							<h3>Seeing what uses a record</h3>
+							<p>
+								Open an officer, station or defendant. Under{" "}
+								<Ui>Related records</Ui>, <Ui>View cases</Ui> opens the Cases
+								list showing only that record&apos;s cases, and on a station{" "}
+								<Ui>View officers</Ui> lists the officers based there. Each
+								button shows how many there are; with none, it reads{" "}
+								<Ui>No cases</Ui> or <Ui>No officers</Ui> instead.
+							</p>
+							<ul className="list-disc space-y-1 pl-5">
+								<li>
+									An officer&apos;s cases include those where they are the
+									conveying officer and those where they are the requesting
+									officer.
+								</li>
+								<li>
+									A defendant&apos;s cases appear with a{" "}
+									<Ui>Defendant: SURNAME, Given</Ui> tag above the list. Click
+									its cross, or <Ui>Clear search</Ui>, to see every case again.
+								</li>
+							</ul>
+							<img
+								src="/assets/guide/related-records.png"
+								alt="A station's edit dialog showing the Related records section with View officers (2) and View cases (2) buttons above Delete station"
+								className="mx-auto max-w-xl rounded-lg border shadow-sm"
+							/>
 							<h3>Merging duplicates</h3>
 							<p>
 								If the same officer, station or defendant has been entered

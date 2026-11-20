@@ -249,6 +249,7 @@ export interface CasesSearchParams {
 	botanist?: number;
 	officer?: number;
 	station?: number;
+	defendant?: number;
 	finance?: number;
 	cannabis_only?: boolean;
 	date_from?: string;

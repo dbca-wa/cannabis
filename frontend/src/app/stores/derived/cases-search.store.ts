@@ -11,6 +11,8 @@ export interface CasesSearchFilters {
 	botanist: number | null;
 	officer: number | null;
 	station: number | null;
+	/** Set from a defendant's record ("View cases"); shown as a removable chip. */
+	defendant: number | null;
 	tagSearch: string;
 }
 
@@ -30,6 +32,7 @@ const CASES_DEFAULT_FILTERS: CasesSearchFilters = {
 	botanist: null,
 	officer: null,
 	station: null,
+	defendant: null,
 	tagSearch: "",
 };
 
@@ -166,6 +169,8 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 		if (this.state.filters.botanist !== CASES_DEFAULT_FILTERS.botanist) count++;
 		if (this.state.filters.officer !== CASES_DEFAULT_FILTERS.officer) count++;
 		if (this.state.filters.station !== CASES_DEFAULT_FILTERS.station) count++;
+		if (this.state.filters.defendant !== CASES_DEFAULT_FILTERS.defendant)
+			count++;
 		if (this.state.filters.tagSearch.length > 0) count++;
 
 		return count;
@@ -199,6 +204,9 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 
 		if (this.state.filters.station !== null) {
 			params.set("station", this.state.filters.station.toString());
+		}
+		if (this.state.filters.defendant !== null) {
+			params.set("defendant", this.state.filters.defendant.toString());
 		}
 
 		if (this.state.filters.tagSearch) {
@@ -270,6 +278,10 @@ export class CasesSearchStore extends BaseStore<CasesSearchStoreState> {
 					typeof filters.station === "number"
 						? filters.station
 						: CASES_DEFAULT_FILTERS.station,
+				defendant:
+					typeof filters.defendant === "number"
+						? filters.defendant
+						: CASES_DEFAULT_FILTERS.defendant,
 				tagSearch:
 					typeof filters.tagSearch === "string"
 						? filters.tagSearch

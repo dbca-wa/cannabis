@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 # Rank seniority order (higher number = higher rank)
 RANK_SENIORITY_ORDER = {
     PoliceOfficer.NO_RANK: 0,
-    PoliceOfficer.SeniorityChoices.UNKNOWN: 0,
     PoliceOfficer.SeniorityChoices.OTHER: 1,
     PoliceOfficer.SeniorityChoices.CONSTABLE: 4,
     PoliceOfficer.SeniorityChoices.POLICE_CONSTABLE: 5,
@@ -121,14 +120,14 @@ class OfficerService:
         if unknown_only.lower() == "true":
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
         elif include_unknown.lower() == "false":
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
@@ -197,14 +196,14 @@ class OfficerService:
         if unknown_only.lower() == "true":
             queryset = queryset.filter(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
         elif include_unknown.lower() == "false":
             queryset = queryset.exclude(
                 rank__in=[
-                    PoliceOfficer.SeniorityChoices.UNKNOWN,
+                    PoliceOfficer.NO_RANK,
                     PoliceOfficer.SeniorityChoices.OTHER,
                 ]
             )
