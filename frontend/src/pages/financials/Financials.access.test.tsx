@@ -36,6 +36,14 @@ vi.mock("@/features/admin/hooks/useSystemSettings", () => ({
 	}),
 }));
 
+// Templates are off unless switched on in the Django admin.
+const flags = { templatesEnabled: false };
+vi.mock("@/shared/hooks/data/useFeatureFlags", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("@/shared/hooks/data/useFeatureFlags")
+	>()),
+	useSectionCTemplatesEnabled: () => flags.templatesEnabled,
+}));
 vi.mock("@/features/cases/components/templates/TemplatesSettingsCard", () => ({
 	TemplatesSettingsCard: () => <div data-testid="templates" />,
 }));
@@ -130,11 +138,39 @@ describe("Settings Page access", () => {
 		expect(screen.getByLabelText(/counter value/i)).toHaveAttribute("readonly");
 		// The default botanist is shown as text, with no search box.
 		expect(screen.getByText("No default set")).toBeInTheDocument();
-		// Templates need a role, so the card says so instead of loading them.
+		// Templates are off, so neither the card nor its note is shown.
 		expect(screen.queryByTestId("templates")).not.toBeInTheDocument();
 		expect(
-			screen.getByText(/templates are available to finance officers/i)
-		).toBeInTheDocument();
+			screen.queryByText(/templates are available to finance officers/i)
+		).not.toBeInTheDocument();
+	});
+
+	describe("Section C templates", () => {
+		it("are hidden while switched off", () => {
+			flags.templatesEnabled = false;
+			asUser({ role: "finance" });
+			renderPage(<Settings />);
+			expect(screen.queryByTestId("templates")).not.toBeInTheDocument();
+		});
+
+		it("are managed here once switched on", () => {
+			flags.templatesEnabled = true;
+			asUser({ role: "finance" });
+			renderPage(<Settings />);
+			expect(screen.getByTestId("templates")).toBeInTheDocument();
+			flags.templatesEnabled = false;
+		});
+
+		it("say they need a role when switched on for someone without one", () => {
+			flags.templatesEnabled = true;
+			asUser({ role: "none" });
+			renderPage(<Settings />);
+			expect(screen.queryByTestId("templates")).not.toBeInTheDocument();
+			expect(
+				screen.getByText(/templates are available to finance officers/i)
+			).toBeInTheDocument();
+			flags.templatesEnabled = false;
+		});
 	});
 
 	it("has no accessibility violations without a role", async () => {

@@ -62,6 +62,44 @@ python -m venv /tmp/mdbvenv && /tmp/mdbvenv/bin/pip install access-parser
 python -m etl.bundle      # writes etl/data/legacy_import_bundle.zip
 ```
 
+## Staff accounts first
+
+Each old certificate names its approved botanist. The import attaches the case
+to an existing account with that name; only a botanist with no account gets an
+inactive former-botanist record. So give staff their accounts before importing:
+
+```bash
+python manage.py provision_staff \
+    "jane.doe@dbca.wa.gov.au:botanist:admin:Jane Doe" \
+    "sam.lee@dbca.wa.gov.au:finance::Sam Lee"
+```
+
+Each entry is `email:role[:flags[:Name]]`. Roles: botanist, finance, none.
+Flags: `admin` (app administrator), `superuser` (Django admin), `maintainer`
+(legacy import). Names come from the DBCA directory; the typed name is used
+when the directory is unavailable or does not list the person. The command
+prepares each account and emails the normal invitation (`--no-email` prints
+the links instead, `--dry-run` changes nothing). People who can already sign
+in, or have a pending invitation, are left alone, so it is safe to rerun.
+
+If a botanist is invited after the import, accepting the invitation turns
+their former-botanist record into their account, so their past cases stay
+with them and no second account is made. This only happens for someone
+invited as a botanist whose name matches exactly one such record.
+
+To clear a site before importing again:
+
+```bash
+python manage.py purge_case_data                                  # report only
+python manage.py purge_case_data --confirm --full --reset-counters \
+    --staff "jane.doe@dbca.wa.gov.au:botanist:admin:Jane Doe" ...
+```
+
+`--full` also removes the stored source rows, import history, bundles, the
+import user and former-botanist accounts (never superusers or real staff).
+`--staff` then runs `provision_staff`. If anyone listed cannot be given an
+account, nothing is deleted.
+
 ## Run from the app (staging and production)
 
 Only users with **Maintainer** ticked (Django admin, superusers only) see the
@@ -95,7 +133,7 @@ poetry run python manage.py undo_legacy_import --commit
 SWEEP_EMAIL=you@dbca.wa.gov.au SWEEP_PASSWORD='...' etl/verify/run_app_sweep.sh
 ```
 
-To start from empty: `poetry run python manage.py purge_case_data --confirm --reset-counters`.
+To start from empty: `poetry run python manage.py purge_case_data --confirm --full --reset-counters`.
 Set `ETL_DEBUG_FILES=1` to let the field rules write their diagnostic files.
 
 ## What a person should review after the import

@@ -53,9 +53,10 @@ describe("SidebarNav", () => {
 	it("renders the working links and Settings", () => {
 		renderPage(<SidebarNav />);
 
+		// The dashboard is switched off; "/" opens Cases instead.
 		expect(
-			screen.getByRole("link", { name: /dashboard/i })
-		).toBeInTheDocument();
+			screen.queryByRole("link", { name: /dashboard/i })
+		).not.toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /cases/i })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /batches/i })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /settings/i })).toBeInTheDocument();
@@ -87,14 +88,14 @@ describe("SidebarNav", () => {
 		).toBeInTheDocument();
 	});
 
-	it("shows only the dashboard and Settings to a user without app access", () => {
+	it("shows only Settings to a user without app access", () => {
 		authState.hasAppAccess = false;
 		renderPage(<SidebarNav />);
 
 		const hrefs = screen
 			.getAllByRole("link")
 			.map((link) => link.getAttribute("href"));
-		expect(hrefs).toEqual(["/", "/settings"]);
+		expect(hrefs).toEqual(["/settings"]);
 	});
 
 	describe("awaiting invoice count", () => {

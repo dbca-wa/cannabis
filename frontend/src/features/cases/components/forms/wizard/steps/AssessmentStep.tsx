@@ -39,6 +39,7 @@ import type {
 	BotanicalDetermination,
 } from "../../../../types/drugBags.types";
 import type { Priority3Form } from "@/shared/types/backend-api.types";
+import { useSectionCTemplatesEnabled } from "@/shared/hooks/data/useFeatureFlags";
 
 interface AssessmentStepProps {
 	/** Case data from TanStack Query — contains bags array and text fields */
@@ -244,6 +245,7 @@ export const AssessmentStep = observer(function AssessmentStep({
 	const [notesFocused, setNotesFocused] = useState(false);
 
 	const serverNotes = (caseData?.additional_notes as string) ?? "";
+	const templatesEnabled = useSectionCTemplatesEnabled();
 	const [localNotes, setLocalNotes] = useState(serverNotes);
 	// Re-seed the note from the server only when the active form changes. Seeding
 	// on every server change let a debounced save's echo overwrite freshly typed
@@ -709,19 +711,22 @@ export const AssessmentStep = observer(function AssessmentStep({
 				completionLabel="Section C notes written"
 			>
 				<div className="space-y-4">
-					{/* Keyed by form so switching forms gives a fresh picker: its
-					    selected template never carries over and re-resolves onto
-					    another form's note. Section C is strictly per form. */}
-					<TemplatePicker
-						key={formId}
-						caseData={caseData}
-						bags={serverBags}
-						currentValue={localNotes}
-						onApply={(resolved) => {
-							setLocalNotes(resolved);
-							onFieldChange("additional_notes", resolved);
-						}}
-					/>
+					{/* Templates are off unless switched on in the Django admin; Section C
+					    fills itself, and the note below is always available. The picker
+					    is keyed by form so its selection never carries over and
+					    re-resolves onto another form's note. */}
+					{templatesEnabled && (
+						<TemplatePicker
+							key={formId}
+							caseData={caseData}
+							bags={serverBags}
+							currentValue={localNotes}
+							onApply={(resolved) => {
+								setLocalNotes(resolved);
+								onFieldChange("additional_notes", resolved);
+							}}
+						/>
+					)}
 					{/* The per-bag result lines the certificate adds by itself, shown
 					    so the botanist does not type them again. */}
 					{resultsDiffer && certificateResults && (

@@ -154,6 +154,15 @@ class SystemSettings(models.Model):
             "creation and processing to optionally prefill case data."
         ),
     )
+    section_c_templates_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "When enabled, Section C templates can be chosen on a form and "
+            "managed on the Settings page. Off because Section C fills itself "
+            "from the bags and envelope; the free-text note is always shown. "
+            "Existing templates are kept while this is off."
+        ),
+    )
     allow_saved_searches = models.BooleanField(
         default=False,
         help_text=(

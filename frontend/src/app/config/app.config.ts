@@ -4,6 +4,11 @@ export const APP_CONFIG = {
 	VERSION: import.meta.env.VITE_APP_VERSION || "1.0.0",
 	ENVIRONMENT: import.meta.env.NODE_ENV || "development",
 
+	// The dashboard (charts and summary cards) is switched off: the start page
+	// goes straight to Cases. Its code is kept; set this to true to bring it
+	// back as the start page and in the sidebar.
+	DASHBOARD_ENABLED: false,
+
 	// Cache configuration (used by hooks)
 	CACHE: {
 		DEFAULT_TTL: 5 * 60 * 1000, // 5 minutes - used by police hooks

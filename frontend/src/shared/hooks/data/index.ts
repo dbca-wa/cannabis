@@ -33,6 +33,7 @@ export { useSystemSettings } from "./useSystemSettings";
 export {
 	useFeatureFlags,
 	useOcrEnabled,
+	useSectionCTemplatesEnabled,
 	useDefaultBotanistId,
 	useCertificatePrintDefaults,
 	INITIAL_PRINT_DEFAULTS,

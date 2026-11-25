@@ -12,6 +12,8 @@ import {
 } from "@/features/cases/utils/certificateWording";
 import { DETERMINATION_LABELS } from "@/features/cases/constants/determinations";
 import { PHASE_DISPLAY_NAMES } from "@/shared/constants/phases.config";
+import { APP_CONFIG } from "@/app/config/app.config";
+import { useSectionCTemplatesEnabled } from "@/shared/hooks/data/useFeatureFlags";
 
 /**
  * Step-by-step how-to guide for the Cannabis Identification System.
@@ -31,6 +33,12 @@ interface Stage {
 	/** One line saying what the stage is for, shown in the contents. */
 	summary: string;
 }
+
+/** The dashboard is switched off unless enabled in the app config. */
+const DASHBOARD = APP_CONFIG.DASHBOARD_ENABLED;
+const STATES_TITLE = DASHBOARD
+	? "Case states and the dashboard"
+	: "Case states";
 
 /** Stages in the order a case moves through them, then reference sections. */
 const STAGES: Stage[] = [
@@ -67,7 +75,7 @@ const STAGES: Stage[] = [
 	},
 	{
 		id: "states",
-		title: "Case states and the dashboard",
+		title: STATES_TITLE,
 		summary: "What each state means and which step comes next",
 	},
 	{
@@ -294,6 +302,9 @@ const CASE_STATES: [string, string, ReactNode][] = [
 ];
 
 /** Glossary terms and their meanings, in alphabetical order. */
+/** Glossary terms that only apply while Section C templates are on. */
+const TEMPLATE_TERMS = new Set(["Template", "Variable (building block)"]);
+
 const GLOSSARY: [string, string][] = [
 	[
 		"Approved Botanist",
@@ -397,7 +408,7 @@ const GLOSSARY: [string, string][] = [
 	],
 	[
 		"State",
-		"Where a case is in the workflow: Assessment, Certificates, Batching, In Batch or Complete. See Case states and the dashboard.",
+		`Where a case is in the workflow: Assessment, Certificates, Batching, In Batch or Complete. See ${STATES_TITLE}.`,
 	],
 	[
 		"Template",
@@ -415,6 +426,7 @@ const GLOSSARY: [string, string][] = [
 
 const Guide = () => {
 	useDocumentTitle("How To");
+	const templatesEnabled = useSectionCTemplatesEnabled();
 
 	return (
 		<>
@@ -507,7 +519,10 @@ const Guide = () => {
 								<li>
 									Click <Ui>Set Up Password Now</Ui>. This creates your account.
 								</li>
-								<li>Choose your password. You land on the Dashboard.</li>
+								<li>
+									Choose your password. You land on the{" "}
+									{DASHBOARD ? "Dashboard" : <Ui>Cases</Ui>}.
+								</li>
 							</ol>
 							<p>
 								An invitation expires after 24 hours and can only be accepted
@@ -531,15 +546,36 @@ const Guide = () => {
 								an administrator unticks <Ui>Active User</Ui> on their account
 								in <Ui>Staff</Ui>.
 							</p>
+							<Tip>
+								Cases brought across from the old system keep the botanist who
+								signed them. A botanist who has no account yet is held as a
+								former-botanist record. Invite them as an{" "}
+								<Ui>Approved Botanist</Ui> and, when they accept, that record
+								becomes their account, so their past cases are already theirs;
+								no second account is made.
+							</Tip>
 							<p>
 								What you see depends on your role. Approved botanists and
 								finance officers see the whole workflow. Anyone without a role
-								sees only the Dashboard and a read-only <Ui>Settings</Ui> page
-								until an administrator gives them one.
+								sees only{" "}
+								{DASHBOARD
+									? "the Dashboard"
+									: "a note saying they have no role yet"}{" "}
+								and a read-only <Ui>Settings</Ui> page until an administrator
+								gives them one.
 							</p>
 							<Outcome>
-								You are on the Dashboard, with <Ui>Cases</Ui> and{" "}
-								<Ui>Batches</Ui> in the sidebar on the left.
+								{DASHBOARD ? (
+									<>
+										You are on the Dashboard, with <Ui>Cases</Ui> and{" "}
+										<Ui>Batches</Ui> in the sidebar on the left.
+									</>
+								) : (
+									<>
+										You are on the <Ui>Cases</Ui> list, with <Ui>Batches</Ui>{" "}
+										and the rest of the app in the sidebar on the left.
+									</>
+								)}
 							</Outcome>
 						</Section>
 
@@ -769,18 +805,20 @@ const Guide = () => {
 									is entered, and one saying which bags held female plants. They
 									appear in a grey box headed{" "}
 									<Ui>Added automatically from the bags and envelope</Ui> and
-									print after your own note. You do not need to type them or use
-									a template for them.
+									print after your own note. You do not need to type them
+									{templatesEnabled && " or use a template for them"}.
 								</li>
+								{templatesEnabled && (
+									<li>
+										For anything else, choose one under <Ui>Use Template</Ui> if
+										one fits. It fills in this form&apos;s tag numbers and
+										counts for you.
+									</li>
+								)}
 								<li>
-									For anything else, choose one under <Ui>Use Template</Ui> if
-									one fits. It fills in this form&apos;s tag numbers and counts
-									for you.
-								</li>
-								<li>
-									Or type the note yourself in{" "}
-									<Ui>Other Matters (Section C)</Ui>. Press Enter for a new
-									line; line breaks are kept on the certificate.
+									{templatesEnabled ? "Or type" : "For anything else, type"} the
+									note yourself in <Ui>Other Matters (Section C)</Ui>. Press
+									Enter for a new line; line breaks are kept on the certificate.
 								</li>
 								<li>
 									If there is nothing to add, leave it empty. When nothing is
@@ -795,7 +833,7 @@ const Guide = () => {
 							</Tip>
 							<img
 								src="/assets/guide/section-c.png"
-								alt="The Section C Notes card, showing the template picker, the grey box of lines added automatically from the bags and envelope (bag results, female plants and the Security Movement Envelope sentence), and an empty note for anything else"
+								alt="The Section C Notes card, showing the grey box of lines added automatically from the bags and envelope (bag results, female plants and the Security Movement Envelope sentence), and the note box for anything else"
 								className="rounded-lg border shadow-sm"
 							/>
 							<Outcome>
@@ -1016,9 +1054,9 @@ const Guide = () => {
 						<Section id="states">
 							<p>
 								Every case shows a <Ui>State</Ui> on the <Ui>Cases</Ui> list.
-								The same names are used by the <Ui>All States</Ui> filter and
-								the cards at the top of the Dashboard. The state moves on by
-								itself as you work; you never set it by hand.
+								The same names are used by the <Ui>All States</Ui> filter
+								{DASHBOARD && " and the cards at the top of the Dashboard"}. The
+								state moves on by itself as you work; you never set it by hand.
 							</p>
 							<div className="not-prose my-4 overflow-x-auto">
 								<table className="w-full border-collapse text-sm">
@@ -1063,32 +1101,37 @@ const Guide = () => {
 								<strong>Assessment</strong> again until the new form catches up.
 							</p>
 							<p>
-								The <Ui>All States</Ui> filter and the Dashboard cards count a
-								case under every state one of its forms is in. A case with forms
-								at two stages appears under both, while its <Ui>State</Ui>{" "}
-								column shows the earlier one.
+								The <Ui>All States</Ui> filter
+								{DASHBOARD && " and the Dashboard cards"} count a case under
+								every state one of its forms is in. A case with forms at two
+								stages appears under both, while its <Ui>State</Ui> column shows
+								the earlier one.
 							</p>
-							<h3>The Dashboard</h3>
-							<ul>
-								<li>
-									The four cards count the cases waiting at{" "}
-									<strong>Assessment</strong>, <strong>Certificates</strong>,{" "}
-									<strong>Batching</strong> and <strong>In Batch</strong>, and
-									how many forms those cases hold. Each card names the step in
-									this guide that comes next. Click a card to open the{" "}
-									<Ui>Cases</Ui> list filtered to that state.
-								</li>
-								<li>
-									<strong>Monthly Throughput</strong> shows, for each month of
-									the financial year, the cases received, the certificates first
-									generated, the bags on the cases received, and the revenue
-									from invoices recorded.
-								</li>
-								<li>
-									<strong>Financial Year Revenue</strong> totals the batches
-									whose invoice number was recorded this financial year.
-								</li>
-							</ul>
+							{DASHBOARD && (
+								<>
+									<h3>The Dashboard</h3>
+									<ul>
+										<li>
+											The four cards count the cases waiting at{" "}
+											<strong>Assessment</strong>, <strong>Certificates</strong>
+											, <strong>Batching</strong> and <strong>In Batch</strong>,
+											and how many forms those cases hold. Each card names the
+											step in this guide that comes next. Click a card to open
+											the <Ui>Cases</Ui> list filtered to that state.
+										</li>
+										<li>
+											<strong>Monthly Throughput</strong> shows, for each month
+											of the financial year, the cases received, the
+											certificates first generated, the bags on the cases
+											received, and the revenue from invoices recorded.
+										</li>
+										<li>
+											<strong>Financial Year Revenue</strong> totals the batches
+											whose invoice number was recorded this financial year.
+										</li>
+									</ul>
+								</>
+							)}
 						</Section>
 
 						<hr />
@@ -1291,10 +1334,11 @@ const Guide = () => {
 								</li>
 								<li>
 									These lines always come from the current bags and SME Number.
-									If your notes contain one, including one left by a template,
-									it is replaced by the up-to-date line, so it never prints
-									twice or goes out of date. An envelope line in your notes is
-									kept only when the form has no SME Number.
+									If your notes contain one
+									{templatesEnabled && ", including one left by a template"}, it
+									is replaced by the up-to-date line, so it never prints twice
+									or goes out of date. An envelope line in your notes is kept
+									only when the form has no SME Number.
 								</li>
 								<li>
 									When there are no added lines and no notes, Section C reads
@@ -1512,7 +1556,9 @@ const Guide = () => {
 								Nothing you do in practice mode is real. Practice cases,
 								certificates, batches, invoices, officers, stations and
 								defendants are kept apart from live work: nobody else sees them,
-								they never change the real dashboard figures, and they never use
+								{DASHBOARD
+									? " they never change the real dashboard figures, and they never use "
+									: " and they never use "}
 								a real certificate or invoice number.
 							</p>
 							<p>
@@ -1524,8 +1570,9 @@ const Guide = () => {
 								<Ui>Settings</Ui>, <Ui>Staff</Ui> and <Ui>Invitations</Ui> have
 								no practice copy, so they show real data even in practice mode.
 								You can look at them, but changes are refused until you leave
-								practice mode. Section C templates are the same: you can use
-								them on a practice case, but not add, edit or delete them.
+								practice mode.
+								{templatesEnabled &&
+									" Section C templates are the same: you can use them on a practice case, but not add, edit or delete them."}
 							</Tip>
 							<Outcome>
 								You have taken a fake case all the way to a recorded invoice,
@@ -1605,10 +1652,12 @@ const Guide = () => {
 									It is off by default, because a remembered search can hide a
 									case that was just created.
 								</li>
-								<li>
-									<strong>Section C Templates</strong>: the reusable notes
-									offered under <Ui>Use Template</Ui>.
-								</li>
+								{templatesEnabled && (
+									<li>
+										<strong>Section C Templates</strong>: the reusable notes
+										offered under <Ui>Use Template</Ui>.
+									</li>
+								)}
 							</ul>
 							<p>
 								Changing a default never changes cases that already exist. Each
@@ -1617,11 +1666,12 @@ const Guide = () => {
 							</p>
 							<p>
 								Finance officers, botanists and administrators can change the
-								rates, numbering and defaults, and manage the Section C
-								templates. Only an administrator can change remembered searches.
-								Anyone without a role can view the page but not change it. In
-								practice mode it is read-only for everyone, because settings are
-								shared; a note at the top says why.
+								rates, numbering and defaults
+								{templatesEnabled && ", and manage the Section C templates"}.
+								Only an administrator can change remembered searches. Anyone
+								without a role can view the page but not change it. In practice
+								mode it is read-only for everyone, because settings are shared;
+								a note at the top says why.
 							</p>
 							<img
 								src="/assets/guide/settings.png"
@@ -1666,7 +1716,9 @@ const Guide = () => {
 								Plain-language meanings of the terms used in this guide, A to Z.
 							</p>
 							<dl className="not-prose space-y-3 text-sm">
-								{GLOSSARY.map(([term, meaning]) => (
+								{GLOSSARY.filter(
+									([term]) => templatesEnabled || !TEMPLATE_TERMS.has(term)
+								).map(([term, meaning]) => (
 									<div key={term}>
 										<dt className="font-semibold">{term}</dt>
 										<dd className="text-muted-foreground">{meaning}</dd>

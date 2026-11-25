@@ -158,3 +158,33 @@ class TestFeatureFlags:
     def test_signed_out_users_cannot(self, api_client):
         resp = api_client.get(reverse("system-feature-flags"))
         assert resp.status_code in (401, 403)
+
+
+class TestSectionCTemplatesFlag:
+    """The Section C templates switch is readable but set only in Django admin."""
+
+    def test_off_by_default(self, botanist_client):
+        resp = botanist_client.get(reverse("system-feature-flags"))
+        assert resp.status_code == 200
+        assert resp.data["section_c_templates_enabled"] is False
+
+    def test_flags_reflect_the_admin_setting(self, botanist_client):
+        settings_obj = SystemSettings.load()
+        settings_obj.section_c_templates_enabled = True
+        settings_obj.save()
+        resp = botanist_client.get(reverse("system-feature-flags"))
+        assert resp.data["section_c_templates_enabled"] is True
+
+    def test_settings_get_includes_it(self, admin_client):
+        resp = admin_client.get(reverse("system-settings"))
+        assert resp.status_code == 200
+        assert resp.data["section_c_templates_enabled"] is False
+
+    def test_settings_patch_cannot_change_it(self, admin_client):
+        resp = admin_client.patch(
+            reverse("system-settings"),
+            {"section_c_templates_enabled": True},
+            format="json",
+        )
+        assert resp.status_code in (200, 400)
+        assert SystemSettings.load().section_c_templates_enabled is False

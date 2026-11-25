@@ -55,14 +55,8 @@ class ExternalUserSearchView(APIView):
 
     permission_classes = [HasAppAccess]
 
-    # Cache key for the full IT Assets user list
-    IT_ASSETS_CACHE_KEY = "it_assets_all_users"
-    IT_ASSETS_CACHE_TTL = 300  # 5 minutes
-
     def get(self, request):
         """Search external users by query parameter"""
-        import requests
-        from django.core.cache import cache
 
         query = request.query_params.get("search", "").strip()
 
@@ -72,27 +66,13 @@ class ExternalUserSearchView(APIView):
                 status=HTTP_200_OK,
             )
 
-        # Fetch full user list from cache or IT Assets API
-        external_users = cache.get(self.IT_ASSETS_CACHE_KEY)
+        # Full directory list, cached for five minutes by the service.
+        from ..services.staff_accounts import (
+            directory_person,
+            fetch_directory_users,
+        )
 
-        if external_users is None:
-            try:
-                external_api_url = settings.IT_ASSETS_URLS
-                auth = (settings.IT_ASSETS_USER, settings.IT_ASSETS_ACCESS_TOKEN)
-                response = requests.get(external_api_url, auth=auth, timeout=15)
-                response.raise_for_status()
-                external_users = response.json()
-                cache.set(
-                    self.IT_ASSETS_CACHE_KEY,
-                    external_users,
-                    self.IT_ASSETS_CACHE_TTL,
-                )
-            except requests.RequestException as e:
-                settings.LOGGER.error(f"IT Assets API error: {str(e)}")
-                raise
-            except Exception as e:
-                settings.LOGGER.error(f"Unexpected error fetching IT Assets: {str(e)}")
-                raise
+        external_users = fetch_directory_users()
 
         # Get existing user emails to exclude (only active users)
         existing_emails = set(
@@ -111,33 +91,15 @@ class ExternalUserSearchView(APIView):
             if email in existing_emails:
                 continue
 
-            # Build searchable text from all available name fields
-            given_name = user.get("given_name", "") or ""
-            surname = user.get("surname", "") or ""
-            name_field = user.get("name", "") or ""
-            full_name = f"{given_name} {surname}".strip() or name_field
-
-            # Searchable corpus: full name + combined name field + email
-            searchable = f"{full_name} {name_field} {email}".lower()
-
-            # Every query token must appear somewhere in the searchable text
+            person = directory_person(user)
+            # Every query token must appear in the name, the directory's
+            # combined name field or the email.
+            searchable = (
+                f"{person['full_name']} {user.get('name', '') or ''} {email}".lower()
+            )
             if not all(token in searchable for token in query_tokens):
                 continue
-
-            # Format for frontend
-            filtered_results.append(
-                {
-                    "id": user.get("id"),
-                    "employee_id": user.get("employee_id"),
-                    "given_name": given_name or name_field.split(" ")[0],
-                    "surname": (surname or " ".join(name_field.split(" ")[1:])),
-                    "email": email,
-                    "full_name": full_name or name_field,
-                    "title": user.get("title"),
-                    "division": user.get("division"),
-                    "unit": user.get("unit"),
-                }
-            )
+            filtered_results.append(person)
 
         # Return top 10 results
         return Response({"results": filtered_results[:10]}, status=HTTP_200_OK)
@@ -162,12 +124,8 @@ class InviteUserView(APIView):
     @handle_network_errors
     def post(self, request):
         """Send invitation to external user"""
-        import secrets
-        from datetime import timedelta
 
         from django.utils import timezone
-
-        from common.services import EmailService
 
         from ..models import InviteRecord
 
@@ -227,72 +185,14 @@ class InviteUserView(APIView):
         if existing_invite:
             return InvitationErrorHandler.handle_invitation_already_exists(email)
 
-        invite_record = None
+        from ..services.staff_accounts import send_invitation
 
         try:
-            # Generate secure 32-character token
-            token = secrets.token_urlsafe(32)
-
-            # Set 24-hour expiration
-            expires_at = timezone.now() + timedelta(hours=24)
-
-            # Create invitation record (no user account yet)
-            invite_record = InviteRecord.objects.create(
-                email=email,
-                invited_by=request.user,
-                role=role,
-                token=token,
-                expires_at=expires_at,
-                external_user_data=external_user_data,
-                is_staff=bool(invite_as_admin),
-            )
-
-            # Build the activation link from configuration; no trailing slash so
-            # it matches the SPA route /auth/activate-invite/:token.
-            from common.utils import get_frontend_url
-
-            activation_link = get_frontend_url(f"/auth/activate-invite/{token}")
-            role_display = dict(User.RoleChoices.choices).get(role, "None")
-
-            # Prepare email context (matches emails/invitation_email.html)
-            context = {
-                "recipient_given_names": external_user_data.get("given_name")
-                or "there",
-                "inviter_given_names": request.user.given_names,
-                "inviter_last_name": request.user.last_name,
-                "inviter_email": request.user.email,
-                "invitee_proposed_role": role_display,
-                "invitation_link": activation_link,
-                "expires_at": expires_at,
-            }
-
-            # Determine recipient based on system settings (send-to-self toggle)
-            from common.models import SystemSettings
-
-            system_settings = SystemSettings.load()
-
-            if system_settings.send_emails_to_self:
-                recipient_list = [system_settings.forward_certificate_emails_to]
-            else:
-                recipient_list = [email]
-
-            # Send via the centralised email service (shared emails/ template,
-            # inline logo, test-mode redirection).
-            EmailService.send_template_email(
-                template_name="emails/invitation_email.html",
-                recipient_email=recipient_list,
-                subject="Invitation to Cannabis Management System",
-                context=context,
-            )
-
-            redirected = (
-                f" (sent to {recipient_list[0]} instead)"
-                if recipient_list != [email]
-                else ""
-            )
-            settings.LOGGER.info(
-                f"{describe_user(request.user)} invited {email} as {role} "
-                f"(invitation {invite_record.pk}){redirected}"
+            invite_record, _, _ = send_invitation(
+                {**external_user_data, "email": email},
+                role,
+                bool(invite_as_admin),
+                request.user,
             )
 
             # Return invitation record data
@@ -312,10 +212,7 @@ class InviteUserView(APIView):
             )
 
         except Exception as e:
-            # Clean up invitation record if created but email failed
-            if invite_record:
-                invite_record.delete()
-
+            # send_invitation removes the invitation when the email fails.
             return InvitationErrorHandler.handle_email_send_failed(email, e)
 
 
@@ -538,6 +435,19 @@ class InviteActivationView(APIView):
         # a previously deactivated user with the same email.
         external_data = invite_record.external_user_data or {}
         user = User.objects.filter(email=invite_record.email, is_active=False).first()
+        if user is None and invite_record.role == User.RoleChoices.BOTANIST:
+            # The legacy import made a placeholder for a former botanist with
+            # this name: it becomes their account, so their past cases stay
+            # with them instead of a second account being made.
+            from ..services.staff_accounts import claim_placeholder, find_placeholder
+
+            placeholder = find_placeholder(
+                external_data.get("given_name", ""), external_data.get("surname", "")
+            )
+            if placeholder is not None:
+                user = claim_placeholder(
+                    placeholder, invite_record.email, external_data
+                )
         if user:
             user.is_active = True
             user.given_names = external_data.get("given_name", "")
@@ -549,6 +459,8 @@ class InviteActivationView(APIView):
             user.it_asset_id = external_data.get("id")
             user.invited_by = invite_record.invited_by
             user.password_last_changed = None
+            user.is_legacy = False
+            user.invitation_accepted_at = timezone.now()
             user.save()
         else:
             user = User.objects.create_user(
