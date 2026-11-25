@@ -11,11 +11,14 @@ import {
 import { lazy, Suspense } from "react";
 import { FaTriangleExclamation } from "react-icons/fa6";
 import { Navigate, type RouteObject } from "react-router";
+import { APP_CONFIG } from "@/app/config/app.config";
 
 const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import("@/pages/dashboard/Home"));
+// Shown at "/" while the dashboard is off: Cases, or the awaiting-role notice.
+const StartPage = lazy(() => import("@/pages/dashboard/StartPage"));
 const GuidePage = lazy(() => import("@/pages/guide/Guide"));
 const CasesPage = lazy(() => import("@/pages/cases/Cases"));
 const BatchesPage = lazy(() => import("@/pages/batches/Batches"));
@@ -188,8 +191,8 @@ export const ROUTES_CONFIG: RouteConfig[] = [
 		activeIcon: <Home size={20} />,
 		tooltipContent: <p>View your dashboard</p>,
 		adminOnly: false,
-		showInSidebar: true,
-		element: HomePage,
+		showInSidebar: APP_CONFIG.DASHBOARD_ENABLED,
+		element: APP_CONFIG.DASHBOARD_ENABLED ? HomePage : StartPage,
 	},
 	...(SHOW_DEV_PAGES
 		? [

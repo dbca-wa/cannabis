@@ -1,5 +1,6 @@
 import { useRouteError, isRouteErrorResponse, Link } from "react-router";
 import { Button } from "@/shared/components/ui/button";
+import { APP_CONFIG } from "@/app/config/app.config";
 
 const ErrorPage = () => {
 	const error = useRouteError();
@@ -31,7 +32,11 @@ const ErrorPage = () => {
 
 				<div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-3 justify-center">
 					<Button variant="outline" className="bg-white!" asChild>
-						<Link to="/">Back to dashboard</Link>
+						<Link to="/">
+							{APP_CONFIG.DASHBOARD_ENABLED
+								? "Back to dashboard"
+								: "Back to cases"}
+						</Link>
 					</Button>
 					<Button
 						variant="outline"

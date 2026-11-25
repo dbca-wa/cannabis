@@ -12,6 +12,7 @@ vi.mock("@/shared/services", () => ({
 import {
 	useFeatureFlags,
 	useOcrEnabled,
+	useSectionCTemplatesEnabled,
 	useDefaultBotanistId,
 	useSavedSearchesAllowed,
 	useCertificatePrintDefaults,
@@ -42,6 +43,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: true,
 			allow_saved_searches: false,
+			section_c_templates_enabled: false,
 			default_approved_botanist: 7,
 			...PRINT_DEFAULTS,
 		});
@@ -59,6 +61,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: true,
 			allow_saved_searches: false,
+			section_c_templates_enabled: false,
 			default_approved_botanist: null,
 			...PRINT_DEFAULTS,
 		});
@@ -76,6 +79,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
 			allow_saved_searches: false,
+			section_c_templates_enabled: false,
 			default_approved_botanist: 42,
 			...PRINT_DEFAULTS,
 		});
@@ -92,6 +96,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
 			allow_saved_searches: false,
+			section_c_templates_enabled: false,
 			default_approved_botanist: null,
 			...PRINT_DEFAULTS,
 		});
@@ -112,6 +117,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
 			allow_saved_searches: false,
+			section_c_templates_enabled: false,
 			default_approved_botanist: null,
 			default_print_conveying_station: false,
 			default_print_requesting_station: true,
@@ -141,6 +147,7 @@ describe("useFeatureFlags", () => {
 		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
 			ocr_enabled: false,
 			allow_saved_searches: true,
+			section_c_templates_enabled: false,
 			default_approved_botanist: null,
 			...PRINT_DEFAULTS,
 		});
@@ -150,6 +157,21 @@ describe("useFeatureFlags", () => {
 		});
 
 		// Off until the query resolves, then reflects the server flag.
+		expect(result.current).toBe(false);
+		await waitFor(() => expect(result.current).toBe(true));
+	});
+
+	it("useSectionCTemplatesEnabled is off until the server says it is on", async () => {
+		vi.mocked(SystemSettingsService.getFeatureFlags).mockResolvedValue({
+			ocr_enabled: false,
+			allow_saved_searches: false,
+			section_c_templates_enabled: true,
+			default_approved_botanist: null,
+			...PRINT_DEFAULTS,
+		});
+		const { result } = renderHook(() => useSectionCTemplatesEnabled(), {
+			wrapper: createWrapper(),
+		});
 		expect(result.current).toBe(false);
 		await waitFor(() => expect(result.current).toBe(true));
 	});

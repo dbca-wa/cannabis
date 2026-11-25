@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useAwaitingInvoiceCount } from "@/features/batches";
+import { APP_CONFIG } from "@/app/config/app.config";
 
 const SHOW_DEV_PAGES = import.meta.env.VITE_SHOW_DEV_PAGES === "true";
 
@@ -41,7 +42,10 @@ export const navGroups: NavGroup[] = [
 	{
 		label: "Casework",
 		items: [
-			{ to: "/", label: "Dashboard", icon: LayoutDashboard },
+			// Hidden while the dashboard is off ("/" then opens Cases).
+			...(APP_CONFIG.DASHBOARD_ENABLED
+				? [{ to: "/", label: "Dashboard", icon: LayoutDashboard }]
+				: []),
 			{ to: "/cases", label: "Cases", icon: FileStack },
 			{
 				to: "/batches",
@@ -110,8 +114,8 @@ export const SidebarNav = ({
 			{navGroups.map((group, groupIdx) => {
 				const visibleItems = group.items.filter(
 					(item) =>
-						// Roleless, non-admin users see the Dashboard and a
-						// read-only Settings page only
+						// Roleless, non-admin users see the start page (when it
+						// is in the sidebar) and a read-only Settings page only
 						(hasAppAccess || item.to === "/" || item.to === "/settings") &&
 						(!item.adminOnly || user?.is_superuser) &&
 						(!item.devOnly || SHOW_DEV_PAGES)

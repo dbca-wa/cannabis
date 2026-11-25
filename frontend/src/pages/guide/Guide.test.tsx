@@ -4,11 +4,22 @@
  * The wording examples are built from the same constants as the certificate
  * preview, so these tests also pin that the guide shows the approved wording.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { renderPage, testAccessibility } from "@/test/page-test-utils";
 import { PHASE_STEPS } from "@/shared/constants/phases.config";
-import Guide from "./Guide";
+
+// Section C templates follow the system switch (off unless turned on in the
+// Django admin); the guide must only describe them while they are on.
+const flags = { templatesEnabled: false };
+vi.mock("@/shared/hooks/data/useFeatureFlags", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("@/shared/hooks/data/useFeatureFlags")
+	>()),
+	useSectionCTemplatesEnabled: () => flags.templatesEnabled,
+}));
+
+const Guide = await import("./Guide").then((m) => m.default);
 
 const text = () => (document.body.textContent ?? "").replace(/\s+/g, " ");
 
@@ -128,5 +139,34 @@ describe("Guide page", () => {
 		const { container } = renderPage(<Guide />);
 
 		expect(await testAccessibility(container)).toHaveNoViolations();
+	});
+
+	describe("follows what is switched on", () => {
+		afterEach(() => {
+			flags.templatesEnabled = false;
+		});
+
+		it("does not describe templates while they are off", () => {
+			renderPage(<Guide />);
+			expect(text()).not.toMatch(/Use Template/);
+			expect(text()).not.toMatch(/Section C Templates/);
+			expect(text()).toMatch(/For anything else, type the note yourself/);
+		});
+
+		it("describes templates once they are switched on", () => {
+			flags.templatesEnabled = true;
+			renderPage(<Guide />);
+			expect(text()).toMatch(/Use Template/);
+			expect(text()).toMatch(/Section C Templates/);
+		});
+
+		it("does not describe the dashboard while it is off", () => {
+			renderPage(<Guide />);
+			expect(
+				screen.queryByRole("heading", { name: "The Dashboard" })
+			).toBeNull();
+			expect(text()).not.toMatch(/You land on the Dashboard/);
+			expect(text()).toMatch(/You land on the Cases/);
+		});
 	});
 });

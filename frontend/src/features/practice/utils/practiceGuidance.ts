@@ -8,6 +8,7 @@
  * advances as the user works, rather than resetting with each page change.
  */
 import type { CasePhase } from "@/features/cases/types/cases.types";
+import { APP_CONFIG } from "@/app/config/app.config";
 
 export interface PracticeStep {
 	/** 1-based number shown to the user. */
@@ -29,6 +30,11 @@ export interface PracticeGuidance {
 	/** The derived current step number (1–6). */
 	currentStep: number;
 }
+
+// Where a new case starts; the dashboard is switched off unless enabled.
+const START_INSTRUCTION = APP_CONFIG.DASHBOARD_ENABLED
+	? "From the Dashboard or Cases page, click 'New Case' on the top right."
+	: "On the Cases page, click 'New Case' on the top right.";
 
 // The same six steps, in the same order, as the How To page and the
 // Dashboard cards.
@@ -110,7 +116,7 @@ const INSTRUCTIONS: Record<
 	1: {
 		heading: "Step 1 — Create the case",
 		instructions: [
-			"From the Dashboard or Cases page, click 'New Case' on the top right.",
+			START_INSTRUCTION,
 			"Type the police reference from your brief below into Police Reference No. In real work this comes from an official Priority 3 form.",
 			"Leave the Received Date — it defaults to the date you create the case.",
 			"Add the defendant, submitting officer and station from your brief below.",
@@ -160,7 +166,11 @@ const INSTRUCTIONS: Record<
 		instructions: [
 			"On the Batches page, click Awaiting invoice on the batch's row, or the Record invoice for … button in the banner at the top.",
 			"Enter an invoice number and click Record & complete. Your case is now Complete.",
-			"Finally, open the Dashboard to see the chart update with your completed batch.",
+			...(APP_CONFIG.DASHBOARD_ENABLED
+				? [
+						"Finally, open the Dashboard to see the chart update with your completed batch.",
+					]
+				: []),
 		],
 	},
 };
@@ -177,7 +187,7 @@ const INSTRUCTIONS_REAL: Record<
 	1: {
 		heading: "Step 1 — Create the case",
 		instructions: [
-			"From the Dashboard or Cases page, click 'New Case' on the top right.",
+			START_INSTRUCTION,
 			"Type the police reference from the Priority 3 form into Police Reference No.",
 			"Set the Received Date (it defaults to today).",
 			"Add the defendant and submitting officer. The station fills itself in from the officer.",
@@ -228,7 +238,11 @@ const INSTRUCTIONS_REAL: Record<
 			"Raise the invoice as usual, using the cost summary in the package.",
 			"On the Batches page, click Awaiting invoice on the batch's row, or the Record invoice for … button in the banner at the top.",
 			"Enter the invoice number and click Record & complete. The batch's cases are now Complete.",
-			"The Dashboard revenue and chart include the batch once its invoice is recorded.",
+			...(APP_CONFIG.DASHBOARD_ENABLED
+				? [
+						"The Dashboard revenue and chart include the batch once its invoice is recorded.",
+					]
+				: []),
 		],
 	},
 };

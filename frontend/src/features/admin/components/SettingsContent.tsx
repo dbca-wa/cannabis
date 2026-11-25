@@ -35,6 +35,7 @@ import { logger } from "@/shared/services/logger.service";
 import type { SystemSettings } from "@/shared/types/backend-api.types";
 import type { SystemSettingsUpdateRequest } from "@/features/admin/types/settings.types";
 import type { LucideIcon } from "lucide-react";
+import { useSectionCTemplatesEnabled } from "@/shared/hooks/data/useFeatureFlags";
 
 interface RateType {
 	key: keyof SystemSettingsUpdateRequest;
@@ -271,6 +272,7 @@ const SettingsContent = () => {
 	// Finance officers, botanists and admins can change settings; the saved
 	// search toggle is a system flag, shown to admins only.
 	const access = getSettingsAccess(user);
+	const templatesEnabled = useSectionCTemplatesEnabled();
 	const canEdit = access.canEdit;
 	const isAdmin = !!(user?.is_staff || user?.is_superuser);
 
@@ -543,19 +545,21 @@ const SettingsContent = () => {
 					onChange={handleCertificateDefaultChange}
 					readOnly={!canEdit}
 				/>
-				{/* Section C Templates management — needs an app role, since the
+				{/* Section C Templates management: shown only while templates are
+				    switched on (Django admin), and needs an app role, since the
 				    templates are only used on cases. */}
-				{access.hasRole ? (
-					<TemplatesSettingsCard />
-				) : (
-					<Card className="p-6">
-						<h3>Section C Templates</h3>
-						<p className="text-[13px] text-muted-foreground">
-							Templates are available to finance officers, botanists and
-							administrators.
-						</p>
-					</Card>
-				)}
+				{templatesEnabled &&
+					(access.hasRole ? (
+						<TemplatesSettingsCard />
+					) : (
+						<Card className="p-6">
+							<h3>Section C Templates</h3>
+							<p className="text-[13px] text-muted-foreground">
+								Templates are available to finance officers, botanists and
+								administrators.
+							</p>
+						</Card>
+					))}
 				{/* Legacy import — maintainers only (the server checks too) */}
 				{user?.is_maintainer && (
 					<LegacyImportCard environment={settings.environment} />

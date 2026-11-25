@@ -22,6 +22,16 @@ export const useOcrEnabled = (): boolean => {
 };
 
 /**
+ * Whether Section C templates are offered (the picker on a form and the
+ * Settings card). Off by default because Section C fills itself from the bags
+ * and envelope; an administrator can switch it on in the Django admin.
+ */
+export const useSectionCTemplatesEnabled = (): boolean => {
+	const { data } = useFeatureFlags();
+	return data?.section_c_templates_enabled ?? false;
+};
+
+/**
  * Whether list pages may remember a user's search between visits. Off unless an
  * admin has turned it on system-wide, so a saved search never hides a record a
  * user has just created.

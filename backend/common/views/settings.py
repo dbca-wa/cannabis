@@ -63,6 +63,9 @@ class SystemFeatureFlagsView(APIView):
         return Response(
             {
                 "ocr_enabled": settings_obj.ocr_enabled,
+                "section_c_templates_enabled": (
+                    settings_obj.section_c_templates_enabled
+                ),
                 "allow_saved_searches": settings_obj.allow_saved_searches,
                 "default_approved_botanist": default_botanist_id,
                 **{
@@ -108,6 +111,7 @@ class SystemSettingsView(APIView):
             "tax_percentage": str(settings.tax_percentage),
             "certificate_counter": settings.certificate_counter,
             "ocr_enabled": settings.ocr_enabled,
+            "section_c_templates_enabled": settings.section_c_templates_enabled,
             "allow_saved_searches": settings.allow_saved_searches,
             "environment": environment,
         }

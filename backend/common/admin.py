@@ -74,7 +74,11 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         (
             "Feature Flags",
             {
-                "fields": ("ocr_enabled", "allow_saved_searches"),
+                "fields": (
+                    "ocr_enabled",
+                    "section_c_templates_enabled",
+                    "allow_saved_searches",
+                ),
             },
         ),
         (
